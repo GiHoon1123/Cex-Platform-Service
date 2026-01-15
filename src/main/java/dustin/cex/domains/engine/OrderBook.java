@@ -54,7 +54,7 @@
 // - 주문 매칭: O(m) where m=매칭 가능한 주문 수
 // =====================================================
 
-package dustin.cex.domains.cex.engine;
+package dustin.cex.domains.engine;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -302,4 +302,3 @@ public class OrderBook {
         }
     }
 }
-

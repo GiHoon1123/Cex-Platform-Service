@@ -15,7 +15,7 @@
 // - quoteMint: 기준 통화
 // =====================================================
 
-package dustin.cex.domains.cex.engine;
+package dustin.cex.domains.engine;
 
 import java.math.BigDecimal;
 
@@ -183,4 +183,3 @@ public final class MatchResult {
         return price.multiply(amount);
     }
 }
-

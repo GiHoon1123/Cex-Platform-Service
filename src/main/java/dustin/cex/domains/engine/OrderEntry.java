@@ -22,7 +22,7 @@
 // - createdAt: 주문 생성 시간 (Time Priority에 사용)
 // =====================================================
 
-package dustin.cex.domains.cex.engine;
+package dustin.cex.domains.engine;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -296,4 +296,3 @@ public final class OrderEntry {
         return "limit".equals(orderSide);
     }
 }
-

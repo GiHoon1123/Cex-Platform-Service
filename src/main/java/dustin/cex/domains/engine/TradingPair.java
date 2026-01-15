@@ -10,7 +10,7 @@
 // - quoteMint: 기준 통화 (항상 "USDT")
 // =====================================================
 
-package dustin.cex.domains.cex.engine;
+package dustin.cex.domains.engine;
 
 import java.util.Objects;
 
@@ -92,4 +92,3 @@ public final class TradingPair {
         return Objects.hash(baseMint, quoteMint);
     }
 }
-
