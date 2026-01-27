@@ -1,15 +1,19 @@
 package dustin.cex.domains.order.repository;
 
-import dustin.cex.domains.order.model.entity.Order;
+import java.util.List;
+import java.util.Optional;
+
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-import java.util.Optional;
+import dustin.cex.domains.order.model.entity.Order;
+import jakarta.persistence.LockModeType;
 
 /**
  * 주문 리포지토리
@@ -121,4 +125,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
         @Param("quoteMint") String quoteMint,
         Pageable pageable
     );
+    
+    /**
+     * 주문 ID로 주문 조회 (비관적 락)
+     * Find order by ID with pessimistic lock (FOR UPDATE)
+     * 
+     * 체결 이벤트 처리 시 동시성 제어를 위해 사용
+     * SELECT FOR UPDATE로 락을 걸어 다른 트랜잭션의 동시 수정을 방지
+     * 
+     * @param orderId 주문 ID
+     * @return 주문 정보 (없으면 Optional.empty())
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM Order o WHERE o.id = :orderId")
+    Optional<Order> findByIdForUpdate(@Param("orderId") Long orderId);
 }
