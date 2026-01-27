@@ -40,6 +40,9 @@ dependencies {
 	// Spring Boot 4.0.1은 Spring Framework 7.0 사용, 최신 SpringDoc 필요
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.0'
 	
+	// Kafka
+	implementation 'org.springframework.kafka:spring-kafka'
+	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
