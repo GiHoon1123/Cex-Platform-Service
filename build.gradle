@@ -27,6 +27,19 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.postgresql:postgresql'
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+	implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+	implementation 'de.mkammerer:argon2-jvm:2.11'
+	
+	// SpringDoc OpenAPI (Swagger) - Spring Boot 4.0.1 호환 버전
+	// Spring Boot 4.0.1은 Spring Framework 7.0 사용, 최신 SpringDoc 필요
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.0'
+	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
