@@ -3,6 +3,7 @@ plugins {
 	id 'org.springframework.boot' version '4.0.1'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'me.champeau.jmh' version '0.7.2'
+	id 'com.google.protobuf' version '0.9.4'
 }
 
 group = 'dustin'
@@ -42,6 +43,17 @@ dependencies {
 	
 	// Kafka
 	implementation 'org.springframework.kafka:spring-kafka'
+	
+	// WebSocket Client (바이낸스 WebSocket 연결용)
+	implementation 'org.java-websocket:Java-WebSocket:1.5.7'
+	
+	// gRPC
+	implementation 'io.grpc:grpc-netty-shaded:1.60.1'
+	implementation 'io.grpc:grpc-protobuf:1.60.1'
+	implementation 'io.grpc:grpc-stub:1.60.1'
+	compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // for @Generated annotation
+	
+	// JSON 처리 (Jackson은 이미 Spring Boot에 포함됨)
 	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -95,4 +107,30 @@ jmh {
 	}
 
 	jvmArgs = baseArgs
+}
+
+// gRPC 설정
+protobuf {
+	protoc {
+		artifact = "com.google.protobuf:protoc:3.25.1"
+	}
+	plugins {
+		grpc {
+			artifact = "io.grpc:protoc-gen-grpc-java:1.60.1"
+		}
+	}
+	generateProtoTasks {
+		all()*.plugins {
+			grpc {}
+		}
+	}
+}
+
+sourceSets {
+	main {
+		java {
+			srcDirs 'build/generated/source/proto/main/grpc'
+			srcDirs 'build/generated/source/proto/main/java'
+		}
+	}
 }

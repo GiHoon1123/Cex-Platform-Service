@@ -9,10 +9,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
+import dustin.cex.shared.grpc.EngineGrpcClient;
+import dustin.cex.shared.kafka.KafkaEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -44,10 +47,9 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderService {
     
     private final OrderRepository orderRepository;
-    // TODO: Rust 엔진 gRPC Client (향후 구현)
-    // private final EngineGrpcClient engineClient;
-    // TODO: Kafka Producer (향후 구현)
-    // private final KafkaProducer kafkaProducer;
+    private final EngineGrpcClient engineGrpcClient;
+    private final KafkaEventProducer kafkaEventProducer;
+    private final ObjectMapper objectMapper = new ObjectMapper();
     
     /**
      * 주문 생성
@@ -108,54 +110,55 @@ public class OrderService {
         // ============================================
         // 3. Rust 엔진에 주문 제출 (gRPC, 동기)
         // ============================================
-        // TODO: Rust 엔진 gRPC Client 구현 후 활성화
-        /*
         try {
             // 엔진에 주문 전송 (동기, 응답 대기)
-            EngineOrderResponse engineResponse = engineClient.submitOrder(savedOrder);
+            String priceStr = savedOrder.getPrice() != null ? savedOrder.getPrice().toString() : null;
+            String amountStr = savedOrder.getAmount().toString();
+            String quoteAmountStr = request.getQuoteAmount() != null ? request.getQuoteAmount().toString() : null;
+            String quoteMint = request.getQuoteMint() != null ? request.getQuoteMint() : "USDT";
             
-            if (!engineResponse.isSuccess()) {
+            boolean success = engineGrpcClient.submitOrder(
+                    savedOrder.getId(),
+                    userId,
+                    request.getOrderType(),
+                    request.getOrderSide(),
+                    request.getBaseMint(),
+                    quoteMint,
+                    priceStr,
+                    amountStr,
+                    quoteAmountStr
+            );
+            
+            if (!success) {
                 // 엔진이 주문을 거부한 경우 (잔고 부족 등)
-                log.warn("[OrderService] 엔진이 주문을 거부: orderId={}, reason={}", 
-                         savedOrder.getId(), engineResponse.getReason());
-                throw new OrderRejectedException("엔진이 주문을 거부했습니다: " + engineResponse.getReason());
+                log.warn("[OrderService] 엔진이 주문을 거부: orderId={}", savedOrder.getId());
+                throw new RuntimeException("엔진이 주문을 거부했습니다");
             }
             
             log.info("[OrderService] 엔진에 주문 제출 완료: orderId={}", savedOrder.getId());
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             // 엔진 통신 실패 시 주문 생성 실패 처리
             log.error("[OrderService] 엔진 통신 실패: orderId={}, error={}", savedOrder.getId(), e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            // 예상치 못한 예외
+            log.error("[OrderService] 엔진 통신 중 예외 발생: orderId={}, error={}", savedOrder.getId(), e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         }
-        */
         
         // ============================================
         // 4. Kafka 이벤트 발행 (비동기, 로깅용)
         // ============================================
-        // TODO: Kafka Producer 구현 후 활성화
-        /*
         try {
-            OrderCreatedEvent event = OrderCreatedEvent.builder()
-                    .orderId(savedOrder.getId())
-                    .userId(userId)
-                    .orderType(request.getOrderType())
-                    .orderSide(request.getOrderSide())
-                    .baseMint(request.getBaseMint())
-                    .quoteMint(request.getQuoteMint() != null ? request.getQuoteMint() : "USDT")
-                    .price(request.getPrice())
-                    .amount(request.getAmount())
-                    .timestamp(Instant.now())
-                    .build();
-            
-            // 비동기 발행 (논블로킹)
-            kafkaProducer.sendAsync("order-created", savedOrder.getId().toString(), event);
+            // 주문 정보를 JSON으로 변환하여 발행
+            String orderJson = objectMapper.writeValueAsString(savedOrder);
+            kafkaEventProducer.publishOrderCreated(orderJson);
             log.debug("[OrderService] Kafka 이벤트 발행 완료: orderId={}", savedOrder.getId());
         } catch (Exception e) {
             // Kafka 발행 실패는 로그만 남기고 계속 진행 (주문 생성은 성공)
             log.warn("[OrderService] Kafka 이벤트 발행 실패 (무시): orderId={}, error={}", 
                      savedOrder.getId(), e.getMessage());
         }
-        */
         
         // ============================================
         // 5. 주문 정보 반환
@@ -364,16 +367,23 @@ public class OrderService {
         }
         
         // 3. Rust 엔진에 취소 요청 (gRPC, 동기)
-        // TODO: Rust 엔진 gRPC Client 구현 후 활성화
-        /*
         try {
-            engineClient.cancelOrder(orderId);
+            String tradingPair = order.getBaseMint() + "/" + order.getQuoteMint();
+            boolean success = engineGrpcClient.cancelOrder(orderId, userId, tradingPair);
+            
+            if (!success) {
+                log.warn("[OrderService] 엔진이 주문 취소를 거부: orderId={}", orderId);
+                throw new RuntimeException("엔진이 주문 취소를 거부했습니다");
+            }
+            
             log.info("[OrderService] 엔진에서 주문 취소 완료: orderId={}", orderId);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("[OrderService] 엔진 취소 요청 실패: orderId={}, error={}", orderId, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("[OrderService] 엔진 취소 요청 중 예외 발생: orderId={}, error={}", orderId, e.getMessage());
             throw new RuntimeException("엔진 취소 요청 실패: " + e.getMessage(), e);
         }
-        */
         
         // 4. 주문 상태를 'cancelled'로 업데이트
         order.setStatus("cancelled");
@@ -381,7 +391,15 @@ public class OrderService {
         log.info("[OrderService] 주문 취소 완료: orderId={}", orderId);
         
         // 5. Kafka 이벤트 발행 (비동기)
-        // TODO: Kafka Producer 구현 후 활성화
+        try {
+            String orderJson = objectMapper.writeValueAsString(cancelledOrder);
+            kafkaEventProducer.publishOrderCancelled(orderJson);
+            log.debug("[OrderService] Kafka 이벤트 발행 완료: orderId={}", orderId);
+        } catch (Exception e) {
+            // Kafka 발행 실패는 로그만 남기고 계속 진행 (주문 취소는 성공)
+            log.warn("[OrderService] Kafka 이벤트 발행 실패 (무시): orderId={}, error={}", 
+                     orderId, e.getMessage());
+        }
         
         OrderResponse.OrderDto orderDto = convertToDto(cancelledOrder);
         return OrderResponse.builder()

@@ -45,7 +45,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             path.startsWith("/api/auth/refresh") ||
             path.startsWith("/api/auth/logout") ||
             // 정산 API는 인증 불필요 (대량 처리 성능 최적화)
-            path.startsWith("/api/settlement")) {
+            path.startsWith("/api/settlement") ||
+            // 봇 API는 인증 불필요 (테스트용)
+            path.startsWith("/api/bot")) {
             filterChain.doFilter(request, response);
             return;
         }
