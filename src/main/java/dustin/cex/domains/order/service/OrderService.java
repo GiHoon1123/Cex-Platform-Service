@@ -9,9 +9,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.entity.Order;
@@ -20,6 +19,8 @@ import dustin.cex.shared.grpc.EngineGrpcClient;
 import dustin.cex.shared.kafka.KafkaEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
 
 /**
  * 주문 서비스
@@ -68,59 +69,39 @@ public class OrderService {
      * 
      * 처리 과정:
      * 1. 주문 유효성 검증
-     *    - 주문 타입/방식 검증
-     *    - 가격/수량 검증 (지정가 주문은 가격 필수, 시장가 매수는 quoteAmount 필수)
-     *    - 잔고 확인 (향후 구현)
-     * 
-     * 2. 주문 엔티티 생성 및 DB 저장
-     *    - Order 엔티티 생성
-     *    - 초기 상태: 'pending'
-     *    - DB에 저장
-     * 
-     * 3. Rust 엔진에 주문 제출 (gRPC, 동기)
-     *    - 엔진에 주문 전송
-     *    - 엔진 응답 대기 (< 5ms 목표)
-     *    - 엔진 장애 시 주문 생성 실패 처리
-     * 
+     * 2. DB에 주문 저장 (트랜잭션 내, status: "pending")
+     * 3. Rust 엔진에 주문 제출 (트랜잭션 밖, gRPC 호출)
+     *    - 성공: 주문은 "pending" 상태 유지
+     *    - 실패: 주문 상태를 "rejected"로 업데이트 (보상 트랜잭션)
      * 4. Kafka 이벤트 발행 (비동기, 로깅용)
-     *    - 'order-created' 이벤트 발행
-     *    - 논블로킹 (엔진 응답과 독립적)
-     * 
      * 5. 주문 정보 반환
+     * 
+     * 트랜잭션 분리 이유:
+     * - DB 저장만 트랜잭션으로 묶어 커넥션 점유 시간 최소화
+     * - gRPC 호출은 트랜잭션 밖에서 실행 (네트워크 지연 영향 최소화)
+     * - gRPC 실패 시 보상 트랜잭션으로 "rejected" 상태 업데이트
      * 
      * @param userId 주문을 생성하는 사용자 ID (JWT 토큰에서 추출)
      * @param request 주문 생성 요청 (가격, 수량, 타입 등)
      * @return 생성된 주문 정보
      * @throws IllegalArgumentException 주문 유효성 검증 실패 시
      * @throws RuntimeException 엔진 통신 실패 시
-     * 
-     * 예시:
-     * - 지정가 매수: orderType='buy', orderSide='limit', price=100.0, amount=1.0
-     * - 시장가 매수: orderType='buy', orderSide='market', quoteAmount=1000.0
-     * - 시장가 매도: orderType='sell', orderSide='market', amount=1.0
      */
-    @Transactional
     public OrderResponse createOrder(Long userId, CreateOrderRequest request) {
-        log.info("[OrderService] 주문 생성 시작: userId={}, orderType={}, orderSide={}, baseMint={}", 
-                 userId, request.getOrderType(), request.getOrderSide(), request.getBaseMint());
-        
         // ============================================
         // 1. 주문 유효성 검증
         // ============================================
         validateOrderRequest(request);
         
         // ============================================
-        // 2. 주문 엔티티 생성 및 DB 저장
+        // 2. DB에 주문 저장 (트랜잭션 내)
         // ============================================
-        Order order = buildOrderEntity(userId, request);
-        Order savedOrder = orderRepository.save(order);
-        log.info("[OrderService] 주문 DB 저장 완료: orderId={}", savedOrder.getId());
+        Order savedOrder = saveOrderInTransaction(userId, request);
         
         // ============================================
-        // 3. Rust 엔진에 주문 제출 (gRPC, 동기)
+        // 3. Rust 엔진에 주문 제출 (트랜잭션 밖, gRPC 호출)
         // ============================================
         try {
-            // 엔진에 주문 전송 (동기, 응답 대기)
             String priceStr = savedOrder.getPrice() != null ? savedOrder.getPrice().toString() : null;
             String amountStr = savedOrder.getAmount().toString();
             String quoteAmountStr = request.getQuoteAmount() != null ? request.getQuoteAmount().toString() : null;
@@ -140,18 +121,25 @@ public class OrderService {
             
             if (!success) {
                 // 엔진이 주문을 거부한 경우 (잔고 부족 등)
-                log.warn("[OrderService] 엔진이 주문을 거부: orderId={}", savedOrder.getId());
+                log.error("[OrderService] 엔진이 주문을 거부: orderId={}", savedOrder.getId());
+                updateOrderStatusRejected(savedOrder.getId(), "엔진이 주문을 거부했습니다");
                 throw new RuntimeException("엔진이 주문을 거부했습니다");
             }
             
-            log.info("[OrderService] 엔진에 주문 제출 완료: orderId={}", savedOrder.getId());
+            // 성공 시: 주문은 "pending" 상태 유지 (엔진이 처리 중)
+            
         } catch (RuntimeException e) {
-            // 엔진 통신 실패 시 주문 생성 실패 처리
-            log.error("[OrderService] 엔진 통신 실패: orderId={}, error={}", savedOrder.getId(), e.getMessage());
+            // gRPC 통신 실패 또는 엔진 거부
+            if (!"엔진이 주문을 거부했습니다".equals(e.getMessage())) {
+                // 통신 실패인 경우에만 rejected 상태로 업데이트
+                log.error("[OrderService] 엔진 통신 실패: orderId={}, error={}", savedOrder.getId(), e.getMessage());
+                updateOrderStatusRejected(savedOrder.getId(), "엔진 통신 실패: " + e.getMessage());
+            }
             throw e;
         } catch (Exception e) {
             // 예상치 못한 예외
             log.error("[OrderService] 엔진 통신 중 예외 발생: orderId={}, error={}", savedOrder.getId(), e.getMessage());
+            updateOrderStatusRejected(savedOrder.getId(), "엔진 통신 실패: " + e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         }
         
@@ -159,13 +147,10 @@ public class OrderService {
         // 4. Kafka 이벤트 발행 (비동기, 로깅용)
         // ============================================
         try {
-            // 주문 정보를 JSON으로 변환하여 발행
             String orderJson = objectMapper.writeValueAsString(savedOrder);
             kafkaEventProducer.publishOrderCreated(orderJson);
-            log.debug("[OrderService] Kafka 이벤트 발행 완료: orderId={}", savedOrder.getId());
         } catch (Exception e) {
-            // Kafka 발행 실패는 로그만 남기고 계속 진행 (주문 생성은 성공)
-            log.warn("[OrderService] Kafka 이벤트 발행 실패 (무시): orderId={}, error={}", 
+            log.error("[OrderService] Kafka 이벤트 발행 실패: orderId={}, error={}", 
                      savedOrder.getId(), e.getMessage());
         }
         
@@ -177,6 +162,49 @@ public class OrderService {
                 .order(orderDto)
                 .message("Order created successfully")
                 .build();
+    }
+    
+    /**
+     * DB에 주문 저장 (트랜잭션 내)
+     * Save Order in Transaction
+     * 
+     * 주문 엔티티를 생성하고 DB에 저장합니다.
+     * 트랜잭션으로 묶여 있어서 실패 시 롤백됩니다.
+     * 
+     * @param userId 사용자 ID
+     * @param request 주문 생성 요청
+     * @return 저장된 주문 엔티티
+     */
+    @Transactional
+    private Order saveOrderInTransaction(Long userId, CreateOrderRequest request) {
+        Order order = buildOrderEntity(userId, request);
+        return orderRepository.save(order);
+    }
+    
+    /**
+     * 주문 상태를 "rejected"로 업데이트 (보상 트랜잭션)
+     * Update Order Status to Rejected (Compensating Transaction)
+     * 
+     * gRPC 호출 실패 시 주문 상태를 "rejected"로 업데이트합니다.
+     * 별도 트랜잭션으로 실행되어 DB 커넥션 점유 시간을 최소화합니다.
+     * 
+     * @param orderId 주문 ID
+     * @param reason 거부 사유
+     */
+    @Transactional
+    private void updateOrderStatusRejected(Long orderId, String reason) {
+        try {
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
+            
+            order.setStatus("rejected");
+            orderRepository.save(order);
+            
+            log.error("[OrderService] 주문 거부 처리 완료: orderId={}, reason={}", orderId, reason);
+        } catch (Exception e) {
+            log.error("[OrderService] 주문 거부 상태 업데이트 실패: orderId={}, error={}", orderId, e.getMessage());
+            // 보상 트랜잭션 실패는 로그만 남기고 예외를 던지지 않음 (이미 gRPC 실패 예외가 있음)
+        }
     }
     
     /**
@@ -348,26 +376,32 @@ public class OrderService {
      * 대기 중이거나 부분 체결된 주문을 취소합니다.
      * 
      * 처리 과정:
-     * 1. 주문 조회 및 본인 확인
+     * 1. 주문 조회 및 본인 확인 (트랜잭션 내)
      * 2. 주문 상태 확인 (취소 가능한 상태인지)
-     * 3. Rust 엔진에 취소 요청 (gRPC, 동기)
-     * 4. 주문 상태를 'cancelled'로 업데이트
-     * 5. Kafka 이벤트 발행 (비동기)
+     * 3. Rust 엔진에 취소 요청 (트랜잭션 밖, gRPC 호출)
+     *    - 성공: 주문 상태를 'cancelled'로 업데이트 (별도 트랜잭션)
+     *    - 실패: 예외 발생 (주문 상태는 변경되지 않음)
+     * 4. Kafka 이벤트 발행 (비동기)
+     * 
+     * 트랜잭션 분리 이유:
+     * - 주문 조회만 트랜잭션으로 묶어 커넥션 점유 시간 최소화
+     * - gRPC 호출은 트랜잭션 밖에서 실행 (네트워크 지연 영향 최소화)
+     * - 성공 시 별도 트랜잭션으로 상태 업데이트
      * 
      * @param userId 사용자 ID (본인 확인용)
      * @param orderId 취소할 주문 ID
      * @return 취소된 주문 정보
      * @throws RuntimeException 주문을 찾을 수 없거나 취소 불가능한 상태일 때
      */
-    @Transactional
     public OrderResponse cancelOrder(Long userId, Long orderId) {
-        log.info("[OrderService] 주문 취소 시작: userId={}, orderId={}", userId, orderId);
+        // ============================================
+        // 1. 주문 조회 및 본인 확인 (트랜잭션 내)
+        // ============================================
+        Order order = findOrderForCancellation(userId, orderId);
         
-        // 1. 주문 조회 및 본인 확인
-        Order order = orderRepository.findByUserIdAndId(userId, orderId)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
-        
+        // ============================================
         // 2. 주문 상태 확인 (취소 가능한 상태인지)
+        // ============================================
         if ("filled".equals(order.getStatus())) {
             throw new RuntimeException("이미 전량 체결된 주문은 취소할 수 없습니다");
         }
@@ -375,17 +409,21 @@ public class OrderService {
             throw new RuntimeException("이미 취소된 주문입니다");
         }
         
-        // 3. Rust 엔진에 취소 요청 (gRPC, 동기)
+        // ============================================
+        // 3. Rust 엔진에 취소 요청 (트랜잭션 밖, gRPC 호출)
+        // ============================================
         try {
             String tradingPair = order.getBaseMint() + "/" + order.getQuoteMint();
             boolean success = engineGrpcClient.cancelOrder(orderId, userId, tradingPair);
             
             if (!success) {
-                log.warn("[OrderService] 엔진이 주문 취소를 거부: orderId={}", orderId);
+                log.error("[OrderService] 엔진이 주문 취소를 거부: orderId={}", orderId);
                 throw new RuntimeException("엔진이 주문 취소를 거부했습니다");
             }
             
-            log.info("[OrderService] 엔진에서 주문 취소 완료: orderId={}", orderId);
+            // 성공 시: 주문 상태를 'cancelled'로 업데이트 (별도 트랜잭션)
+            updateOrderStatusCancelled(orderId);
+            
         } catch (RuntimeException e) {
             log.error("[OrderService] 엔진 취소 요청 실패: orderId={}, error={}", orderId, e.getMessage());
             throw e;
@@ -394,26 +432,71 @@ public class OrderService {
             throw new RuntimeException("엔진 취소 요청 실패: " + e.getMessage(), e);
         }
         
-        // 4. 주문 상태를 'cancelled'로 업데이트
-        order.setStatus("cancelled");
-        Order cancelledOrder = orderRepository.save(order);
-        log.info("[OrderService] 주문 취소 완료: orderId={}", orderId);
-        
-        // 5. Kafka 이벤트 발행 (비동기)
+        // ============================================
+        // 4. Kafka 이벤트 발행 (비동기)
+        // ============================================
         try {
+            // 취소된 주문 정보 조회 (최신 상태)
+            Order cancelledOrder = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
+            
             String orderJson = objectMapper.writeValueAsString(cancelledOrder);
             kafkaEventProducer.publishOrderCancelled(orderJson);
-            log.debug("[OrderService] Kafka 이벤트 발행 완료: orderId={}", orderId);
         } catch (Exception e) {
-            // Kafka 발행 실패는 로그만 남기고 계속 진행 (주문 취소는 성공)
-            log.warn("[OrderService] Kafka 이벤트 발행 실패 (무시): orderId={}, error={}", 
+            log.error("[OrderService] Kafka 이벤트 발행 실패: orderId={}, error={}", 
                      orderId, e.getMessage());
         }
+        
+        // ============================================
+        // 5. 취소된 주문 정보 반환
+        // ============================================
+        Order cancelledOrder = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
         
         OrderResponse.OrderDto orderDto = convertToDto(cancelledOrder);
         return OrderResponse.builder()
                 .order(orderDto)
                 .message("Order cancelled successfully")
                 .build();
+    }
+    
+    /**
+     * 주문 조회 (취소용, 트랜잭션 내)
+     * Find Order for Cancellation (in Transaction)
+     * 
+     * 취소할 주문을 조회하고 본인 확인을 수행합니다.
+     * 
+     * @param userId 사용자 ID
+     * @param orderId 주문 ID
+     * @return 주문 엔티티
+     * @throws RuntimeException 주문을 찾을 수 없거나 본인 주문이 아닐 때
+     */
+    @Transactional(readOnly = true)
+    private Order findOrderForCancellation(Long userId, Long orderId) {
+        return orderRepository.findByUserIdAndId(userId, orderId)
+                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
+    }
+    
+    /**
+     * 주문 상태를 "cancelled"로 업데이트 (별도 트랜잭션)
+     * Update Order Status to Cancelled (Separate Transaction)
+     * 
+     * gRPC 취소 요청 성공 후 주문 상태를 "cancelled"로 업데이트합니다.
+     * 별도 트랜잭션으로 실행되어 DB 커넥션 점유 시간을 최소화합니다.
+     * 
+     * @param orderId 주문 ID
+     */
+    @Transactional
+    private void updateOrderStatusCancelled(Long orderId) {
+        try {
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
+            
+            order.setStatus("cancelled");
+            orderRepository.save(order);
+        } catch (Exception e) {
+            log.error("[OrderService] 주문 취소 상태 업데이트 실패: orderId={}, error={}", orderId, e.getMessage());
+            throw new RuntimeException("주문 취소 상태 업데이트 실패", e);
+        }
     }
 }

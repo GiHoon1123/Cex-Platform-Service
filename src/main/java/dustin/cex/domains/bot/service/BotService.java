@@ -62,8 +62,8 @@ public class BotService {
             BigDecimal amount,
             BigDecimal quoteAmount
     ) {
-        log.info("[BotService] 봇 주문 생성 시작: botUserId={}, orderType={}, orderSide={}, baseMint={}", 
-                 botUserId, orderType, orderSide, baseMint);
+        // log.debug("[BotService] 봇 주문 생성 시작: botUserId={}, orderType={}, orderSide={}, baseMint={}",
+        //         botUserId, orderType, orderSide, baseMint);
         
         // 주문 생성 요청 생성
         CreateOrderRequest request = new CreateOrderRequest();
@@ -78,8 +78,8 @@ public class BotService {
         // OrderService를 통해 주문 생성
         OrderResponse response = orderService.createOrder(botUserId, request);
         
-        log.info("[BotService] 봇 주문 생성 완료: orderId={}, botUserId={}", 
-                 response.getOrder().getId(), botUserId);
+        // log.debug("[BotService] 봇 주문 생성 완료: orderId={}, botUserId={}", 
+        //          response.getOrder().getId(), botUserId);
         
         return response;
     }
@@ -149,12 +149,12 @@ public class BotService {
      * @return 취소된 주문 정보
      */
     public OrderResponse cancelBotOrder(Long botUserId, Long orderId) {
-        log.info("[BotService] 봇 주문 취소 시작: botUserId={}, orderId={}", botUserId, orderId);
+        // log.debug("[BotService] 봇 주문 취소 시작: botUserId={}, orderId={}", botUserId, orderId);
         
         // OrderService를 통해 주문 취소
         OrderResponse response = orderService.cancelOrder(botUserId, orderId);
         
-        log.info("[BotService] 봇 주문 취소 완료: orderId={}, botUserId={}", orderId, botUserId);
+        // log.debug("[BotService] 봇 주문 취소 완료: orderId={}, botUserId={}", orderId, botUserId);
         
         return response;
     }

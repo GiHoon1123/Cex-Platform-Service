@@ -1,15 +1,16 @@
 package dustin.cex.domains.order.model.entity;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * 주문 엔티티
@@ -178,8 +179,9 @@ public class Order {
      * - 'partial': 부분 체결 (일부만 체결됨)
      * - 'filled': 전량 체결 완료
      * - 'cancelled': 주문 취소됨
+     * - 'rejected': 주문 거부됨 (엔진 통신 실패 또는 엔진 거부)
      * 
-     * 데이터베이스 제약조건: CHECK (status IN ('pending', 'partial', 'filled', 'cancelled'))
+     * 데이터베이스 제약조건: CHECK (status IN ('pending', 'partial', 'filled', 'cancelled', 'rejected'))
      * 기본값: 'pending'
      */
     @Column(name = "status", nullable = false, length = 50)

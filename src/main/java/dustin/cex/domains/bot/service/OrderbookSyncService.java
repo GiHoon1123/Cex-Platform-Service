@@ -69,15 +69,15 @@ public class OrderbookSyncService {
      */
     @PostConstruct
     public void start() {
-        log.info("[OrderbookSyncService] 오더북 동기화 시작...");
-        log.info("  - 바이낸스 WebSocket URL: {}", botConfig.getBinanceWsUrl());
-        log.info("  - 오더북 깊이: {}", botConfig.getOrderbookDepth());
-        log.info("  - 주문 수량: {}", botConfig.getOrderQuantity());
+        // log.info("[OrderbookSyncService] 오더북 동기화 시작...");
+        // log.info("  - 바이낸스 WebSocket URL: {}", botConfig.getBinanceWsUrl());
+        // log.info("  - 오더북 깊이: {}", botConfig.getOrderbookDepth());
+        // log.info("  - 주문 수량: {}", botConfig.getOrderQuantity());
         
         // 바이낸스 WebSocket 연결 시작
         binanceWebSocketClient.start(botConfig.getBinanceWsUrl(), this::handleOrderbookUpdate);
         
-        log.info("[OrderbookSyncService] 오더북 동기화 시작 완료");
+        // log.info("[OrderbookSyncService] 오더북 동기화 시작 완료");
     }
     
     /**
@@ -86,9 +86,9 @@ public class OrderbookSyncService {
      */
     @PreDestroy
     public void stop() {
-        log.info("[OrderbookSyncService] 오더북 동기화 중지...");
+        // log.info("[OrderbookSyncService] 오더북 동기화 중지...");
         binanceWebSocketClient.stop();
-        log.info("[OrderbookSyncService] 오더북 동기화 중지 완료");
+        // log.info("[OrderbookSyncService] 오더북 동기화 중지 완료");
     }
     
     /**
@@ -141,8 +141,8 @@ public class OrderbookSyncService {
                         botService.cancelBotOrder(bot1UserId, orderId);
                     } catch (Exception e) {
                         // 주문이 이미 체결되었거나 취소되었을 수 있으므로 에러는 무시
-                        log.debug("[OrderbookSyncService] Bot1 주문 취소 실패 (무시): orderId={}, error={}", 
-                                 orderId, e.getMessage());
+                        // log.debug("[OrderbookSyncService] Bot1 주문 취소 실패 (무시): orderId={}, error={}", 
+                        //          orderId, e.getMessage());
                     }
                 }
                 bot1Orders.clear();
@@ -156,8 +156,8 @@ public class OrderbookSyncService {
                         botService.cancelBotOrder(bot2UserId, orderId);
                     } catch (Exception e) {
                         // 주문이 이미 체결되었거나 취소되었을 수 있으므로 에러는 무시
-                        log.debug("[OrderbookSyncService] Bot2 주문 취소 실패 (무시): orderId={}, error={}", 
-                                 orderId, e.getMessage());
+                        // log.debug("[OrderbookSyncService] Bot2 주문 취소 실패 (무시): orderId={}, error={}", 
+                        //          orderId, e.getMessage());
                     }
                 }
                 bot2Orders.clear();
@@ -189,8 +189,8 @@ public class OrderbookSyncService {
                                 bot1Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
                             }
                         } catch (Exception e) {
-                            // 주문 생성 실패 (잔고 부족 등) - 로그만 출력하고 계속 진행
-                            log.warn("[OrderbookSyncService] Bot1 주문 생성 실패: price={}, amount={}, error={}", 
+                            // 주문 생성 실패 (잔고 부족 등) - 에러만 로그
+                            log.error("[OrderbookSyncService] Bot1 주문 생성 실패: price={}, amount={}, error={}", 
                                     bid.getPrice(), finalOrderQuantity, e.getMessage());
                         }
                     }
@@ -220,16 +220,16 @@ public class OrderbookSyncService {
                                 bot2Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
                             }
                         } catch (Exception e) {
-                            // 주문 생성 실패 (잔고 부족 등) - 로그만 출력하고 계속 진행
-                            log.warn("[OrderbookSyncService] Bot2 주문 생성 실패: price={}, amount={}, error={}", 
+                            // 주문 생성 실패 (잔고 부족 등) - 에러만 로그
+                            log.error("[OrderbookSyncService] Bot2 주문 생성 실패: price={}, amount={}, error={}", 
                                     ask.getPrice(), finalOrderQuantity, e.getMessage());
                         }
                     }
                 });
             }
             
-            log.debug("[OrderbookSyncService] 오더북 동기화 완료: bids={}, asks={}", 
-                     topBids.size(), topAsks.size());
+            // log.debug("[OrderbookSyncService] 오더북 동기화 완료: bids={}, asks={}", 
+            //          topBids.size(), topAsks.size());
             
         } catch (Exception e) {
             log.error("[OrderbookSyncService] 오더북 업데이트 처리 실패", e);

@@ -1,18 +1,18 @@
 package dustin.cex.shared.kafka;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dustin.cex.domains.trade.model.entity.Trade;
-import dustin.cex.domains.trade.repository.TradeRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+import dustin.cex.domains.trade.model.entity.Trade;
+import dustin.cex.domains.trade.repository.TradeRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Kafka 체결 이벤트 Consumer
@@ -56,7 +56,7 @@ public class KafkaTradeConsumer {
     @KafkaListener(topicPattern = "trade-executed-*", groupId = "cex-consumer-group")
     public void consumeTradeExecuted(String message) {
         try {
-            log.debug("[KafkaTradeConsumer] 체결 이벤트 수신: {}", message);
+            // log.info("[KafkaTradeConsumer] 체결 이벤트 수신: {}", message);
             
             // JSON 파싱
             JsonNode jsonNode = objectMapper.readTree(message);
@@ -77,9 +77,9 @@ public class KafkaTradeConsumer {
             // DB 저장
             Trade savedTrade = tradeRepository.save(trade);
             
-            log.info("[KafkaTradeConsumer] 체결 내역 저장 완료: tradeId={}, buyOrderId={}, sellOrderId={}, price={}, amount={}",
-                    savedTrade.getId(), savedTrade.getBuyOrderId(), savedTrade.getSellOrderId(),
-                    savedTrade.getPrice(), savedTrade.getAmount());
+            // log.info("[KafkaTradeConsumer] 체결 내역 저장 완료: tradeId={}, buyOrderId={}, sellOrderId={}, price={}, amount={}",
+            //         savedTrade.getId(), savedTrade.getBuyOrderId(), savedTrade.getSellOrderId(),
+            //         savedTrade.getPrice(), savedTrade.getAmount());
             
             // TODO: 주문 상태 업데이트 (filled_amount, filled_quote_amount 등)
             // TODO: 잔고 업데이트 (user_balances 테이블)

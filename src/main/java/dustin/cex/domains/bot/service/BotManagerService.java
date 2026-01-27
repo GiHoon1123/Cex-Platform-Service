@@ -1,18 +1,18 @@
 package dustin.cex.domains.bot.service;
 
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import dustin.cex.domains.auth.model.dto.SignupRequest;
 import dustin.cex.domains.auth.model.entity.User;
 import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.auth.service.AuthService;
 import dustin.cex.domains.bot.model.BotConfig;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import jakarta.annotation.PostConstruct;
-import java.math.BigDecimal;
-import java.util.Optional;
 
 /**
  * 봇 관리자 서비스
@@ -62,16 +62,16 @@ public class BotManagerService {
     @PostConstruct
     @Transactional
     public void initializeBots() {
-        log.info("[BotManagerService] 봇 계정 초기화 시작...");
+        // log.info("[BotManagerService] 봇 계정 초기화 시작...");
         
         try {
             // 1. 봇 계정 확인/생성
             bot1User = ensureBotAccount(botConfig.getBot1Email(), botConfig.getBot1Password());
             bot2User = ensureBotAccount(botConfig.getBot2Email(), botConfig.getBot2Password());
             
-            log.info("[BotManagerService] 봇 계정 초기화 완료:");
-            log.info("  - Bot1 (매수 전용): {} (userId={})", bot1User.getEmail(), bot1User.getId());
-            log.info("  - Bot2 (매도 전용): {} (userId={})", bot2User.getEmail(), bot2User.getId());
+            // log.info("[BotManagerService] 봇 계정 초기화 완료:");
+            // log.info("  - Bot1 (매수 전용): {} (userId={})", bot1User.getEmail(), bot1User.getId());
+            // log.info("  - Bot2 (매도 전용): {} (userId={})", bot2User.getEmail(), bot2User.getId());
             
             // 2. 봇 잔고 설정 (향후 구현)
             // TODO: user_balances 테이블 생성 후 구현
@@ -99,20 +99,20 @@ public class BotManagerService {
         
         if (existingUser.isPresent()) {
             // 계정이 이미 존재함
-            log.info("[BotManagerService] 봇 계정 이미 존재: {}", email);
+            // log.info("[BotManagerService] 봇 계정 이미 존재: {}", email);
             return existingUser.get();
         }
         
         // 계정이 없으면 생성
-        log.info("[BotManagerService] 봇 계정 생성 중: {}", email);
+        // log.info("[BotManagerService] 봇 계정 생성 중: {}", email);
         SignupRequest signupRequest = new SignupRequest();
         signupRequest.setEmail(email);
         signupRequest.setPassword(password);
         signupRequest.setUsername(email); // username도 email과 동일하게
         
         var signupResponse = authService.signup(signupRequest);
-        log.info("[BotManagerService] 봇 계정 생성 완료: {} (userId={})", 
-                 email, signupResponse.getUser().getId());
+        // log.info("[BotManagerService] 봇 계정 생성 완료: {} (userId={})", 
+        //          email, signupResponse.getUser().getId());
         
         // User 엔티티로 변환
         User user = User.builder()
@@ -150,7 +150,7 @@ public class BotManagerService {
         // setBotBalance(bot2User.getId(), "SOL", hugeBalance);
         // setBotBalance(bot2User.getId(), "USDT", hugeBalance);
         
-        log.warn("[BotManagerService] 봇 잔고 설정은 아직 구현되지 않았습니다 (user_balances 테이블 필요)");
+        // log.warn("[BotManagerService] 봇 잔고 설정은 아직 구현되지 않았습니다 (user_balances 테이블 필요)");
     }
     
     /**

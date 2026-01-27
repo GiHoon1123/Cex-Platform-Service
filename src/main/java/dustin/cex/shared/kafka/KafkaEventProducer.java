@@ -1,11 +1,12 @@
 package dustin.cex.shared.kafka;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CompletableFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Kafka 이벤트 발행자
@@ -39,20 +40,20 @@ public class KafkaEventProducer {
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 try {
                     kafkaTemplate.send("order-created", orderJson);
-                    log.debug("[KafkaEventProducer] 주문 생성 이벤트 발행 완료");
+                    // log.debug("[KafkaEventProducer] 주문 생성 이벤트 발행 완료");
                 } catch (Exception e) {
-                    log.warn("[KafkaEventProducer] 주문 생성 이벤트 발행 실패 (무시): {}", e.getMessage());
+                    log.error("[KafkaEventProducer] 주문 생성 이벤트 발행 실패: {}", e.getMessage());
                 }
             });
             
             // 비동기 처리 (논블로킹)
             future.exceptionally(ex -> {
-                log.warn("[KafkaEventProducer] 주문 생성 이벤트 발행 중 예외 발생 (무시): {}", ex.getMessage());
+                log.error("[KafkaEventProducer] 주문 생성 이벤트 발행 중 예외 발생: {}", ex.getMessage());
                 return null;
             });
             
         } catch (Exception e) {
-            log.warn("[KafkaEventProducer] 주문 생성 이벤트 발행 실패 (무시): {}", e.getMessage());
+            log.error("[KafkaEventProducer] 주문 생성 이벤트 발행 실패: {}", e.getMessage());
         }
     }
     
@@ -67,20 +68,20 @@ public class KafkaEventProducer {
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 try {
                     kafkaTemplate.send("order-cancelled", orderJson);
-                    log.debug("[KafkaEventProducer] 주문 취소 이벤트 발행 완료");
+                    // log.debug("[KafkaEventProducer] 주문 취소 이벤트 발행 완료");
                 } catch (Exception e) {
-                    log.warn("[KafkaEventProducer] 주문 취소 이벤트 발행 실패 (무시): {}", e.getMessage());
+                    log.error("[KafkaEventProducer] 주문 취소 이벤트 발행 실패: {}", e.getMessage());
                 }
             });
             
             // 비동기 처리 (논블로킹)
             future.exceptionally(ex -> {
-                log.warn("[KafkaEventProducer] 주문 취소 이벤트 발행 중 예외 발생 (무시): {}", ex.getMessage());
+                log.error("[KafkaEventProducer] 주문 취소 이벤트 발행 중 예외 발생: {}", ex.getMessage());
                 return null;
             });
             
         } catch (Exception e) {
-            log.warn("[KafkaEventProducer] 주문 취소 이벤트 발행 실패 (무시): {}", e.getMessage());
+            log.error("[KafkaEventProducer] 주문 취소 이벤트 발행 실패: {}", e.getMessage());
         }
     }
     

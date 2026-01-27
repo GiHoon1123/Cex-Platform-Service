@@ -1,15 +1,16 @@
 package dustin.cex.shared.kafka;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import dustin.cex.domains.order.repository.OrderRepository;
-import dustin.cex.shared.kafka.model.OrderCancelledEvent;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import dustin.cex.domains.order.repository.OrderRepository;
+import dustin.cex.shared.kafka.model.OrderCancelledEvent;
+import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 주문 취소 이벤트 Consumer
@@ -65,12 +66,12 @@ public class KafkaOrderCancelledConsumer {
     @Transactional
     public void consumeOrderCancelled(String message) {
         try {
-            log.info("[KafkaOrderCancelledConsumer] 주문 취소 이벤트 수신: {}", message);
+            // log.info("[KafkaOrderCancelledConsumer] 주문 취소 이벤트 수신: {}", message);
             
             // 1. JSON 파싱
             OrderCancelledEvent event = objectMapper.readValue(message, OrderCancelledEvent.class);
-            log.info("[KafkaOrderCancelledConsumer] 이벤트 파싱 완료: orderId={}, userId={}", 
-                    event.getOrderId(), event.getUserId());
+            // log.debug("[KafkaOrderCancelledConsumer] 이벤트 파싱 완료: orderId={}, userId={}", 
+            //         event.getOrderId(), event.getUserId());
             
             // 2. DB에서 주문 조회
             var orderOpt = orderRepository.findById(event.getOrderId());
@@ -83,7 +84,7 @@ public class KafkaOrderCancelledConsumer {
             
             // 3. 이미 취소된 주문인지 확인
             if ("cancelled".equals(order.getStatus())) {
-                log.info("[KafkaOrderCancelledConsumer] 주문이 이미 취소됨: orderId={}", event.getOrderId());
+                // log.info("[KafkaOrderCancelledConsumer] 주문이 이미 취소됨: orderId={}", event.getOrderId());
                 return;
             }
             
@@ -91,8 +92,8 @@ public class KafkaOrderCancelledConsumer {
             order.setStatus("cancelled");
             orderRepository.save(order);
             
-            log.info("[KafkaOrderCancelledConsumer] 주문 취소 처리 완료: orderId={}, userId={}", 
-                    event.getOrderId(), event.getUserId());
+            // log.info("[KafkaOrderCancelledConsumer] 주문 취소 처리 완료: orderId={}, userId={}", 
+            //         event.getOrderId(), event.getUserId());
             
         } catch (Exception e) {
             log.error("[KafkaOrderCancelledConsumer] 주문 취소 이벤트 처리 실패: {}", message, e);
