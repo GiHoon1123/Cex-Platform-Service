@@ -16,14 +16,19 @@ import org.springframework.transaction.annotation.Transactional;
  * Order Cancelled Event Consumer
  * 
  * 역할:
- * - Rust 엔진에서 발행한 order-cancelled 토픽 메시지 수신
+ * - Rust 엔진에서 발행한 order-cancelled-* 토픽 메시지 수신 (자산별 토픽)
  * - 주문 상태를 cancelled로 업데이트
  * 
  * 처리 과정:
- * 1. Kafka에서 order-cancelled 이벤트 수신
+ * 1. Kafka에서 order-cancelled-* 이벤트 수신 (자산별 토픽)
  * 2. 이벤트 파싱 (JSON → OrderCancelledEvent)
  * 3. DB에서 주문 조회
  * 4. 주문 상태를 cancelled로 업데이트
+ * 
+ * 자산별 토픽 구독:
+ * - order-cancelled-sol: SOL/USDT 주문 취소 이벤트
+ * - order-cancelled-usdc: USDC/USDT 주문 취소 이벤트
+ * - 확장성: 새로운 자산 추가 시 자동으로 구독
  */
 @Slf4j
 @Component
@@ -46,10 +51,15 @@ public class KafkaOrderCancelledConsumer {
     /**
      * 주문 취소 이벤트 수신 및 처리
      * 
+     * 자산별 토픽 구독:
+     * - order-cancelled-sol: SOL/USDT 주문 취소 이벤트
+     * - order-cancelled-usdc: USDC/USDT 주문 취소 이벤트
+     * - 확장성: 새로운 자산 추가 시 자동으로 구독
+     * 
      * @param message Kafka 메시지 (JSON 문자열)
      */
     @KafkaListener(
-            topics = "order-cancelled",
+            topicPattern = "order-cancelled-*",
             groupId = "cex-consumer-group"
     )
     @Transactional

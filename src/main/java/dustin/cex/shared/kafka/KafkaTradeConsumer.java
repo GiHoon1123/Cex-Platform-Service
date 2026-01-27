@@ -24,7 +24,7 @@ import java.time.ZoneId;
  * - 주문 상태 업데이트 (향후 구현)
  * 
  * 처리 흐름:
- * 1. Kafka에서 'trade-executed' 토픽 메시지 수신
+ * 1. Kafka에서 'trade-executed-*' 토픽 메시지 수신 (자산별 토픽)
  * 2. JSON 파싱
  * 3. Trade 엔티티 생성 및 DB 저장
  * 4. 주문 상태 업데이트 (향후 구현)
@@ -46,9 +46,14 @@ public class KafkaTradeConsumer {
      * 체결 이벤트 수신 및 처리
      * Consume trade executed event
      * 
+     * 자산별 토픽 구독:
+     * - trade-executed-sol: SOL/USDT 체결 이벤트
+     * - trade-executed-usdc: USDC/USDT 체결 이벤트
+     * - 확장성: 새로운 자산 추가 시 자동으로 구독
+     * 
      * @param message Kafka 메시지 (JSON 문자열)
      */
-    @KafkaListener(topics = "trade-executed", groupId = "cex-consumer-group")
+    @KafkaListener(topicPattern = "trade-executed-*", groupId = "cex-consumer-group")
     public void consumeTradeExecuted(String message) {
         try {
             log.debug("[KafkaTradeConsumer] 체결 이벤트 수신: {}", message);
