@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.entity.Order;
@@ -49,7 +51,14 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final EngineGrpcClient engineGrpcClient;
     private final KafkaEventProducer kafkaEventProducer;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    
+    /**
+     * ObjectMapper 초기화 (JavaTimeModule 등록)
+     * Initialize ObjectMapper with JavaTimeModule for LocalDateTime serialization
+     */
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule()) // LocalDateTime 직렬화 지원
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // ISO 8601 형식 사용
     
     /**
      * 주문 생성

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
 
@@ -166,47 +167,65 @@ public class OrderbookSyncService {
             // 3. 새로운 봇 주문 생성
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // Bot 1 (매수): 바이낸스 매수 호가와 동일한 지정가 매수 주문
+            // WebSocket 스레드에서 트랜잭션 사용 시 문제 발생하므로 비동기로 실행
             if (bot1UserId != null) {
-                for (BinanceOrderbookEntry bid : topBids) {
-                    try {
-                        OrderResponse response = botService.createLimitBuyOrder(
-                                bot1UserId,
-                                "SOL",
-                                bid.getPrice(),
-                                orderQuantity
-                        );
-                        
-                        // 주문 맵에 추가
-                        String priceKey = bid.getPrice().toString();
-                        bot1Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
-                    } catch (Exception e) {
-                        // 주문 생성 실패 (잔고 부족 등) - 로그만 출력하고 계속 진행
-                        log.warn("[OrderbookSyncService] Bot1 주문 생성 실패: price={}, amount={}, error={}", 
-                                bid.getPrice(), orderQuantity, e.getMessage());
+                final Long finalBot1UserId = bot1UserId;
+                final List<BinanceOrderbookEntry> finalTopBids = new ArrayList<>(topBids);
+                final BigDecimal finalOrderQuantity = orderQuantity;
+                
+                CompletableFuture.runAsync(() -> {
+                    for (BinanceOrderbookEntry bid : finalTopBids) {
+                        try {
+                            OrderResponse response = botService.createLimitBuyOrder(
+                                    finalBot1UserId,
+                                    "SOL",
+                                    bid.getPrice(),
+                                    finalOrderQuantity
+                            );
+                            
+                            // 주문 맵에 추가 (동기화 필요)
+                            synchronized (bot1Orders) {
+                                String priceKey = bid.getPrice().toString();
+                                bot1Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
+                            }
+                        } catch (Exception e) {
+                            // 주문 생성 실패 (잔고 부족 등) - 로그만 출력하고 계속 진행
+                            log.warn("[OrderbookSyncService] Bot1 주문 생성 실패: price={}, amount={}, error={}", 
+                                    bid.getPrice(), finalOrderQuantity, e.getMessage());
+                        }
                     }
-                }
+                });
             }
             
             // Bot 2 (매도): 바이낸스 매도 호가와 동일한 지정가 매도 주문
+            // WebSocket 스레드에서 트랜잭션 사용 시 문제 발생하므로 비동기로 실행
             if (bot2UserId != null) {
-                for (BinanceOrderbookEntry ask : topAsks) {
-                    try {
-                        OrderResponse response = botService.createLimitSellOrder(
-                                bot2UserId,
-                                "SOL",
-                                ask.getPrice(),
-                                orderQuantity
-                        );
-                        
-                        // 주문 맵에 추가
-                        String priceKey = ask.getPrice().toString();
-                        bot2Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
-                    } catch (Exception e) {
-                        // 주문 생성 실패 (잔고 부족 등) - 로그만 출력하고 계속 진행
-                        log.warn("[OrderbookSyncService] Bot2 주문 생성 실패: price={}, amount={}, error={}", 
-                                ask.getPrice(), orderQuantity, e.getMessage());
+                final Long finalBot2UserId = bot2UserId;
+                final List<BinanceOrderbookEntry> finalTopAsks = new ArrayList<>(topAsks);
+                final BigDecimal finalOrderQuantity = orderQuantity;
+                
+                CompletableFuture.runAsync(() -> {
+                    for (BinanceOrderbookEntry ask : finalTopAsks) {
+                        try {
+                            OrderResponse response = botService.createLimitSellOrder(
+                                    finalBot2UserId,
+                                    "SOL",
+                                    ask.getPrice(),
+                                    finalOrderQuantity
+                            );
+                            
+                            // 주문 맵에 추가 (동기화 필요)
+                            synchronized (bot2Orders) {
+                                String priceKey = ask.getPrice().toString();
+                                bot2Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
+                            }
+                        } catch (Exception e) {
+                            // 주문 생성 실패 (잔고 부족 등) - 로그만 출력하고 계속 진행
+                            log.warn("[OrderbookSyncService] Bot2 주문 생성 실패: price={}, amount={}, error={}", 
+                                    ask.getPrice(), finalOrderQuantity, e.getMessage());
+                        }
                     }
-                }
+                });
             }
             
             log.debug("[OrderbookSyncService] 오더북 동기화 완료: bids={}, asks={}", 
