@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Propagation;
 
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
@@ -140,7 +139,12 @@ public class KafkaOrderEventConsumer {
      * 
      * 트랜잭션:
      * - 모든 작업을 하나의 트랜잭션으로 처리
-     * - 실패 시 롤백 (Kafka Consumer가 재시도)
+     *   * Trade 저장
+     *   * 주문 업데이트 (매수/매도)
+     *   * 잔고 업데이트 (매수자/매도자)
+     *   * 포지션 업데이트 (매수자/매도자)
+     * - 하나라도 실패하면 전체 롤백 (Kafka Consumer가 재시도)
+     * - 데이터 일관성 보장
      */
     private void handleTradeExecuted(JsonNode jsonNode) {
         Long buyOrderId;
@@ -184,102 +188,50 @@ public class KafkaOrderEventConsumer {
             throw new RuntimeException("Trade 엔티티 생성 실패", e);
         }
         
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 모든 작업을 하나의 트랜잭션으로 처리
+        // Trade 저장, 주문 업데이트, 잔고 업데이트, 포지션 업데이트 모두 원자적으로 처리
+        // 하나라도 실패하면 전체 롤백 (Kafka Consumer가 재시도)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
         // 주문 존재 여부 확인 (Foreign Key 제약 조건 때문에 필요)
-        // 트랜잭션 커밋 타이밍 문제로 주문이 아직 없을 수 있으므로 재시도 로직 추가
+        // 트랜잭션 내에서 확인하므로 최신 상태를 보장
         boolean buyOrderExists = orderRepository.existsById(buyOrderId);
         boolean sellOrderExists = orderRepository.existsById(sellOrderId);
         
         if (!buyOrderExists || !sellOrderExists) {
-            // 주문이 아직 없으면 잠시 대기 후 재시도 (트랜잭션 커밋 대기)
-            // 최대 30번, 각각 500ms 대기 (총 15초 대기)
-            for (int i = 0; i < 30; i++) {
-                try {
-                    Thread.sleep(500); // 500ms 대기
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-                
-                buyOrderExists = orderRepository.existsById(buyOrderId);
-                sellOrderExists = orderRepository.existsById(sellOrderId);
-                
-                if (buyOrderExists && sellOrderExists) {
-                    break;
-                }
-            }
+            // 주문이 없으면 예외 발생 (트랜잭션 롤백, Kafka Consumer가 재시도)
+            throw new RuntimeException("주문이 존재하지 않습니다: buyOrderId=" + buyOrderId + " (exists=" + buyOrderExists + "), sellOrderId=" + sellOrderId + " (exists=" + sellOrderExists + ")");
         }
         
-        // 주문이 여전히 없으면 경고 메시지 출력
-        if (!buyOrderExists) {
-            System.out.println("[Kafka] 경고: buyOrderId=" + buyOrderId + "가 orders 테이블에 없습니다. Trade 저장 시도...");
-        }
-        if (!sellOrderExists) {
-            System.out.println("[Kafka] 경고: sellOrderId=" + sellOrderId + "가 orders 테이블에 없습니다. Trade 저장 시도...");
-        }
-        
-        // Trade 저장 (별도 트랜잭션으로 저장하여 데이터 손실 방지)
-        Trade savedTrade;
-        try {
-            savedTrade = saveTradeInNewTransaction(trade);
-            System.out.println("[Kafka] 체결 처리 완료: buyOrderId=" + buyOrderId + ", sellOrderId=" + sellOrderId + ", price=" + price + ", amount=" + amount + ", tradeId=" + savedTrade.getId());
-        } catch (Exception e) {
-            // Foreign Key 제약 조건 위반인 경우
-            if (e.getCause() != null && e.getCause().getMessage() != null && e.getCause().getMessage().contains("foreign key constraint")) {
-                System.out.println("[Kafka] 오류: Trade 저장 실패 - 주문이 없음. buyOrderId=" + buyOrderId + " (exists=" + buyOrderExists + "), sellOrderId=" + sellOrderId + " (exists=" + sellOrderExists + ")");
-                // 주문이 없어도 Trade는 저장되어야 하므로, 주문을 먼저 생성하거나 Foreign Key 제약 조건을 완화해야 함
-                // 현재는 Trade 저장 실패로 처리
-                return;
-            }
-            throw e; // 다른 예외는 재발생
-        }
+        // Trade 저장
+        Trade savedTrade = tradeRepository.save(trade);
         
         // 매수 주문 업데이트 (비관적 락, 주문 ID 순서로 락 획득)
-        try {
-            updateOrderForTrade(buyOrderId, sellOrderId, price, amount, savedTrade.getId());
-        } catch (Exception e) {
-            // Trade는 이미 저장되었으므로 예외를 throw하지 않음
-        }
+        updateOrderForTrade(buyOrderId, sellOrderId, price, amount, savedTrade.getId());
         
         // 매도 주문 업데이트 (비관적 락, 주문 ID 순서로 락 획득)
-        try {
-            updateOrderForTrade(sellOrderId, buyOrderId, price, amount, savedTrade.getId());
-        } catch (Exception e) {
-            // Trade는 이미 저장되었으므로 예외를 throw하지 않음
-        }
+        updateOrderForTrade(sellOrderId, buyOrderId, price, amount, savedTrade.getId());
         
         // 매수자 잔고 업데이트
         // - base_mint: available 증가 (체결로 받음)
         // - quote_mint: locked 감소 (주문에 사용했던 금액)
-        try {
-            updateBalanceForTrade(buyerId, baseMint, amount, BigDecimal.ZERO); // base_mint available 증가
-            updateBalanceForTrade(buyerId, quoteMint, BigDecimal.ZERO, totalValue.negate()); // quote_mint locked 감소
-        } catch (Exception e) {
-            // 잔고 업데이트 실패는 무시
-        }
+        updateBalanceForTrade(buyerId, baseMint, amount, BigDecimal.ZERO); // base_mint available 증가
+        updateBalanceForTrade(buyerId, quoteMint, BigDecimal.ZERO, totalValue.negate()); // quote_mint locked 감소
         
         // 매도자 잔고 업데이트
         // - base_mint: locked 감소 (주문에 사용했던 수량)
         // - quote_mint: available 증가 (체결로 받음)
-        try {
-            updateBalanceForTrade(sellerId, baseMint, BigDecimal.ZERO, amount.negate()); // base_mint locked 감소
-            updateBalanceForTrade(sellerId, quoteMint, totalValue, BigDecimal.ZERO); // quote_mint available 증가
-        } catch (Exception e) {
-            // 잔고 업데이트 실패는 무시
-        }
+        updateBalanceForTrade(sellerId, baseMint, BigDecimal.ZERO, amount.negate()); // base_mint locked 감소
+        updateBalanceForTrade(sellerId, quoteMint, totalValue, BigDecimal.ZERO); // quote_mint available 증가
         
         // 매수자 포지션 업데이트
-        try {
-            updatePositionForTrade(buyerId, baseMint, quoteMint, amount, price);
-        } catch (Exception e) {
-            // 포지션 업데이트 실패는 무시
-        }
+        updatePositionForTrade(buyerId, baseMint, quoteMint, amount, price);
         
         // 매도자 포지션 업데이트 (매도는 포지션 감소)
-        try {
-            updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
-        } catch (Exception e) {
-            // 포지션 업데이트 실패는 무시
-        }
+        updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
+        
+        System.out.println("[Kafka] 체결 처리 완료: buyOrderId=" + buyOrderId + ", sellOrderId=" + sellOrderId + ", price=" + price + ", amount=" + amount + ", tradeId=" + savedTrade.getId());
     }
     
     /**
@@ -573,15 +525,4 @@ public class KafkaOrderEventConsumer {
         return LocalDateTime.now();
     }
     
-    /**
-     * Trade를 별도 트랜잭션으로 저장
-     * Save Trade in a new transaction to prevent rollback
-     * 
-     * 주문 업데이트나 잔고 업데이트 실패 시에도 Trade는 저장되도록
-     * 별도의 트랜잭션으로 분리합니다.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Trade saveTradeInNewTransaction(Trade trade) {
-        return tradeRepository.save(trade);
-    }
 }
