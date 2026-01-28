@@ -17,7 +17,7 @@ import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
-import dustin.cex.shared.grpc.EngineGrpcClient;
+import dustin.cex.shared.http.EngineHttpClient;
 import dustin.cex.shared.kafka.KafkaEventProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderService {
     
     private final OrderRepository orderRepository;
-    private final EngineGrpcClient engineGrpcClient;
+    private final EngineHttpClient engineHttpClient;
     private final KafkaEventProducer kafkaEventProducer;
     
     /**
@@ -108,7 +108,7 @@ public class OrderService {
             String quoteAmountStr = request.getQuoteAmount() != null ? request.getQuoteAmount().toString() : null;
             String quoteMint = request.getQuoteMint() != null ? request.getQuoteMint() : "USDT";
             
-            boolean success = engineGrpcClient.submitOrder(
+            boolean success = engineHttpClient.submitOrder(
                     savedOrder.getId(),
                     userId,
                     request.getOrderType(),
@@ -415,7 +415,7 @@ public class OrderService {
         // ============================================
         try {
             String tradingPair = order.getBaseMint() + "/" + order.getQuoteMint();
-            boolean success = engineGrpcClient.cancelOrder(orderId, userId, tradingPair);
+            boolean success = engineHttpClient.cancelOrder(orderId, userId, tradingPair);
             
             if (!success) {
                 log.error("[OrderService] 엔진이 주문 취소를 거부: orderId={}", orderId);
