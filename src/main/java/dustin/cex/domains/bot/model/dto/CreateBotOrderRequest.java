@@ -1,10 +1,12 @@
 package dustin.cex.domains.bot.model.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
-import lombok.Data;
-
 import java.math.BigDecimal;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+
+import lombok.Data;
 
 /**
  * 봇 주문 생성 요청 DTO

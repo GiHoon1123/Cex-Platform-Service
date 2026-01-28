@@ -5,28 +5,32 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.annotation.PostConstruct;
+import jakarta.persistence.LockModeType;
+
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import dustin.cex.domains.order.model.entity.Order;
-import dustin.cex.domains.order.repository.OrderRepository;
-import dustin.cex.domains.trade.model.entity.Trade;
-import dustin.cex.domains.trade.repository.TradeRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
+import dustin.cex.domains.fee.service.FeeConfigService;
+import dustin.cex.domains.order.model.entity.Order;
+import dustin.cex.domains.order.repository.OrderRepository;
 import dustin.cex.domains.position.model.entity.UserPosition;
 import dustin.cex.domains.position.repository.UserPositionRepository;
-import dustin.cex.domains.fee.service.FeeConfigService;
+import dustin.cex.domains.trade.model.entity.Trade;
+import dustin.cex.domains.trade.repository.TradeRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.LockModeType;
-import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 /**
  * Kafka 주문 이벤트 통합 Consumer
@@ -70,7 +74,7 @@ public class KafkaOrderEventConsumer {
     private final FeeConfigService feeConfigService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
-    @jakarta.annotation.PostConstruct
+    @PostConstruct
     public void init() {
         // Consumer 초기화 완료
     }
@@ -107,20 +111,20 @@ public class KafkaOrderEventConsumer {
             
             switch (eventType) {
                 case "trade_executed":
-                    System.out.println("[Kafka] 체결 이벤트 수신: " + message);
+                    log.debug("[Kafka] 체결 이벤트 수신: {}", message);
                     handleTradeExecuted(jsonNode);
-                    System.out.println("[Kafka] 체결 이벤트 처리 완료");
+                    log.debug("[Kafka] 체결 이벤트 처리 완료");
                     break;
                 case "order_cancelled":
-                    System.out.println("[Kafka] 취소 이벤트 수신: " + message);
+                    log.debug("[Kafka] 취소 이벤트 수신: {}", message);
                     handleOrderCancelled(jsonNode);
-                    System.out.println("[Kafka] 취소 이벤트 처리 완료");
+                    log.debug("[Kafka] 취소 이벤트 처리 완료");
                     break;
                 default:
                     // 알 수 없는 이벤트 타입은 무시
                     break;
             }
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             throw new RuntimeException("JSON 파싱 실패", e);
         } catch (Exception e) {
             throw e; // 트랜잭션 롤백을 위해 예외 재발생
@@ -243,7 +247,8 @@ public class KafkaOrderEventConsumer {
         // 매도자 포지션 업데이트 (매도는 포지션 감소)
         updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
         
-        System.out.println("[Kafka] 체결 처리 완료: buyOrderId=" + buyOrderId + ", sellOrderId=" + sellOrderId + ", price=" + price + ", amount=" + amount + ", tradeId=" + savedTrade.getId());
+        log.debug("[Kafka] 체결 처리 완료: buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}", 
+                buyOrderId, sellOrderId, price, amount, savedTrade.getId());
     }
     
     /**
@@ -360,7 +365,7 @@ public class KafkaOrderEventConsumer {
             updateBalanceForCancel(userId, baseMint, lockedAmount);
         }
         
-        System.out.println("[Kafka] 취소 처리 완료: orderId=" + orderId + ", userId=" + userId);
+        log.debug("[Kafka] 취소 처리 완료: orderId={}, userId={}", orderId, userId);
     }
     
     /**

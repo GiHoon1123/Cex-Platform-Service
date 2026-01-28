@@ -1,7 +1,28 @@
 package dustin.cex.domains.auth.controller;
 
-import dustin.cex.domains.auth.model.dto.*;
+import java.util.Map;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import dustin.cex.domains.auth.model.dto.LogoutRequest;
+import dustin.cex.domains.auth.model.dto.RefreshTokenRequest;
+import dustin.cex.domains.auth.model.dto.RefreshTokenResponse;
+import dustin.cex.domains.auth.model.dto.SigninRequest;
+import dustin.cex.domains.auth.model.dto.SigninResponse;
+import dustin.cex.domains.auth.model.dto.SignupRequest;
+import dustin.cex.domains.auth.model.dto.SignupResponse;
+import dustin.cex.domains.auth.model.dto.UserResponse;
 import dustin.cex.domains.auth.service.AuthService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -9,14 +30,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 /**
  * 인증 컨트롤러
