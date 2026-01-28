@@ -46,6 +46,7 @@ import org.springframework.data.repository.query.Param;
  * - 단일 토픽 사용: order-events (파티션 12개)
  * - 파티션 키: user_id (같은 유저의 이벤트는 같은 파티션)
  * - 같은 파티션 내에서 순서 보장됨
+ * - 가상 스레드: 파티션 하나당 하나의 가상 스레드가 담당
  * - 정산용: trade_executed, order_cancelled만 처리
  * 
  * 트랜잭션 처리:

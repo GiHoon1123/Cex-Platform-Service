@@ -13,6 +13,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -93,6 +94,15 @@ public class KafkaConfig {
      * Kafka Listener Container Factory 생성
      * Create Kafka Listener Container Factory
      * 
+     * 가상 스레드 사용: 파티션 하나당 하나의 가상 스레드가 담당
+     * Virtual Thread: One virtual thread per partition
+     * 
+     * 동작 방식:
+     * 1. setConcurrency(12): 12개의 KafkaMessageListenerContainer 생성
+     * 2. 각 컨테이너는 하나의 Kafka Consumer를 가지고 있음
+     * 3. 각 Consumer는 하나의 파티션을 담당 (12개 파티션 / 12개 컨테이너 = 파티션당 1개)
+     * 4. SimpleAsyncTaskExecutor with virtual threads: 각 메시지 처리를 가상 스레드로 실행
+     * 
      * @KafkaListener 어노테이션이 사용하는 팩토리
      */
     @Bean
@@ -101,8 +111,18 @@ public class KafkaConfig {
             new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         
-        // 동시성 설정 (여러 스레드에서 메시지 처리)
-        factory.setConcurrency(1); // 기본값: 1 (필요시 증가 가능)
+        // 동시성 설정: 파티션 수만큼 설정 (파티션 하나당 하나의 컨테이너/Consumer)
+        // Concurrency: Set to number of partitions (one container per partition)
+        // 각 컨테이너는 하나의 파티션을 담당하므로, 파티션 하나당 하나의 Consumer가 됨
+        factory.setConcurrency(12); // order-events 토픽의 파티션 수: 12개
+        
+        // 가상 스레드 Executor 설정
+        // SimpleAsyncTaskExecutor with virtual threads: 각 메시지 처리를 가상 스레드로 실행
+        // 각 파티션의 메시지가 가상 스레드에서 처리됨
+        SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor("kafka-listener-");
+        asyncTaskExecutor.setVirtualThreads(true); // 가상 스레드 활성화
+        asyncTaskExecutor.setConcurrencyLimit(SimpleAsyncTaskExecutor.UNBOUNDED_CONCURRENCY); // 무제한 동시성
+        factory.getContainerProperties().setListenerTaskExecutor(asyncTaskExecutor);
         
         // 수동 커밋 모드: @Transactional과 함께 사용 시 트랜잭션 커밋 시 자동으로 offset 커밋
         // BATCH 모드: 트랜잭션이 성공적으로 커밋되면 배치의 모든 offset이 자동으로 커밋됨
