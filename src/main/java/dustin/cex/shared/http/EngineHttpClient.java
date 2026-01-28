@@ -187,6 +187,78 @@ public class EngineHttpClient {
     }
     
     /**
+     * 잔고 동기화
+     * Sync balance to engine
+     * 
+     * Java API 서버에서 잔고 업데이트 시 엔진 메모리 잔고를 동기화합니다.
+     * 
+     * @param userId 사용자 ID
+     * @param mint 자산 종류 (예: "SOL", "USDT")
+     * @param availableDelta available 증감량 (양수: 입금, 음수: 출금)
+     * @return 성공 여부
+     * @throws RuntimeException 엔진 통신 실패 시
+     */
+    public boolean syncBalance(Long userId, String mint, java.math.BigDecimal availableDelta) {
+        try {
+            // 요청 본문 생성
+            String requestBody = buildSyncBalanceRequest(userId, mint, availableDelta);
+            
+            // HTTP 헤더 설정
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            // POST 요청 전송
+            String url = engineBaseUrl + "/api/cex/balances/sync";
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    requestEntity,
+                    String.class
+            );
+            
+            // 응답 확인
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.debug("[EngineHttpClient] 잔고 동기화 성공: userId={}, mint={}, delta={}", 
+                        userId, mint, availableDelta);
+                return true;
+            } else {
+                log.error("[EngineHttpClient] 잔고 동기화 실패: userId={}, mint={}, delta={}, status={}", 
+                        userId, mint, availableDelta, response.getStatusCode());
+                throw new RuntimeException("엔진 잔고 동기화 실패: " + response.getStatusCode());
+            }
+            
+        } catch (RestClientException e) {
+            log.error("[EngineHttpClient] 잔고 동기화 실패: userId={}, mint={}, delta={}, error={}", 
+                    userId, mint, availableDelta, e.getMessage());
+            throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("[EngineHttpClient] 잔고 동기화 중 예외 발생: userId={}, mint={}, delta={}, error={}", 
+                    userId, mint, availableDelta, e.getMessage());
+            throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 잔고 동기화 요청 본문 생성
+     * Build sync balance request body
+     */
+    private String buildSyncBalanceRequest(Long userId, String mint, java.math.BigDecimal availableDelta) {
+        try {
+            // JSON 객체 생성
+            JsonNode requestNode = objectMapper.createObjectNode()
+                    .put("user_id", userId)
+                    .put("mint", mint)
+                    .put("available_delta", availableDelta.toString());
+            
+            return objectMapper.writeValueAsString(requestNode);
+        } catch (Exception e) {
+            throw new RuntimeException("요청 본문 생성 실패: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
      * 주문 제출 요청 본문 생성
      * Build submit order request body
      */

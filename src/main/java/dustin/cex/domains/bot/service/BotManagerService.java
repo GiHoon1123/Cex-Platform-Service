@@ -5,11 +5,14 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 import dustin.cex.domains.auth.model.dto.SignupRequest;
 import dustin.cex.domains.auth.model.entity.User;
 import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.auth.service.AuthService;
 import dustin.cex.domains.bot.model.BotConfig;
+import dustin.cex.shared.services.BalanceSyncService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +43,7 @@ public class BotManagerService {
     private final BotConfig botConfig;
     private final AuthService authService;
     private final UserRepository userRepository;
+    private final BalanceSyncService balanceSyncService;
     
     /**
      * 봇 1 (매수 전용) 사용자 정보
@@ -73,9 +77,8 @@ public class BotManagerService {
             // log.info("  - Bot1 (매수 전용): {} (userId={})", bot1User.getEmail(), bot1User.getId());
             // log.info("  - Bot2 (매도 전용): {} (userId={})", bot2User.getEmail(), bot2User.getId());
             
-            // 2. 봇 잔고 설정 (향후 구현)
-            // TODO: user_balances 테이블 생성 후 구현
-            // setBotBalances();
+            // 2. 봇 잔고 설정 (엔진에 동기화)
+            setBotBalances();
             
         } catch (Exception e) {
             log.error("[BotManagerService] 봇 계정 초기화 실패", e);
@@ -130,27 +133,33 @@ public class BotManagerService {
      * 봇 잔고 설정
      * Set bot balances
      * 
-     * 봇 계정에 무한대에 가까운 SOL/USDT를 설정합니다.
-     * 
-     * 주의: user_balances 테이블이 생성된 후에만 동작합니다.
+     * 봇 계정에 무한대에 가까운 SOL/USDT를 엔진에 동기화합니다.
      * 
      * 설정할 잔고:
      * - Bot 1: 1,000,000,000 SOL, 1,000,000,000 USDT
      * - Bot 2: 1,000,000,000 SOL, 1,000,000,000 USDT
      */
     private void setBotBalances() {
-        // TODO: user_balances 테이블 생성 후 구현
-        // BigDecimal hugeBalance = BigDecimal.valueOf(1_000_000_000L);
-        // 
-        // // Bot 1 자산 설정
-        // setBotBalance(bot1User.getId(), "SOL", hugeBalance);
-        // setBotBalance(bot1User.getId(), "USDT", hugeBalance);
-        // 
-        // // Bot 2 자산 설정
-        // setBotBalance(bot2User.getId(), "SOL", hugeBalance);
-        // setBotBalance(bot2User.getId(), "USDT", hugeBalance);
-        
-        // log.warn("[BotManagerService] 봇 잔고 설정은 아직 구현되지 않았습니다 (user_balances 테이블 필요)");
+        try {
+            BigDecimal hugeBalance = BigDecimal.valueOf(1_000_000_000L);
+            
+            log.info("[BotManagerService] 봇 잔고 설정 시작...");
+            
+            // Bot 1 자산 설정 (매수 전용 봇)
+            // USDT만 설정 (매수에 필요)
+            balanceSyncService.syncDeposit(bot1User.getId(), "USDT", hugeBalance);
+            log.info("[BotManagerService] Bot1 잔고 설정 완료: USDT={}", hugeBalance);
+            
+            // Bot 2 자산 설정 (매도 전용 봇)
+            // SOL만 설정 (매도에 필요)
+            balanceSyncService.syncDeposit(bot2User.getId(), "SOL", hugeBalance);
+            log.info("[BotManagerService] Bot2 잔고 설정 완료: SOL={}", hugeBalance);
+            
+            log.info("[BotManagerService] 봇 잔고 설정 완료");
+        } catch (Exception e) {
+            log.error("[BotManagerService] 봇 잔고 설정 실패", e);
+            // 봇 잔고 설정 실패해도 서버는 계속 실행 (경고만)
+        }
     }
     
     /**
