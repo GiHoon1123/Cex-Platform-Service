@@ -1,9 +1,16 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '4.0.1'
-	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.springframework.boot' version '3.2.5'
+	id 'io.spring.dependency-management' version '1.1.4'
 	id 'me.champeau.jmh' version '0.7.2'
-	id 'com.google.protobuf' version '0.9.4'
+	id 'com.google.protobuf' version '0.9.3'
+}
+
+// Spring Boot 의존성 관리 명시적 설정
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.boot:spring-boot-dependencies:3.2.5"
+	}
 }
 
 group = 'dustin'
@@ -27,7 +34,7 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.postgresql:postgresql'
@@ -37,9 +44,9 @@ dependencies {
 	implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
 	implementation 'de.mkammerer:argon2-jvm:2.11'
 	
-	// SpringDoc OpenAPI (Swagger) - Spring Boot 4.0.1 호환 버전
-	// Spring Boot 4.0.1은 Spring Framework 7.0 사용, 최신 SpringDoc 필요
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.0'
+	// SpringDoc OpenAPI (Swagger) - Spring Boot 3.2.x 호환 버전
+	// Spring Boot 3.2.x는 Spring Framework 6.1.x 사용
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 	
 	// Kafka
 	implementation 'org.springframework.kafka:spring-kafka'
@@ -57,7 +64,10 @@ dependencies {
 	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.kafka:spring-kafka-test'
+	testImplementation 'com.h2database:h2'
+	testImplementation 'org.awaitility:awaitility:4.2.0'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	
 	// JMH for benchmarking
@@ -120,8 +130,13 @@ protobuf {
 		}
 	}
 	generateProtoTasks {
-		all()*.plugins {
-			grpc {}
+		all().configureEach { task ->
+			task.builtins {
+				java {}
+			}
+			task.plugins {
+				grpc {}
+			}
 		}
 	}
 }

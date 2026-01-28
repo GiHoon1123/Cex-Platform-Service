@@ -2,7 +2,10 @@ package dustin.cex.domains.order.model.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
@@ -29,6 +32,9 @@ import java.math.BigDecimal;
  *   → orderType='sell', orderSide='market', amount=1.0
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "주문 생성 요청")
 public class CreateOrderRequest {
     

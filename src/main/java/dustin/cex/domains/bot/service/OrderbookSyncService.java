@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import dustin.cex.domains.bot.model.BinanceOrderbookEntry;
 import dustin.cex.domains.bot.model.BinanceOrderbookUpdate;
@@ -46,6 +48,13 @@ public class OrderbookSyncService {
     private final BotManagerService botManagerService;
     private final BotService botService;
     private final BinanceWebSocketClient binanceWebSocketClient;
+    private final PlatformTransactionManager transactionManager;
+    
+    /**
+     * 트랜잭션 템플릿 (비동기 스레드에서 트랜잭션 사용)
+     * Transaction Template for async threads
+     */
+    private TransactionTemplate transactionTemplate;
     
     /**
      * 봇 1 (매수)의 활성 주문 추적
@@ -69,6 +78,9 @@ public class OrderbookSyncService {
      */
     @PostConstruct
     public void start() {
+        // TransactionTemplate 초기화
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        
         // log.info("[OrderbookSyncService] 오더북 동기화 시작...");
         // log.info("  - 바이낸스 WebSocket URL: {}", botConfig.getBinanceWsUrl());
         // log.info("  - 오더북 깊이: {}", botConfig.getOrderbookDepth());
@@ -168,25 +180,32 @@ public class OrderbookSyncService {
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // Bot 1 (매수): 바이낸스 매수 호가와 동일한 지정가 매수 주문
             // WebSocket 스레드에서 트랜잭션 사용 시 문제 발생하므로 비동기로 실행
+            // TransactionTemplate을 사용하여 각 주문 생성 작업을 트랜잭션으로 감싸기
             if (bot1UserId != null) {
                 final Long finalBot1UserId = bot1UserId;
                 final List<BinanceOrderbookEntry> finalTopBids = new ArrayList<>(topBids);
                 final BigDecimal finalOrderQuantity = orderQuantity;
+                final TransactionTemplate txTemplate = transactionTemplate;
                 
                 CompletableFuture.runAsync(() -> {
                     for (BinanceOrderbookEntry bid : finalTopBids) {
                         try {
-                            OrderResponse response = botService.createLimitBuyOrder(
-                                    finalBot1UserId,
-                                    "SOL",
-                                    bid.getPrice(),
-                                    finalOrderQuantity
-                            );
+                            // TransactionTemplate을 사용하여 트랜잭션 컨텍스트 내에서 실행
+                            OrderResponse response = txTemplate.execute(status -> {
+                                return botService.createLimitBuyOrder(
+                                        finalBot1UserId,
+                                        "SOL",
+                                        bid.getPrice(),
+                                        finalOrderQuantity
+                                );
+                            });
                             
-                            // 주문 맵에 추가 (동기화 필요)
-                            synchronized (bot1Orders) {
-                                String priceKey = bid.getPrice().toString();
-                                bot1Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
+                            if (response != null) {
+                                // 주문 맵에 추가 (동기화 필요)
+                                synchronized (bot1Orders) {
+                                    String priceKey = bid.getPrice().toString();
+                                    bot1Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
+                                }
                             }
                         } catch (Exception e) {
                             // 주문 생성 실패 (잔고 부족 등) - 에러만 로그
@@ -199,25 +218,32 @@ public class OrderbookSyncService {
             
             // Bot 2 (매도): 바이낸스 매도 호가와 동일한 지정가 매도 주문
             // WebSocket 스레드에서 트랜잭션 사용 시 문제 발생하므로 비동기로 실행
+            // TransactionTemplate을 사용하여 각 주문 생성 작업을 트랜잭션으로 감싸기
             if (bot2UserId != null) {
                 final Long finalBot2UserId = bot2UserId;
                 final List<BinanceOrderbookEntry> finalTopAsks = new ArrayList<>(topAsks);
                 final BigDecimal finalOrderQuantity = orderQuantity;
+                final TransactionTemplate txTemplate = transactionTemplate;
                 
                 CompletableFuture.runAsync(() -> {
                     for (BinanceOrderbookEntry ask : finalTopAsks) {
                         try {
-                            OrderResponse response = botService.createLimitSellOrder(
-                                    finalBot2UserId,
-                                    "SOL",
-                                    ask.getPrice(),
-                                    finalOrderQuantity
-                            );
+                            // TransactionTemplate을 사용하여 트랜잭션 컨텍스트 내에서 실행
+                            OrderResponse response = txTemplate.execute(status -> {
+                                return botService.createLimitSellOrder(
+                                        finalBot2UserId,
+                                        "SOL",
+                                        ask.getPrice(),
+                                        finalOrderQuantity
+                                );
+                            });
                             
-                            // 주문 맵에 추가 (동기화 필요)
-                            synchronized (bot2Orders) {
-                                String priceKey = ask.getPrice().toString();
-                                bot2Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
+                            if (response != null) {
+                                // 주문 맵에 추가 (동기화 필요)
+                                synchronized (bot2Orders) {
+                                    String priceKey = ask.getPrice().toString();
+                                    bot2Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
+                                }
                             }
                         } catch (Exception e) {
                             // 주문 생성 실패 (잔고 부족 등) - 에러만 로그

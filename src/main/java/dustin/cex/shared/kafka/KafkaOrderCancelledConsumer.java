@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dustin.cex.domains.order.repository.OrderRepository;
@@ -61,7 +62,7 @@ public class KafkaOrderCancelledConsumer {
      * @param message Kafka 메시지 (JSON 문자열)
      */
     @KafkaListener(
-            topicPattern = "order-cancelled-*",
+            topicPattern = "order-cancelled*",
             groupId = "cex-consumer-group"
     )
     @Transactional
@@ -69,15 +70,43 @@ public class KafkaOrderCancelledConsumer {
         try {
             // log.info("[KafkaOrderCancelledConsumer] 주문 취소 이벤트 수신: {}", message);
             
-            // 1. JSON 파싱
-            OrderCancelledEvent event = objectMapper.readValue(message, OrderCancelledEvent.class);
-            // log.debug("[KafkaOrderCancelledConsumer] 이벤트 파싱 완료: orderId={}, userId={}", 
-            //         event.getOrderId(), event.getUserId());
+            // 1. JSON 파싱 (두 가지 형식 지원)
+            // 형식 1: OrderCancelledEvent (Rust 엔진에서 발행)
+            // 형식 2: Order 엔티티 전체 JSON (Java에서 발행, 로깅용)
+            Long orderId = null;
+            
+            try {
+                // 먼저 OrderCancelledEvent 형식으로 파싱 시도
+                OrderCancelledEvent event = objectMapper.readValue(message, OrderCancelledEvent.class);
+                orderId = event.getOrderId();
+            } catch (Exception e) {
+                // OrderCancelledEvent 형식이 아니면 Order 엔티티 형식으로 파싱 시도
+                try {
+                    com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(message);
+                    // Order 엔티티에는 "id" 필드가 있음
+                    if (jsonNode.has("id")) {
+                        orderId = jsonNode.get("id").asLong();
+                    } else if (jsonNode.has("orderId")) {
+                        orderId = jsonNode.get("orderId").asLong();
+                    } else {
+                        log.warn("[KafkaOrderCancelledConsumer] 주문 ID를 찾을 수 없음: {}", message);
+                        return;
+                    }
+                } catch (Exception e2) {
+                    log.error("[KafkaOrderCancelledConsumer] JSON 파싱 실패: {}", message, e2);
+                    return;
+                }
+            }
+            
+            if (orderId == null) {
+                log.warn("[KafkaOrderCancelledConsumer] 주문 ID가 null입니다: {}", message);
+                return;
+            }
             
             // 2. DB에서 주문 조회
-            var orderOpt = orderRepository.findById(event.getOrderId());
+            var orderOpt = orderRepository.findById(orderId);
             if (orderOpt.isEmpty()) {
-                log.warn("[KafkaOrderCancelledConsumer] 주문을 찾을 수 없음: orderId={}", event.getOrderId());
+                log.warn("[KafkaOrderCancelledConsumer] 주문을 찾을 수 없음: orderId={}", orderId);
                 return;
             }
             
@@ -85,7 +114,7 @@ public class KafkaOrderCancelledConsumer {
             
             // 3. 이미 취소된 주문인지 확인
             if ("cancelled".equals(order.getStatus())) {
-                // log.info("[KafkaOrderCancelledConsumer] 주문이 이미 취소됨: orderId={}", event.getOrderId());
+                // log.info("[KafkaOrderCancelledConsumer] 주문이 이미 취소됨: orderId={}", orderId);
                 return;
             }
             
@@ -93,8 +122,7 @@ public class KafkaOrderCancelledConsumer {
             order.setStatus("cancelled");
             orderRepository.save(order);
             
-            // log.info("[KafkaOrderCancelledConsumer] 주문 취소 처리 완료: orderId={}, userId={}", 
-            //         event.getOrderId(), event.getUserId());
+            // log.info("[KafkaOrderCancelledConsumer] 주문 취소 처리 완료: orderId={}", orderId);
             
         } catch (Exception e) {
             log.error("[KafkaOrderCancelledConsumer] 주문 취소 이벤트 처리 실패: {}", message, e);
