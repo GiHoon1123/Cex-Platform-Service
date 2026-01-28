@@ -104,6 +104,10 @@ public class KafkaConfig {
         // 동시성 설정 (여러 스레드에서 메시지 처리)
         factory.setConcurrency(1); // 기본값: 1 (필요시 증가 가능)
         
+        // 수동 커밋 모드: @Transactional과 함께 사용 시 트랜잭션 커밋 시 자동으로 offset 커밋
+        // BATCH 모드: 트랜잭션이 성공적으로 커밋되면 배치의 모든 offset이 자동으로 커밋됨
+        factory.getContainerProperties().setAckMode(org.springframework.kafka.listener.ContainerProperties.AckMode.BATCH);
+        
         return factory;
     }
 }

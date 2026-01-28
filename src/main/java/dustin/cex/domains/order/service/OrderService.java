@@ -116,21 +116,41 @@ public class OrderService {
         validateOrderRequest(request);
         
         // ============================================
-        // 2. DB에 주문 저장 (트랜잭션 내)
+        // 2. DB에 주문 저장 (트랜잭션 내, 명시적 커밋)
         // ============================================
-        Order savedOrder = saveOrderInTransaction(userId, request);
+        // TransactionTemplate을 사용하여 트랜잭션을 명시적으로 커밋
+        // 이렇게 하면 Rust 엔진에 제출하기 전에 주문이 DB에 확실히 저장됨
+        Order savedOrder = transactionTemplate.execute(status -> {
+            Order order = buildOrderEntity(userId, request);
+            Order saved = orderRepository.save(order);
+            return saved;
+        });
+        
+        // 트랜잭션이 커밋되었는지 확인 (주문이 DB에 저장되었는지)
+        if (savedOrder == null || savedOrder.getId() == null) {
+            throw new RuntimeException("주문 저장 실패");
+        }
+        
+        // 트랜잭션 커밋 후 DB에서 실제로 조회하여 확인
+        // 이렇게 하면 트랜잭션이 완전히 커밋되었는지 확인 가능
+        Order verifiedOrder = orderRepository.findById(savedOrder.getId())
+                .orElseThrow(() -> new RuntimeException("주문이 DB에 저장되지 않았습니다: orderId=" + savedOrder.getId()));
+        
+        // 저장된 주문 ID를 사용 (DB에서 조회한 주문 ID)
+        Long orderId = verifiedOrder.getId();
         
         // ============================================
-        // 3. Rust 엔진에 주문 제출 (트랜잭션 밖, gRPC 호출)
+        // 3. Rust 엔진에 주문 제출 (트랜잭션 커밋 후, HTTP 호출)
         // ============================================
         try {
-            String priceStr = savedOrder.getPrice() != null ? savedOrder.getPrice().toString() : null;
-            String amountStr = savedOrder.getAmount().toString();
+            String priceStr = verifiedOrder.getPrice() != null ? verifiedOrder.getPrice().toString() : null;
+            String amountStr = verifiedOrder.getAmount().toString();
             String quoteAmountStr = request.getQuoteAmount() != null ? request.getQuoteAmount().toString() : null;
             String quoteMint = request.getQuoteMint() != null ? request.getQuoteMint() : "USDT";
             
+            // DB에 저장된 주문 ID를 Rust 엔진에 전달
             boolean success = engineHttpClient.submitOrder(
-                    savedOrder.getId(),
+                    orderId,
                     userId,
                     request.getOrderType(),
                     request.getOrderSide(),
@@ -143,25 +163,22 @@ public class OrderService {
             
             if (!success) {
                 // 엔진이 주문을 거부한 경우 (잔고 부족 등)
-                log.error("[OrderService] 엔진이 주문을 거부: orderId={}", savedOrder.getId());
-                updateOrderStatusRejected(savedOrder.getId(), "엔진이 주문을 거부했습니다");
+                updateOrderStatusRejected(orderId, "엔진이 주문을 거부했습니다");
                 throw new RuntimeException("엔진이 주문을 거부했습니다");
             }
             
             // 성공 시: 주문은 "pending" 상태 유지 (엔진이 처리 중)
             
         } catch (RuntimeException e) {
-            // gRPC 통신 실패 또는 엔진 거부
+            // HTTP 통신 실패 또는 엔진 거부
             if (!"엔진이 주문을 거부했습니다".equals(e.getMessage())) {
                 // 통신 실패인 경우에만 rejected 상태로 업데이트
-                log.error("[OrderService] 엔진 통신 실패: orderId={}, error={}", savedOrder.getId(), e.getMessage());
-                updateOrderStatusRejected(savedOrder.getId(), "엔진 통신 실패: " + e.getMessage());
+                updateOrderStatusRejected(orderId, "엔진 통신 실패: " + e.getMessage());
             }
             throw e;
         } catch (Exception e) {
             // 예상치 못한 예외
-            log.error("[OrderService] 엔진 통신 중 예외 발생: orderId={}, error={}", savedOrder.getId(), e.getMessage());
-            updateOrderStatusRejected(savedOrder.getId(), "엔진 통신 실패: " + e.getMessage());
+            updateOrderStatusRejected(orderId, "엔진 통신 실패: " + e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         }
         
@@ -169,17 +186,22 @@ public class OrderService {
         // 4. Kafka 이벤트 발행 (비동기, 로깅용)
         // ============================================
         try {
-            String orderJson = objectMapper.writeValueAsString(savedOrder);
+            // 최신 주문 정보 조회
+            Order latestOrder = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
+            String orderJson = objectMapper.writeValueAsString(latestOrder);
             kafkaEventProducer.publishOrderCreated(orderJson);
         } catch (Exception e) {
-            log.error("[OrderService] Kafka 이벤트 발행 실패: orderId={}, error={}", 
-                     savedOrder.getId(), e.getMessage());
+            // Kafka 이벤트 발행 실패는 무시
         }
         
         // ============================================
         // 5. 주문 정보 반환
         // ============================================
-        OrderResponse.OrderDto orderDto = convertToDto(savedOrder);
+        // 최신 주문 정보 조회하여 반환
+        Order finalOrder = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
+        OrderResponse.OrderDto orderDto = convertToDto(finalOrder);
         return OrderResponse.builder()
                 .order(orderDto)
                 .message("Order created successfully")
@@ -221,11 +243,8 @@ public class OrderService {
             
             order.setStatus("rejected");
             orderRepository.save(order);
-            
-            log.error("[OrderService] 주문 거부 처리 완료: orderId={}, reason={}", orderId, reason);
         } catch (Exception e) {
-            log.error("[OrderService] 주문 거부 상태 업데이트 실패: orderId={}, error={}", orderId, e.getMessage());
-            // 보상 트랜잭션 실패는 로그만 남기고 예외를 던지지 않음 (이미 gRPC 실패 예외가 있음)
+            // 보상 트랜잭션 실패는 무시 (이미 gRPC 실패 예외가 있음)
         }
     }
     
@@ -452,7 +471,6 @@ public class OrderService {
             boolean success = engineHttpClient.cancelOrder(orderId, userId, tradingPair);
             
             if (!success) {
-                log.error("[OrderService] 엔진이 주문 취소를 거부: orderId={}", orderId);
                 throw new RuntimeException("엔진이 주문 취소를 거부했습니다");
             }
             
@@ -460,10 +478,8 @@ public class OrderService {
             updateOrderStatusCancelled(orderId);
             
         } catch (RuntimeException e) {
-            log.error("[OrderService] 엔진 취소 요청 실패: orderId={}, error={}", orderId, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("[OrderService] 엔진 취소 요청 중 예외 발생: orderId={}, error={}", orderId, e.getMessage());
             throw new RuntimeException("엔진 취소 요청 실패: " + e.getMessage(), e);
         }
         
@@ -478,8 +494,7 @@ public class OrderService {
             String orderJson = objectMapper.writeValueAsString(cancelledOrder);
             kafkaEventProducer.publishOrderCancelled(orderJson);
         } catch (Exception e) {
-            log.error("[OrderService] Kafka 이벤트 발행 실패: orderId={}, error={}", 
-                     orderId, e.getMessage());
+            // Kafka 이벤트 발행 실패는 무시
         }
         
         // ============================================
@@ -536,7 +551,6 @@ public class OrderService {
             order.setStatus("cancelled");
             orderRepository.save(order);
         } catch (Exception e) {
-            log.error("[OrderService] 주문 취소 상태 업데이트 실패: orderId={}, error={}", orderId, e.getMessage());
             throw new RuntimeException("주문 취소 상태 업데이트 실패", e);
         }
     }

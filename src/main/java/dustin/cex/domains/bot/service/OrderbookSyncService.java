@@ -26,18 +26,21 @@ import lombok.extern.slf4j.Slf4j;
  * 
  * 역할:
  * - 바이낸스 오더북을 실시간으로 수신
- * - 기존 봇 주문 모두 취소
+ * - 변경된 호가만 업데이트 (취소/생성)
  * - 새로운 봇 주문 생성 (바이낸스와 동일한 지정가 주문)
  * 
  * 처리 흐름:
  * 1. 바이낸스 오더북 업데이트 수신
- * 2. 기존 봇 주문 모두 취소
- * 3. 새로운 봇 주문 생성 (상위 N개만)
+ * 2. 기존 주문과 새 호가 비교:
+ *    - 가격이 같은 주문 → 유지
+ *    - 가격이 다른 주문 → 취소 후 새로 생성
+ *    - 새로운 가격 → 새로 생성
+ *    - 사라진 가격 → 취소
  * 
  * 주의사항:
  * - bot1은 매수 전용, bot2는 매도 전용
  * - 바이낸스 오더북의 각 호가에 대해 고정 수량으로 주문 생성
- * - 오더북 업데이트마다 기존 주문을 모두 취소하고 새로 생성
+ * - 변경된 호가만 업데이트하여 불필요한 취소 이벤트 최소화
  */
 @Slf4j
 @Service
@@ -111,8 +114,11 @@ public class OrderbookSyncService {
      * 
      * 처리 과정:
      * 1. 바이낸스 오더북 파싱
-     * 2. 기존 봇 주문 모두 취소
-     * 3. 새로운 봇 주문 생성 (상위 N개만)
+     * 2. 기존 주문과 새 호가 비교하여 변경된 것만 업데이트:
+     *    - 가격이 같은 주문 → 유지
+     *    - 가격이 다른 주문 → 취소 후 새로 생성
+     *    - 새로운 가격 → 새로 생성
+     *    - 사라진 가격 → 취소
      * 
      * @param update 바이낸스 오더북 업데이트
      */
@@ -139,126 +145,126 @@ public class OrderbookSyncService {
                 topAsks = asks.stream().limit(depth).toList();
             }
             
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // 2. 기존 봇 주문 모두 취소
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             Long bot1UserId = botManagerService.getBot1UserId();
             Long bot2UserId = botManagerService.getBot2UserId();
             
-            // Bot 1 (매수) 주문 취소
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // 2. Bot 1 (매수) 주문 업데이트: 변경된 호가만 처리
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             if (bot1UserId != null) {
-                List<Long> bot1OrderIds = new java.util.ArrayList<>(bot1Orders.values());
-                for (Long orderId : bot1OrderIds) {
-                    try {
-                        botService.cancelBotOrder(bot1UserId, orderId);
-                    } catch (Exception e) {
-                        // 주문이 이미 체결되었거나 취소되었을 수 있으므로 에러는 무시
-                        // log.debug("[OrderbookSyncService] Bot1 주문 취소 실패 (무시): orderId={}, error={}", 
-                        //          orderId, e.getMessage());
-                    }
-                }
-                bot1Orders.clear();
-            }
-            
-            // Bot 2 (매도) 주문 취소
-            if (bot2UserId != null) {
-                List<Long> bot2OrderIds = new java.util.ArrayList<>(bot2Orders.values());
-                for (Long orderId : bot2OrderIds) {
-                    try {
-                        botService.cancelBotOrder(bot2UserId, orderId);
-                    } catch (Exception e) {
-                        // 주문이 이미 체결되었거나 취소되었을 수 있으므로 에러는 무시
-                        // log.debug("[OrderbookSyncService] Bot2 주문 취소 실패 (무시): orderId={}, error={}", 
-                        //          orderId, e.getMessage());
-                    }
-                }
-                bot2Orders.clear();
+                updateBotOrders(bot1UserId, bot1Orders, topBids, orderQuantity, true);
             }
             
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // 3. 새로운 봇 주문 생성
+            // 3. Bot 2 (매도) 주문 업데이트: 변경된 호가만 처리
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // Bot 1 (매수): 바이낸스 매수 호가와 동일한 지정가 매수 주문
-            // WebSocket 스레드에서 트랜잭션 사용 시 문제 발생하므로 비동기로 실행
-            // TransactionTemplate을 사용하여 각 주문 생성 작업을 트랜잭션으로 감싸기
-            if (bot1UserId != null) {
-                final Long finalBot1UserId = bot1UserId;
-                final List<BinanceOrderbookEntry> finalTopBids = new ArrayList<>(topBids);
-                final BigDecimal finalOrderQuantity = orderQuantity;
-                final TransactionTemplate txTemplate = transactionTemplate;
-                
-                CompletableFuture.runAsync(() -> {
-                    for (BinanceOrderbookEntry bid : finalTopBids) {
-                        try {
-                            // TransactionTemplate을 사용하여 트랜잭션 컨텍스트 내에서 실행
-                            OrderResponse response = txTemplate.execute(status -> {
-                                return botService.createLimitBuyOrder(
-                                        finalBot1UserId,
-                                        "SOL",
-                                        bid.getPrice(),
-                                        finalOrderQuantity
-                                );
-                            });
-                            
-                            if (response != null) {
-                                // 주문 맵에 추가 (동기화 필요)
-                                synchronized (bot1Orders) {
-                                    String priceKey = bid.getPrice().toString();
-                                    bot1Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
-                                }
-                            }
-                        } catch (Exception e) {
-                            // 주문 생성 실패 (잔고 부족 등) - 에러만 로그
-                            log.error("[OrderbookSyncService] Bot1 주문 생성 실패: price={}, amount={}, error={}", 
-                                    bid.getPrice(), finalOrderQuantity, e.getMessage());
-                        }
-                    }
-                });
-            }
-            
-            // Bot 2 (매도): 바이낸스 매도 호가와 동일한 지정가 매도 주문
-            // WebSocket 스레드에서 트랜잭션 사용 시 문제 발생하므로 비동기로 실행
-            // TransactionTemplate을 사용하여 각 주문 생성 작업을 트랜잭션으로 감싸기
             if (bot2UserId != null) {
-                final Long finalBot2UserId = bot2UserId;
-                final List<BinanceOrderbookEntry> finalTopAsks = new ArrayList<>(topAsks);
-                final BigDecimal finalOrderQuantity = orderQuantity;
-                final TransactionTemplate txTemplate = transactionTemplate;
-                
-                CompletableFuture.runAsync(() -> {
-                    for (BinanceOrderbookEntry ask : finalTopAsks) {
-                        try {
-                            // TransactionTemplate을 사용하여 트랜잭션 컨텍스트 내에서 실행
-                            OrderResponse response = txTemplate.execute(status -> {
-                                return botService.createLimitSellOrder(
-                                        finalBot2UserId,
-                                        "SOL",
-                                        ask.getPrice(),
-                                        finalOrderQuantity
-                                );
-                            });
-                            
-                            if (response != null) {
-                                // 주문 맵에 추가 (동기화 필요)
-                                synchronized (bot2Orders) {
-                                    String priceKey = ask.getPrice().toString();
-                                    bot2Orders.put(priceKey, Long.parseLong(response.getOrder().getId()));
-                                }
-                            }
-                        } catch (Exception e) {
-                            // 주문 생성 실패 (잔고 부족 등) - 에러만 로그
-                            log.error("[OrderbookSyncService] Bot2 주문 생성 실패: price={}, amount={}, error={}", 
-                                    ask.getPrice(), finalOrderQuantity, e.getMessage());
-                        }
-                    }
-                });
+                updateBotOrders(bot2UserId, bot2Orders, topAsks, orderQuantity, false);
             }
-            
-            // log.debug("[OrderbookSyncService] 오더북 동기화 완료: bids={}, asks={}", 
-            //          topBids.size(), topAsks.size());
             
         } catch (Exception e) {
             log.error("[OrderbookSyncService] 오더북 업데이트 처리 실패", e);
         }
+    }
+    
+    /**
+     * 봇 주문 업데이트 (변경된 호가만 처리)
+     * Update bot orders (only changed prices)
+     * 
+     * 처리 로직:
+     * 1. 새 호가의 가격 목록 생성
+     * 2. 기존 주문과 비교:
+     *    - 새 호가에 없는 가격 → 취소
+     *    - 새 호가에 있는 가격 → 유지 (이미 주문이 있으면) 또는 생성 (없으면)
+     * 
+     * @param botUserId 봇 사용자 ID
+     * @param existingOrders 기존 주문 맵 (가격 -> 주문 ID)
+     * @param newEntries 새로운 호가 목록
+     * @param orderQuantity 주문 수량
+     * @param isBuy 매수 여부 (true: 매수, false: 매도)
+     */
+    private void updateBotOrders(Long botUserId, Map<String, Long> existingOrders, 
+                                 List<BinanceOrderbookEntry> newEntries, 
+                                 BigDecimal orderQuantity, boolean isBuy) {
+        // 새 호가의 가격 목록 생성
+        Map<String, BinanceOrderbookEntry> newPrices = new HashMap<>();
+        for (BinanceOrderbookEntry entry : newEntries) {
+            String priceKey = entry.getPrice().toString();
+            newPrices.put(priceKey, entry);
+        }
+        
+        // 기존 주문 맵 복사 (동시성 문제 방지)
+        Map<String, Long> existingOrdersCopy;
+        synchronized (existingOrders) {
+            existingOrdersCopy = new HashMap<>(existingOrders);
+        }
+        
+        final Long finalBotUserId = botUserId;
+        final BigDecimal finalOrderQuantity = orderQuantity;
+        final TransactionTemplate txTemplate = transactionTemplate;
+        
+        // 비동기로 처리
+        CompletableFuture.runAsync(() -> {
+            // 1. 사라진 가격의 주문 취소
+            for (Map.Entry<String, Long> existingEntry : existingOrdersCopy.entrySet()) {
+                String priceKey = existingEntry.getKey();
+                Long orderId = existingEntry.getValue();
+                
+                // 새 호가에 없는 가격이면 취소
+                if (!newPrices.containsKey(priceKey)) {
+                    try {
+                        botService.cancelBotOrder(finalBotUserId, orderId);
+                        synchronized (existingOrders) {
+                            existingOrders.remove(priceKey);
+                        }
+                    } catch (Exception e) {
+                        // 주문이 이미 체결되었거나 취소되었을 수 있으므로 에러는 무시
+                    }
+                }
+            }
+            
+            // 2. 새로운 호가에 대해 주문 생성 또는 유지
+            for (BinanceOrderbookEntry entry : newEntries) {
+                String priceKey = entry.getPrice().toString();
+                
+                // 이미 주문이 있으면 유지 (아무것도 안 함)
+                synchronized (existingOrders) {
+                    if (existingOrders.containsKey(priceKey)) {
+                        continue; // 이미 주문이 있으므로 유지
+                    }
+                }
+                
+                // 주문이 없으면 새로 생성
+                try {
+                    OrderResponse response = txTemplate.execute(status -> {
+                        if (isBuy) {
+                            return botService.createLimitBuyOrder(
+                                    finalBotUserId,
+                                    "SOL",
+                                    entry.getPrice(),
+                                    finalOrderQuantity
+                            );
+                        } else {
+                            return botService.createLimitSellOrder(
+                                    finalBotUserId,
+                                    "SOL",
+                                    entry.getPrice(),
+                                    finalOrderQuantity
+                            );
+                        }
+                    });
+                    
+                    if (response != null) {
+                        synchronized (existingOrders) {
+                            existingOrders.put(priceKey, Long.parseLong(response.getOrder().getId()));
+                        }
+                    }
+                } catch (Exception e) {
+                    // 주문 생성 실패 (잔고 부족 등) - 에러만 로그
+                    log.error("[OrderbookSyncService] {} 주문 생성 실패: price={}, amount={}, error={}", 
+                            isBuy ? "Bot1" : "Bot2", entry.getPrice(), finalOrderQuantity, e.getMessage());
+                }
+            }
+        });
     }
 }

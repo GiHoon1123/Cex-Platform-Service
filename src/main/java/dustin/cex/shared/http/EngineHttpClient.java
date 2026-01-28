@@ -99,9 +99,9 @@ public class EngineHttpClient {
             String quoteAmount
     ) {
         try {
-            // 요청 본문 생성
+            // 요청 본문 생성 (Java에서 생성한 주문 ID 포함)
             String requestBody = buildSubmitOrderRequest(
-                    userId, orderType, orderSide, baseMint, quoteMint, price, amount, quoteAmount
+                    orderId, userId, orderType, orderSide, baseMint, quoteMint, price, amount, quoteAmount
             );
             
             // HTTP 헤더 설정
@@ -121,19 +121,14 @@ public class EngineHttpClient {
             
             // 응답 확인
             if (response.getStatusCode().is2xxSuccessful()) {
-                // log.debug("[EngineHttpClient] 주문 제출 성공: orderId={}", orderId);
                 return true;
             } else {
-                log.error("[EngineHttpClient] 주문 제출 실패: orderId={}, status={}", 
-                        orderId, response.getStatusCode());
                 throw new RuntimeException("엔진 주문 제출 실패: " + response.getStatusCode());
             }
             
         } catch (RestClientException e) {
-            log.error("[EngineHttpClient] 주문 제출 실패: orderId={}, error={}", orderId, e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("[EngineHttpClient] 주문 제출 중 예외 발생: orderId={}, error={}", orderId, e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         }
     }
@@ -169,19 +164,14 @@ public class EngineHttpClient {
             
             // 응답 확인
             if (response.getStatusCode().is2xxSuccessful()) {
-                // log.debug("[EngineHttpClient] 주문 취소 성공: orderId={}", orderId);
                 return true;
             } else {
-                log.error("[EngineHttpClient] 주문 취소 실패: orderId={}, status={}", 
-                        orderId, response.getStatusCode());
                 throw new RuntimeException("엔진 주문 취소 실패: " + response.getStatusCode());
             }
             
         } catch (RestClientException e) {
-            log.error("[EngineHttpClient] 주문 취소 실패: orderId={}, error={}", orderId, e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("[EngineHttpClient] 주문 취소 중 예외 발생: orderId={}, error={}", orderId, e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         }
     }
@@ -220,22 +210,14 @@ public class EngineHttpClient {
             
             // 응답 확인
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.debug("[EngineHttpClient] 잔고 동기화 성공: userId={}, mint={}, delta={}", 
-                        userId, mint, availableDelta);
                 return true;
             } else {
-                log.error("[EngineHttpClient] 잔고 동기화 실패: userId={}, mint={}, delta={}, status={}", 
-                        userId, mint, availableDelta, response.getStatusCode());
                 throw new RuntimeException("엔진 잔고 동기화 실패: " + response.getStatusCode());
             }
             
         } catch (RestClientException e) {
-            log.error("[EngineHttpClient] 잔고 동기화 실패: userId={}, mint={}, delta={}, error={}", 
-                    userId, mint, availableDelta, e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("[EngineHttpClient] 잔고 동기화 중 예외 발생: userId={}, mint={}, delta={}, error={}", 
-                    userId, mint, availableDelta, e.getMessage());
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         }
     }
@@ -261,8 +243,12 @@ public class EngineHttpClient {
     /**
      * 주문 제출 요청 본문 생성
      * Build submit order request body
+     * 
+     * Java 서버에서 생성한 주문 ID를 Rust 엔진에 전달하여,
+     * 엔진이 체결 이벤트를 발행할 때 이 주문 ID를 사용하도록 합니다.
      */
     private String buildSubmitOrderRequest(
+            Long orderId,
             Long userId,
             String orderType,
             String orderSide,
@@ -273,8 +259,9 @@ public class EngineHttpClient {
             String quoteAmount
     ) {
         try {
-            // JSON 객체 생성
+            // JSON 객체 생성 (Java에서 생성한 주문 ID 포함)
             JsonNode requestNode = objectMapper.createObjectNode()
+                    .put("order_id", orderId)  // Java에서 생성한 주문 ID 전달
                     .put("user_id", userId)
                     .put("order_type", orderType)
                     .put("order_side", orderSide)

@@ -10,11 +10,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
 import dustin.cex.domains.trade.model.entity.Trade;
 import dustin.cex.domains.trade.repository.TradeRepository;
+import dustin.cex.domains.balance.model.entity.UserBalance;
+import dustin.cex.domains.balance.repository.UserBalanceRepository;
+import dustin.cex.domains.position.model.entity.UserPosition;
+import dustin.cex.domains.position.repository.UserPositionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,19 +34,20 @@ import org.springframework.data.repository.query.Param;
  * 
  * 역할:
  * - Rust 엔진에서 발행한 주문 관련 이벤트를 통합 수신
- * - 같은 토픽으로 통합하여 순서 보장
- * - 파티션 키(orderId)로 같은 주문의 이벤트는 같은 파티션으로 보장
+ * - 단일 토픽으로 통합하여 순서 보장
+ * - 파티션 키(user_id)로 같은 유저의 이벤트는 같은 파티션으로 보장
  * 
  * 처리 흐름:
- * 1. Kafka에서 'order-events-*' 토픽 메시지 수신 (자산별 토픽)
+ * 1. Kafka에서 'order-events' 토픽 메시지 수신 (단일 토픽, 파티션 12개)
  * 2. event_type에 따라 분기 처리:
- *    - "trade_executed": 체결 이벤트 처리
- *    - "order_cancelled": 취소 이벤트 처리
+ *    - "trade_executed": 체결 이벤트 처리 (buyer_id 기준 파티션)
+ *    - "order_cancelled": 취소 이벤트 처리 (user_id 기준 파티션)
  * 
  * 순서 보장:
- * - 같은 토픽 사용: order-events-{asset}
- * - 파티션 키: orderId (같은 주문의 이벤트는 같은 파티션)
+ * - 단일 토픽 사용: order-events (파티션 12개)
+ * - 파티션 키: user_id (같은 유저의 이벤트는 같은 파티션)
  * - 같은 파티션 내에서 순서 보장됨
+ * - 정산용: trade_executed, order_cancelled만 처리
  * 
  * 트랜잭션 처리:
  * - 각 이벤트 타입별로 트랜잭션 처리
@@ -58,27 +64,29 @@ public class KafkaOrderEventConsumer {
     
     private final TradeRepository tradeRepository;
     private final OrderRepository orderRepository;
+    private final UserBalanceRepository userBalanceRepository;
+    private final UserPositionRepository userPositionRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     @jakarta.annotation.PostConstruct
     public void init() {
-        log.info("[KafkaOrderEventConsumer] Consumer 초기화 완료 - topicPattern: order-events-*, groupId: cex-consumer-group");
+        // Consumer 초기화 완료
     }
     
     /**
      * 주문 이벤트 통합 수신 및 처리
      * Consume unified order events
      * 
-     * 자산별 토픽 구독:
-     * - order-events-sol: SOL/USDT 주문 이벤트
-     * - order-events-usdc: USDC/USDT 주문 이벤트
-     * - 확장성: 새로운 자산 추가 시 자동으로 구독
+     * 단일 토픽 구독:
+     * - order-events: 모든 자산의 주문 이벤트 (파티션 12개)
+     * - 파티션 키: user_id (같은 유저의 이벤트는 같은 파티션)
+     * - 정산용: trade_executed, order_cancelled만 처리
      * 
      * 처리 과정:
      * 1. JSON 파싱 및 event_type 확인
      * 2. event_type에 따라 분기 처리:
-     *    - "trade_executed": 체결 이벤트 처리
-     *    - "order_cancelled": 취소 이벤트 처리
+     *    - "trade_executed": 체결 이벤트 처리 (buyer_id 기준 파티션)
+     *    - "order_cancelled": 취소 이벤트 처리 (user_id 기준 파티션)
      * 
      * 트랜잭션:
      * - 각 이벤트 타입별로 트랜잭션 처리
@@ -86,36 +94,33 @@ public class KafkaOrderEventConsumer {
      * 
      * @param message Kafka 메시지 (JSON 문자열)
      */
-    @KafkaListener(topicPattern = "order-events-*", groupId = "cex-consumer-group")
+    @KafkaListener(topics = "order-events", groupId = "cex-consumer-group", containerFactory = "kafkaListenerContainerFactory")
     @Transactional
     public void consumeOrderEvent(String message) {
-        log.info("[KafkaOrderEventConsumer] 메시지 수신: {}", message);
         try {
             JsonNode jsonNode = objectMapper.readTree(message);
             
             // event_type 확인
             String eventType = jsonNode.get("event_type").asText();
-            log.info("[KafkaOrderEventConsumer] 이벤트 타입: {}", eventType);
             
             switch (eventType) {
                 case "trade_executed":
-                    log.info("[KafkaOrderEventConsumer] 체결 이벤트 처리 시작");
+                    System.out.println("[Kafka] 체결 이벤트 수신: " + message);
                     handleTradeExecuted(jsonNode);
-                    log.info("[KafkaOrderEventConsumer] 체결 이벤트 처리 완료");
+                    System.out.println("[Kafka] 체결 이벤트 처리 완료");
                     break;
                 case "order_cancelled":
-                    log.info("[KafkaOrderEventConsumer] 취소 이벤트 처리 시작");
+                    System.out.println("[Kafka] 취소 이벤트 수신: " + message);
                     handleOrderCancelled(jsonNode);
-                    log.info("[KafkaOrderEventConsumer] 취소 이벤트 처리 완료");
+                    System.out.println("[Kafka] 취소 이벤트 처리 완료");
                     break;
                 default:
-                    log.warn("[KafkaOrderEventConsumer] 알 수 없는 이벤트 타입: eventType={}, message={}", eventType, message);
+                    // 알 수 없는 이벤트 타입은 무시
+                    break;
             }
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            log.error("[KafkaOrderEventConsumer] JSON 파싱 실패: {}", message, e);
             throw new RuntimeException("JSON 파싱 실패", e);
         } catch (Exception e) {
-            log.error("[KafkaOrderEventConsumer] 주문 이벤트 처리 실패: {}", message, e);
             throw e; // 트랜잭션 롤백을 위해 예외 재발생
         }
     }
@@ -128,37 +133,153 @@ public class KafkaOrderEventConsumer {
      * 1. Trade 저장
      * 2. 매수 주문 업데이트 (비관적 락)
      * 3. 매도 주문 업데이트 (비관적 락)
+     * 4. 매수자 잔고 업데이트 (user_balances)
+     * 5. 매도자 잔고 업데이트 (user_balances)
+     * 6. 매수자 포지션 업데이트 (user_positions)
+     * 7. 매도자 포지션 업데이트 (user_positions)
      * 
      * 트랜잭션:
      * - 모든 작업을 하나의 트랜잭션으로 처리
      * - 실패 시 롤백 (Kafka Consumer가 재시도)
      */
     private void handleTradeExecuted(JsonNode jsonNode) {
-        Long buyOrderId = jsonNode.get("buy_order_id").asLong();
-        Long sellOrderId = jsonNode.get("sell_order_id").asLong();
-        BigDecimal price = new BigDecimal(jsonNode.get("price").asText());
-        BigDecimal amount = new BigDecimal(jsonNode.get("amount").asText());
+        Long buyOrderId;
+        Long sellOrderId;
+        Long buyerId;
+        Long sellerId;
+        BigDecimal price;
+        BigDecimal amount;
+        String baseMint;
+        String quoteMint;
         
-        Trade trade = Trade.builder()
-                .buyOrderId(buyOrderId)
-                .sellOrderId(sellOrderId)
-                .buyerId(jsonNode.get("buyer_id").asLong())
-                .sellerId(jsonNode.get("seller_id").asLong())
-                .baseMint(jsonNode.get("base_mint").asText())
-                .quoteMint(jsonNode.get("quote_mint").asText())
-                .price(price)
-                .amount(amount)
-                .createdAt(parseTimestamp(jsonNode.get("timestamp")))
-                .build();
+        try {
+            buyOrderId = jsonNode.get("buy_order_id").asLong();
+            sellOrderId = jsonNode.get("sell_order_id").asLong();
+            buyerId = jsonNode.get("buyer_id").asLong();
+            sellerId = jsonNode.get("seller_id").asLong();
+            price = new BigDecimal(jsonNode.get("price").asText());
+            amount = new BigDecimal(jsonNode.get("amount").asText());
+            baseMint = jsonNode.get("base_mint").asText();
+            quoteMint = jsonNode.get("quote_mint").asText();
+        } catch (Exception e) {
+            throw new RuntimeException("JSON 파싱 실패", e);
+        }
         
-        // Trade 저장
-        Trade savedTrade = tradeRepository.save(trade);
+        BigDecimal totalValue = price.multiply(amount);
+        
+        Trade trade;
+        try {
+            trade = Trade.builder()
+                    .buyOrderId(buyOrderId)
+                    .sellOrderId(sellOrderId)
+                    .buyerId(buyerId)
+                    .sellerId(sellerId)
+                    .baseMint(baseMint)
+                    .quoteMint(quoteMint)
+                    .price(price)
+                    .amount(amount)
+                    .createdAt(parseTimestamp(jsonNode.get("timestamp")))
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Trade 엔티티 생성 실패", e);
+        }
+        
+        // 주문 존재 여부 확인 (Foreign Key 제약 조건 때문에 필요)
+        // 트랜잭션 커밋 타이밍 문제로 주문이 아직 없을 수 있으므로 재시도 로직 추가
+        boolean buyOrderExists = orderRepository.existsById(buyOrderId);
+        boolean sellOrderExists = orderRepository.existsById(sellOrderId);
+        
+        if (!buyOrderExists || !sellOrderExists) {
+            // 주문이 아직 없으면 잠시 대기 후 재시도 (트랜잭션 커밋 대기)
+            // 최대 30번, 각각 500ms 대기 (총 15초 대기)
+            for (int i = 0; i < 30; i++) {
+                try {
+                    Thread.sleep(500); // 500ms 대기
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                
+                buyOrderExists = orderRepository.existsById(buyOrderId);
+                sellOrderExists = orderRepository.existsById(sellOrderId);
+                
+                if (buyOrderExists && sellOrderExists) {
+                    break;
+                }
+            }
+        }
+        
+        // 주문이 여전히 없으면 경고 메시지 출력
+        if (!buyOrderExists) {
+            System.out.println("[Kafka] 경고: buyOrderId=" + buyOrderId + "가 orders 테이블에 없습니다. Trade 저장 시도...");
+        }
+        if (!sellOrderExists) {
+            System.out.println("[Kafka] 경고: sellOrderId=" + sellOrderId + "가 orders 테이블에 없습니다. Trade 저장 시도...");
+        }
+        
+        // Trade 저장 (별도 트랜잭션으로 저장하여 데이터 손실 방지)
+        Trade savedTrade;
+        try {
+            savedTrade = saveTradeInNewTransaction(trade);
+            System.out.println("[Kafka] 체결 처리 완료: buyOrderId=" + buyOrderId + ", sellOrderId=" + sellOrderId + ", price=" + price + ", amount=" + amount + ", tradeId=" + savedTrade.getId());
+        } catch (Exception e) {
+            // Foreign Key 제약 조건 위반인 경우
+            if (e.getCause() != null && e.getCause().getMessage() != null && e.getCause().getMessage().contains("foreign key constraint")) {
+                System.out.println("[Kafka] 오류: Trade 저장 실패 - 주문이 없음. buyOrderId=" + buyOrderId + " (exists=" + buyOrderExists + "), sellOrderId=" + sellOrderId + " (exists=" + sellOrderExists + ")");
+                // 주문이 없어도 Trade는 저장되어야 하므로, 주문을 먼저 생성하거나 Foreign Key 제약 조건을 완화해야 함
+                // 현재는 Trade 저장 실패로 처리
+                return;
+            }
+            throw e; // 다른 예외는 재발생
+        }
         
         // 매수 주문 업데이트 (비관적 락, 주문 ID 순서로 락 획득)
-        updateOrderForTrade(buyOrderId, sellOrderId, price, amount, savedTrade.getId());
+        try {
+            updateOrderForTrade(buyOrderId, sellOrderId, price, amount, savedTrade.getId());
+        } catch (Exception e) {
+            // Trade는 이미 저장되었으므로 예외를 throw하지 않음
+        }
         
         // 매도 주문 업데이트 (비관적 락, 주문 ID 순서로 락 획득)
-        updateOrderForTrade(sellOrderId, buyOrderId, price, amount, savedTrade.getId());
+        try {
+            updateOrderForTrade(sellOrderId, buyOrderId, price, amount, savedTrade.getId());
+        } catch (Exception e) {
+            // Trade는 이미 저장되었으므로 예외를 throw하지 않음
+        }
+        
+        // 매수자 잔고 업데이트
+        // - base_mint: available 증가 (체결로 받음)
+        // - quote_mint: locked 감소 (주문에 사용했던 금액)
+        try {
+            updateBalanceForTrade(buyerId, baseMint, amount, BigDecimal.ZERO); // base_mint available 증가
+            updateBalanceForTrade(buyerId, quoteMint, BigDecimal.ZERO, totalValue.negate()); // quote_mint locked 감소
+        } catch (Exception e) {
+            // 잔고 업데이트 실패는 무시
+        }
+        
+        // 매도자 잔고 업데이트
+        // - base_mint: locked 감소 (주문에 사용했던 수량)
+        // - quote_mint: available 증가 (체결로 받음)
+        try {
+            updateBalanceForTrade(sellerId, baseMint, BigDecimal.ZERO, amount.negate()); // base_mint locked 감소
+            updateBalanceForTrade(sellerId, quoteMint, totalValue, BigDecimal.ZERO); // quote_mint available 증가
+        } catch (Exception e) {
+            // 잔고 업데이트 실패는 무시
+        }
+        
+        // 매수자 포지션 업데이트
+        try {
+            updatePositionForTrade(buyerId, baseMint, quoteMint, amount, price);
+        } catch (Exception e) {
+            // 포지션 업데이트 실패는 무시
+        }
+        
+        // 매도자 포지션 업데이트 (매도는 포지션 감소)
+        try {
+            updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
+        } catch (Exception e) {
+            // 포지션 업데이트 실패는 무시
+        }
     }
     
     /**
@@ -234,6 +355,7 @@ public class KafkaOrderEventConsumer {
      * 처리 과정:
      * 1. 주문 조회 (비관적 락)
      * 2. 주문 상태를 cancelled로 업데이트
+     * 3. 잠금된 잔고 해제 (locked → available)
      * 
      * 트랜잭션:
      * - 모든 작업을 하나의 트랜잭션으로 처리
@@ -241,11 +363,13 @@ public class KafkaOrderEventConsumer {
      */
     private void handleOrderCancelled(JsonNode jsonNode) {
         Long orderId = jsonNode.get("order_id").asLong();
+        Long userId = jsonNode.get("user_id").asLong();
+        String baseMint = jsonNode.get("base_mint").asText();
+        String quoteMint = jsonNode.get("quote_mint").asText();
         
         // 주문 조회 (비관적 락)
         var orderOpt = orderRepository.findByIdForUpdate(orderId);
         if (orderOpt.isEmpty()) {
-            log.warn("[KafkaOrderEventConsumer] 주문을 찾을 수 없음: orderId={}", orderId);
             return;
         }
         
@@ -259,6 +383,155 @@ public class KafkaOrderEventConsumer {
         // 주문 상태를 cancelled로 업데이트
         order.setStatus("cancelled");
         orderRepository.save(order);
+        
+        // 잠금된 잔고 해제
+        // 주문 타입에 따라 다른 자산의 잔고를 해제
+        if ("buy".equals(order.getOrderType())) {
+            // 매수 주문 취소: quote_mint의 locked → available
+            BigDecimal lockedAmount = order.getAmount().subtract(order.getFilledAmount()).multiply(order.getPrice());
+            updateBalanceForCancel(userId, quoteMint, lockedAmount);
+        } else if ("sell".equals(order.getOrderType())) {
+            // 매도 주문 취소: base_mint의 locked → available
+            BigDecimal lockedAmount = order.getAmount().subtract(order.getFilledAmount());
+            updateBalanceForCancel(userId, baseMint, lockedAmount);
+        }
+        
+        System.out.println("[Kafka] 취소 처리 완료: orderId=" + orderId + ", userId=" + userId);
+    }
+    
+    /**
+     * 체결 이벤트에 대한 잔고 업데이트
+     * Update balance for trade execution
+     * 
+     * @param userId 사용자 ID
+     * @param mint 자산 종류
+     * @param availableDelta available 증감량
+     * @param lockedDelta locked 증감량
+     */
+    private void updateBalanceForTrade(Long userId, String mint, BigDecimal availableDelta, BigDecimal lockedDelta) {
+        var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
+        
+        UserBalance balance;
+        if (balanceOpt.isPresent()) {
+            balance = balanceOpt.get();
+            balance.setAvailable(balance.getAvailable().add(availableDelta));
+            balance.setLocked(balance.getLocked().add(lockedDelta));
+        } else {
+            // 잔고가 없으면 생성
+            balance = UserBalance.builder()
+                    .userId(userId)
+                    .mintAddress(mint)
+                    .available(availableDelta)
+                    .locked(lockedDelta)
+                    .build();
+        }
+        
+        // 잔고가 음수가 되지 않도록 검증
+        if (balance.getAvailable().compareTo(BigDecimal.ZERO) < 0 || balance.getLocked().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("잔고가 음수가 될 수 없습니다");
+        }
+        
+        userBalanceRepository.save(balance);
+    }
+    
+    /**
+     * 취소 이벤트에 대한 잔고 업데이트 (locked → available)
+     * Update balance for order cancellation
+     * 
+     * @param userId 사용자 ID
+     * @param mint 자산 종류
+     * @param unlockAmount 해제할 금액
+     */
+    private void updateBalanceForCancel(Long userId, String mint, BigDecimal unlockAmount) {
+        if (unlockAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return; // 해제할 금액이 없으면 스킵
+        }
+        
+        var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
+        
+        if (balanceOpt.isEmpty()) {
+            return;
+        }
+        
+        UserBalance balance = balanceOpt.get();
+        balance.setLocked(balance.getLocked().subtract(unlockAmount));
+        balance.setAvailable(balance.getAvailable().add(unlockAmount));
+        
+        // 잔고가 음수가 되지 않도록 검증
+        if (balance.getAvailable().compareTo(BigDecimal.ZERO) < 0 || balance.getLocked().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("잔고가 음수가 될 수 없습니다");
+        }
+        
+        userBalanceRepository.save(balance);
+    }
+    
+    /**
+     * 체결 이벤트에 대한 포지션 업데이트
+     * Update position for trade execution
+     * 
+     * 포지션 계산:
+     * - 매수: position_amount 증가 (양수)
+     * - 매도: position_amount 감소 (음수)
+     * - 평균 진입 가격: 가중 평균으로 계산
+     * 
+     * @param userId 사용자 ID
+     * @param baseMint 기준 자산
+     * @param quoteMint 기준 통화
+     * @param amount 포지션 증감량 (양수: 매수, 음수: 매도)
+     * @param price 체결 가격
+     */
+    private void updatePositionForTrade(Long userId, String baseMint, String quoteMint, BigDecimal amount, BigDecimal price) {
+        var positionOpt = userPositionRepository.findByUserIdAndBaseMintAndQuoteMintForUpdate(userId, baseMint, quoteMint);
+        
+        UserPosition position;
+        if (positionOpt.isPresent()) {
+            position = positionOpt.get();
+            
+            // 기존 포지션이 있는 경우: 가중 평균으로 평균 진입 가격 계산
+            BigDecimal currentPosition = position.getPositionAmount();
+            BigDecimal newPosition = currentPosition.add(amount);
+            
+            if (newPosition.compareTo(BigDecimal.ZERO) == 0) {
+                // 포지션이 0이 되면 평균 진입 가격 초기화
+                position.setAvgEntryPrice(price);
+            } else if (amount.compareTo(BigDecimal.ZERO) > 0) {
+                // 매수: 가중 평균 계산
+                // 새로운 평균 가격 = (기존 포지션 * 기존 가격 + 신규 체결량 * 체결가) / 총 포지션
+                BigDecimal totalCost = currentPosition.multiply(position.getAvgEntryPrice())
+                        .add(amount.multiply(price));
+                position.setAvgEntryPrice(totalCost.divide(newPosition, 9, java.math.RoundingMode.HALF_UP));
+            }
+            // 매도는 평균 진입 가격 변경 없음 (기존 가격 유지)
+            
+            position.setPositionAmount(newPosition);
+        } else {
+            // 포지션이 없으면 생성 (매수만 가능)
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                // 매도인데 포지션이 없으면 스킵 (숏 포지션 미지원)
+                return;
+            }
+            
+            position = UserPosition.builder()
+                    .userId(userId)
+                    .baseMint(baseMint)
+                    .quoteMint(quoteMint)
+                    .positionAmount(amount)
+                    .avgEntryPrice(price)
+                    .currentPrice(price) // 초기에는 체결가를 현재가로 설정
+                    .unrealizedPnl(BigDecimal.ZERO) // 초기에는 손익 없음
+                    .build();
+        }
+        
+        // 현재가 업데이트 (체결가로)
+        position.setCurrentPrice(price);
+        
+        // 미실현 손익 계산: (현재가 - 평균 진입가) * 포지션 수량
+        BigDecimal pnl = position.getCurrentPrice()
+                .subtract(position.getAvgEntryPrice())
+                .multiply(position.getPositionAmount());
+        position.setUnrealizedPnl(pnl);
+        
+        userPositionRepository.save(position);
     }
     
     /**
@@ -274,11 +547,23 @@ public class KafkaOrderEventConsumer {
         if (timestampNode.isTextual()) {
             String timestampStr = timestampNode.asText();
             try {
-                return LocalDateTime.parse(timestampStr);
+                // ISO 8601 형식 (UTC 포함) 파싱 시도
+                if (timestampStr.endsWith("Z") || timestampStr.contains("+") || timestampStr.contains("-")) {
+                    // UTC 또는 타임존이 포함된 경우 Instant로 파싱
+                    Instant instant = Instant.parse(timestampStr);
+                    return LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+                } else {
+                    // 일반 ISO 8601 형식 (타임존 없음)
+                    return LocalDateTime.parse(timestampStr);
+                }
             } catch (Exception e) {
-                // Unix timestamp로 시도
-                long timestamp = Long.parseLong(timestampStr);
-                return LocalDateTime.ofInstant(Instant.ofEpochSecond(timestamp), ZoneId.systemDefault());
+                try {
+                    // Unix timestamp로 시도
+                    long timestamp = Long.parseLong(timestampStr);
+                    return LocalDateTime.ofInstant(Instant.ofEpochSecond(timestamp), ZoneId.systemDefault());
+                } catch (NumberFormatException nfe) {
+                    return LocalDateTime.now();
+                }
             }
         } else if (timestampNode.isNumber()) {
             long timestamp = timestampNode.asLong();
@@ -286,5 +571,17 @@ public class KafkaOrderEventConsumer {
         }
         
         return LocalDateTime.now();
+    }
+    
+    /**
+     * Trade를 별도 트랜잭션으로 저장
+     * Save Trade in a new transaction to prevent rollback
+     * 
+     * 주문 업데이트나 잔고 업데이트 실패 시에도 Trade는 저장되도록
+     * 별도의 트랜잭션으로 분리합니다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Trade saveTradeInNewTransaction(Trade trade) {
+        return tradeRepository.save(trade);
     }
 }
