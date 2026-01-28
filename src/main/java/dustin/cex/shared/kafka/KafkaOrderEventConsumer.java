@@ -19,6 +19,7 @@ import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
 import dustin.cex.domains.position.model.entity.UserPosition;
 import dustin.cex.domains.position.repository.UserPositionRepository;
+import dustin.cex.domains.fee.service.FeeConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,6 +67,7 @@ public class KafkaOrderEventConsumer {
     private final OrderRepository orderRepository;
     private final UserBalanceRepository userBalanceRepository;
     private final UserPositionRepository userPositionRepository;
+    private final FeeConfigService feeConfigService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     @jakarta.annotation.PostConstruct
@@ -214,17 +216,26 @@ public class KafkaOrderEventConsumer {
         // 매도 주문 업데이트 (비관적 락, 주문 ID 순서로 락 획득)
         updateOrderForTrade(sellOrderId, buyOrderId, price, amount, savedTrade.getId());
         
+        // 수수료 계산
+        BigDecimal buyerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
+        BigDecimal sellerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
+        
+        log.info("[Kafka] 수수료 계산: buyerFee={}, sellerFee={}, totalValue={}, baseMint={}, quoteMint={}", 
+                buyerFee, sellerFee, totalValue, baseMint, quoteMint);
+        
         // 매수자 잔고 업데이트
         // - base_mint: available 증가 (체결로 받음)
-        // - quote_mint: locked 감소 (주문에 사용했던 금액)
+        // - quote_mint: locked 감소 (주문에 사용했던 금액 + 수수료)
         updateBalanceForTrade(buyerId, baseMint, amount, BigDecimal.ZERO); // base_mint available 증가
-        updateBalanceForTrade(buyerId, quoteMint, BigDecimal.ZERO, totalValue.negate()); // quote_mint locked 감소
+        BigDecimal buyerTotalDeduction = totalValue.add(buyerFee); // 거래 금액 + 수수료
+        updateBalanceForTrade(buyerId, quoteMint, BigDecimal.ZERO, buyerTotalDeduction.negate()); // quote_mint locked 감소 (거래금액 + 수수료)
         
         // 매도자 잔고 업데이트
         // - base_mint: locked 감소 (주문에 사용했던 수량)
-        // - quote_mint: available 증가 (체결로 받음)
+        // - quote_mint: available 증가 (체결로 받은 금액 - 수수료)
         updateBalanceForTrade(sellerId, baseMint, BigDecimal.ZERO, amount.negate()); // base_mint locked 감소
-        updateBalanceForTrade(sellerId, quoteMint, totalValue, BigDecimal.ZERO); // quote_mint available 증가
+        BigDecimal sellerNetAmount = totalValue.subtract(sellerFee); // 거래 금액 - 수수료
+        updateBalanceForTrade(sellerId, quoteMint, sellerNetAmount, BigDecimal.ZERO); // quote_mint available 증가 (거래금액 - 수수료)
         
         // 매수자 포지션 업데이트
         updatePositionForTrade(buyerId, baseMint, quoteMint, amount, price);
