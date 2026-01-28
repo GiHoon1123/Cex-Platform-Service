@@ -34,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
  * - 확장성: 새로운 자산 추가 시 자동으로 구독
  */
 @Slf4j
-@Component
+// @Component  // 비활성화: KafkaOrderEventConsumer로 통합됨
 public class KafkaOrderCancelledConsumer {
     
     private final OrderRepository orderRepository;

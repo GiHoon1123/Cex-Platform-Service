@@ -139,4 +139,26 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT o FROM Order o WHERE o.id = :orderId")
     Optional<Order> findByIdForUpdate(@Param("orderId") Long orderId);
+    
+    /**
+     * 사용자 ID와 주문 ID로 주문 조회 (비관적 락)
+     * Find order by user ID and order ID with pessimistic lock (FOR UPDATE)
+     * 
+     * 주문 취소 시 동시성 제어를 위해 사용
+     * SELECT FOR UPDATE로 락을 걸어 다른 트랜잭션의 동시 수정을 방지
+     * 
+     * 사용 사례:
+     * - 주문 취소 요청 시 Kafka Consumer가 동시에 체결 이벤트를 처리하는 경우 방지
+     * - 주문 상태가 변경되는 동안 취소 요청이 들어오는 경우 방지
+     * 
+     * @param userId 사용자 ID
+     * @param orderId 주문 ID
+     * @return 주문 정보 (없으면 Optional.empty())
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM Order o WHERE o.userId = :userId AND o.id = :orderId")
+    Optional<Order> findByUserIdAndIdForUpdate(
+        @Param("userId") Long userId,
+        @Param("orderId") Long orderId
+    );
 }

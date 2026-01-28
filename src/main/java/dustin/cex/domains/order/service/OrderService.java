@@ -8,6 +8,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import jakarta.annotation.PostConstruct;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,12 +51,13 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OrderService {
     
     private final OrderRepository orderRepository;
     private final EngineHttpClient engineHttpClient;
     private final KafkaEventProducer kafkaEventProducer;
+    private final PlatformTransactionManager transactionManager;
+    private final TransactionTemplate transactionTemplate;
     
     /**
      * ObjectMapper 초기화 (JavaTimeModule 등록)
@@ -61,6 +66,22 @@ public class OrderService {
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule()) // LocalDateTime 직렬화 지원
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // ISO 8601 형식 사용
+    
+    /**
+     * 생성자: TransactionTemplate 초기화
+     * Constructor: Initialize TransactionTemplate
+     */
+    public OrderService(
+            OrderRepository orderRepository,
+            EngineHttpClient engineHttpClient,
+            KafkaEventProducer kafkaEventProducer,
+            PlatformTransactionManager transactionManager) {
+        this.orderRepository = orderRepository;
+        this.engineHttpClient = engineHttpClient;
+        this.kafkaEventProducer = kafkaEventProducer;
+        this.transactionManager = transactionManager;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
     
     /**
      * 주문 생성
@@ -377,16 +398,17 @@ public class OrderService {
      * 대기 중이거나 부분 체결된 주문을 취소합니다.
      * 
      * 처리 과정:
-     * 1. 주문 조회 및 본인 확인 (트랜잭션 내)
+     * 1. 주문 조회 및 본인 확인 (트랜잭션 내, 비관적 락)
      * 2. 주문 상태 확인 (취소 가능한 상태인지)
-     * 3. Rust 엔진에 취소 요청 (트랜잭션 밖, gRPC 호출)
+     * 3. 트랜잭션 커밋 (락 해제)
+     * 4. Rust 엔진에 취소 요청 (트랜잭션 밖, HTTP 호출)
      *    - 성공: 주문 상태를 'cancelled'로 업데이트 (별도 트랜잭션)
      *    - 실패: 예외 발생 (주문 상태는 변경되지 않음)
-     * 4. Kafka 이벤트 발행 (비동기)
+     * 5. Kafka 이벤트 발행 (비동기)
      * 
      * 트랜잭션 분리 이유:
      * - 주문 조회만 트랜잭션으로 묶어 커넥션 점유 시간 최소화
-     * - gRPC 호출은 트랜잭션 밖에서 실행 (네트워크 지연 영향 최소화)
+     * - HTTP 호출은 트랜잭션 밖에서 실행 (네트워크 지연 영향 최소화)
      * - 성공 시 별도 트랜잭션으로 상태 업데이트
      * 
      * @param userId 사용자 ID (본인 확인용)
@@ -396,9 +418,12 @@ public class OrderService {
      */
     public OrderResponse cancelOrder(Long userId, Long orderId) {
         // ============================================
-        // 1. 주문 조회 및 본인 확인 (트랜잭션 내)
+        // 1. 주문 조회 및 본인 확인 (트랜잭션 내, 비관적 락)
         // ============================================
-        Order order = findOrderForCancellation(userId, orderId);
+        Order order = transactionTemplate.execute(status -> {
+            return orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
+                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
+        });
         
         // ============================================
         // 2. 주문 상태 확인 (취소 가능한 상태인지)
@@ -410,11 +435,20 @@ public class OrderService {
             throw new RuntimeException("이미 취소된 주문입니다");
         }
         
+        // 주문 정보 저장 (트랜잭션 종료 후 사용)
+        String baseMint = order.getBaseMint();
+        String quoteMint = order.getQuoteMint();
+        
         // ============================================
-        // 3. Rust 엔진에 취소 요청 (트랜잭션 밖, gRPC 호출)
+        // 3. 트랜잭션 커밋 (락 해제)
+        // ============================================
+        // findOrderForCancellation의 트랜잭션이 여기서 종료됨
+        
+        // ============================================
+        // 4. Rust 엔진에 취소 요청 (트랜잭션 밖, HTTP 호출)
         // ============================================
         try {
-            String tradingPair = order.getBaseMint() + "/" + order.getQuoteMint();
+            String tradingPair = baseMint + "/" + quoteMint;
             boolean success = engineHttpClient.cancelOrder(orderId, userId, tradingPair);
             
             if (!success) {
@@ -434,7 +468,7 @@ public class OrderService {
         }
         
         // ============================================
-        // 4. Kafka 이벤트 발행 (비동기)
+        // 5. Kafka 이벤트 발행 (비동기)
         // ============================================
         try {
             // 취소된 주문 정보 조회 (최신 상태)
@@ -449,7 +483,7 @@ public class OrderService {
         }
         
         // ============================================
-        // 5. 취소된 주문 정보 반환
+        // 6. 취소된 주문 정보 반환
         // ============================================
         Order cancelledOrder = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
@@ -462,19 +496,25 @@ public class OrderService {
     }
     
     /**
-     * 주문 조회 (취소용, 트랜잭션 내)
-     * Find Order for Cancellation (in Transaction)
+     * 주문 조회 (취소용, 비관적 락 사용)
+     * Find Order for Cancellation (with Pessimistic Lock)
      * 
      * 취소할 주문을 조회하고 본인 확인을 수행합니다.
+     * 비관적 락을 사용하여 동시성 문제를 방지합니다.
+     * 
+     * 동시성 제어:
+     * - SELECT FOR UPDATE로 락을 걸어 다른 트랜잭션의 동시 수정을 방지
+     * - Kafka Consumer가 체결 이벤트를 처리하는 동안 취소 요청이 들어오는 경우 방지
+     * - 주문 상태가 변경되는 동안 취소 요청이 들어오는 경우 방지
      * 
      * @param userId 사용자 ID
      * @param orderId 주문 ID
      * @return 주문 엔티티
      * @throws RuntimeException 주문을 찾을 수 없거나 본인 주문이 아닐 때
      */
-    @Transactional(readOnly = true)
+    @Transactional
     private Order findOrderForCancellation(Long userId, Long orderId) {
-        return orderRepository.findByUserIdAndId(userId, orderId)
+        return orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
                 .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
     }
     

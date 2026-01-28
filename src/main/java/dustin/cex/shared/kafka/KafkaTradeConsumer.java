@@ -48,7 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * - 중복 체결 방지 (idempotency key 사용, 향후 구현)
  */
 @Slf4j
-@Component
+// @Component  // 비활성화: KafkaOrderEventConsumer로 통합됨
 @RequiredArgsConstructor
 public class KafkaTradeConsumer {
     

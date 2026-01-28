@@ -1,10 +1,15 @@
 package dustin.cex.shared.kafka;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
@@ -18,13 +23,21 @@ import java.util.Map;
  * 
  * 역할:
  * - Kafka Producer 설정
+ * - Kafka Consumer 설정
  * - KafkaTemplate 빈 등록
+ * - KafkaListenerContainerFactory 빈 등록
  */
 @Configuration
 public class KafkaConfig {
     
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
     private String bootstrapServers;
+    
+    @Value("${spring.kafka.consumer.group-id:cex-consumer-group}")
+    private String groupId;
+    
+    @Value("${spring.kafka.consumer.auto-offset-reset:earliest}")
+    private String autoOffsetReset;
     
     /**
      * Kafka Producer Factory 생성
@@ -54,5 +67,43 @@ public class KafkaConfig {
     @Bean
     public KafkaTemplate<String, String> kafkaTemplate() {
         return new KafkaTemplate<>(producerFactory());
+    }
+    
+    /**
+     * Kafka Consumer Factory 생성
+     * Create Kafka Consumer Factory
+     */
+    @Bean
+    public ConsumerFactory<String, String> consumerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        configProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetReset);
+        configProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        configProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        
+        // Consumer 성능 최적화 설정
+        configProps.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 500); // 한 번에 가져올 최대 레코드 수
+        configProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false); // 수동 커밋 (트랜잭션 처리)
+        
+        return new DefaultKafkaConsumerFactory<>(configProps);
+    }
+    
+    /**
+     * Kafka Listener Container Factory 생성
+     * Create Kafka Listener Container Factory
+     * 
+     * @KafkaListener 어노테이션이 사용하는 팩토리
+     */
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory = 
+            new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory());
+        
+        // 동시성 설정 (여러 스레드에서 메시지 처리)
+        factory.setConcurrency(1); // 기본값: 1 (필요시 증가 가능)
+        
+        return factory;
     }
 }
