@@ -5,12 +5,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.persistence.LockModeType;
-
-import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +22,7 @@ import dustin.cex.domains.position.model.entity.UserPosition;
 import dustin.cex.domains.position.repository.UserPositionRepository;
 import dustin.cex.domains.trade.model.entity.Trade;
 import dustin.cex.domains.trade.repository.TradeRepository;
-
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -154,6 +148,19 @@ public class KafkaOrderEventConsumer {
      * - 데이터 일관성 보장
      */
     private void handleTradeExecuted(JsonNode jsonNode) {
+        // 하위 호환성: 새 필드가 있으면 스냅샷 방식, 없으면 기존 Delta 방식
+        if (jsonNode.has("buyer_base_available")) {
+            handleTradeExecutedWithSnapshot(jsonNode);
+        } else {
+            handleTradeExecutedWithDelta(jsonNode);
+        }
+    }
+    
+    /**
+     * 스냅샷 방식으로 체결 처리 (새 방식)
+     * Handle trade executed with balance snapshot
+     */
+    private void handleTradeExecutedWithSnapshot(JsonNode jsonNode) {
         Long buyOrderId;
         Long sellOrderId;
         Long buyerId;
@@ -162,6 +169,16 @@ public class KafkaOrderEventConsumer {
         BigDecimal amount;
         String baseMint;
         String quoteMint;
+        
+        // 잔고 스냅샷
+        BigDecimal buyerBaseAvailable;
+        BigDecimal buyerBaseLocked;
+        BigDecimal buyerQuoteAvailable;
+        BigDecimal buyerQuoteLocked;
+        BigDecimal sellerBaseAvailable;
+        BigDecimal sellerBaseLocked;
+        BigDecimal sellerQuoteAvailable;
+        BigDecimal sellerQuoteLocked;
         
         try {
             buyOrderId = jsonNode.get("buy_order_id").asLong();
@@ -172,6 +189,16 @@ public class KafkaOrderEventConsumer {
             amount = new BigDecimal(jsonNode.get("amount").asText());
             baseMint = jsonNode.get("base_mint").asText();
             quoteMint = jsonNode.get("quote_mint").asText();
+            
+            // 잔고 스냅샷 파싱
+            buyerBaseAvailable = new BigDecimal(jsonNode.get("buyer_base_available").asText());
+            buyerBaseLocked = new BigDecimal(jsonNode.get("buyer_base_locked").asText());
+            buyerQuoteAvailable = new BigDecimal(jsonNode.get("buyer_quote_available").asText());
+            buyerQuoteLocked = new BigDecimal(jsonNode.get("buyer_quote_locked").asText());
+            sellerBaseAvailable = new BigDecimal(jsonNode.get("seller_base_available").asText());
+            sellerBaseLocked = new BigDecimal(jsonNode.get("seller_base_locked").asText());
+            sellerQuoteAvailable = new BigDecimal(jsonNode.get("seller_quote_available").asText());
+            sellerQuoteLocked = new BigDecimal(jsonNode.get("seller_quote_locked").asText());
         } catch (Exception e) {
             throw new RuntimeException("JSON 파싱 실패", e);
         }
@@ -257,11 +284,137 @@ public class KafkaOrderEventConsumer {
         // 매도 주문 업데이트 (이미 락을 획득했으므로 직접 업데이트)
         updateOrderWithLock(sellOrderId, amount, price.multiply(amount));
         
+        // 수수료 계산 (Java에서)
+        BigDecimal buyerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
+        BigDecimal sellerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
+        
+        log.info("[Kafka] 수수료 계산 (스냅샷 방식): buyerFee={}, sellerFee={}, totalValue={}, baseMint={}, quoteMint={}", 
+                buyerFee, sellerFee, totalValue, baseMint, quoteMint);
+        
+        // 잔고 업데이트 (스냅샷 적용 + 수수료 차감)
+        // base_mint: 스냅샷 그대로 적용 (수수료 없음)
+        updateBalanceFromSnapshot(buyerId, baseMint, buyerBaseAvailable, buyerBaseLocked);
+        updateBalanceFromSnapshot(sellerId, baseMint, sellerBaseAvailable, sellerBaseLocked);
+        
+        // quote_mint: 스냅샷 적용 후 수수료 차감
+        updateBalanceFromSnapshotWithFee(buyerId, quoteMint, buyerQuoteAvailable, buyerQuoteLocked, buyerFee);
+        updateBalanceFromSnapshotWithFee(sellerId, quoteMint, sellerQuoteAvailable, sellerQuoteLocked, sellerFee);
+        
+        // 매수자 포지션 업데이트
+        updatePositionForTrade(buyerId, baseMint, quoteMint, amount, price);
+        
+        // 매도자 포지션 업데이트 (매도는 포지션 감소)
+        updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
+        
+        log.info("[Kafka] 체결 처리 완료 (스냅샷): buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}", 
+                buyOrderId, sellOrderId, price, amount, savedTrade.getId());
+    }
+    
+    /**
+     * Delta 방식으로 체결 처리 (기존 방식, 하위 호환성)
+     * Handle trade executed with delta calculation
+     */
+    private void handleTradeExecutedWithDelta(JsonNode jsonNode) {
+        Long buyOrderId;
+        Long sellOrderId;
+        Long buyerId;
+        Long sellerId;
+        BigDecimal price;
+        BigDecimal amount;
+        String baseMint;
+        String quoteMint;
+        
+        try {
+            buyOrderId = jsonNode.get("buy_order_id").asLong();
+            sellOrderId = jsonNode.get("sell_order_id").asLong();
+            buyerId = jsonNode.get("buyer_id").asLong();
+            sellerId = jsonNode.get("seller_id").asLong();
+            price = new BigDecimal(jsonNode.get("price").asText());
+            amount = new BigDecimal(jsonNode.get("amount").asText());
+            baseMint = jsonNode.get("base_mint").asText();
+            quoteMint = jsonNode.get("quote_mint").asText();
+        } catch (Exception e) {
+            throw new RuntimeException("JSON 파싱 실패", e);
+        }
+        
+        BigDecimal totalValue = price.multiply(amount);
+        
+        Trade trade;
+        try {
+            trade = Trade.builder()
+                    .buyOrderId(buyOrderId)
+                    .sellOrderId(sellOrderId)
+                    .buyerId(buyerId)
+                    .sellerId(sellerId)
+                    .baseMint(baseMint)
+                    .quoteMint(quoteMint)
+                    .price(price)
+                    .amount(amount)
+                    .createdAt(parseTimestamp(jsonNode.get("timestamp")))
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Trade 엔티티 생성 실패", e);
+        }
+        
+        // 주문 존재 여부 확인
+        boolean buyOrderExists = orderRepository.existsById(buyOrderId);
+        boolean sellOrderExists = orderRepository.existsById(sellOrderId);
+        
+        if (!buyOrderExists || !sellOrderExists) {
+            log.warn("[Kafka] 주문이 존재하지 않아 체결 처리 스킵: buyOrderId={} (exists={}), sellOrderId={} (exists={})", 
+                    buyOrderId, buyOrderExists, sellOrderId, sellOrderExists);
+            return;
+        }
+        
+        // 중복 체결 방지: 주문의 현재 filled_amount 확인 (비관적 락)
+        var buyOrderOpt = orderRepository.findByIdForUpdate(buyOrderId);
+        var sellOrderOpt = orderRepository.findByIdForUpdate(sellOrderId);
+        
+        if (buyOrderOpt.isEmpty() || sellOrderOpt.isEmpty()) {
+            log.warn("[Kafka] 주문 조회 실패 (락 획득 실패): buyOrderId={}, sellOrderId={}", buyOrderId, sellOrderId);
+            return;
+        }
+        
+        Order buyOrder = buyOrderOpt.get();
+        Order sellOrder = sellOrderOpt.get();
+        
+        // 이미 전량 체결된 주문이면 스킵 (중복 체결 방지)
+        if ("filled".equals(buyOrder.getStatus()) || "filled".equals(sellOrder.getStatus())) {
+            log.warn("[Kafka] 이미 전량 체결된 주문으로 인한 중복 체결 이벤트 스킵: buyOrderId={} (status={}), sellOrderId={} (status={})", 
+                    buyOrderId, buyOrder.getStatus(), sellOrderId, sellOrder.getStatus());
+            return;
+        }
+        
+        // 체결 후 예상 filled_amount가 주문 amount를 초과하는지 확인
+        BigDecimal buyOrderNewFilledAmount = buyOrder.getFilledAmount().add(amount);
+        BigDecimal sellOrderNewFilledAmount = sellOrder.getFilledAmount().add(amount);
+        
+        if (buyOrderNewFilledAmount.compareTo(buyOrder.getAmount()) > 0) {
+            log.error("[Kafka] 매수 주문 체결량 초과: buyOrderId={}, currentFilled={}, amount={}, newFilled={}", 
+                    buyOrderId, buyOrder.getFilledAmount(), buyOrder.getAmount(), buyOrderNewFilledAmount);
+            return;
+        }
+        
+        if (sellOrderNewFilledAmount.compareTo(sellOrder.getAmount()) > 0) {
+            log.error("[Kafka] 매도 주문 체결량 초과: sellOrderId={}, currentFilled={}, amount={}, newFilled={}", 
+                    sellOrderId, sellOrder.getFilledAmount(), sellOrder.getAmount(), sellOrderNewFilledAmount);
+            return;
+        }
+        
+        // Trade 저장
+        Trade savedTrade = tradeRepository.save(trade);
+        
+        // 매수 주문 업데이트 (이미 락을 획득했으므로 직접 업데이트)
+        updateOrderWithLock(buyOrderId, amount, price.multiply(amount));
+        
+        // 매도 주문 업데이트 (이미 락을 획득했으므로 직접 업데이트)
+        updateOrderWithLock(sellOrderId, amount, price.multiply(amount));
+        
         // 수수료 계산
         BigDecimal buyerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
         BigDecimal sellerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
         
-        log.info("[Kafka] 수수료 계산: buyerFee={}, sellerFee={}, totalValue={}, baseMint={}, quoteMint={}", 
+        log.info("[Kafka] 수수료 계산 (Delta 방식): buyerFee={}, sellerFee={}, totalValue={}, baseMint={}, quoteMint={}", 
                 buyerFee, sellerFee, totalValue, baseMint, quoteMint);
         
         // 매수자 잔고 업데이트
@@ -284,7 +437,7 @@ public class KafkaOrderEventConsumer {
         // 매도자 포지션 업데이트 (매도는 포지션 감소)
         updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
         
-        log.info("[Kafka] 체결 처리 완료: buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}", 
+        log.info("[Kafka] 체결 처리 완료 (Delta): buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}", 
                 buyOrderId, sellOrderId, price, amount, savedTrade.getId());
     }
     
@@ -524,6 +677,96 @@ public class KafkaOrderEventConsumer {
         }
         
         userBalanceRepository.save(balance);
+    }
+    
+    /**
+     * 스냅샷을 그대로 적용 (수수료 없음)
+     * Apply balance snapshot without fee
+     * base_mint에 사용
+     * 
+     * @param userId 사용자 ID
+     * @param mint 자산 종류
+     * @param available 스냅샷의 available 값
+     * @param locked 스냅샷의 locked 값
+     */
+    private void updateBalanceFromSnapshot(
+        Long userId, String mint, 
+        BigDecimal available, BigDecimal locked
+    ) {
+        var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
+        
+        if (balanceOpt.isPresent()) {
+            UserBalance balance = balanceOpt.get();
+            balance.setAvailable(available);
+            balance.setLocked(locked);
+            userBalanceRepository.save(balance);
+            
+            log.debug("[Balance] 스냅샷 적용: userId={}, mint={}, available={}, locked={}", 
+                    userId, mint, available, locked);
+        } else {
+            // 없으면 생성
+            UserBalance balance = UserBalance.builder()
+                    .userId(userId)
+                    .mintAddress(mint)
+                    .available(available)
+                    .locked(locked)
+                    .build();
+            userBalanceRepository.save(balance);
+            
+            log.info("[Balance] 잔고 생성 (스냅샷): userId={}, mint={}, available={}, locked={}", 
+                    userId, mint, available, locked);
+        }
+    }
+    
+    /**
+     * 스냅샷 적용 + 수수료 차감 (단순화)
+     * Apply balance snapshot and deduct fee
+     * quote_mint에 사용
+     * 
+     * 로직:
+     * 1. 스냅샷 그대로 적용
+     * 2. available에서 수수료 차감
+     * 
+     * @param userId 사용자 ID
+     * @param mint 자산 종류
+     * @param snapshotAvailable 스냅샷의 available 값
+     * @param snapshotLocked 스냅샷의 locked 값
+     * @param fee 수수료
+     */
+    private void updateBalanceFromSnapshotWithFee(
+        Long userId, String mint, 
+        BigDecimal snapshotAvailable, BigDecimal snapshotLocked,
+        BigDecimal fee
+    ) {
+        var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
+        
+        if (balanceOpt.isPresent()) {
+            UserBalance balance = balanceOpt.get();
+            
+            // 1. 스냅샷 그대로 적용
+            balance.setAvailable(snapshotAvailable);
+            balance.setLocked(snapshotLocked);
+            
+            // 2. available에서 수수료 차감 (단순!)
+            balance.setAvailable(balance.getAvailable().subtract(fee));
+            
+            userBalanceRepository.save(balance);
+            
+            log.debug("[Balance] 스냅샷 적용 + 수수료 차감: userId={}, mint={}, available={} -> {}, locked={}, fee={}", 
+                    userId, mint, snapshotAvailable, balance.getAvailable(), snapshotLocked, fee);
+        } else {
+            // 없으면 생성
+            UserBalance balance = UserBalance.builder()
+                    .userId(userId)
+                    .mintAddress(mint)
+                    .available(snapshotAvailable.subtract(fee))
+                    .locked(snapshotLocked)
+                    .build();
+            userBalanceRepository.save(balance);
+            
+            log.info("[Balance] 잔고 생성 (스냅샷 + 수수료): userId={}, mint={}, available={}, locked={}, fee={}", 
+                    userId, mint, balance.getAvailable(), snapshotLocked, fee);
+        }
     }
     
     /**

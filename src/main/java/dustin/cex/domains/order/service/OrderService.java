@@ -21,6 +21,8 @@ import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
+import dustin.cex.domains.balance.repository.UserBalanceRepository;
+import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.shared.http.EngineHttpClient;
 import dustin.cex.shared.kafka.KafkaEventProducer;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderService {
     
     private final OrderRepository orderRepository;
+    private final UserBalanceRepository userBalanceRepository;
     private final EngineHttpClient engineHttpClient;
     private final KafkaEventProducer kafkaEventProducer;
     private final PlatformTransactionManager transactionManager;
@@ -73,10 +76,12 @@ public class OrderService {
      */
     public OrderService(
             OrderRepository orderRepository,
+            UserBalanceRepository userBalanceRepository,
             EngineHttpClient engineHttpClient,
             KafkaEventProducer kafkaEventProducer,
             PlatformTransactionManager transactionManager) {
         this.orderRepository = orderRepository;
+        this.userBalanceRepository = userBalanceRepository;
         this.engineHttpClient = engineHttpClient;
         this.kafkaEventProducer = kafkaEventProducer;
         this.transactionManager = transactionManager;
@@ -116,13 +121,18 @@ public class OrderService {
         validateOrderRequest(request);
         
         // ============================================
-        // 2. DB에 주문 저장 (트랜잭션 내, 명시적 커밋)
+        // 2. DB에 주문 저장 + 잔고 lock (트랜잭션 내, 명시적 커밋)
         // ============================================
         // TransactionTemplate을 사용하여 트랜잭션을 명시적으로 커밋
         // 이렇게 하면 Rust 엔진에 제출하기 전에 주문이 DB에 확실히 저장됨
         Order savedOrder = transactionTemplate.execute(status -> {
+            // 2-1. 주문 저장
             Order order = buildOrderEntity(userId, request);
             Order saved = orderRepository.save(order);
+            
+            // 2-2. 잔고 lock (같은 트랜잭션 내)
+            lockBalanceForOrder(userId, request);
+            
             return saved;
         });
         
@@ -162,8 +172,8 @@ public class OrderService {
             );
             
             if (!success) {
-                // 엔진이 주문을 거부한 경우 (잔고 부족 등)
-                updateOrderStatusRejected(orderId, "엔진이 주문을 거부했습니다");
+                // 엔진이 주문을 거부한 경우 (잔고 부족 등): 잔고 unlock
+                rollbackOrderAndBalance(orderId, userId, request);
                 throw new RuntimeException("엔진이 주문을 거부했습니다");
             }
             
@@ -172,13 +182,13 @@ public class OrderService {
         } catch (RuntimeException e) {
             // HTTP 통신 실패 또는 엔진 거부
             if (!"엔진이 주문을 거부했습니다".equals(e.getMessage())) {
-                // 통신 실패인 경우에만 rejected 상태로 업데이트
-                updateOrderStatusRejected(orderId, "엔진 통신 실패: " + e.getMessage());
+                // 통신 실패인 경우: 잔고 unlock
+                rollbackOrderAndBalance(orderId, userId, request);
             }
             throw e;
         } catch (Exception e) {
-            // 예상치 못한 예외
-            updateOrderStatusRejected(orderId, "엔진 통신 실패: " + e.getMessage());
+            // 예상치 못한 예외: 잔고 unlock
+            rollbackOrderAndBalance(orderId, userId, request);
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         }
         
@@ -552,6 +562,132 @@ public class OrderService {
             orderRepository.save(order);
         } catch (Exception e) {
             throw new RuntimeException("주문 취소 상태 업데이트 실패", e);
+        }
+    }
+    
+    /**
+     * 주문에 필요한 잔고 lock
+     * Lock balance for order
+     * 
+     * @param userId 사용자 ID
+     * @param request 주문 요청
+     */
+    private void lockBalanceForOrder(Long userId, CreateOrderRequest request) {
+        if ("buy".equals(request.getOrderSide())) {
+            // 매수 주문: quote_mint lock
+            BigDecimal lockAmount = calculateQuoteAmount(request);
+            lockBalance(userId, request.getQuoteMint(), lockAmount);
+        } else {
+            // 매도 주문: base_mint lock
+            lockBalance(userId, request.getBaseMint(), request.getAmount());
+        }
+    }
+    
+    /**
+     * quote_amount 계산
+     * Calculate quote amount for buy order
+     */
+    private BigDecimal calculateQuoteAmount(CreateOrderRequest request) {
+        if (request.getQuoteAmount() != null) {
+            return request.getQuoteAmount();
+        }
+        // quoteAmount가 없으면 price * amount 계산
+        if (request.getPrice() != null) {
+            return request.getPrice().multiply(request.getAmount());
+        }
+        throw new RuntimeException("매수 주문의 경우 quoteAmount 또는 price가 필요합니다");
+    }
+    
+    /**
+     * 잔고 lock (비관적 락 사용)
+     * Lock balance with pessimistic lock
+     * 
+     * @param userId 사용자 ID
+     * @param mint 자산 종류
+     * @param amount lock할 금액
+     */
+    private void lockBalance(Long userId, String mint, BigDecimal amount) {
+        var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
+        
+        if (balanceOpt.isEmpty()) {
+            throw new RuntimeException(String.format("잔고가 없습니다: userId=%d, mint=%s", userId, mint));
+        }
+        
+        UserBalance balance = balanceOpt.get();
+        
+        // 잔고 확인
+        if (balance.getAvailable().compareTo(amount) < 0) {
+            throw new RuntimeException(String.format(
+                "잔고 부족: userId=%d, mint=%s, available=%s, required=%s", 
+                userId, mint, balance.getAvailable(), amount
+            ));
+        }
+        
+        // 잔고 lock
+        balance.setAvailable(balance.getAvailable().subtract(amount));
+        balance.setLocked(balance.getLocked().add(amount));
+        userBalanceRepository.save(balance);
+        
+        log.info("[Balance] 잔고 lock: userId={}, mint={}, amount={}, available={} -> {}, locked={} -> {}", 
+            userId, mint, amount, 
+            balance.getAvailable().add(amount), balance.getAvailable(),
+            balance.getLocked().subtract(amount), balance.getLocked());
+    }
+    
+    /**
+     * Rust 엔진 거부 시 롤백
+     * Rollback order and balance when engine rejects order
+     * 
+     * @param orderId 주문 ID
+     * @param userId 사용자 ID
+     * @param request 주문 요청
+     */
+    private void rollbackOrderAndBalance(Long orderId, Long userId, CreateOrderRequest request) {
+        transactionTemplate.execute(status -> {
+            // 주문 상태 변경
+            updateOrderStatusRejected(orderId, "엔진이 주문을 거부했습니다");
+            
+            // 잔고 unlock
+            unlockBalanceForOrder(userId, request);
+            
+            return null;
+        });
+    }
+    
+    /**
+     * 주문 취소 시 잔고 unlock
+     * Unlock balance for order cancellation
+     * 
+     * @param userId 사용자 ID
+     * @param request 주문 요청
+     */
+    private void unlockBalanceForOrder(Long userId, CreateOrderRequest request) {
+        if ("buy".equals(request.getOrderSide())) {
+            BigDecimal unlockAmount = calculateQuoteAmount(request);
+            unlockBalance(userId, request.getQuoteMint(), unlockAmount);
+        } else {
+            unlockBalance(userId, request.getBaseMint(), request.getAmount());
+        }
+    }
+    
+    /**
+     * 잔고 unlock
+     * Unlock balance
+     * 
+     * @param userId 사용자 ID
+     * @param mint 자산 종류
+     * @param amount unlock할 금액
+     */
+    private void unlockBalance(Long userId, String mint, BigDecimal amount) {
+        var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
+        
+        if (balanceOpt.isPresent()) {
+            UserBalance balance = balanceOpt.get();
+            balance.setLocked(balance.getLocked().subtract(amount));
+            balance.setAvailable(balance.getAvailable().add(amount));
+            userBalanceRepository.save(balance);
+            
+            log.info("[Balance] 잔고 unlock: userId={}, mint={}, amount={}", userId, mint, amount);
         }
     }
 }
