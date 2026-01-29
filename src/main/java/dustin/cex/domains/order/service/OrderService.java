@@ -7,26 +7,23 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
-import jakarta.annotation.PostConstruct;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import dustin.cex.domains.balance.model.entity.UserBalance;
+import dustin.cex.domains.balance.repository.UserBalanceRepository;
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.dto.OrderbookResponse;
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
-import dustin.cex.domains.balance.repository.UserBalanceRepository;
-import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.shared.http.EngineHttpClient;
 import dustin.cex.shared.kafka.KafkaEventProducer;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -37,13 +34,13 @@ import lombok.extern.slf4j.Slf4j;
  * 역할:
  * - 주문 생성, 조회, 취소 등의 비즈니스 로직 처리
  * - 주문 유효성 검증
- * - Rust 엔진과의 통신 (gRPC, 향후 구현)
- * - Kafka 이벤트 발행 (로깅용, 향후 구현)
+ * - Rust 엔진과의 통신 (HTTP)
+ * - Kafka 이벤트 발행 (로깅용)
  * 
  * 처리 흐름:
  * 1. 주문 유효성 검증 (가격, 수량, 타입 등)
  * 2. 주문 엔티티 생성 및 DB 저장
- * 3. Rust 엔진에 주문 제출 (gRPC, 동기)
+ * 3. Rust 엔진에 주문 제출 (HTTP, 동기)
  * 4. Kafka 이벤트 발행 (비동기, 로깅용)
  * 5. 주문 정보 반환
  * 
@@ -98,7 +95,7 @@ public class OrderService {
      * 처리 과정:
      * 1. 주문 유효성 검증
      * 2. DB에 주문 저장 (트랜잭션 내, status: "pending")
-     * 3. Rust 엔진에 주문 제출 (트랜잭션 밖, gRPC 호출)
+     * 3. Rust 엔진에 주문 제출 (트랜잭션 밖, HTTP 호출)
      *    - 성공: 주문은 "pending" 상태 유지
      *    - 실패: 주문 상태를 "rejected"로 업데이트 (보상 트랜잭션)
      * 4. Kafka 이벤트 발행 (비동기, 로깅용)
@@ -106,8 +103,8 @@ public class OrderService {
      * 
      * 트랜잭션 분리 이유:
      * - DB 저장만 트랜잭션으로 묶어 커넥션 점유 시간 최소화
-     * - gRPC 호출은 트랜잭션 밖에서 실행 (네트워크 지연 영향 최소화)
-     * - gRPC 실패 시 보상 트랜잭션으로 "rejected" 상태 업데이트
+     * - HTTP 호출은 트랜잭션 밖에서 실행 (네트워크 지연 영향 최소화)
+     * - HTTP 실패 시 보상 트랜잭션으로 "rejected" 상태 업데이트
      * 
      * @param userId 주문을 생성하는 사용자 ID (JWT 토큰에서 추출)
      * @param request 주문 생성 요청 (가격, 수량, 타입 등)
@@ -240,7 +237,7 @@ public class OrderService {
      * 주문 상태를 "rejected"로 업데이트 (보상 트랜잭션)
      * Update Order Status to Rejected (Compensating Transaction)
      * 
-     * gRPC 호출 실패 시 주문 상태를 "rejected"로 업데이트합니다.
+     * HTTP 호출 실패 시 주문 상태를 "rejected"로 업데이트합니다.
      * 별도 트랜잭션으로 실행되어 DB 커넥션 점유 시간을 최소화합니다.
      * 
      * @param orderId 주문 ID
@@ -255,7 +252,7 @@ public class OrderService {
             order.setStatus("rejected");
             orderRepository.save(order);
         } catch (Exception e) {
-            // 보상 트랜잭션 실패는 무시 (이미 gRPC 실패 예외가 있음)
+            // 보상 트랜잭션 실패는 무시 (이미 HTTP 실패 예외가 있음)
         }
     }
     
@@ -589,7 +586,7 @@ public class OrderService {
      * 주문 상태를 "cancelled"로 업데이트 (별도 트랜잭션)
      * Update Order Status to Cancelled (Separate Transaction)
      * 
-     * gRPC 취소 요청 성공 후 주문 상태를 "cancelled"로 업데이트합니다.
+     * HTTP 취소 요청 성공 후 주문 상태를 "cancelled"로 업데이트합니다.
      * 별도 트랜잭션으로 실행되어 DB 커넥션 점유 시간을 최소화합니다.
      * 
      * @param orderId 주문 ID

@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.v3.oas.annotations.tags.Tag;
-
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.dto.OrderbookResponse;
@@ -25,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -72,7 +71,7 @@ public class OrderController {
      * 2. 주문 생성 요청 유효성 검증 (@Valid)
      * 3. OrderService를 통해 주문 생성
      *    - 주문 DB 저장
-     *    - Rust 엔진에 주문 제출 (gRPC, 동기)
+     *    - Rust 엔진에 주문 제출 (HTTP, 동기)
      *    - Kafka 이벤트 발행 (비동기, 로깅용)
      * 4. 생성된 주문 정보 반환
      * 
@@ -325,7 +324,7 @@ public class OrderController {
      * 처리 과정:
      * 1. 주문 조회 및 본인 확인
      * 2. 주문 상태 확인 (취소 가능한 상태인지)
-     * 3. Rust 엔진에 취소 요청 (gRPC, 동기)
+     * 3. Rust 엔진에 취소 요청 (HTTP, 동기)
      * 4. 주문 상태를 'cancelled'로 업데이트
      * 5. Kafka 이벤트 발행 (비동기)
      * 

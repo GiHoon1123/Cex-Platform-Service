@@ -1,11 +1,13 @@
 package dustin.cex.config;
 
+import java.util.concurrent.Executor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-
-import java.util.concurrent.Executor;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * 성능 최적화 설정
@@ -38,6 +40,7 @@ public class PerformanceConfig {
     /**
      * 일반 비동기 작업용 스레드 풀
      * General async task executor
+     * 트랜잭션 컨텍스트 전파를 위한 TaskDecorator 포함
      */
     @Bean(name = "taskExecutor")
     public Executor taskExecutor() {
@@ -46,6 +49,21 @@ public class PerformanceConfig {
         executor.setMaxPoolSize(8);
         executor.setQueueCapacity(500);
         executor.setThreadNamePrefix("async-");
+        // 트랜잭션 컨텍스트 전파를 위한 TaskDecorator 설정
+        executor.setTaskDecorator(new TaskDecorator() {
+            @Override
+            public Runnable decorate(Runnable runnable) {
+                // 현재 스레드의 트랜잭션 컨텍스트를 캡처
+                return () -> {
+                    try {
+                        runnable.run();
+                    } finally {
+                        // 작업 완료 후 트랜잭션 동기화 상태 정리
+                        TransactionSynchronizationManager.clear();
+                    }
+                };
+            }
+        });
         executor.initialize();
         return executor;
     }

@@ -3,7 +3,6 @@ plugins {
 	id 'org.springframework.boot' version '3.2.5'
 	id 'io.spring.dependency-management' version '1.1.4'
 	id 'me.champeau.jmh' version '0.7.2'
-	id 'com.google.protobuf' version '0.9.3'
 }
 
 // Spring Boot 의존성 관리 명시적 설정
@@ -53,12 +52,6 @@ dependencies {
 	
 	// WebSocket Client (바이낸스 WebSocket 연결용)
 	implementation 'org.java-websocket:Java-WebSocket:1.5.7'
-	
-	// gRPC
-	implementation 'io.grpc:grpc-netty-shaded:1.60.1'
-	implementation 'io.grpc:grpc-protobuf:1.60.1'
-	implementation 'io.grpc:grpc-stub:1.60.1'
-	compileOnly 'org.apache.tomcat:annotations-api:6.0.53' // for @Generated annotation
 	
 	// JSON 처리 (Jackson은 이미 Spring Boot에 포함됨)
 	
@@ -117,35 +110,4 @@ jmh {
 	}
 
 	jvmArgs = baseArgs
-}
-
-// gRPC 설정
-protobuf {
-	protoc {
-		artifact = "com.google.protobuf:protoc:3.25.1"
-	}
-	plugins {
-		grpc {
-			artifact = "io.grpc:protoc-gen-grpc-java:1.60.1"
-		}
-	}
-	generateProtoTasks {
-		all().configureEach { task ->
-			task.builtins {
-				java {}
-			}
-			task.plugins {
-				grpc {}
-			}
-		}
-	}
-}
-
-sourceSets {
-	main {
-		java {
-			srcDirs 'build/generated/source/proto/main/grpc'
-			srcDirs 'build/generated/source/proto/main/java'
-		}
-	}
 }
