@@ -1,4 +1,4 @@
-package dustin.cex.domains.settlement.model.entity;
+package dustin.cex.domains.settlement.trade.model.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,12 +21,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 사용자별 정산 내역 엔티티
- * User Settlement Entity
+ * 사용자별 거래 정산 내역 엔티티
+ * Trade User Settlement Entity
  * 
  * 역할:
  * - 사용자별 일별/월별 거래 및 수수료 내역 요약
  * - 사용자 리포트 생성의 기초 데이터
+ * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 엔티티는 settlement.trade 하위 도메인에 속합니다.
+ * 거래 정산만을 담당하며, 향후 입출금/이벤트/쿠폰 정산은 별도 하위 도메인에서 처리됩니다.
  * 
  * 정산에서의 중요성:
  * ==================
@@ -65,16 +70,16 @@ import lombok.NoArgsConstructor;
  * - total_fees_paid: 60 USDT
  */
 @Entity
-@Table(name = "user_settlements",
+@Table(name = "trade_user_settlements",
        indexes = {
-           @Index(name = "idx_user_settlements_user_id", columnList = "user_id"),
-           @Index(name = "idx_user_settlements_date", columnList = "settlement_date"),
-           @Index(name = "idx_user_settlements_user_date", columnList = "user_id,settlement_date"),
-           @Index(name = "idx_user_settlements_type", columnList = "settlement_type")
+           @Index(name = "idx_trade_user_settlements_user_id", columnList = "user_id"),
+           @Index(name = "idx_trade_user_settlements_date", columnList = "settlement_date"),
+           @Index(name = "idx_trade_user_settlements_user_date", columnList = "user_id,settlement_date"),
+           @Index(name = "idx_trade_user_settlements_type", columnList = "settlement_type")
        },
        uniqueConstraints = {
            @jakarta.persistence.UniqueConstraint(
-               name = "uk_user_settlements_user_date_type_mint",
+               name = "uk_trade_user_settlements_user_date_type_mint",
                columnNames = {"user_id", "settlement_date", "settlement_type", "base_mint", "quote_mint"}
            )
        })
@@ -82,7 +87,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserSettlement {
+public class TradeUserSettlement {
     
     /**
      * 사용자별 정산 내역 고유 ID (DB에서 자동 생성)

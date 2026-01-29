@@ -1,4 +1,4 @@
-package dustin.cex.domains.settlement.repository;
+package dustin.cex.domains.settlement.trade.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import dustin.cex.domains.settlement.model.entity.TradeFee;
+import dustin.cex.domains.settlement.trade.model.entity.TradeFee;
 
 /**
  * 거래별 수수료 내역 Repository
@@ -18,10 +18,15 @@ import dustin.cex.domains.settlement.model.entity.TradeFee;
  * - trade_fees 테이블에 대한 데이터베이스 접근 제공
  * - 정산 시 수수료 수익 집계를 위한 쿼리 메서드 제공
  * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 Repository는 settlement.trade 하위 도메인에 속합니다.
+ * 거래 수수료만을 담당하며, 향후 입출금 수수료/이벤트 수수료는 별도 하위 도메인에서 처리됩니다.
+ * 
  * 정산 활용:
  * ==========
  * 1. 일별 수수료 수익 집계:
- *    - calculateDailyFeeRevenue() 메서드 사용
+ *    - calculateTotalFeeRevenueByMint() 메서드 사용
  *    - 전일 모든 거래의 수수료 합계 계산
  * 
  * 2. 사용자별 수수료 납부 내역:

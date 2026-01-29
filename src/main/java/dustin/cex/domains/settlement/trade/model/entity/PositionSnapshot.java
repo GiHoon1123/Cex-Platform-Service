@@ -1,4 +1,4 @@
-package dustin.cex.domains.settlement.model.entity;
+package dustin.cex.domains.settlement.trade.model.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,20 +13,27 @@ import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 포지션 스냅샷 엔티티
- * Position Snapshot Entity
+ * 거래 포지션 스냅샷 엔티티
+ * Trade Position Snapshot Entity
  * 
  * 역할:
  * - 일별 포지션 스냅샷 저장 (정산 시점 데이터 고정)
  * - user_positions 테이블의 일일 스냅샷
  * - 정산 및 감사 목적
+ * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 엔티티는 settlement.trade 하위 도메인에 속합니다.
+ * 포지션 스냅샷은 거래 정산에만 필요합니다:
+ * - 거래 정산: 거래로 인한 포지션 변화 추적 ✅
+ * - 입출금 정산: 입출금은 잔고만 영향, 포지션 불필요 ❌
+ * - 이벤트 정산: 이벤트는 잔고만 영향, 포지션 불필요 ❌
  * 
  * 생성 시점:
  * - 매일 자정 배치 작업으로 생성
@@ -39,12 +46,12 @@ import lombok.NoArgsConstructor;
  * - 감사 및 정산 검증
  */
 @Entity
-@Table(name = "position_snapshots",
+@Table(name = "trade_position_snapshots",
        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "snapshot_date", "base_mint", "quote_mint"}),
        indexes = {
-           @Index(name = "idx_position_snapshots_user_date", columnList = "user_id,snapshot_date"),
-           @Index(name = "idx_position_snapshots_date", columnList = "snapshot_date"),
-           @Index(name = "idx_position_snapshots_base_quote", columnList = "base_mint,quote_mint")
+           @Index(name = "idx_trade_position_snapshots_user_date", columnList = "user_id,snapshot_date"),
+           @Index(name = "idx_trade_position_snapshots_date", columnList = "snapshot_date"),
+           @Index(name = "idx_trade_position_snapshots_base_quote", columnList = "base_mint,quote_mint")
        })
 @Data
 @Builder

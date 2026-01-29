@@ -1,9 +1,7 @@
-package dustin.cex.domains.settlement.service;
+package dustin.cex.domains.settlement.trade.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,21 +10,29 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import dustin.cex.domains.settlement.model.entity.Settlement;
-import dustin.cex.domains.settlement.model.entity.UserSettlement;
-import dustin.cex.domains.settlement.repository.SettlementRepository;
-import dustin.cex.domains.settlement.repository.UserSettlementRepository;
+import dustin.cex.domains.settlement.trade.model.entity.TradeSettlement;
+import dustin.cex.domains.settlement.trade.model.entity.TradeUserSettlement;
+import dustin.cex.domains.settlement.trade.repository.TradeSettlementRepository;
+import dustin.cex.domains.settlement.trade.repository.TradeUserSettlementRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 정산 리포트 서비스
- * Settlement Report Service
+ * 거래 정산 리포트 서비스
+ * Trade Settlement Report Service
  * 
  * 역할:
- * - 일별/월별 정산 리포트 생성
- * - 사용자별 정산 리포트 생성
+ * - 일별/월별 거래 정산 리포트 생성
+ * - 사용자별 거래 정산 리포트 생성
  * - 수수료 수익 리포트 생성
+ * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 서비스는 settlement.trade 하위 도메인에 속합니다.
+ * 거래 정산 리포트만 생성합니다:
+ * - 거래 정산 리포트: 거래량, 수수료 수익 등 ✅
+ * - 입출금 정산 리포트: 입출금 내역 기반 (별도 서비스) ❌
+ * - 이벤트 정산 리포트: 이벤트 지급 내역 기반 (별도 서비스) ❌
  * 
  * 리포트의 목적:
  * ==============
@@ -47,15 +53,15 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SettlementReportService {
+public class TradeReportService {
     
-    private final SettlementRepository settlementRepository;
-    private final UserSettlementRepository userSettlementRepository;
-    private final SettlementService settlementService;
+    private final TradeSettlementRepository tradeSettlementRepository;
+    private final TradeUserSettlementRepository tradeUserSettlementRepository;
+    private final TradeSettlementService tradeSettlementService;
     
     /**
-     * 일별 정산 리포트 생성
-     * Generate Daily Settlement Report
+     * 일별 거래 정산 리포트 생성
+     * Generate Daily Trade Settlement Report
      * 
      * 리포트 내용:
      * ===========
@@ -72,9 +78,9 @@ public class SettlementReportService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> generateDailyReport(LocalDate date) {
-        log.info("[SettlementReportService] 일별 정산 리포트 생성 시작: date={}", date);
+        log.info("[TradeReportService] 일별 거래 정산 리포트 생성 시작: date={}", date);
         
-        Settlement settlement = settlementRepository
+        TradeSettlement settlement = tradeSettlementRepository
                 .findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(date, "daily", null, "USDT")
                 .orElseThrow(() -> new RuntimeException("일별 정산 데이터를 찾을 수 없습니다: date=" + date));
         
@@ -90,15 +96,15 @@ public class SettlementReportService {
         report.put("createdAt", settlement.getCreatedAt());
         report.put("validatedAt", settlement.getValidatedAt());
         
-        log.info("[SettlementReportService] 일별 정산 리포트 생성 완료: date={}, totalTrades={}, totalFeeRevenue={}", 
+        log.info("[TradeReportService] 일별 거래 정산 리포트 생성 완료: date={}, totalTrades={}, totalFeeRevenue={}", 
                 date, settlement.getTotalTrades(), settlement.getTotalFeeRevenue());
         
         return report;
     }
     
     /**
-     * 월별 정산 리포트 생성
-     * Generate Monthly Settlement Report
+     * 월별 거래 정산 리포트 생성
+     * Generate Monthly Trade Settlement Report
      * 
      * 리포트 내용:
      * ===========
@@ -117,11 +123,11 @@ public class SettlementReportService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> generateMonthlyReport(int year, int month, boolean includeDailyDetails) {
-        log.info("[SettlementReportService] 월별 정산 리포트 생성 시작: year={}, month={}", year, month);
+        log.info("[TradeReportService] 월별 거래 정산 리포트 생성 시작: year={}, month={}", year, month);
         
         LocalDate startDate = LocalDate.of(year, month, 1);
         
-        Settlement monthlySettlement = settlementRepository
+        TradeSettlement monthlySettlement = tradeSettlementRepository
                 .findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(startDate, "monthly", null, "USDT")
                 .orElseThrow(() -> new RuntimeException("월별 정산 데이터를 찾을 수 없습니다: year=" + year + ", month=" + month));
         
@@ -142,7 +148,7 @@ public class SettlementReportService {
         // 일별 상세 내역 포함 여부
         if (includeDailyDetails) {
             LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
-            List<Settlement> dailySettlements = settlementRepository
+            List<TradeSettlement> dailySettlements = tradeSettlementRepository
                     .findBySettlementDateBetweenAndSettlementType(startDate, endDate, "daily");
             
             List<Map<String, Object>> dailyDetails = dailySettlements.stream()
@@ -161,15 +167,15 @@ public class SettlementReportService {
             report.put("dailyDetails", dailyDetails);
         }
         
-        log.info("[SettlementReportService] 월별 정산 리포트 생성 완료: year={}, month={}, totalTrades={}, totalFeeRevenue={}", 
+        log.info("[TradeReportService] 월별 거래 정산 리포트 생성 완료: year={}, month={}, totalTrades={}, totalFeeRevenue={}", 
                 year, month, monthlySettlement.getTotalTrades(), monthlySettlement.getTotalFeeRevenue());
         
         return report;
     }
     
     /**
-     * 사용자별 일별 정산 리포트 생성
-     * Generate User Daily Settlement Report
+     * 사용자별 일별 거래 정산 리포트 생성
+     * Generate User Daily Trade Settlement Report
      * 
      * 리포트 내용:
      * ===========
@@ -185,9 +191,9 @@ public class SettlementReportService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> generateUserDailyReport(Long userId, LocalDate date) {
-        log.info("[SettlementReportService] 사용자별 일별 정산 리포트 생성 시작: userId={}, date={}", userId, date);
+        log.info("[TradeReportService] 사용자별 일별 거래 정산 리포트 생성 시작: userId={}, date={}", userId, date);
         
-        UserSettlement userSettlement = userSettlementRepository
+        TradeUserSettlement userSettlement = tradeUserSettlementRepository
                 .findByUserIdAndSettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(
                         userId, date, "daily", null, "USDT")
                 .orElseThrow(() -> new RuntimeException("사용자별 일별 정산 데이터를 찾을 수 없습니다: userId=" + userId + ", date=" + date));
@@ -201,7 +207,7 @@ public class SettlementReportService {
         report.put("totalFeesPaid", userSettlement.getTotalFeesPaid());
         report.put("createdAt", userSettlement.getCreatedAt());
         
-        log.info("[SettlementReportService] 사용자별 일별 정산 리포트 생성 완료: userId={}, date={}, totalTrades={}, totalFeesPaid={}", 
+        log.info("[TradeReportService] 사용자별 일별 거래 정산 리포트 생성 완료: userId={}, date={}, totalTrades={}, totalFeesPaid={}", 
                 userId, date, userSettlement.getTotalTrades(), userSettlement.getTotalFeesPaid());
         
         return report;
@@ -220,7 +226,7 @@ public class SettlementReportService {
     @Transactional(readOnly = true)
     public BigDecimal getDailyFeeRevenue(LocalDate date) {
         // 먼저 정산 데이터가 있는지 확인
-        Settlement settlement = settlementRepository
+        TradeSettlement settlement = tradeSettlementRepository
                 .findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(date, "daily", null, "USDT")
                 .orElse(null);
         
@@ -229,12 +235,9 @@ public class SettlementReportService {
         }
         
         // 정산 데이터가 없으면 trade_fees 테이블에서 직접 계산
-        LocalDateTime startDateTime = date.atStartOfDay();
-        LocalDateTime endDateTime = date.atTime(LocalTime.MAX);
+        BigDecimal totalRevenue = tradeSettlementService.calculateDailyFeeRevenue(date);
         
-        BigDecimal totalRevenue = settlementService.calculateDailyFeeRevenue(date);
-        
-        log.info("[SettlementReportService] 일별 수수료 수익 조회 (직접 계산): date={}, revenue={}", date, totalRevenue);
+        log.info("[TradeReportService] 일별 수수료 수익 조회 (직접 계산): date={}, revenue={}", date, totalRevenue);
         return totalRevenue;
     }
     
@@ -254,7 +257,7 @@ public class SettlementReportService {
         LocalDate startDate = LocalDate.of(year, month, 1);
         
         // 먼저 정산 데이터가 있는지 확인
-        Settlement settlement = settlementRepository
+        TradeSettlement settlement = tradeSettlementRepository
                 .findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(startDate, "monthly", null, "USDT")
                 .orElse(null);
         
@@ -263,9 +266,9 @@ public class SettlementReportService {
         }
         
         // 정산 데이터가 없으면 trade_fees 테이블에서 직접 계산
-        BigDecimal totalRevenue = settlementService.calculateMonthlyFeeRevenue(year, month);
+        BigDecimal totalRevenue = tradeSettlementService.calculateMonthlyFeeRevenue(year, month);
         
-        log.info("[SettlementReportService] 월별 수수료 수익 조회 (직접 계산): year={}, month={}, revenue={}", 
+        log.info("[TradeReportService] 월별 수수료 수익 조회 (직접 계산): year={}, month={}, revenue={}", 
                 year, month, totalRevenue);
         return totalRevenue;
     }
@@ -280,20 +283,20 @@ public class SettlementReportService {
      */
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> getFeeRevenueByPair(LocalDate startDate, LocalDate endDate) {
-        log.info("[SettlementReportService] 거래쌍별 수수료 수익 조회 시작: startDate={}, endDate={}", startDate, endDate);
+        log.info("[TradeReportService] 거래쌍별 수수료 수익 조회 시작: startDate={}, endDate={}", startDate, endDate);
         
-        List<Settlement> settlements = settlementRepository
+        List<TradeSettlement> settlements = tradeSettlementRepository
                 .findBySettlementDateBetweenAndSettlementType(startDate, endDate, "daily");
         
         Map<String, BigDecimal> revenueByPair = new HashMap<>();
         
-        for (Settlement settlement : settlements) {
+        for (TradeSettlement settlement : settlements) {
             String baseMint = settlement.getBaseMint() != null ? settlement.getBaseMint() : "ALL";
             BigDecimal currentRevenue = revenueByPair.getOrDefault(baseMint, BigDecimal.ZERO);
             revenueByPair.put(baseMint, currentRevenue.add(settlement.getTotalFeeRevenue()));
         }
         
-        log.info("[SettlementReportService] 거래쌍별 수수료 수익 조회 완료: pairCount={}", revenueByPair.size());
+        log.info("[TradeReportService] 거래쌍별 수수료 수익 조회 완료: pairCount={}", revenueByPair.size());
         
         return revenueByPair;
     }

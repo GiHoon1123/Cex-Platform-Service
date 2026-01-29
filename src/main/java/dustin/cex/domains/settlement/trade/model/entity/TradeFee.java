@@ -1,8 +1,10 @@
-package dustin.cex.domains.settlement.model.entity;
+package dustin.cex.domains.settlement.trade.model.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import dustin.cex.domains.auth.model.entity.User;
+import dustin.cex.domains.trade.model.entity.Trade;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -18,9 +20,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import dustin.cex.domains.trade.model.entity.Trade;
-import dustin.cex.domains.auth.model.entity.User;
-
 /**
  * 거래별 수수료 내역 엔티티
  * Trade Fee Entity
@@ -28,6 +27,11 @@ import dustin.cex.domains.auth.model.entity.User;
  * 역할:
  * - 각 거래(trade)에서 발생한 수수료를 상세히 기록
  * - 정산 시 수수료 수익 집계의 기초 데이터
+ * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 엔티티는 settlement.trade 하위 도메인에 속합니다.
+ * 거래 수수료만을 담당하며, 향후 입출금 수수료/이벤트 수수료는 별도 하위 도메인에서 처리됩니다.
  * 
  * 정산에서의 중요성:
  * ==================

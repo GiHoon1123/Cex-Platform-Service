@@ -1,18 +1,24 @@
-package dustin.cex.domains.settlement.repository;
-
-import dustin.cex.domains.settlement.model.entity.PositionSnapshot;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+package dustin.cex.domains.settlement.trade.repository;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import dustin.cex.domains.settlement.trade.model.entity.PositionSnapshot;
+
 /**
- * 포지션 스냅샷 Repository
- * Position Snapshot Repository
+ * 거래 포지션 스냅샷 Repository
+ * Trade Position Snapshot Repository
+ * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 Repository는 settlement.trade 하위 도메인에 속합니다.
+ * 포지션 스냅샷은 거래 정산에만 필요합니다.
  */
 @Repository
 public interface PositionSnapshotRepository extends JpaRepository<PositionSnapshot, Long> {

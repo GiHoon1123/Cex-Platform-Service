@@ -1,4 +1,4 @@
-package dustin.cex.domains.settlement.repository;
+package dustin.cex.domains.settlement.trade.repository;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -9,18 +9,23 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import dustin.cex.domains.settlement.model.entity.Settlement;
+import dustin.cex.domains.settlement.trade.model.entity.TradeSettlement;
 
 /**
- * 정산 내역 Repository
- * Settlement Repository
+ * 거래 정산 내역 Repository
+ * Trade Settlement Repository
  * 
  * 역할:
  * - settlements 테이블에 대한 데이터베이스 접근 제공
- * - 일별/월별 정산 데이터 조회 및 집계 쿼리 제공
+ * - 일별/월별 거래 정산 데이터 조회 및 집계 쿼리 제공
+ * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 Repository는 settlement.trade 하위 도메인에 속합니다.
+ * 거래 정산만을 담당하며, 향후 입출금/이벤트/쿠폰 정산은 별도 하위 도메인에서 처리됩니다.
  */
 @Repository
-public interface SettlementRepository extends JpaRepository<Settlement, Long> {
+public interface TradeSettlementRepository extends JpaRepository<TradeSettlement, Long> {
     
     /**
      * 특정 날짜의 일별 정산 조회
@@ -30,7 +35,7 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
      * @param quoteMint 기준 통화 (기본값: USDT)
      * @return 일별 정산 데이터
      */
-    Optional<Settlement> findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(
+    Optional<TradeSettlement> findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(
             LocalDate settlementDate,
             String settlementType,
             String baseMint,
@@ -45,8 +50,8 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
      * @param settlementType 정산 유형 ('daily' 또는 'monthly')
      * @return 해당 기간의 정산 데이터 목록
      */
-    @Query("SELECT s FROM Settlement s WHERE s.settlementDate BETWEEN :startDate AND :endDate AND s.settlementType = :settlementType ORDER BY s.settlementDate ASC")
-    List<Settlement> findBySettlementDateBetweenAndSettlementType(
+    @Query("SELECT s FROM TradeSettlement s WHERE s.settlementDate BETWEEN :startDate AND :endDate AND s.settlementType = :settlementType ORDER BY s.settlementDate ASC")
+    List<TradeSettlement> findBySettlementDateBetweenAndSettlementType(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
             @Param("settlementType") String settlementType

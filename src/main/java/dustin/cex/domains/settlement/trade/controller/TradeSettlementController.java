@@ -1,4 +1,4 @@
-package dustin.cex.domains.settlement.controller;
+package dustin.cex.domains.settlement.trade.controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,8 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import dustin.cex.domains.settlement.service.SettlementReportService;
-import dustin.cex.domains.settlement.service.SettlementService;
+import dustin.cex.domains.settlement.trade.service.TradeReportService;
+import dustin.cex.domains.settlement.trade.service.TradeSettlementService;
+import dustin.cex.domains.settlement.trade.service.TradeSettlementValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,39 +27,48 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 정산 컨트롤러
- * Settlement Controller
+ * 거래 정산 컨트롤러
+ * Trade Settlement Controller
  * 
  * 역할:
- * - 정산 리포트 조회 REST API 엔드포인트 제공
+ * - 거래 정산 리포트 조회 REST API 엔드포인트 제공
  * - 수수료 수익 조회 API 제공
- * - 정산 검증 API 제공
+ * - 거래 정산 검증 API 제공
+ * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 컨트롤러는 settlement.trade 하위 도메인에 속합니다.
+ * 거래 정산에만 관련된 API를 제공합니다:
+ * - 거래 정산 리포트 ✅
+ * - 입출금 정산 리포트: 별도 컨트롤러 (settlement/deposit/controller) ❌
+ * - 이벤트 정산 리포트: 별도 컨트롤러 (settlement/event/controller) ❌
  * 
  * API 엔드포인트:
- * - GET /api/settlement/revenue/daily - 일별 수수료 수익 조회
- * - GET /api/settlement/revenue/monthly - 월별 수수료 수익 조회
- * - GET /api/settlement/revenue/by-pair - 거래쌍별 수수료 수익 조회
- * - POST /api/settlement/validate/{date} - 정산 검증 실행
- * - GET /api/settlement/validation-status/{date} - 정산 검증 상태 조회
- * - GET /api/settlement/report/daily/{date} - 일별 정산 리포트 조회
- * - GET /api/settlement/report/monthly/{year}/{month} - 월별 정산 리포트 조회
- * - GET /api/settlement/report/user/{userId}/{date} - 사용자별 일별 정산 리포트 조회
+ * - GET /api/settlement/trade/revenue/daily - 일별 수수료 수익 조회
+ * - GET /api/settlement/trade/revenue/monthly - 월별 수수료 수익 조회
+ * - GET /api/settlement/trade/revenue/by-pair - 거래쌍별 수수료 수익 조회
+ * - POST /api/settlement/trade/validate/{date} - 정산 검증 실행
+ * - GET /api/settlement/trade/validation-status/{date} - 정산 검증 상태 조회
+ * - GET /api/settlement/trade/report/daily/{date} - 일별 정산 리포트 조회
+ * - GET /api/settlement/trade/report/monthly/{year}/{month} - 월별 정산 리포트 조회
+ * - GET /api/settlement/trade/report/user/{userId}/{date} - 사용자별 일별 정산 리포트 조회
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/settlement")
+@RequestMapping("/api/settlement/trade")
 @RequiredArgsConstructor
-@Tag(name = "Settlement", description = "정산 API 엔드포인트")
-public class SettlementController {
+@Tag(name = "Trade Settlement", description = "거래 정산 API 엔드포인트")
+public class TradeSettlementController {
     
-    private final SettlementReportService settlementReportService;
-    private final SettlementService settlementService;
+    private final TradeReportService tradeReportService;
+    private final TradeSettlementService tradeSettlementService;
+    private final TradeSettlementValidator tradeSettlementValidator;
     
     /**
      * 일별 수수료 수익 조회
      * Get Daily Fee Revenue
      * 
-     * GET /api/settlement/revenue/daily?date=2026-01-28
+     * GET /api/settlement/trade/revenue/daily?date=2026-01-28
      * 
      * @param date 날짜 (YYYY-MM-DD 형식)
      * @return 일별 총 수수료 수익 (USDT)
@@ -85,10 +95,10 @@ public class SettlementController {
     public ResponseEntity<Map<String, Object>> getDailyFeeRevenue(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         
-        log.info("[SettlementController] 일별 수수료 수익 조회 요청: date={}", date);
+        log.info("[TradeSettlementController] 일별 수수료 수익 조회 요청: date={}", date);
         
         try {
-            BigDecimal revenue = settlementReportService.getDailyFeeRevenue(date);
+            BigDecimal revenue = tradeReportService.getDailyFeeRevenue(date);
             
             Map<String, Object> response = new HashMap<>();
             response.put("date", date);
@@ -96,7 +106,7 @@ public class SettlementController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("[SettlementController] 일별 수수료 수익 조회 실패: date={}", date, e);
+            log.error("[TradeSettlementController] 일별 수수료 수익 조회 실패: date={}", date, e);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -109,7 +119,7 @@ public class SettlementController {
      * 월별 수수료 수익 조회
      * Get Monthly Fee Revenue
      * 
-     * GET /api/settlement/revenue/monthly?year=2026&month=1
+     * GET /api/settlement/trade/revenue/monthly?year=2026&month=1
      * 
      * @param year 연도
      * @param month 월 (1-12)
@@ -140,10 +150,10 @@ public class SettlementController {
             @RequestParam int year,
             @RequestParam int month) {
         
-        log.info("[SettlementController] 월별 수수료 수익 조회 요청: year={}, month={}", year, month);
+        log.info("[TradeSettlementController] 월별 수수료 수익 조회 요청: year={}, month={}", year, month);
         
         try {
-            BigDecimal revenue = settlementReportService.getMonthlyFeeRevenue(year, month);
+            BigDecimal revenue = tradeReportService.getMonthlyFeeRevenue(year, month);
             
             Map<String, Object> response = new HashMap<>();
             response.put("year", year);
@@ -152,7 +162,7 @@ public class SettlementController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("[SettlementController] 월별 수수료 수익 조회 실패: year={}, month={}", year, month, e);
+            log.error("[TradeSettlementController] 월별 수수료 수익 조회 실패: year={}, month={}", year, month, e);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -165,7 +175,7 @@ public class SettlementController {
      * 거래쌍별 수수료 수익 조회
      * Get Fee Revenue by Trading Pair
      * 
-     * GET /api/settlement/revenue/by-pair?startDate=2026-01-01&endDate=2026-01-31
+     * GET /api/settlement/trade/revenue/by-pair?startDate=2026-01-01&endDate=2026-01-31
      * 
      * @param startDate 시작 날짜 (YYYY-MM-DD 형식)
      * @param endDate 종료 날짜 (YYYY-MM-DD 형식)
@@ -195,14 +205,14 @@ public class SettlementController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         
-        log.info("[SettlementController] 거래쌍별 수수료 수익 조회 요청: startDate={}, endDate={}", startDate, endDate);
+        log.info("[TradeSettlementController] 거래쌍별 수수료 수익 조회 요청: startDate={}, endDate={}", startDate, endDate);
         
         try {
-            Map<String, BigDecimal> revenueByPair = settlementReportService.getFeeRevenueByPair(startDate, endDate);
+            Map<String, BigDecimal> revenueByPair = tradeReportService.getFeeRevenueByPair(startDate, endDate);
             
             return ResponseEntity.ok(revenueByPair);
         } catch (Exception e) {
-            log.error("[SettlementController] 거래쌍별 수수료 수익 조회 실패: startDate={}, endDate={}", startDate, endDate, e);
+            log.error("[TradeSettlementController] 거래쌍별 수수료 수익 조회 실패: startDate={}, endDate={}", startDate, endDate, e);
             
             Map<String, BigDecimal> errorResponse = new HashMap<>();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
@@ -213,14 +223,14 @@ public class SettlementController {
      * 정산 검증 실행
      * Execute Settlement Validation
      * 
-     * POST /api/settlement/validate/2026-01-28
+     * POST /api/settlement/trade/validate/2026-01-28
      * 
      * @param date 검증할 날짜 (YYYY-MM-DD 형식)
      * @return 검증 결과
      */
     @Operation(
-            summary = "정산 검증 실행",
-            description = "특정 날짜의 정산 데이터에 대한 복식부기 검증을 실행합니다.\n\n" +
+            summary = "거래 정산 검증 실행",
+            description = "특정 날짜의 거래 정산 데이터에 대한 복식부기 검증을 실행합니다.\n\n" +
                          "**경로 변수:**\n" +
                          "- `date` (필수): 검증할 날짜 (YYYY-MM-DD 형식)\n\n" +
                          "**응답 예시:**\n" +
@@ -243,10 +253,14 @@ public class SettlementController {
     public ResponseEntity<Map<String, Object>> validateSettlement(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         
-        log.info("[SettlementController] 정산 검증 실행 요청: date={}", date);
+        log.info("[TradeSettlementController] 거래 정산 검증 실행 요청: date={}", date);
         
         try {
-            SettlementService.ValidationResult result = settlementService.validateDoubleEntryBookkeeping(date);
+            TradeSettlementValidator.ValidationResult result = tradeSettlementValidator.validateDoubleEntryBookkeeping(date);
+            
+            // 검증 결과를 DB에 저장
+            String errorMessage = result.getErrors().isEmpty() ? null : String.join("; ", result.getErrors());
+            tradeSettlementService.updateValidationStatus(date, result.getStatus(), errorMessage);
             
             Map<String, Object> response = new HashMap<>();
             response.put("date", result.getDate());
@@ -261,7 +275,7 @@ public class SettlementController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("[SettlementController] 정산 검증 실행 실패: date={}", date, e);
+            log.error("[TradeSettlementController] 거래 정산 검증 실행 실패: date={}", date, e);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -274,14 +288,14 @@ public class SettlementController {
      * 정산 검증 상태 조회
      * Get Settlement Validation Status
      * 
-     * GET /api/settlement/validation-status/2026-01-28
+     * GET /api/settlement/trade/validation-status/2026-01-28
      * 
      * @param date 날짜 (YYYY-MM-DD 형식)
      * @return 검증 상태
      */
     @Operation(
-            summary = "정산 검증 상태 조회",
-            description = "특정 날짜의 정산 데이터 검증 상태를 조회합니다.\n\n" +
+            summary = "거래 정산 검증 상태 조회",
+            description = "특정 날짜의 거래 정산 데이터 검증 상태를 조회합니다.\n\n" +
                          "**경로 변수:**\n" +
                          "- `date` (필수): 날짜 (YYYY-MM-DD 형식)\n\n" +
                          "**응답 예시:**\n" +
@@ -302,11 +316,11 @@ public class SettlementController {
     public ResponseEntity<Map<String, Object>> getValidationStatus(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         
-        log.info("[SettlementController] 정산 검증 상태 조회 요청: date={}", date);
+        log.info("[TradeSettlementController] 거래 정산 검증 상태 조회 요청: date={}", date);
         
         try {
-            dustin.cex.domains.settlement.model.entity.Settlement settlement = 
-                    settlementService.getSettlementByDate(date);
+            dustin.cex.domains.settlement.trade.model.entity.TradeSettlement settlement = 
+                    tradeSettlementService.getSettlementByDate(date);
             
             Map<String, Object> response = new HashMap<>();
             response.put("date", settlement.getSettlementDate());
@@ -316,7 +330,7 @@ public class SettlementController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("[SettlementController] 정산 검증 상태 조회 실패: date={}", date, e);
+            log.error("[TradeSettlementController] 거래 정산 검증 상태 조회 실패: date={}", date, e);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -329,14 +343,14 @@ public class SettlementController {
      * 일별 정산 리포트 조회
      * Get Daily Settlement Report
      * 
-     * GET /api/settlement/report/daily/2026-01-28
+     * GET /api/settlement/trade/report/daily/2026-01-28
      * 
      * @param date 날짜 (YYYY-MM-DD 형식)
      * @return 일별 정산 리포트
      */
     @Operation(
-            summary = "일별 정산 리포트 조회",
-            description = "특정 날짜의 일별 정산 리포트를 조회합니다.\n\n" +
+            summary = "일별 거래 정산 리포트 조회",
+            description = "특정 날짜의 일별 거래 정산 리포트를 조회합니다.\n\n" +
                          "**경로 변수:**\n" +
                          "- `date` (필수): 날짜 (YYYY-MM-DD 형식)\n\n" +
                          "**응답 예시:**\n" +
@@ -361,14 +375,14 @@ public class SettlementController {
     public ResponseEntity<Map<String, Object>> getDailyReport(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         
-        log.info("[SettlementController] 일별 정산 리포트 조회 요청: date={}", date);
+        log.info("[TradeSettlementController] 일별 거래 정산 리포트 조회 요청: date={}", date);
         
         try {
-            Map<String, Object> report = settlementReportService.generateDailyReport(date);
+            Map<String, Object> report = tradeReportService.generateDailyReport(date);
             
             return ResponseEntity.ok(report);
         } catch (Exception e) {
-            log.error("[SettlementController] 일별 정산 리포트 조회 실패: date={}", date, e);
+            log.error("[TradeSettlementController] 일별 거래 정산 리포트 조회 실패: date={}", date, e);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -381,7 +395,7 @@ public class SettlementController {
      * 월별 정산 리포트 조회
      * Get Monthly Settlement Report
      * 
-     * GET /api/settlement/report/monthly/2026/1?includeDailyDetails=true
+     * GET /api/settlement/trade/report/monthly/2026/1?includeDailyDetails=true
      * 
      * @param year 연도
      * @param month 월 (1-12)
@@ -389,8 +403,8 @@ public class SettlementController {
      * @return 월별 정산 리포트
      */
     @Operation(
-            summary = "월별 정산 리포트 조회",
-            description = "특정 월의 월별 정산 리포트를 조회합니다.\n\n" +
+            summary = "월별 거래 정산 리포트 조회",
+            description = "특정 월의 월별 거래 정산 리포트를 조회합니다.\n\n" +
                          "**경로 변수:**\n" +
                          "- `year` (필수): 연도 (예: 2026)\n" +
                          "- `month` (필수): 월 (1-12, 예: 1)\n\n" +
@@ -419,15 +433,15 @@ public class SettlementController {
             @PathVariable int month,
             @RequestParam(required = false, defaultValue = "false") boolean includeDailyDetails) {
         
-        log.info("[SettlementController] 월별 정산 리포트 조회 요청: year={}, month={}, includeDailyDetails={}", 
+        log.info("[TradeSettlementController] 월별 거래 정산 리포트 조회 요청: year={}, month={}, includeDailyDetails={}", 
                 year, month, includeDailyDetails);
         
         try {
-            Map<String, Object> report = settlementReportService.generateMonthlyReport(year, month, includeDailyDetails);
+            Map<String, Object> report = tradeReportService.generateMonthlyReport(year, month, includeDailyDetails);
             
             return ResponseEntity.ok(report);
         } catch (Exception e) {
-            log.error("[SettlementController] 월별 정산 리포트 조회 실패: year={}, month={}", year, month, e);
+            log.error("[TradeSettlementController] 월별 거래 정산 리포트 조회 실패: year={}, month={}", year, month, e);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
@@ -440,15 +454,15 @@ public class SettlementController {
      * 사용자별 일별 정산 리포트 조회
      * Get User Daily Settlement Report
      * 
-     * GET /api/settlement/report/user/1/2026-01-28
+     * GET /api/settlement/trade/report/user/1/2026-01-28
      * 
      * @param userId 사용자 ID
      * @param date 날짜 (YYYY-MM-DD 형식)
      * @return 사용자별 일별 정산 리포트
      */
     @Operation(
-            summary = "사용자별 일별 정산 리포트 조회",
-            description = "특정 사용자의 특정 날짜 일별 정산 리포트를 조회합니다.\n\n" +
+            summary = "사용자별 일별 거래 정산 리포트 조회",
+            description = "특정 사용자의 특정 날짜 일별 거래 정산 리포트를 조회합니다.\n\n" +
                          "**경로 변수:**\n" +
                          "- `userId` (필수): 사용자 ID\n" +
                          "- `date` (필수): 날짜 (YYYY-MM-DD 형식)\n\n" +
@@ -472,14 +486,14 @@ public class SettlementController {
             @PathVariable Long userId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         
-        log.info("[SettlementController] 사용자별 일별 정산 리포트 조회 요청: userId={}, date={}", userId, date);
+        log.info("[TradeSettlementController] 사용자별 일별 거래 정산 리포트 조회 요청: userId={}, date={}", userId, date);
         
         try {
-            Map<String, Object> report = settlementReportService.generateUserDailyReport(userId, date);
+            Map<String, Object> report = tradeReportService.generateUserDailyReport(userId, date);
             
             return ResponseEntity.ok(report);
         } catch (Exception e) {
-            log.error("[SettlementController] 사용자별 일별 정산 리포트 조회 실패: userId={}, date={}", userId, date, e);
+            log.error("[TradeSettlementController] 사용자별 일별 거래 정산 리포트 조회 실패: userId={}, date={}", userId, date, e);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());

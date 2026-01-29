@@ -1,4 +1,4 @@
-package dustin.cex.domains.settlement.model.entity;
+package dustin.cex.domains.settlement.trade.model.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,12 +19,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 정산 내역 엔티티
- * Settlement Entity
+ * 거래 정산 내역 엔티티
+ * Trade Settlement Entity
  * 
  * 역할:
- * - 일별/월별 정산 요약 정보 저장
- * - 거래소의 일별/월별 성과를 요약하여 기록
+ * - 거래(Trade) 관련 일별/월별 정산 요약 정보 저장
+ * - 거래소의 일별/월별 거래 성과를 요약하여 기록
+ * 
+ * 하위 도메인 분리:
+ * ================
+ * 이 엔티티는 settlement.trade 하위 도메인에 속합니다.
+ * 거래 정산만을 담당하며, 향후 입출금/이벤트/쿠폰 정산은 별도 하위 도메인에서 처리됩니다.
  * 
  * 정산에서의 중요성:
  * ==================
@@ -68,16 +73,16 @@ import lombok.NoArgsConstructor;
  * - validation_status: 'validated'
  */
 @Entity
-@Table(name = "settlements",
+@Table(name = "trade_settlements",
        indexes = {
-           @Index(name = "idx_settlements_date", columnList = "settlement_date"),
-           @Index(name = "idx_settlements_type", columnList = "settlement_type"),
-           @Index(name = "idx_settlements_date_type", columnList = "settlement_date,settlement_type"),
-           @Index(name = "idx_settlements_base_mint", columnList = "base_mint")
+           @Index(name = "idx_trade_settlements_date", columnList = "settlement_date"),
+           @Index(name = "idx_trade_settlements_type", columnList = "settlement_type"),
+           @Index(name = "idx_trade_settlements_date_type", columnList = "settlement_date,settlement_type"),
+           @Index(name = "idx_trade_settlements_base_mint", columnList = "base_mint")
        },
        uniqueConstraints = {
            @jakarta.persistence.UniqueConstraint(
-               name = "uk_settlements_date_type_mint",
+               name = "uk_trade_settlements_date_type_mint",
                columnNames = {"settlement_date", "settlement_type", "base_mint", "quote_mint"}
            )
        })
@@ -85,7 +90,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Settlement {
+public class TradeSettlement {
     
     /**
      * 정산 내역 고유 ID (DB에서 자동 생성)
