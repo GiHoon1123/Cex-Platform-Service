@@ -605,8 +605,8 @@ public class OrderService {
      * @param request 주문 요청
      */
     private void lockBalanceForOrder(Long userId, CreateOrderRequest request) {
-        if ("buy".equals(request.getOrderSide())) {
-            // 매수 주문: quote_mint lock
+        if ("buy".equals(request.getOrderType())) {
+            // 매수 주문: quote_mint lock (USDT 등)
             BigDecimal lockAmount = calculateQuoteAmount(request);
             lockBalance(userId, request.getQuoteMint(), lockAmount);
         } else {
@@ -715,7 +715,7 @@ public class OrderService {
      * @param request 주문 요청
      */
     private void unlockBalanceForOrder(Long userId, CreateOrderRequest request) {
-        if ("buy".equals(request.getOrderSide())) {
+        if ("buy".equals(request.getOrderType())) {
             BigDecimal unlockAmount = calculateQuoteAmount(request);
             unlockBalance(userId, request.getQuoteMint(), unlockAmount);
         } else {

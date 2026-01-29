@@ -21,11 +21,13 @@ import dustin.cex.domains.settlement.trade.model.entity.TradeFee;
 import dustin.cex.domains.settlement.trade.model.entity.TradeSettlement;
 import dustin.cex.domains.settlement.trade.model.entity.TradeSettlementAdjustment;
 import dustin.cex.domains.settlement.trade.model.entity.TradeSettlementAuditLog;
+import dustin.cex.domains.settlement.trade.model.entity.TradeSettlementFailure;
 import dustin.cex.domains.settlement.trade.model.entity.TradeSettlementItem;
 import dustin.cex.domains.settlement.trade.model.entity.TradeUserSettlement;
 import dustin.cex.domains.settlement.trade.repository.TradeFeeRepository;
 import dustin.cex.domains.settlement.trade.repository.TradeSettlementAdjustmentRepository;
 import dustin.cex.domains.settlement.trade.repository.TradeSettlementAuditLogRepository;
+import dustin.cex.domains.settlement.trade.repository.TradeSettlementFailureRepository;
 import dustin.cex.domains.settlement.trade.repository.TradeSettlementItemRepository;
 import dustin.cex.domains.settlement.trade.repository.TradeSettlementRepository;
 import dustin.cex.domains.settlement.trade.repository.TradeUserSettlementRepository;
@@ -59,6 +61,7 @@ public class TradeSettlementService {
     private final TradeSettlementItemRepository tradeSettlementItemRepository;
     private final TradeSettlementAdjustmentRepository tradeSettlementAdjustmentRepository;
     private final TradeSettlementAuditLogRepository tradeSettlementAuditLogRepository;
+    private final TradeSettlementFailureRepository tradeSettlementFailureRepository;
     private final TradeUserSettlementRepository tradeUserSettlementRepository;
     private final UserRepository userRepository;
     
@@ -89,11 +92,24 @@ public class TradeSettlementService {
      * 5. 정산 데이터 저장: trade_settlements 테이블에 저장
      * 
      * @param settlementDate 정산할 날짜 (예: 2026-01-28을 정산하려면 2026-01-28 전달)
-     * @return 생성된 정산 데이터
+     * @return 생성된 정산 데이터 (이미 있으면 기존 반환 → 실패 재실행 시 해당 단계부터 재개 가능)
      */
     @Transactional
     public TradeSettlement createDailySettlement(LocalDate settlementDate) {
-        log.info("[TradeSettlementService] 일별 거래 정산 집계 시작: settlementDate={}", settlementDate);
+        return createDailySettlement(settlementDate, false);
+    }
+
+    /**
+     * 일별 거래 정산 집계 (재생성 옵션)
+     * forceRecreate=true 시 테스트/수동 재정산용으로 기존 삭제 후 재생성.
+     *
+     * @param settlementDate 정산할 날짜
+     * @param forceRecreate true면 기존 정산 삭제 후 재생성, false면 이미 있으면 기존 반환(단계별 재개용)
+     * @return 생성된 또는 기존 정산 데이터
+     */
+    @Transactional
+    public TradeSettlement createDailySettlement(LocalDate settlementDate, boolean forceRecreate) {
+        log.info("[TradeSettlementService] 일별 거래 정산 집계 시작: settlementDate={}, forceRecreate={}", settlementDate, forceRecreate);
         
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 정산 기준 시점 명확화
@@ -122,29 +138,29 @@ public class TradeSettlementService {
         
         log.info("[TradeSettlementService] 정산 시간 범위: {} ~ {} (KST)", startDateTime, endDateTime);
         
-        // 이미 정산 데이터가 존재하는지 확인 (테스트를 위해 기존 데이터 삭제 후 재생성)
+        // 이미 정산 데이터가 존재하는지 확인
         boolean exists = tradeSettlementRepository.existsBySettlementDateAndSettlementType(targetDate, "daily");
-        if (exists) {
-            log.warn("[TradeSettlementService] 이미 정산 데이터가 존재함. 기존 데이터 삭제 후 재생성: date={}", targetDate);
-            // 기존 정산 데이터와 관련 데이터 삭제
+        if (exists && !forceRecreate) {
+            // 단계별 재개: 2단계는 이미 완료 → 기존 정산 반환 (3·4단계만 이어서 실행 가능)
+            java.util.Optional<TradeSettlement> existing = tradeSettlementRepository.findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(
+                    targetDate, "daily", null, "USDT");
+            if (existing.isPresent()) {
+                log.info("[TradeSettlementService] 이미 정산 데이터 존재 → 기존 반환 (실패 단계부터 재개): date={}, settlementId={}", targetDate, existing.get().getId());
+                return existing.get();
+            }
+        }
+        if (exists && forceRecreate) {
+            // 테스트/수동 재정산: 기존 삭제 후 아래에서 재생성
             java.util.Optional<TradeSettlement> existingSettlement = tradeSettlementRepository.findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(
                     targetDate, "daily", null, "USDT");
             if (existingSettlement.isPresent()) {
                 TradeSettlement settlement = existingSettlement.get();
                 Long settlementId = settlement.getId();
-                
-                // 관련 아이템 삭제
-                tradeSettlementItemRepository.findBySettlementId(settlementId).forEach(item -> 
-                    tradeSettlementItemRepository.delete(item));
-                // 관련 감사 로그 삭제
-                tradeSettlementAuditLogRepository.findBySettlementIdOrderByCreatedAtDesc(settlementId).forEach(auditLog -> 
-                    tradeSettlementAuditLogRepository.delete(auditLog));
-                // 관련 보정 삭제
-                tradeSettlementAdjustmentRepository.findBySettlementId(settlementId).forEach(adj -> 
-                    tradeSettlementAdjustmentRepository.delete(adj));
-                // 정산 데이터 삭제
+                tradeSettlementItemRepository.findBySettlementId(settlementId).forEach(tradeSettlementItemRepository::delete);
+                tradeSettlementAuditLogRepository.findBySettlementIdOrderByCreatedAtDesc(settlementId).forEach(tradeSettlementAuditLogRepository::delete);
+                tradeSettlementAdjustmentRepository.findBySettlementId(settlementId).forEach(tradeSettlementAdjustmentRepository::delete);
                 tradeSettlementRepository.delete(settlement);
-                log.info("[TradeSettlementService] 기존 정산 데이터 삭제 완료: date={}, settlementId={}", targetDate, settlementId);
+                log.info("[TradeSettlementService] 기존 정산 데이터 삭제 완료(forceRecreate): date={}, settlementId={}", targetDate, settlementId);
             }
         }
         
@@ -534,6 +550,29 @@ public class TradeSettlementService {
                 .distinct()
                 .toList();
     }
+
+    /**
+     * 거래가 있는 날짜 목록 (KST 기준, 최신순, 최대 31일)
+     * 수동 정산 테스트 시 사용할 날짜 후보 반환
+     */
+    @Transactional(readOnly = true)
+    public List<LocalDate> getDatesWithTrades() {
+        List<Object> raw = tradeRepository.findDistinctSettlementDates();
+        return raw.stream()
+                .map(o -> {
+                    if (o instanceof java.sql.Date d) {
+                        return d.toLocalDate();
+                    }
+                    if (o instanceof java.sql.Timestamp t) {
+                        return t.toLocalDateTime().toLocalDate();
+                    }
+                    if (o instanceof LocalDate ld) {
+                        return ld;
+                    }
+                    throw new IllegalStateException("Unexpected date type: " + (o != null ? o.getClass() : "null"));
+                })
+                .toList();
+    }
     
     /**
      * 정산 데이터 업데이트
@@ -559,6 +598,35 @@ public class TradeSettlementService {
         return tradeSettlementRepository
                 .findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(date, "daily", null, "USDT")
                 .orElseThrow(() -> new RuntimeException("정산 데이터를 찾을 수 없습니다: date=" + date));
+    }
+
+    /**
+     * 거래 정산 실패 기록 (우아한 처리: 실패 지점·유저 명시적 기록)
+     * Record settlement failure to trade_settlement_failures (거래 정산 도메인)
+     *
+     * @param settlementDate 정산일
+     * @param step 실패 단계 (1~4)
+     * @param userId 3단계 실패 시 user_id, 그 외 null
+     * @param errorMessage 에러 메시지
+     */
+    @Transactional
+    public void recordFailure(LocalDate settlementDate, int step, Long userId, String errorMessage) {
+        TradeSettlementFailure failure = TradeSettlementFailure.builder()
+                .settlementDate(settlementDate)
+                .step(step)
+                .userId(userId)
+                .errorMessage(errorMessage != null ? (errorMessage.length() > 2000 ? errorMessage.substring(0, 2000) : errorMessage) : null)
+                .build();
+        tradeSettlementFailureRepository.save(failure);
+        log.info("[TradeSettlementService] 정산 실패 기록: date={}, step={}, userId={}", settlementDate, step, userId);
+    }
+
+    /**
+     * 정산일별 실패 목록 조회 (GET /api/settlement/trade/failures?date= 용)
+     */
+    @Transactional(readOnly = true)
+    public List<TradeSettlementFailure> getFailuresByDate(LocalDate date) {
+        return tradeSettlementFailureRepository.findBySettlementDateOrderByCreatedAtDesc(date);
     }
     
     /**

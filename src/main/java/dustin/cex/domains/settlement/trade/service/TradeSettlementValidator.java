@@ -14,7 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
 import dustin.cex.domains.settlement.trade.model.entity.TradeFee;
+import dustin.cex.domains.settlement.trade.model.entity.TradeSettlement;
+import dustin.cex.domains.settlement.trade.model.entity.TradeSettlementItem;
 import dustin.cex.domains.settlement.trade.repository.TradeFeeRepository;
+import dustin.cex.domains.settlement.trade.repository.TradeSettlementItemRepository;
+import dustin.cex.domains.settlement.trade.repository.TradeSettlementRepository;
 import dustin.cex.domains.trade.model.entity.Trade;
 import dustin.cex.domains.trade.repository.TradeRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +51,8 @@ public class TradeSettlementValidator {
     
     private final TradeRepository tradeRepository;
     private final TradeFeeRepository tradeFeeRepository;
+    private final TradeSettlementRepository tradeSettlementRepository;
+    private final TradeSettlementItemRepository tradeSettlementItemRepository;
     private final UserBalanceRepository userBalanceRepository;
     
     /**
@@ -190,6 +196,28 @@ public class TradeSettlementValidator {
         
         log.info("[TradeSettlementValidator] 전체 시스템 검증: 총 사용자 잔고={}, 총 수수료 수익={}", 
                 totalUserBalances, totalFeeRevenue);
+        
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 4. 정산 데이터 교차 검증 (items 합 = total_fee_revenue)
+        // Cross-Check: SUM(trade_settlement_items.total_fee) = trade_settlements.total_fee_revenue
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        java.util.Optional<TradeSettlement> settlementOpt = tradeSettlementRepository
+                .findBySettlementDateAndSettlementTypeAndBaseMintAndQuoteMint(date, "daily", null, "USDT");
+        if (settlementOpt.isPresent()) {
+            TradeSettlement settlement = settlementOpt.get();
+            List<TradeSettlementItem> items = tradeSettlementItemRepository.findBySettlementId(settlement.getId());
+            BigDecimal itemsTotalFee = items.stream()
+                    .map(TradeSettlementItem::getTotalFee)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal settlementTotalFee = settlement.getTotalFeeRevenue() != null ? settlement.getTotalFeeRevenue() : BigDecimal.ZERO;
+            BigDecimal crossDiff = itemsTotalFee.subtract(settlementTotalFee).abs();
+            if (crossDiff.compareTo(new BigDecimal("0.000001")) > 0) {
+                result.addError(String.format("정산 교차 검증 실패: trade_settlement_items 합계(%s) != trade_settlements.total_fee_revenue(%s), 차이=%s",
+                        itemsTotalFee, settlementTotalFee, crossDiff));
+            } else {
+                log.info("[TradeSettlementValidator] 정산 교차 검증 통과: items 합계={}, settlement total_fee_revenue={}", itemsTotalFee, settlementTotalFee);
+            }
+        }
         
         // 검증 결과 설정
         result.setTotalTrades((long) trades.size());

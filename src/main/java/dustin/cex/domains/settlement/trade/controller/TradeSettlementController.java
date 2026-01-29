@@ -2,7 +2,9 @@ package dustin.cex.domains.settlement.trade.controller;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -113,6 +115,27 @@ public class TradeSettlementController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * 거래가 있는 날짜 목록 (수동 정산 테스트용)
+     * GET /api/settlement/trade/dates-with-trades
+     */
+    @Operation(summary = "거래가 있는 날짜 목록", description = "거래가 1건 이상 있는 날짜 목록(KST 기준, 최신순, 최대 31일). 수동 정산 테스트 시 사용.")
+    @GetMapping("/dates-with-trades")
+    public ResponseEntity<Map<String, Object>> getDatesWithTrades() {
+        try {
+            List<LocalDate> dates = tradeSettlementService.getDatesWithTrades();
+            Map<String, Object> response = new HashMap<>();
+            response.put("dates", dates.stream().map(LocalDate::toString).toList());
+            response.put("count", dates.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("[TradeSettlementController] 거래 날짜 목록 조회 실패", e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
@@ -343,6 +366,46 @@ public class TradeSettlementController {
     }
     
     /**
+     * 정산일별 실패 목록 조회 (우아한 처리: 실패 지점·유저 명시적 조회)
+     * GET /api/settlement/trade/failures?date=2026-01-28
+     */
+    @Operation(
+            summary = "거래 정산 실패 목록 조회",
+            description = "특정 날짜의 거래 정산 실패 기록을 조회합니다. (trade_settlement_failures)"
+    )
+    @GetMapping("/failures")
+    public ResponseEntity<Map<String, Object>> getFailures(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        
+        log.info("[TradeSettlementController] 거래 정산 실패 목록 조회 요청: date={}", date);
+        
+        try {
+            var failures = tradeSettlementService.getFailuresByDate(date);
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (var f : failures) {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", f.getId());
+                m.put("settlementDate", f.getSettlementDate());
+                m.put("step", f.getStep());
+                m.put("userId", f.getUserId());
+                m.put("errorMessage", f.getErrorMessage());
+                m.put("createdAt", f.getCreatedAt());
+                list.add(m);
+            }
+            Map<String, Object> response = new HashMap<>();
+            response.put("date", date);
+            response.put("failures", list);
+            response.put("count", list.size());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("[TradeSettlementController] 거래 정산 실패 목록 조회 실패: date={}", date, e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
      * 일별 정산 리포트 조회
      * Get Daily Settlement Report
      * 
@@ -506,27 +569,29 @@ public class TradeSettlementController {
     }
     
     /**
-     * 수동 일별 정산 실행 (테스트용)
-     * Manual Daily Settlement Execution (for Testing)
-     * 
-     * POST /api/settlement/trade/manual/daily?date=2026-01-30
-     * 
-     * @param date 정산할 날짜 (전일 데이터 정산)
+     * 수동 일별 정산 실행 (전체 4단계: 스냅샷 → 집계 → 사용자별 → 검증)
+     * Manual Daily Settlement Execution (full 4-step flow, same as 00:00 scheduler)
+     *
+     * POST /api/settlement/trade/manual/daily?date=2026-01-30&forceRecreate=false
+     *
+     * @param date 정산할 날짜
+     * @param forceRecreate true면 2단계에서 기존 정산 삭제 후 재생성, false면 단계별 재개
      * @return 정산 결과
      */
     @Operation(
-            summary = "수동 일별 정산 실행",
-            description = "특정 날짜의 일별 정산을 수동으로 실행합니다. (테스트용)"
+            summary = "수동 일별 정산 실행 (전체 4단계)",
+            description = "특정 날짜의 일별 정산을 수동으로 실행합니다. 스케줄러와 동일한 4단계(스냅샷→집계→사용자별→검증)를 수행합니다."
     )
     @PostMapping("/manual/daily")
     public ResponseEntity<Map<String, Object>> manualDailySettlement(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
-        log.info("[TradeSettlementController] 수동 일별 정산 실행 요청: date={}", date);
-        
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false, defaultValue = "false") boolean forceRecreate) {
+
+        log.info("[TradeSettlementController] 수동 일별 정산 실행 요청 (전체 4단계): date={}, forceRecreate={}", date, forceRecreate);
+
         try {
-            // 정산 실행 (서비스를 직접 호출)
-            tradeSettlementService.createDailySettlement(date);
+            // 스케줄러와 동일한 4단계 전체 실행 (trade_settlement_runs, trade_settlement_failures 포함)
+            tradeSettlementScheduler.runDailySettlementForDate(date, forceRecreate);
             
             // 정산 결과 조회
             dustin.cex.domains.settlement.trade.model.entity.TradeSettlement settlement = tradeSettlementService.getSettlementByDate(date);

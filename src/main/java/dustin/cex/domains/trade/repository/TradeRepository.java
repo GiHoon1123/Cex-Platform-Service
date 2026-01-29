@@ -71,4 +71,11 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
             @Param("startDateTime") LocalDateTime startDateTime,
             @Param("endDateTime") LocalDateTime endDateTime
     );
+
+    /**
+     * 거래가 있는 날짜 목록 (KST 기준, 최신순, 최대 31일)
+     * Distinct settlement dates that have at least one trade (for manual settlement / testing)
+     */
+    @Query(value = "SELECT DISTINCT CAST(created_at AS date) FROM trades ORDER BY 1 DESC LIMIT 31", nativeQuery = true)
+    List<Object> findDistinctSettlementDates();
 }
