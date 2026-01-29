@@ -624,10 +624,13 @@ public class OrderService {
             return request.getQuoteAmount();
         }
         // quoteAmount가 없으면 price * amount 계산
-        if (request.getPrice() != null) {
+        if (request.getPrice() != null && request.getAmount() != null) {
             return request.getPrice().multiply(request.getAmount());
         }
-        throw new RuntimeException("매수 주문의 경우 quoteAmount 또는 price가 필요합니다");
+        throw new RuntimeException(String.format(
+            "매수 주문의 경우 quoteAmount 또는 (price와 amount)가 필요합니다: price=%s, amount=%s", 
+            request.getPrice(), request.getAmount()
+        ));
     }
     
     /**
@@ -639,6 +642,11 @@ public class OrderService {
      * @param amount lock할 금액
      */
     private void lockBalance(Long userId, String mint, BigDecimal amount) {
+        // null 체크
+        if (amount == null) {
+            throw new IllegalArgumentException(String.format("lock할 금액이 null입니다: userId=%d, mint=%s", userId, mint));
+        }
+        
         var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
         
         if (balanceOpt.isEmpty()) {
@@ -647,17 +655,30 @@ public class OrderService {
         
         UserBalance balance = balanceOpt.get();
         
+        // available null 체크 및 기본값 설정
+        BigDecimal available = balance.getAvailable();
+        if (available == null) {
+            log.warn("[Balance] available이 null입니다. BigDecimal.ZERO로 설정: userId={}, mint={}", userId, mint);
+            available = BigDecimal.ZERO;
+            balance.setAvailable(BigDecimal.ZERO);
+        }
+        
         // 잔고 확인
-        if (balance.getAvailable().compareTo(amount) < 0) {
+        if (available.compareTo(amount) < 0) {
             throw new RuntimeException(String.format(
                 "잔고 부족: userId=%d, mint=%s, available=%s, required=%s", 
-                userId, mint, balance.getAvailable(), amount
+                userId, mint, available, amount
             ));
         }
         
         // 잔고 lock
-        balance.setAvailable(balance.getAvailable().subtract(amount));
-        balance.setLocked(balance.getLocked().add(amount));
+        BigDecimal locked = balance.getLocked();
+        if (locked == null) {
+            locked = BigDecimal.ZERO;
+        }
+        
+        balance.setAvailable(available.subtract(amount));
+        balance.setLocked(locked.add(amount));
         userBalanceRepository.save(balance);
         
         log.info("[Balance] 잔고 lock: userId={}, mint={}, amount={}, available={} -> {}, locked={} -> {}", 
@@ -711,12 +732,31 @@ public class OrderService {
      * @param amount unlock할 금액
      */
     private void unlockBalance(Long userId, String mint, BigDecimal amount) {
+        // null 체크
+        if (amount == null) {
+            throw new IllegalArgumentException(String.format("unlock할 금액이 null입니다: userId=%d, mint=%s", userId, mint));
+        }
+        
         var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
         
         if (balanceOpt.isPresent()) {
             UserBalance balance = balanceOpt.get();
-            balance.setLocked(balance.getLocked().subtract(amount));
-            balance.setAvailable(balance.getAvailable().add(amount));
+            
+            // null 체크 및 기본값 설정
+            BigDecimal locked = balance.getLocked();
+            if (locked == null) {
+                log.warn("[Balance] locked이 null입니다. BigDecimal.ZERO로 설정: userId={}, mint={}", userId, mint);
+                locked = BigDecimal.ZERO;
+            }
+            
+            BigDecimal available = balance.getAvailable();
+            if (available == null) {
+                log.warn("[Balance] available이 null입니다. BigDecimal.ZERO로 설정: userId={}, mint={}", userId, mint);
+                available = BigDecimal.ZERO;
+            }
+            
+            balance.setLocked(locked.subtract(amount));
+            balance.setAvailable(available.add(amount));
             userBalanceRepository.save(balance);
             
             log.info("[Balance] 잔고 unlock: userId={}, mint={}, amount={}", userId, mint, amount);

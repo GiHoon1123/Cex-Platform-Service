@@ -769,6 +769,18 @@ public class KafkaOrderEventConsumer {
             currentAvailable = balance.getAvailable();
             currentLocked = balance.getLocked();
             
+            // null 체크 및 기본값 설정
+            if (currentAvailable == null) {
+                log.warn("[Balance] available이 null입니다. BigDecimal.ZERO로 설정: userId={}, mint={}", userId, mint);
+                currentAvailable = BigDecimal.ZERO;
+                balance.setAvailable(BigDecimal.ZERO);
+            }
+            if (currentLocked == null) {
+                log.warn("[Balance] locked이 null입니다. BigDecimal.ZERO로 설정: userId={}, mint={}", userId, mint);
+                currentLocked = BigDecimal.ZERO;
+                balance.setLocked(BigDecimal.ZERO);
+            }
+            
             log.debug("[Balance] 업데이트 전 - userId={}, mint={}, available={}, locked={}, availableDelta={}, lockedDelta={}", 
                     userId, mint, currentAvailable, currentLocked, availableDelta, lockedDelta);
             
@@ -858,8 +870,22 @@ public class KafkaOrderEventConsumer {
         }
         
         UserBalance balance = balanceOpt.get();
-        balance.setLocked(balance.getLocked().subtract(unlockAmount));
-        balance.setAvailable(balance.getAvailable().add(unlockAmount));
+        
+        // null 체크 및 기본값 설정
+        BigDecimal locked = balance.getLocked();
+        if (locked == null) {
+            log.warn("[Balance] locked이 null입니다. BigDecimal.ZERO로 설정: userId={}, mint={}", userId, mint);
+            locked = BigDecimal.ZERO;
+        }
+        
+        BigDecimal available = balance.getAvailable();
+        if (available == null) {
+            log.warn("[Balance] available이 null입니다. BigDecimal.ZERO로 설정: userId={}, mint={}", userId, mint);
+            available = BigDecimal.ZERO;
+        }
+        
+        balance.setLocked(locked.subtract(unlockAmount));
+        balance.setAvailable(available.add(unlockAmount));
         
         // 잔고가 음수가 되지 않도록 검증
         if (balance.getAvailable().compareTo(BigDecimal.ZERO) < 0 || balance.getLocked().compareTo(BigDecimal.ZERO) < 0) {
@@ -933,9 +959,13 @@ public class KafkaOrderEventConsumer {
         if (balanceOpt.isPresent()) {
             UserBalance balance = balanceOpt.get();
             
+            // null 체크
+            BigDecimal safeSnapshotAvailable = snapshotAvailable != null ? snapshotAvailable : BigDecimal.ZERO;
+            BigDecimal safeSnapshotLocked = snapshotLocked != null ? snapshotLocked : BigDecimal.ZERO;
+            
             // 1. 스냅샷 그대로 적용
-            balance.setAvailable(snapshotAvailable);
-            balance.setLocked(snapshotLocked);
+            balance.setAvailable(safeSnapshotAvailable);
+            balance.setLocked(safeSnapshotLocked);
             
             // 2. available에서 수수료 차감 (단순!)
             balance.setAvailable(balance.getAvailable().subtract(fee));
