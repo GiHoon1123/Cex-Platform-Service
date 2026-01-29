@@ -1,13 +1,15 @@
 package dustin.cex.domains.trade.repository;
 
-import dustin.cex.domains.trade.model.entity.Trade;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import dustin.cex.domains.trade.model.entity.Trade;
 
 /**
  * 체결 내역 리포지토리
@@ -54,4 +56,18 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
     @Query("SELECT t FROM Trade t WHERE (t.buyerId = :userId OR t.sellerId = :userId) AND t.baseMint = :baseMint ORDER BY t.createdAt DESC")
     List<Trade> findByUserIdAndBaseMintOrderByCreatedAtDesc(
             @Param("userId") Long userId, @Param("baseMint") String baseMint, Pageable pageable);
+    
+    /**
+     * 날짜 범위별 체결 내역 조회 (정산 검증용)
+     * Find trades by date range for settlement validation
+     * 
+     * @param startDateTime 시작 날짜/시간
+     * @param endDateTime 종료 날짜/시간
+     * @return 해당 기간의 모든 체결 내역
+     */
+    @Query("SELECT t FROM Trade t WHERE t.createdAt BETWEEN :startDateTime AND :endDateTime ORDER BY t.createdAt ASC")
+    List<Trade> findByCreatedAtBetween(
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
 }

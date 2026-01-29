@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import dustin.cex.domains.settlement.scheduler.SettlementScheduler;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,6 +61,52 @@ public class SettlementTestController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("[SettlementTestController] 스냅샷 생성 실패", e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+    
+    /**
+     * 일별 정산 프로세스 수동 실행 엔드포인트
+     * Manual daily settlement process execution endpoint
+     * 
+     * GET /api/settlement/test/create-daily-settlement?date=2026-01-28
+     * GET /api/settlement/test/create-daily-settlement (오늘 날짜 사용, 전일 데이터 정산)
+     * 
+     * 처리 과정:
+     * ==========
+     * 1. 스냅샷 생성: 잔고 및 포지션 스냅샷 생성
+     * 2. 정산 집계: 거래, 수수료, 사용자 수 집계 → settlements 테이블에 저장
+     * 3. 사용자별 정산 집계: 각 사용자별 거래 및 수수료 집계 → user_settlements 테이블에 저장
+     * 4. 복식부기 검증: 정산 데이터의 정확성 검증
+     * 
+     * @param date 정산 실행 날짜 (선택사항, 없으면 오늘 날짜 사용, 전일 데이터 정산)
+     * @return 생성 결과
+     */
+    @GetMapping("/create-daily-settlement")
+    public ResponseEntity<Map<String, Object>> createDailySettlement(
+            @RequestParam(required = false) String date) {
+        
+        log.info("[SettlementTestController] 일별 정산 프로세스 수동 실행 요청: date={}", date);
+        
+        try {
+            LocalDate today = date != null ? LocalDate.parse(date) : LocalDate.now();
+            settlementScheduler.createDailySettlementManually(today);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("settlementDate", today.minusDays(1).toString()); // 전일 데이터 정산
+            response.put("message", "일별 정산 프로세스 실행 완료");
+            
+            log.info("[SettlementTestController] 일별 정산 프로세스 수동 실행 완료: date={}", today);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("[SettlementTestController] 일별 정산 프로세스 수동 실행 실패", e);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);

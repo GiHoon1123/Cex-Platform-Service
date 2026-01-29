@@ -13,13 +13,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import dustin.cex.domains.auth.model.entity.User;
+import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
+import dustin.cex.domains.fee.model.entity.FeeConfig;
 import dustin.cex.domains.fee.service.FeeConfigService;
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
 import dustin.cex.domains.position.model.entity.UserPosition;
 import dustin.cex.domains.position.repository.UserPositionRepository;
+import dustin.cex.domains.settlement.model.entity.TradeFee;
+import dustin.cex.domains.settlement.repository.TradeFeeRepository;
 import dustin.cex.domains.trade.model.entity.Trade;
 import dustin.cex.domains.trade.repository.TradeRepository;
 import jakarta.annotation.PostConstruct;
@@ -66,6 +71,8 @@ public class KafkaOrderEventConsumer {
     private final UserBalanceRepository userBalanceRepository;
     private final UserPositionRepository userPositionRepository;
     private final FeeConfigService feeConfigService;
+    private final TradeFeeRepository tradeFeeRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     @PostConstruct
@@ -284,14 +291,117 @@ public class KafkaOrderEventConsumer {
         // 매도 주문 업데이트 (이미 락을 획득했으므로 직접 업데이트)
         updateOrderWithLock(sellOrderId, amount, price.multiply(amount));
         
-        // 수수료 계산 (Java에서)
-        BigDecimal buyerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
-        BigDecimal sellerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 수수료 계산 및 기록
+        // Fee Calculation and Recording
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 
+        // 정산에서의 중요성:
+        // ==================
+        // 1. 수수료 수익 집계:
+        //    - 거래소가 벌어들인 총 수수료 수익을 계산하기 위해 필요
+        //    - 거래 금액에 따라 수수료 금액이 다름 (1000달러 → 0.1달러, 100000달러 → 10달러)
+        //    - 각 거래마다 실제 수수료 금액을 기록해야 총 수수료 수익을 집계할 수 있음
+        // 
+        // 2. 사용자별 수수료 납부 내역:
+        //    - 사용자가 지불한 총 수수료를 집계하여 리포트 제공
+        //    - 세금 신고용 데이터로 활용 가능
+        // 
+        // 3. 거래쌍별 수수료 분석:
+        //    - 어떤 거래쌍에서 수수료 수익이 많이 발생하는지 분석
+        // 
+        // 처리 과정:
+        // ==========
+        // 1. FeeConfig 조회: 실제 적용된 수수료율 가져오기
+        // 2. 수수료 계산: 거래 금액 × 수수료율
+        // 3. TradeFee 엔티티 생성: 매수자 수수료 + 매도자 수수료
+        // 4. trade_fees 테이블에 저장: 정산 시 집계 가능하도록 기록
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         
-        log.info("[Kafka] 수수료 계산 (스냅샷 방식): buyerFee={}, sellerFee={}, totalValue={}, baseMint={}, quoteMint={}", 
-                buyerFee, sellerFee, totalValue, baseMint, quoteMint);
+        // 실제 적용된 수수료 설정 조회 (수수료율 기록을 위해)
+        FeeConfig feeConfig = feeConfigService.getFeeConfig(baseMint, quoteMint);
+        BigDecimal feeRate = feeConfig.getFeeRate(); // 실제 적용된 수수료율 (예: 0.0001 = 0.01%)
         
+        // 수수료 계산 (거래 금액 × 수수료율)
+        BigDecimal buyerFee = totalValue.multiply(feeRate);
+        BigDecimal sellerFee = totalValue.multiply(feeRate);
+        
+        log.info("[Kafka] 수수료 계산 (스냅샷 방식): buyerFee={}, sellerFee={}, feeRate={}, totalValue={}, baseMint={}, quoteMint={}", 
+                buyerFee, sellerFee, feeRate, totalValue, baseMint, quoteMint);
+        
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 수수료 기록 (trade_fees 테이블에 저장)
+        // Fee Recording (Save to trade_fees table)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 
+        // 목적:
+        // - 각 거래에서 발생한 수수료를 상세히 기록
+        // - 정산 시 수수료 수익 집계의 기초 데이터로 활용
+        // 
+        // 기록 내용:
+        // - trade_id: 어떤 거래에서 발생한 수수료인지
+        // - user_id: 누가 수수료를 납부했는지 (매수자 또는 매도자)
+        // - fee_type: 'buyer' (매수자) 또는 'seller' (매도자)
+        // - fee_rate: 적용된 수수료율 (예: 0.0001)
+        // - fee_amount: 실제 수수료 금액 (예: 0.1달러 또는 10달러)
+        // - fee_mint: 수수료가 차감된 자산 (보통 USDT)
+        // - trade_value: 거래 금액 (수수료 계산 기준)
+        // 
+        // 정산 활용 예시:
+        // - 일별 총 수수료 수익: SELECT SUM(fee_amount) FROM trade_fees WHERE created_at BETWEEN ...
+        // - 사용자별 수수료 납부액: SELECT SUM(fee_amount) FROM trade_fees WHERE user_id = ...
+        // - 거래쌍별 수수료 수익: SELECT SUM(fee_amount) FROM trade_fees WHERE fee_mint = 'USDT' AND ...
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        // 사용자 엔티티 조회 (TradeFee 엔티티에서 참조하기 위해 필요)
+        User buyer = userRepository.findById(buyerId)
+                .orElseThrow(() -> new RuntimeException("매수자 사용자를 찾을 수 없습니다: userId=" + buyerId));
+        User seller = userRepository.findById(sellerId)
+                .orElseThrow(() -> new RuntimeException("매도자 사용자를 찾을 수 없습니다: userId=" + sellerId));
+        
+        // 매수자 수수료 기록
+        TradeFee buyerTradeFee = TradeFee.builder()
+                .trade(savedTrade)                    // 어떤 거래에서 발생한 수수료인지
+                .user(buyer)                          // 누가 수수료를 납부했는지 (매수자)
+                .feeType("buyer")                     // 수수료 유형: 매수자
+                .feeRate(feeRate)                     // 실제 적용된 수수료율 (예: 0.0001)
+                .feeAmount(buyerFee)                  // 실제 수수료 금액 (예: 0.1달러 또는 10달러)
+                .feeMint(quoteMint)                   // 수수료가 차감된 자산 (보통 USDT)
+                .tradeValue(totalValue)                // 거래 금액 (수수료 계산 기준)
+                .build();
+        
+        // 매도자 수수료 기록
+        TradeFee sellerTradeFee = TradeFee.builder()
+                .trade(savedTrade)                    // 어떤 거래에서 발생한 수수료인지
+                .user(seller)                         // 누가 수수료를 납부했는지 (매도자)
+                .feeType("seller")                    // 수수료 유형: 매도자
+                .feeRate(feeRate)                     // 실제 적용된 수수료율 (예: 0.0001)
+                .feeAmount(sellerFee)                  // 실제 수수료 금액 (예: 0.1달러 또는 10달러)
+                .feeMint(quoteMint)                   // 수수료가 차감된 자산 (보통 USDT)
+                .tradeValue(totalValue)                // 거래 금액 (수수료 계산 기준)
+                .build();
+        
+        // trade_fees 테이블에 저장 (배치 INSERT로 성능 최적화)
+        tradeFeeRepository.saveAll(java.util.List.of(buyerTradeFee, sellerTradeFee));
+        
+        log.info("[Kafka] 수수료 기록 완료: tradeId={}, buyerFee={}, sellerFee={}, totalFeeRevenue={}", 
+                savedTrade.getId(), buyerFee, sellerFee, buyerFee.add(sellerFee));
+        
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 잔고 업데이트 (스냅샷 적용 + 수수료 차감)
+        // Balance Update (Apply snapshot and deduct fee)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 
+        // 처리 과정:
+        // 1. base_mint (예: SOL): 스냅샷 그대로 적용 (수수료 없음)
+        //    - 매수자: SOL 잔고 증가 (구매한 SOL)
+        //    - 매도자: SOL 잔고 감소 (판매한 SOL)
+        // 
+        // 2. quote_mint (예: USDT): 스냅샷 적용 후 수수료 차감
+        //    - 매수자: USDT 잔고 감소 (구매 비용) - 수수료 차감
+        //    - 매도자: USDT 잔고 증가 (판매 대금) - 수수료 차감
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
         // base_mint: 스냅샷 그대로 적용 (수수료 없음)
         updateBalanceFromSnapshot(buyerId, baseMint, buyerBaseAvailable, buyerBaseLocked);
         updateBalanceFromSnapshot(sellerId, baseMint, sellerBaseAvailable, sellerBaseLocked);
@@ -300,14 +410,28 @@ public class KafkaOrderEventConsumer {
         updateBalanceFromSnapshotWithFee(buyerId, quoteMint, buyerQuoteAvailable, buyerQuoteLocked, buyerFee);
         updateBalanceFromSnapshotWithFee(sellerId, quoteMint, sellerQuoteAvailable, sellerQuoteLocked, sellerFee);
         
-        // 매수자 포지션 업데이트
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 포지션 업데이트
+        // Position Update
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 
+        // 포지션(Position)이란?
+        // - 사용자가 보유한 자산의 평균 매수가, 손익, 수익률 등을 계산한 정보
+        // - 예: 100 USDT에 SOL을 구매했다면 평균 매수가는 100 USDT
+        // 
+        // 처리 과정:
+        // - 매수자: 포지션 증가 (구매한 SOL 추가)
+        // - 매도자: 포지션 감소 (판매한 SOL 차감)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        // 매수자 포지션 업데이트 (구매한 SOL 추가)
         updatePositionForTrade(buyerId, baseMint, quoteMint, amount, price);
         
         // 매도자 포지션 업데이트 (매도는 포지션 감소)
         updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
         
-        log.info("[Kafka] 체결 처리 완료 (스냅샷): buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}", 
-                buyOrderId, sellOrderId, price, amount, savedTrade.getId());
+        log.info("[Kafka] 체결 처리 완료 (스냅샷): buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}, totalFeeRevenue={}", 
+                buyOrderId, sellOrderId, price, amount, savedTrade.getId(), buyerFee.add(sellerFee));
     }
     
     /**
@@ -410,12 +534,78 @@ public class KafkaOrderEventConsumer {
         // 매도 주문 업데이트 (이미 락을 획득했으므로 직접 업데이트)
         updateOrderWithLock(sellOrderId, amount, price.multiply(amount));
         
-        // 수수료 계산
-        BigDecimal buyerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
-        BigDecimal sellerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 수수료 계산 및 기록 (Delta 방식)
+        // Fee Calculation and Recording (Delta Method)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 
+        // Delta 방식에서도 수수료 기록은 동일하게 수행
+        // 정산 시 수수료 수익 집계를 위해 반드시 필요
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         
-        log.info("[Kafka] 수수료 계산 (Delta 방식): buyerFee={}, sellerFee={}, totalValue={}, baseMint={}, quoteMint={}", 
-                buyerFee, sellerFee, totalValue, baseMint, quoteMint);
+        // 실제 적용된 수수료 설정 조회 (수수료율 기록을 위해)
+        FeeConfig feeConfig = feeConfigService.getFeeConfig(baseMint, quoteMint);
+        BigDecimal feeRate = feeConfig.getFeeRate(); // 실제 적용된 수수료율 (예: 0.0001 = 0.01%)
+        
+        // 수수료 계산 (거래 금액 × 수수료율)
+        BigDecimal buyerFee = totalValue.multiply(feeRate);
+        BigDecimal sellerFee = totalValue.multiply(feeRate);
+        
+        log.info("[Kafka] 수수료 계산 (Delta 방식): buyerFee={}, sellerFee={}, feeRate={}, totalValue={}, baseMint={}, quoteMint={}", 
+                buyerFee, sellerFee, feeRate, totalValue, baseMint, quoteMint);
+        
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 수수료 기록 (trade_fees 테이블에 저장)
+        // Fee Recording (Save to trade_fees table)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 
+        // Delta 방식에서도 수수료 기록은 필수
+        // 정산 시 모든 거래의 수수료를 집계하기 위해 필요
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        // 사용자 엔티티 조회 (TradeFee 엔티티에서 참조하기 위해 필요)
+        User buyer = userRepository.findById(buyerId)
+                .orElseThrow(() -> new RuntimeException("매수자 사용자를 찾을 수 없습니다: userId=" + buyerId));
+        User seller = userRepository.findById(sellerId)
+                .orElseThrow(() -> new RuntimeException("매도자 사용자를 찾을 수 없습니다: userId=" + sellerId));
+        
+        // 매수자 수수료 기록
+        TradeFee buyerTradeFee = TradeFee.builder()
+                .trade(savedTrade)
+                .user(buyer)
+                .feeType("buyer")
+                .feeRate(feeRate)
+                .feeAmount(buyerFee)
+                .feeMint(quoteMint)
+                .tradeValue(totalValue)
+                .build();
+        
+        // 매도자 수수료 기록
+        TradeFee sellerTradeFee = TradeFee.builder()
+                .trade(savedTrade)
+                .user(seller)
+                .feeType("seller")
+                .feeRate(feeRate)
+                .feeAmount(sellerFee)
+                .feeMint(quoteMint)
+                .tradeValue(totalValue)
+                .build();
+        
+        // trade_fees 테이블에 저장 (배치 INSERT로 성능 최적화)
+        tradeFeeRepository.saveAll(java.util.List.of(buyerTradeFee, sellerTradeFee));
+        
+        log.info("[Kafka] 수수료 기록 완료 (Delta): tradeId={}, buyerFee={}, sellerFee={}, totalFeeRevenue={}", 
+                savedTrade.getId(), buyerFee, sellerFee, buyerFee.add(sellerFee));
+        
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 매수자 잔고 업데이트 (Delta 방식)
+        // Buyer Balance Update (Delta Method)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // 
+        // Delta 방식의 잔고 업데이트:
+        // - base_mint: available 증가 (체결로 받은 SOL)
+        // - quote_mint: locked 감소 (주문에 사용했던 금액 + 수수료)
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         
         // 매수자 잔고 업데이트
         // - base_mint: available 증가 (체결로 받음)
@@ -437,8 +627,8 @@ public class KafkaOrderEventConsumer {
         // 매도자 포지션 업데이트 (매도는 포지션 감소)
         updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
         
-        log.info("[Kafka] 체결 처리 완료 (Delta): buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}", 
-                buyOrderId, sellOrderId, price, amount, savedTrade.getId());
+        log.info("[Kafka] 체결 처리 완료 (Delta): buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}, totalFeeRevenue={}", 
+                buyOrderId, sellOrderId, price, amount, savedTrade.getId(), buyerFee.add(sellerFee));
     }
     
     /**
