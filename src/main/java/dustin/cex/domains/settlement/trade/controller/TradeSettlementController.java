@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import dustin.cex.domains.settlement.trade.scheduler.TradeSettlementScheduler;
 import dustin.cex.domains.settlement.trade.service.TradeReportService;
 import dustin.cex.domains.settlement.trade.service.TradeSettlementService;
 import dustin.cex.domains.settlement.trade.service.TradeSettlementValidator;
@@ -63,6 +64,7 @@ public class TradeSettlementController {
     private final TradeReportService tradeReportService;
     private final TradeSettlementService tradeSettlementService;
     private final TradeSettlementValidator tradeSettlementValidator;
+    private final TradeSettlementScheduler tradeSettlementScheduler;
     
     /**
      * 일별 수수료 수익 조회
@@ -258,9 +260,10 @@ public class TradeSettlementController {
         try {
             TradeSettlementValidator.ValidationResult result = tradeSettlementValidator.validateDoubleEntryBookkeeping(date);
             
-            // 검증 결과를 DB에 저장
+            // 검증 결과를 DB에 저장 (상태를 대문자로 변환)
             String errorMessage = result.getErrors().isEmpty() ? null : String.join("; ", result.getErrors());
-            tradeSettlementService.updateValidationStatus(date, result.getStatus(), errorMessage);
+            String finalStatus = "validated".equals(result.getStatus()) ? "VALIDATED" : "FAILED";
+            tradeSettlementService.updateValidationStatus(date, finalStatus, errorMessage);
             
             Map<String, Object> response = new HashMap<>();
             response.put("date", result.getDate());
@@ -498,6 +501,91 @@ public class TradeSettlementController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", e.getMessage());
             
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        }
+    }
+    
+    /**
+     * 수동 일별 정산 실행 (테스트용)
+     * Manual Daily Settlement Execution (for Testing)
+     * 
+     * POST /api/settlement/trade/manual/daily?date=2026-01-30
+     * 
+     * @param date 정산할 날짜 (전일 데이터 정산)
+     * @return 정산 결과
+     */
+    @Operation(
+            summary = "수동 일별 정산 실행",
+            description = "특정 날짜의 일별 정산을 수동으로 실행합니다. (테스트용)"
+    )
+    @PostMapping("/manual/daily")
+    public ResponseEntity<Map<String, Object>> manualDailySettlement(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        
+        log.info("[TradeSettlementController] 수동 일별 정산 실행 요청: date={}", date);
+        
+        try {
+            // 정산 실행 (서비스를 직접 호출)
+            tradeSettlementService.createDailySettlement(date);
+            
+            // 정산 결과 조회
+            dustin.cex.domains.settlement.trade.model.entity.TradeSettlement settlement = tradeSettlementService.getSettlementByDate(date);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("date", date);
+            response.put("settlementId", settlement.getId());
+            response.put("validationStatus", settlement.getValidationStatus());
+            response.put("codeVersion", settlement.getCodeVersion());
+            response.put("policyVersion", settlement.getPolicyVersion());
+            response.put("totalTrades", settlement.getTotalTrades());
+            response.put("totalVolume", settlement.getTotalVolume());
+            response.put("totalFeeRevenue", settlement.getTotalFeeRevenue());
+            response.put("message", "정산이 성공적으로 실행되었습니다.");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("[TradeSettlementController] 수동 일별 정산 실행 실패: date={}", date, e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * 정산 상세 정보 조회 (감사 로그, 아이템 포함)
+     * Get Settlement Details (with Audit Logs and Items)
+     * 
+     * GET /api/settlement/trade/details/{date}
+     */
+    @GetMapping("/details/{date}")
+    public ResponseEntity<Map<String, Object>> getSettlementDetails(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        
+        try {
+            dustin.cex.domains.settlement.trade.model.entity.TradeSettlement settlement = tradeSettlementService.getSettlementByDate(date);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("settlementId", settlement.getId());
+            response.put("settlementDate", settlement.getSettlementDate());
+            response.put("settlementType", settlement.getSettlementType());
+            response.put("validationStatus", settlement.getValidationStatus());
+            response.put("codeVersion", settlement.getCodeVersion());
+            response.put("policyVersion", settlement.getPolicyVersion());
+            response.put("totalTrades", settlement.getTotalTrades());
+            response.put("totalVolume", settlement.getTotalVolume());
+            response.put("totalFeeRevenue", settlement.getTotalFeeRevenue());
+            response.put("totalUsers", settlement.getTotalUsers());
+            response.put("createdAt", settlement.getCreatedAt());
+            response.put("validatedAt", settlement.getValidatedAt());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
     }

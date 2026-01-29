@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -64,9 +66,13 @@ public class TradeSettlementValidator {
     public ValidationResult validateDoubleEntryBookkeeping(LocalDate date) {
         log.info("[TradeSettlementValidator] 거래 정산 복식부기 검증 시작: date={}", date);
         
-        // 검증 기간 설정 (해당 날짜의 00:00:00 ~ 23:59:59)
-        LocalDateTime startDateTime = date.atStartOfDay();
-        LocalDateTime endDateTime = date.atTime(LocalTime.MAX);
+        // 정산 기준 시점 명확화 (KST 기준)
+        ZoneId businessTimeZone = ZoneId.of("Asia/Seoul");
+        ZonedDateTime startZonedDateTime = date.atStartOfDay().atZone(businessTimeZone);
+        ZonedDateTime endZonedDateTime = date.atTime(LocalTime.MAX).atZone(businessTimeZone);
+        
+        LocalDateTime startDateTime = startZonedDateTime.toLocalDateTime();
+        LocalDateTime endDateTime = endZonedDateTime.toLocalDateTime();
         
         ValidationResult result = new ValidationResult();
         result.setDate(date);
@@ -194,11 +200,11 @@ public class TradeSettlementValidator {
         
         // 검증 상태 결정
         if (result.getErrors().isEmpty()) {
-            result.setStatus("validated");
+            result.setStatus("validated");  // 스케줄러에서 "VALIDATED"로 변환됨
             log.info("[TradeSettlementValidator] 거래 정산 복식부기 검증 통과: date={}, 거래건수={}, 수수료수익={}", 
                     date, trades.size(), totalFeeRevenue);
         } else {
-            result.setStatus("failed");
+            result.setStatus("failed");  // 스케줄러에서 "FAILED"로 변환됨
             log.error("[TradeSettlementValidator] 거래 정산 복식부기 검증 실패: date={}, 에러개수={}", 
                     date, result.getErrors().size());
             result.getErrors().forEach(error -> log.error("[TradeSettlementValidator] 검증 에러: {}", error));

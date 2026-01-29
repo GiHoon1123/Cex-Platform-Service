@@ -50,7 +50,8 @@ public interface TradeFeeRepository extends JpaRepository<TradeFee, Long> {
      * @param tradeId 거래 ID
      * @return 해당 거래의 모든 수수료 내역 (보통 2개: buyerFee, sellerFee)
      */
-    List<TradeFee> findByTradeId(Long tradeId);
+    @Query("SELECT tf FROM TradeFee tf WHERE tf.trade.id = :tradeId")
+    List<TradeFee> findByTradeId(@Param("tradeId") Long tradeId);
     
     /**
      * 특정 사용자의 수수료 내역 조회 (날짜 범위 지정)

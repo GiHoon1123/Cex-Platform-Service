@@ -191,19 +191,32 @@ public class TradeSettlement {
     private String quoteMint;
     
     /**
-     * 검증 상태: 'pending', 'validated', 'failed'
+     * 정산 상태: 'PENDING', 'CALCULATING', 'CALCULATED', 'VALIDATING', 'VALIDATED', 'FAILED', 'ADJUSTED'
      * 
-     * 의미:
-     * - 'pending': 아직 검증하지 않음
-     * - 'validated': 검증 통과 (모든 검증 항목 통과)
-     * - 'failed': 검증 실패 (검증 에러 발생)
+     * 상태 머신:
+     * ==========
+     * PENDING → CALCULATING → CALCULATED → VALIDATING → VALIDATED
+     *                                    ↓
+     *                                  FAILED
+     *                                    ↓
+     *                                  ADJUSTED
+     * 
+     * 상태 설명:
+     * - 'PENDING': 정산 대기 중
+     * - 'CALCULATING': 정산 계산 중
+     * - 'CALCULATED': 정산 계산 완료 (검증 전)
+     * - 'VALIDATING': 검증 진행 중
+     * - 'VALIDATED': 검증 통과 (최종 완료)
+     * - 'FAILED': 검증 실패 또는 계산 실패
+     * - 'ADJUSTED': 보정 정산이 적용됨
      * 
      * 정산에서의 중요성:
      * - 정산의 정확성을 보장하기 위한 필수 기능
+     * - 단계별 상태 추적으로 어느 단계에서 실패했는지 파악 가능
      * - 검증 실패 시 validation_error에 상세 에러 메시지 저장
      */
     @Column(name = "validation_status", length = 20)
-    private String validationStatus; // 'pending', 'validated', 'failed'
+    private String validationStatus; // 'PENDING', 'CALCULATING', 'CALCULATED', 'VALIDATING', 'VALIDATED', 'FAILED', 'ADJUSTED'
     
     /**
      * 검증 실패 시 에러 메시지
@@ -225,10 +238,42 @@ public class TradeSettlement {
      * 검증 완료 시간
      * 
      * 의미:
-     * - validation_status가 'validated' 또는 'failed'로 변경된 시간
+     * - validation_status가 'VALIDATED' 또는 'FAILED'로 변경된 시간
      */
     @Column(name = "validated_at")
     private LocalDateTime validatedAt;
+    
+    /**
+     * 정산 코드 버전
+     * Settlement Code Version
+     * 
+     * 의미:
+     * - 정산을 실행한 코드의 버전 (예: "1.2.3" 또는 Git commit hash)
+     * - 정산 재현성을 위해 사용된 코드 버전을 기록
+     * 
+     * 정산에서의 중요성:
+     * - 코드 변경으로 인한 정산 결과 차이 추적 가능
+     * - 버그 수정 후 재정산 시 이전 버전과 비교 가능
+     * - 감사 시 사용된 코드 버전 확인 가능
+     */
+    @Column(name = "code_version", length = 100)
+    private String codeVersion;
+    
+    /**
+     * 정산 정책 버전
+     * Settlement Policy Version
+     * 
+     * 의미:
+     * - 정산에 적용된 정책의 버전 (예: "fee-policy-v2", "settlement-policy-2026-01")
+     * - 수수료율, 정산 기준 등 정책 변경 추적
+     * 
+     * 정산에서의 중요성:
+     * - 정책 변경으로 인한 정산 결과 차이 추적 가능
+     * - 수수료율 변경 시 이전 정책과 비교 가능
+     * - 감사 시 적용된 정책 버전 확인 가능
+     */
+    @Column(name = "policy_version", length = 100)
+    private String policyVersion;
     
     /**
      * 엔티티 저장 전 자동으로 생성 시간 설정
@@ -237,7 +282,7 @@ public class TradeSettlement {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         if (validationStatus == null) {
-            validationStatus = "pending";
+            validationStatus = "PENDING";
         }
         if (quoteMint == null) {
             quoteMint = "USDT";
@@ -249,7 +294,7 @@ public class TradeSettlement {
      */
     @PreUpdate
     protected void onUpdate() {
-        if (validatedAt == null && ("validated".equals(validationStatus) || "failed".equals(validationStatus))) {
+        if (validatedAt == null && ("VALIDATED".equals(validationStatus) || "FAILED".equals(validationStatus))) {
             validatedAt = LocalDateTime.now();
         }
     }
