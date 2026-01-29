@@ -111,9 +111,9 @@ public class KafkaOrderEventConsumer {
             
             switch (eventType) {
                 case "trade_executed":
-                    log.debug("[Kafka] 체결 이벤트 수신: {}", message);
+                    log.info("[Kafka] 체결 이벤트 수신: {}", message);
                     handleTradeExecuted(jsonNode);
-                    log.debug("[Kafka] 체결 이벤트 처리 완료");
+                    log.info("[Kafka] 체결 이벤트 처리 완료");
                     break;
                 case "order_cancelled":
                     log.debug("[Kafka] 취소 이벤트 수신: {}", message);
@@ -207,18 +207,55 @@ public class KafkaOrderEventConsumer {
         boolean sellOrderExists = orderRepository.existsById(sellOrderId);
         
         if (!buyOrderExists || !sellOrderExists) {
-            // 주문이 없으면 예외 발생 (트랜잭션 롤백, Kafka Consumer가 재시도)
-            throw new RuntimeException("주문이 존재하지 않습니다: buyOrderId=" + buyOrderId + " (exists=" + buyOrderExists + "), sellOrderId=" + sellOrderId + " (exists=" + sellOrderExists + ")");
+            // 주문이 없으면 스킵 (이미 처리된 체결이거나 오래된 메시지일 수 있음)
+            log.warn("[Kafka] 주문이 존재하지 않아 체결 처리 스킵: buyOrderId={} (exists={}), sellOrderId={} (exists={})", 
+                    buyOrderId, buyOrderExists, sellOrderId, sellOrderExists);
+            return;
+        }
+        
+        // 중복 체결 방지: 주문의 현재 filled_amount 확인 (비관적 락)
+        var buyOrderOpt = orderRepository.findByIdForUpdate(buyOrderId);
+        var sellOrderOpt = orderRepository.findByIdForUpdate(sellOrderId);
+        
+        if (buyOrderOpt.isEmpty() || sellOrderOpt.isEmpty()) {
+            log.warn("[Kafka] 주문 조회 실패 (락 획득 실패): buyOrderId={}, sellOrderId={}", buyOrderId, sellOrderId);
+            return;
+        }
+        
+        Order buyOrder = buyOrderOpt.get();
+        Order sellOrder = sellOrderOpt.get();
+        
+        // 이미 전량 체결된 주문이면 스킵 (중복 체결 방지)
+        if ("filled".equals(buyOrder.getStatus()) || "filled".equals(sellOrder.getStatus())) {
+            log.warn("[Kafka] 이미 전량 체결된 주문으로 인한 중복 체결 이벤트 스킵: buyOrderId={} (status={}), sellOrderId={} (status={})", 
+                    buyOrderId, buyOrder.getStatus(), sellOrderId, sellOrder.getStatus());
+            return;
+        }
+        
+        // 체결 후 예상 filled_amount가 주문 amount를 초과하는지 확인
+        BigDecimal buyOrderNewFilledAmount = buyOrder.getFilledAmount().add(amount);
+        BigDecimal sellOrderNewFilledAmount = sellOrder.getFilledAmount().add(amount);
+        
+        if (buyOrderNewFilledAmount.compareTo(buyOrder.getAmount()) > 0) {
+            log.error("[Kafka] 매수 주문 체결량 초과: buyOrderId={}, currentFilled={}, amount={}, newFilled={}", 
+                    buyOrderId, buyOrder.getFilledAmount(), buyOrder.getAmount(), buyOrderNewFilledAmount);
+            return;
+        }
+        
+        if (sellOrderNewFilledAmount.compareTo(sellOrder.getAmount()) > 0) {
+            log.error("[Kafka] 매도 주문 체결량 초과: sellOrderId={}, currentFilled={}, amount={}, newFilled={}", 
+                    sellOrderId, sellOrder.getFilledAmount(), sellOrder.getAmount(), sellOrderNewFilledAmount);
+            return;
         }
         
         // Trade 저장
         Trade savedTrade = tradeRepository.save(trade);
         
-        // 매수 주문 업데이트 (비관적 락, 주문 ID 순서로 락 획득)
-        updateOrderForTrade(buyOrderId, sellOrderId, price, amount, savedTrade.getId());
+        // 매수 주문 업데이트 (이미 락을 획득했으므로 직접 업데이트)
+        updateOrderWithLock(buyOrderId, amount, price.multiply(amount));
         
-        // 매도 주문 업데이트 (비관적 락, 주문 ID 순서로 락 획득)
-        updateOrderForTrade(sellOrderId, buyOrderId, price, amount, savedTrade.getId());
+        // 매도 주문 업데이트 (이미 락을 획득했으므로 직접 업데이트)
+        updateOrderWithLock(sellOrderId, amount, price.multiply(amount));
         
         // 수수료 계산
         BigDecimal buyerFee = feeConfigService.calculateFee(baseMint, quoteMint, totalValue);
@@ -247,7 +284,7 @@ public class KafkaOrderEventConsumer {
         // 매도자 포지션 업데이트 (매도는 포지션 감소)
         updatePositionForTrade(sellerId, baseMint, quoteMint, amount.negate(), price);
         
-        log.debug("[Kafka] 체결 처리 완료: buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}", 
+        log.info("[Kafka] 체결 처리 완료: buyOrderId={}, sellOrderId={}, price={}, amount={}, tradeId={}", 
                 buyOrderId, sellOrderId, price, amount, savedTrade.getId());
     }
     
@@ -381,12 +418,61 @@ public class KafkaOrderEventConsumer {
         var balanceOpt = userBalanceRepository.findByUserIdAndMintAddressForUpdate(userId, mint);
         
         UserBalance balance;
+        BigDecimal currentAvailable = BigDecimal.ZERO;
+        BigDecimal currentLocked = BigDecimal.ZERO;
+        
         if (balanceOpt.isPresent()) {
             balance = balanceOpt.get();
-            balance.setAvailable(balance.getAvailable().add(availableDelta));
-            balance.setLocked(balance.getLocked().add(lockedDelta));
+            currentAvailable = balance.getAvailable();
+            currentLocked = balance.getLocked();
+            
+            log.debug("[Balance] 업데이트 전 - userId={}, mint={}, available={}, locked={}, availableDelta={}, lockedDelta={}", 
+                    userId, mint, currentAvailable, currentLocked, availableDelta, lockedDelta);
+            
+            // lockedDelta가 음수인 경우 (locked 감소)
+            if (lockedDelta.compareTo(BigDecimal.ZERO) < 0) {
+                BigDecimal requiredLocked = lockedDelta.abs(); // 필요한 locked 양
+                BigDecimal newLocked = currentLocked.add(lockedDelta); // lockedDelta는 이미 음수
+                
+                if (newLocked.compareTo(BigDecimal.ZERO) < 0) {
+                    // locked가 부족한 경우: available에서 차감
+                    BigDecimal shortage = newLocked.abs(); // 부족한 양
+                    BigDecimal availableAfterLocked = currentAvailable.subtract(shortage);
+                    
+                    if (availableAfterLocked.compareTo(BigDecimal.ZERO) < 0) {
+                        // available도 부족하면 에러
+                        log.error("[Balance] 잔고 부족 - userId={}, mint={}, currentAvailable={}, currentLocked={}, requiredLocked={}, shortage={}", 
+                                userId, mint, currentAvailable, currentLocked, requiredLocked, shortage);
+                        throw new RuntimeException(String.format(
+                                "잔고가 부족합니다: userId=%d, mint=%s, available=%s, locked=%s, requiredLocked=%s", 
+                                userId, mint, currentAvailable, currentLocked, requiredLocked));
+                    }
+                    
+                    // available에서 부족한 만큼 차감하고 locked는 0으로 설정
+                    balance.setAvailable(availableAfterLocked);
+                    balance.setLocked(BigDecimal.ZERO);
+                    log.warn("[Balance] locked 부족으로 available에서 차감 - userId={}, mint={}, available={} -> {}, locked={} -> 0", 
+                            userId, mint, currentAvailable, availableAfterLocked);
+                } else {
+                    // locked가 충분한 경우: 정상 처리
+                    balance.setAvailable(currentAvailable.add(availableDelta));
+                    balance.setLocked(newLocked);
+                }
+            } else {
+                // lockedDelta가 양수이거나 0인 경우: 정상 처리
+                balance.setAvailable(currentAvailable.add(availableDelta));
+                balance.setLocked(currentLocked.add(lockedDelta));
+            }
         } else {
             // 잔고가 없으면 생성
+            // lockedDelta가 음수이면 에러 (잔고가 없는데 차감할 수 없음)
+            if (lockedDelta.compareTo(BigDecimal.ZERO) < 0) {
+                log.error("[Balance] 잔고 없음 - userId={}, mint={}, lockedDelta={} (음수)", userId, mint, lockedDelta);
+                throw new RuntimeException(String.format(
+                        "잔고가 없습니다: userId=%d, mint=%s, lockedDelta=%s", 
+                        userId, mint, lockedDelta));
+            }
+            
             balance = UserBalance.builder()
                     .userId(userId)
                     .mintAddress(mint)
@@ -395,12 +481,18 @@ public class KafkaOrderEventConsumer {
                     .build();
         }
         
-        // 잔고가 음수가 되지 않도록 검증
+        // 최종 검증
         if (balance.getAvailable().compareTo(BigDecimal.ZERO) < 0 || balance.getLocked().compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("잔고가 음수가 될 수 없습니다");
+            log.error("[Balance] 최종 검증 실패 - userId={}, mint={}, available={}, locked={}", 
+                    userId, mint, balance.getAvailable(), balance.getLocked());
+            throw new RuntimeException(String.format(
+                    "잔고가 음수가 될 수 없습니다: userId=%d, mint=%s, available=%s, locked=%s", 
+                    userId, mint, balance.getAvailable(), balance.getLocked()));
         }
         
         userBalanceRepository.save(balance);
+        log.debug("[Balance] 업데이트 완료 - userId={}, mint={}, available={}, locked={}", 
+                userId, mint, balance.getAvailable(), balance.getLocked());
     }
     
     /**
