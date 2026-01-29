@@ -3,6 +3,7 @@ package dustin.cex.domains.trade.repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,9 +26,9 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
      * @param baseMint 기준 자산
      * @param quoteMint 기준 통화
      * @param pageable 페이지네이션 정보
-     * @return 체결 내역 목록
+     * @return 페이징된 체결 내역
      */
-    List<Trade> findByBaseMintAndQuoteMintOrderByCreatedAtDesc(
+    Page<Trade> findByBaseMintAndQuoteMintOrderByCreatedAtDesc(
             String baseMint, String quoteMint, Pageable pageable);
     
     /**
@@ -38,10 +39,10 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
      * 
      * @param userId 사용자 ID
      * @param pageable 페이지네이션 정보
-     * @return 체결 내역 목록
+     * @return 페이징된 체결 내역
      */
     @Query("SELECT t FROM Trade t WHERE t.buyerId = :userId OR t.sellerId = :userId ORDER BY t.createdAt DESC")
-    List<Trade> findByUserIdOrderByCreatedAtDesc(
+    Page<Trade> findByUserIdOrderByCreatedAtDesc(
             @Param("userId") Long userId, Pageable pageable);
     
     /**
@@ -51,10 +52,10 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
      * @param userId 사용자 ID
      * @param baseMint 기준 자산
      * @param pageable 페이지네이션 정보
-     * @return 체결 내역 목록
+     * @return 페이징된 체결 내역
      */
     @Query("SELECT t FROM Trade t WHERE (t.buyerId = :userId OR t.sellerId = :userId) AND t.baseMint = :baseMint ORDER BY t.createdAt DESC")
-    List<Trade> findByUserIdAndBaseMintOrderByCreatedAtDesc(
+    Page<Trade> findByUserIdAndBaseMintOrderByCreatedAtDesc(
             @Param("userId") Long userId, @Param("baseMint") String baseMint, Pageable pageable);
     
     /**

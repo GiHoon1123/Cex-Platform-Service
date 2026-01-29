@@ -1,5 +1,14 @@
 package dustin.cex.domains.position.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
 import dustin.cex.domains.position.model.dto.PositionResponse;
@@ -9,14 +18,6 @@ import dustin.cex.domains.trade.model.entity.Trade;
 import dustin.cex.domains.trade.repository.TradeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * 포지션 서비스
@@ -144,7 +145,7 @@ public class PositionService {
     private PositionResponse.TradeSummary calculateTradeSummary(Long userId, String baseMint, String quoteMint) {
         // 사용자의 해당 자산 거래 내역 조회
         List<Trade> trades = tradeRepository.findByUserIdAndBaseMintOrderByCreatedAtDesc(
-                userId, baseMint, org.springframework.data.domain.PageRequest.of(0, 10000));
+                userId, baseMint, org.springframework.data.domain.PageRequest.of(0, 10000)).getContent();
         
         long totalBuyTrades = 0;
         long totalSellTrades = 0;

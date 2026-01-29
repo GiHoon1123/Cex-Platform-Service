@@ -1,7 +1,9 @@
 package dustin.cex.domains.trade.controller;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import dustin.cex.domains.trade.model.dto.TradeResponse;
 import dustin.cex.domains.trade.service.TradeService;
+import dustin.cex.shared.model.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -51,10 +54,12 @@ public class TradeController {
      * 쿼리 파라미터:
      * - baseMint: 기준 자산 (필수, 예: "SOL")
      * - quoteMint: 기준 통화 (선택, 기본값: "USDT")
-     * - limit: 최대 조회 개수 (선택, 기본값: 100)
+     * - page: 페이지 번호 (선택, 기본값: 0)
+     * - size: 페이지 크기 (선택, 기본값: 100)
+     * - sort: 정렬 기준 (선택, 예: createdAt,desc)
      * 
      * 응답:
-     * - 200: 체결 내역 조회 성공
+     * - 200: 체결 내역 조회 성공 (페이징 정보 포함)
      * - 400: 잘못된 요청 (baseMint 없음)
      */
     @Operation(
@@ -63,30 +68,41 @@ public class TradeController {
                          "**쿼리 파라미터:**\n" +
                          "- `baseMint` (필수): 기준 자산 (예: SOL, USDC)\n" +
                          "- `quoteMint` (선택): 기준 통화 (기본값: USDT)\n" +
-                         "- `limit` (선택): 최대 조회 개수 (기본값: 100)\n\n" +
+                         "- `page` (선택): 페이지 번호 (0부터 시작, 기본값: 0)\n" +
+                         "- `size` (선택): 페이지 크기 (기본값: 100)\n" +
+                         "- `sort` (선택): 정렬 기준 (예: createdAt,desc 또는 createdAt,asc, 기본값: createdAt,desc)\n\n" +
                          "**응답 예시:**\n" +
                          "```json\n" +
-                         "[\n" +
-                         "  {\n" +
-                         "    \"id\": 456,\n" +
-                         "    \"buyOrderId\": 123,\n" +
-                         "    \"sellOrderId\": 124,\n" +
-                         "    \"buyerId\": 1,\n" +
-                         "    \"sellerId\": 2,\n" +
-                         "    \"baseMint\": \"SOL\",\n" +
-                         "    \"quoteMint\": \"USDT\",\n" +
-                         "    \"price\": 100.5,\n" +
-                         "    \"amount\": 1.0,\n" +
-                         "    \"createdAt\": \"2026-01-29T10:30:00\"\n" +
-                         "  }\n" +
-                         "]\n" +
+                         "{\n" +
+                         "  \"content\": [\n" +
+                         "    {\n" +
+                         "      \"id\": 456,\n" +
+                         "      \"buyOrderId\": 123,\n" +
+                         "      \"sellOrderId\": 124,\n" +
+                         "      \"buyerId\": 1,\n" +
+                         "      \"sellerId\": 2,\n" +
+                         "      \"baseMint\": \"SOL\",\n" +
+                         "      \"quoteMint\": \"USDT\",\n" +
+                         "      \"price\": 100.5,\n" +
+                         "      \"amount\": 1.0,\n" +
+                         "      \"createdAt\": \"2026-01-29T10:30:00\"\n" +
+                         "    }\n" +
+                         "  ],\n" +
+                         "  \"page\": 0,\n" +
+                         "  \"size\": 100,\n" +
+                         "  \"totalElements\": 500,\n" +
+                         "  \"totalPages\": 5,\n" +
+                         "  \"first\": true,\n" +
+                         "  \"last\": false,\n" +
+                         "  \"empty\": false\n" +
+                         "}\n" +
                          "```"
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "체결 내역 조회 성공",
-                    content = @Content(schema = @Schema(implementation = TradeResponse.class))
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))
             ),
             @ApiResponse(
                     responseCode = "400",
@@ -94,13 +110,19 @@ public class TradeController {
             )
     })
     @GetMapping
-    public ResponseEntity<List<TradeResponse>> getTrades(
+    public ResponseEntity<PageResponse<TradeResponse>> getTrades(
             @RequestParam String baseMint,
             @RequestParam(required = false, defaultValue = "USDT") String quoteMint,
-            @RequestParam(required = false) Integer limit
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "100") Integer size,
+            @RequestParam(required = false, defaultValue = "createdAt,desc") String sort
     ) {
-        List<TradeResponse> trades = tradeService.getTrades(baseMint, quoteMint, limit);
-        return ResponseEntity.ok(trades);
+        Sort sortObj = parseSort(sort);
+        Pageable pageable = PageRequest.of(page, size, sortObj);
+        
+        Page<TradeResponse> trades = tradeService.getTrades(baseMint, quoteMint, pageable);
+        PageResponse<TradeResponse> response = PageResponse.of(trades, trades.getContent());
+        return ResponseEntity.ok(response);
     }
     
     /**
@@ -112,11 +134,12 @@ public class TradeController {
      * 
      * 쿼리 파라미터:
      * - mint: 자산 식별자 (선택, 특정 자산만 필터링)
-     * - limit: 최대 조회 개수 (선택, 기본값: 100)
-     * - offset: 페이지네이션 오프셋 (선택, 기본값: 0)
+     * - page: 페이지 번호 (선택, 기본값: 0)
+     * - size: 페이지 크기 (선택, 기본값: 100)
+     * - sort: 정렬 기준 (선택, 예: createdAt,desc)
      * 
      * 응답:
-     * - 200: 체결 내역 조회 성공
+     * - 200: 체결 내역 조회 성공 (페이징 정보 포함)
      * - 401: 인증 실패
      */
     @Operation(
@@ -125,24 +148,34 @@ public class TradeController {
                          "매수자 또는 매도자로 참여한 모든 거래가 포함됩니다.\n\n" +
                          "**쿼리 파라미터:**\n" +
                          "- `mint` (선택): 자산 식별자 (예: SOL, 특정 자산만 필터링)\n" +
-                         "- `limit` (선택): 최대 조회 개수 (기본값: 100)\n" +
-                         "- `offset` (선택): 페이지네이션 오프셋 (기본값: 0)\n\n" +
+                         "- `page` (선택): 페이지 번호 (0부터 시작, 기본값: 0)\n" +
+                         "- `size` (선택): 페이지 크기 (기본값: 100)\n" +
+                         "- `sort` (선택): 정렬 기준 (예: createdAt,desc 또는 createdAt,asc, 기본값: createdAt,desc)\n\n" +
                          "**응답 예시:**\n" +
                          "```json\n" +
-                         "[\n" +
-                         "  {\n" +
-                         "    \"id\": 456,\n" +
-                         "    \"buyOrderId\": 123,\n" +
-                         "    \"sellOrderId\": 124,\n" +
-                         "    \"buyerId\": 1,\n" +
-                         "    \"sellerId\": 2,\n" +
-                         "    \"baseMint\": \"SOL\",\n" +
-                         "    \"quoteMint\": \"USDT\",\n" +
-                         "    \"price\": 100.5,\n" +
-                         "    \"amount\": 1.0,\n" +
-                         "    \"createdAt\": \"2026-01-29T10:30:00\"\n" +
-                         "  }\n" +
-                         "]\n" +
+                         "{\n" +
+                         "  \"content\": [\n" +
+                         "    {\n" +
+                         "      \"id\": 456,\n" +
+                         "      \"buyOrderId\": 123,\n" +
+                         "      \"sellOrderId\": 124,\n" +
+                         "      \"buyerId\": 1,\n" +
+                         "      \"sellerId\": 2,\n" +
+                         "      \"baseMint\": \"SOL\",\n" +
+                         "      \"quoteMint\": \"USDT\",\n" +
+                         "      \"price\": 100.5,\n" +
+                         "      \"amount\": 1.0,\n" +
+                         "      \"createdAt\": \"2026-01-29T10:30:00\"\n" +
+                         "    }\n" +
+                         "  ],\n" +
+                         "  \"page\": 0,\n" +
+                         "  \"size\": 100,\n" +
+                         "  \"totalElements\": 250,\n" +
+                         "  \"totalPages\": 3,\n" +
+                         "  \"first\": true,\n" +
+                         "  \"last\": false,\n" +
+                         "  \"empty\": false\n" +
+                         "}\n" +
                          "```",
             security = @SecurityRequirement(name = "BearerAuth")
     )
@@ -150,7 +183,7 @@ public class TradeController {
             @ApiResponse(
                     responseCode = "200",
                     description = "체결 내역 조회 성공",
-                    content = @Content(schema = @Schema(implementation = TradeResponse.class))
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -158,10 +191,11 @@ public class TradeController {
             )
     })
     @GetMapping("/my")
-    public ResponseEntity<List<TradeResponse>> getMyTrades(
+    public ResponseEntity<PageResponse<TradeResponse>> getMyTrades(
             @RequestParam(required = false) String mint,
-            @RequestParam(required = false) Integer limit,
-            @RequestParam(required = false) Integer offset,
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "100") Integer size,
+            @RequestParam(required = false, defaultValue = "createdAt,desc") String sort,
             HttpServletRequest httpRequest
     ) {
         Long userId = (Long) httpRequest.getAttribute("userId");
@@ -170,7 +204,32 @@ public class TradeController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        List<TradeResponse> trades = tradeService.getMyTrades(userId, mint, limit, offset);
-        return ResponseEntity.ok(trades);
+        Sort sortObj = parseSort(sort);
+        Pageable pageable = PageRequest.of(page, size, sortObj);
+        
+        Page<TradeResponse> trades = tradeService.getMyTrades(userId, mint, pageable);
+        PageResponse<TradeResponse> response = PageResponse.of(trades, trades.getContent());
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * 정렬 문자열을 Sort 객체로 변환
+     * Parse sort string to Sort object
+     * 
+     * @param sort 정렬 문자열 (예: "createdAt,desc" 또는 "createdAt,asc")
+     * @return Sort 객체
+     */
+    private Sort parseSort(String sort) {
+        if (sort == null || sort.isEmpty()) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+        
+        String[] parts = sort.split(",");
+        String property = parts[0].trim();
+        Sort.Direction direction = parts.length > 1 && "asc".equalsIgnoreCase(parts[1].trim())
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        
+        return Sort.by(direction, property);
     }
 }

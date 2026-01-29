@@ -396,16 +396,11 @@ public class OrderService {
      * 
      * @param userId 사용자 ID
      * @param status 주문 상태 필터 (optional, 'pending', 'partial', 'filled', 'cancelled')
-     * @param limit 최대 조회 개수 (optional, 기본값: 50)
-     * @param offset 페이지네이션 오프셋 (optional, 기본값: 0)
-     * @return 주문 목록
+     * @param pageable 페이징 정보 (page, size)
+     * @return 페이징된 주문 목록
      */
     @Transactional(readOnly = true)
-    public List<OrderResponse.OrderDto> getMyOrders(Long userId, String status, Integer limit, Integer offset) {
-        int pageSize = limit != null && limit > 0 ? limit : 50;
-        int pageNumber = offset != null && offset >= 0 ? offset / pageSize : 0;
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
-        
+    public Page<OrderResponse.OrderDto> getMyOrders(Long userId, String status, Pageable pageable) {
         Page<Order> orders;
         if (status != null && !status.isEmpty()) {
             orders = orderRepository.findByUserIdAndStatus(userId, status, pageable);
@@ -413,9 +408,7 @@ public class OrderService {
             orders = orderRepository.findByUserId(userId, pageable);
         }
         
-        return orders.getContent().stream()
-                .map(this::convertToDto)
-                .toList();
+        return orders.map(this::convertToDto);
     }
     
     /**

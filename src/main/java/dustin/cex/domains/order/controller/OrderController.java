@@ -1,7 +1,9 @@
 package dustin.cex.domains.order.controller;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,6 +19,7 @@ import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.dto.OrderbookResponse;
 import dustin.cex.domains.order.service.OrderService;
+import dustin.cex.shared.model.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -250,11 +253,12 @@ public class OrderController {
      * 
      * 쿼리 파라미터:
      * - status: 주문 상태 필터 (optional, 'pending', 'partial', 'filled', 'cancelled')
-     * - limit: 최대 조회 개수 (optional, 기본값: 50)
-     * - offset: 페이지네이션 오프셋 (optional, 기본값: 0)
+     * - page: 페이지 번호 (optional, 기본값: 0)
+     * - size: 페이지 크기 (optional, 기본값: 50)
+     * - sort: 정렬 기준 (optional, 예: createdAt,desc)
      * 
      * 응답:
-     * - 200: 주문 목록 조회 성공
+     * - 200: 주문 목록 조회 성공 (페이징 정보 포함)
      * - 401: 인증 실패
      */
     @Operation(
@@ -262,27 +266,37 @@ public class OrderController {
             description = "현재 로그인한 사용자의 주문 목록을 조회합니다. 상태별 필터링 및 페이지네이션을 지원합니다.\n\n" +
                          "**쿼리 파라미터:**\n" +
                          "- `status` (선택): 주문 상태 필터 ('pending', 'partial', 'filled', 'cancelled')\n" +
-                         "- `limit` (선택): 최대 조회 개수 (기본값: 50)\n" +
-                         "- `offset` (선택): 페이지네이션 오프셋 (기본값: 0)\n\n" +
+                         "- `page` (선택): 페이지 번호 (0부터 시작, 기본값: 0)\n" +
+                         "- `size` (선택): 페이지 크기 (기본값: 50)\n" +
+                         "- `sort` (선택): 정렬 기준 (예: createdAt,desc 또는 createdAt,asc, 기본값: createdAt,desc)\n\n" +
                          "**응답 예시:**\n" +
                          "```json\n" +
-                         "[\n" +
-                         "  {\n" +
-                         "    \"id\": \"1850278129743992082\",\n" +
-                         "    \"userId\": 1,\n" +
-                         "    \"orderType\": \"buy\",\n" +
-                         "    \"orderSide\": \"limit\",\n" +
-                         "    \"baseMint\": \"SOL\",\n" +
-                         "    \"quoteMint\": \"USDT\",\n" +
-                         "    \"price\": 100.5,\n" +
-                         "    \"amount\": 1.0,\n" +
-                         "    \"filledAmount\": 0.0,\n" +
-                         "    \"filledQuoteAmount\": 0.0,\n" +
-                         "    \"status\": \"pending\",\n" +
-                         "    \"createdAt\": \"2026-01-29T10:30:00\",\n" +
-                         "    \"updatedAt\": \"2026-01-29T10:30:00\"\n" +
-                         "  }\n" +
-                         "]\n" +
+                         "{\n" +
+                         "  \"content\": [\n" +
+                         "    {\n" +
+                         "      \"id\": \"1850278129743992082\",\n" +
+                         "      \"userId\": 1,\n" +
+                         "      \"orderType\": \"buy\",\n" +
+                         "      \"orderSide\": \"limit\",\n" +
+                         "      \"baseMint\": \"SOL\",\n" +
+                         "      \"quoteMint\": \"USDT\",\n" +
+                         "      \"price\": 100.5,\n" +
+                         "      \"amount\": 1.0,\n" +
+                         "      \"filledAmount\": 0.0,\n" +
+                         "      \"filledQuoteAmount\": 0.0,\n" +
+                         "      \"status\": \"pending\",\n" +
+                         "      \"createdAt\": \"2026-01-29T10:30:00\",\n" +
+                         "      \"updatedAt\": \"2026-01-29T10:30:00\"\n" +
+                         "    }\n" +
+                         "  ],\n" +
+                         "  \"page\": 0,\n" +
+                         "  \"size\": 50,\n" +
+                         "  \"totalElements\": 100,\n" +
+                         "  \"totalPages\": 2,\n" +
+                         "  \"first\": true,\n" +
+                         "  \"last\": false,\n" +
+                         "  \"empty\": false\n" +
+                         "}\n" +
                          "```",
             security = @SecurityRequirement(name = "BearerAuth")
     )
@@ -290,7 +304,7 @@ public class OrderController {
             @ApiResponse(
                     responseCode = "200",
                     description = "주문 목록 조회 성공",
-                    content = @Content(schema = @Schema(implementation = OrderResponse.OrderDto.class))
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -298,10 +312,11 @@ public class OrderController {
             )
     })
     @GetMapping("/my")
-    public ResponseEntity<List<OrderResponse.OrderDto>> getMyOrders(
+    public ResponseEntity<PageResponse<OrderResponse.OrderDto>> getMyOrders(
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer limit,
-            @RequestParam(required = false) Integer offset,
+            @RequestParam(required = false, defaultValue = "0") Integer page,
+            @RequestParam(required = false, defaultValue = "50") Integer size,
+            @RequestParam(required = false, defaultValue = "createdAt,desc") String sort,
             HttpServletRequest httpRequest
     ) {
         Long userId = (Long) httpRequest.getAttribute("userId");
@@ -310,8 +325,34 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
-        List<OrderResponse.OrderDto> orders = orderService.getMyOrders(userId, status, limit, offset);
-        return ResponseEntity.ok(orders);
+        // 정렬 파라미터 파싱 (예: "createdAt,desc" -> Sort.by("createdAt").descending())
+        Sort sortObj = parseSort(sort);
+        Pageable pageable = PageRequest.of(page, size, sortObj);
+        
+        Page<OrderResponse.OrderDto> orders = orderService.getMyOrders(userId, status, pageable);
+        PageResponse<OrderResponse.OrderDto> response = PageResponse.of(orders, orders.getContent());
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * 정렬 문자열을 Sort 객체로 변환
+     * Parse sort string to Sort object
+     * 
+     * @param sort 정렬 문자열 (예: "createdAt,desc" 또는 "createdAt,asc")
+     * @return Sort 객체
+     */
+    private Sort parseSort(String sort) {
+        if (sort == null || sort.isEmpty()) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+        
+        String[] parts = sort.split(",");
+        String property = parts[0].trim();
+        Sort.Direction direction = parts.length > 1 && "asc".equalsIgnoreCase(parts[1].trim())
+                ? Sort.Direction.ASC
+                : Sort.Direction.DESC;
+        
+        return Sort.by(direction, property);
     }
     
     /**
