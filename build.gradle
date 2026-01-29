@@ -83,6 +83,12 @@ jmh {
 	def extraList = extraJvmArgs?.split(',')?.collect { it.trim() }?.findAll { it }
 	def enableNonHeapLimit = System.getProperty('enableNonHeapLimit', 'true') == 'true'
 
+	// 웜업/측정: -Pjmh.warmupIterations=5 -Pjmh.warmup=3s -Pjmh.iterations=5 -Pjmh.timeOnIteration=3s 로 오버라이드 가능
+	warmupIterations = (findProperty('jmh.warmupIterations') ?: 3) as int
+	warmup = findProperty('jmh.warmup') ?: '2s'
+	iterations = (findProperty('jmh.iterations') ?: 3) as int
+	timeOnIteration = findProperty('jmh.timeOnIteration') ?: '2s'
+
 	def baseArgs = [
 		// Heap 메모리 설정
 		'-Xmx2G',
