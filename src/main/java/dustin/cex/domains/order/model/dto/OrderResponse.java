@@ -69,14 +69,22 @@ public class OrderResponse {
          * 데이터베이스에서 자동 생성되는 값
          * JavaScript 정밀도 손실 방지를 위해 문자열로 직렬화
          */
-        @Schema(description = "주문 ID", example = "1850278129743992082")
+        @Schema(
+            description = "주문 고유 ID (문자열로 직렬화되어 전송됨)", 
+            example = "1850278129743992082",
+            required = true
+        )
         private String id;
         
         /**
          * 주문한 사용자 ID
          * User ID
          */
-        @Schema(description = "사용자 ID", example = "1")
+        @Schema(
+            description = "주문을 생성한 사용자 ID", 
+            example = "1",
+            required = true
+        )
         private Long userId;
         
         /**
@@ -86,7 +94,12 @@ public class OrderResponse {
          * - 'buy': 매수
          * - 'sell': 매도
          */
-        @Schema(description = "주문 유형: buy(매수) 또는 sell(매도)", example = "buy")
+        @Schema(
+            description = "주문 유형: 'buy'(매수) 또는 'sell'(매도)", 
+            example = "buy",
+            allowableValues = {"buy", "sell"},
+            required = true
+        )
         private String orderType;
         
         /**
@@ -96,21 +109,35 @@ public class OrderResponse {
          * - 'limit': 지정가
          * - 'market': 시장가
          */
-        @Schema(description = "주문 방식: limit(지정가) 또는 market(시장가)", example = "limit")
+        @Schema(
+            description = "주문 방식: 'limit'(지정가) 또는 'market'(시장가)", 
+            example = "limit",
+            allowableValues = {"limit", "market"},
+            required = true
+        )
         private String orderSide;
         
         /**
          * 기준 자산
          * Base Asset
          */
-        @Schema(description = "기준 자산", example = "SOL")
+        @Schema(
+            description = "기준 자산 (거래되는 자산, 예: SOL, USDC 등)", 
+            example = "SOL",
+            required = true
+        )
         private String baseMint;
         
         /**
          * 기준 통화
          * Quote Currency
          */
-        @Schema(description = "기준 통화", example = "USDT")
+        @Schema(
+            description = "기준 통화 (항상 USDT)", 
+            example = "USDT",
+            defaultValue = "USDT",
+            required = true
+        )
         private String quoteMint;
         
         /**
@@ -119,28 +146,44 @@ public class OrderResponse {
          * 
          * 지정가 주문만 값이 있음, 시장가 주문은 null
          */
-        @Schema(description = "지정가 가격 (USDT 기준, 시장가 주문은 null)", example = "100.0")
+        @Schema(
+            description = "지정가 가격 (USDT 기준, 1 SOL = 100 USDT라면 100.0). 시장가 주문은 null",
+            example = "100.5",
+            required = false
+        )
         private BigDecimal price;
         
         /**
          * 주문 수량
          * Order Amount
          */
-        @Schema(description = "주문 수량", example = "1.0")
+        @Schema(
+            description = "주문 수량 (기준 자산 기준, 예: 1.5 SOL)", 
+            example = "1.0",
+            required = true
+        )
         private BigDecimal amount;
         
         /**
          * 체결된 수량
          * Filled Amount
          */
-        @Schema(description = "체결된 수량", example = "0.0")
+        @Schema(
+            description = "체결된 수량 (기준 자산 기준). filledAmount == amount면 전량 체결",
+            example = "0.5",
+            required = true
+        )
         private BigDecimal filledAmount;
         
         /**
          * 체결된 금액 (USDT 기준)
          * Filled Quote Amount
          */
-        @Schema(description = "체결된 금액 (USDT 기준)", example = "0.0")
+        @Schema(
+            description = "체결된 금액 (USDT 기준, 체결된 거래의 총 결제 금액)", 
+            example = "50.25",
+            required = true
+        )
         private BigDecimal filledQuoteAmount;
         
         /**
@@ -152,21 +195,34 @@ public class OrderResponse {
          * - 'filled': 전량 체결
          * - 'cancelled': 취소됨
          */
-        @Schema(description = "주문 상태", example = "pending")
+        @Schema(
+            description = "주문 상태: 'pending'(대기), 'partial'(부분체결), 'filled'(완료), 'cancelled'(취소)", 
+            example = "partial",
+            allowableValues = {"pending", "partial", "filled", "cancelled", "rejected"},
+            required = true
+        )
         private String status;
         
         /**
          * 주문 생성 시간
          * Created Timestamp
          */
-        @Schema(description = "주문 생성 시간")
+        @Schema(
+            description = "주문 생성 시간 (ISO 8601 형식)", 
+            example = "2026-01-29T10:30:00",
+            required = true
+        )
         private LocalDateTime createdAt;
         
         /**
          * 주문 정보 마지막 업데이트 시간
          * Updated Timestamp
          */
-        @Schema(description = "주문 정보 마지막 업데이트 시간")
+        @Schema(
+            description = "주문 정보 마지막 업데이트 시간 (ISO 8601 형식)", 
+            example = "2026-01-29T10:35:00",
+            required = true
+        )
         private LocalDateTime updatedAt;
     }
 }

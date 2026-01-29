@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
+import dustin.cex.domains.order.model.dto.OrderbookResponse;
 import dustin.cex.domains.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -101,9 +102,35 @@ public class OrderController {
      */
     @Operation(
             summary = "주문 생성",
-            description = "새로운 주문을 생성하고 Rust 엔진에 제출합니다. " +
-                         "지정가 주문은 가격을 지정하고, 시장가 주문은 즉시 체결됩니다. " +
-                         "시장가 매수는 quoteAmount를 사용하여 금액 기반으로 주문합니다.",
+            description = "새로운 주문을 생성하고 Rust 엔진에 제출합니다.\n\n" +
+                         "**주문 타입:**\n" +
+                         "- 지정가 주문 (`limit`): 원하는 가격에 주문 등록, 매칭될 때까지 대기\n" +
+                         "- 시장가 주문 (`market`): 즉시 체결, 오더북의 최적 가격으로 매칭\n\n" +
+                         "**요청 예시:**\n" +
+                         "1. 지정가 매수: `{\"orderType\":\"buy\",\"orderSide\":\"limit\",\"baseMint\":\"SOL\",\"price\":\"100.0\",\"amount\":\"1.0\"}`\n" +
+                         "2. 시장가 매수: `{\"orderType\":\"buy\",\"orderSide\":\"market\",\"baseMint\":\"SOL\",\"quoteAmount\":\"1000.0\"}`\n" +
+                         "3. 시장가 매도: `{\"orderType\":\"sell\",\"orderSide\":\"market\",\"baseMint\":\"SOL\",\"amount\":\"1.0\"}`\n\n" +
+                         "**응답 예시:**\n" +
+                         "```json\n" +
+                         "{\n" +
+                         "  \"order\": {\n" +
+                         "    \"id\": \"1850278129743992082\",\n" +
+                         "    \"userId\": 1,\n" +
+                         "    \"orderType\": \"buy\",\n" +
+                         "    \"orderSide\": \"limit\",\n" +
+                         "    \"baseMint\": \"SOL\",\n" +
+                         "    \"quoteMint\": \"USDT\",\n" +
+                         "    \"price\": 100.0,\n" +
+                         "    \"amount\": 1.0,\n" +
+                         "    \"filledAmount\": 0.0,\n" +
+                         "    \"filledQuoteAmount\": 0.0,\n" +
+                         "    \"status\": \"pending\",\n" +
+                         "    \"createdAt\": \"2026-01-29T10:30:00\",\n" +
+                         "    \"updatedAt\": \"2026-01-29T10:30:00\"\n" +
+                         "  },\n" +
+                         "  \"message\": \"Order created successfully\"\n" +
+                         "}\n" +
+                         "```",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses({
@@ -163,7 +190,27 @@ public class OrderController {
      */
     @Operation(
             summary = "주문 조회",
-            description = "특정 주문의 상세 정보를 조회합니다. 본인 주문만 조회 가능합니다.",
+            description = "특정 주문의 상세 정보를 조회합니다. 본인 주문만 조회 가능합니다.\n\n" +
+                         "**응답 예시:**\n" +
+                         "```json\n" +
+                         "{\n" +
+                         "  \"order\": {\n" +
+                         "    \"id\": \"1850278129743992082\",\n" +
+                         "    \"userId\": 1,\n" +
+                         "    \"orderType\": \"buy\",\n" +
+                         "    \"orderSide\": \"limit\",\n" +
+                         "    \"baseMint\": \"SOL\",\n" +
+                         "    \"quoteMint\": \"USDT\",\n" +
+                         "    \"price\": 100.5,\n" +
+                         "    \"amount\": 1.0,\n" +
+                         "    \"filledAmount\": 0.5,\n" +
+                         "    \"filledQuoteAmount\": 50.25,\n" +
+                         "    \"status\": \"partial\",\n" +
+                         "    \"createdAt\": \"2026-01-29T10:30:00\",\n" +
+                         "    \"updatedAt\": \"2026-01-29T10:35:00\"\n" +
+                         "  }\n" +
+                         "}\n" +
+                         "```",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses({
@@ -174,11 +221,11 @@ public class OrderController {
             ),
             @ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"
+                    description = "인증 실패 (JWT 토큰 없음 또는 유효하지 않음)"
             ),
             @ApiResponse(
                     responseCode = "404",
-                    description = "주문을 찾을 수 없음"
+                    description = "주문을 찾을 수 없음 (본인 주문이 아님)"
             )
     })
     @GetMapping("/{orderId}")
@@ -213,18 +260,42 @@ public class OrderController {
      */
     @Operation(
             summary = "내 주문 목록 조회",
-            description = "현재 로그인한 사용자의 주문 목록을 조회합니다. " +
-                         "상태별 필터링 및 페이지네이션을 지원합니다.",
+            description = "현재 로그인한 사용자의 주문 목록을 조회합니다. 상태별 필터링 및 페이지네이션을 지원합니다.\n\n" +
+                         "**쿼리 파라미터:**\n" +
+                         "- `status` (선택): 주문 상태 필터 ('pending', 'partial', 'filled', 'cancelled')\n" +
+                         "- `limit` (선택): 최대 조회 개수 (기본값: 50)\n" +
+                         "- `offset` (선택): 페이지네이션 오프셋 (기본값: 0)\n\n" +
+                         "**응답 예시:**\n" +
+                         "```json\n" +
+                         "[\n" +
+                         "  {\n" +
+                         "    \"id\": \"1850278129743992082\",\n" +
+                         "    \"userId\": 1,\n" +
+                         "    \"orderType\": \"buy\",\n" +
+                         "    \"orderSide\": \"limit\",\n" +
+                         "    \"baseMint\": \"SOL\",\n" +
+                         "    \"quoteMint\": \"USDT\",\n" +
+                         "    \"price\": 100.5,\n" +
+                         "    \"amount\": 1.0,\n" +
+                         "    \"filledAmount\": 0.0,\n" +
+                         "    \"filledQuoteAmount\": 0.0,\n" +
+                         "    \"status\": \"pending\",\n" +
+                         "    \"createdAt\": \"2026-01-29T10:30:00\",\n" +
+                         "    \"updatedAt\": \"2026-01-29T10:30:00\"\n" +
+                         "  }\n" +
+                         "]\n" +
+                         "```",
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "주문 목록 조회 성공"
+                    description = "주문 목록 조회 성공",
+                    content = @Content(schema = @Schema(implementation = OrderResponse.OrderDto.class))
             ),
             @ApiResponse(
                     responseCode = "401",
-                    description = "인증 실패"
+                    description = "인증 실패 (JWT 토큰 없음 또는 유효하지 않음)"
             )
     })
     @GetMapping("/my")
@@ -317,5 +388,89 @@ public class OrderController {
                             .message("주문 취소 실패: " + e.getMessage())
                             .build());
         }
+    }
+    
+    /**
+     * 오더북 조회
+     * Get Orderbook
+     * 
+     * 특정 거래쌍의 오더북(호가창)을 조회합니다.
+     * 매수 호가는 가격 내림차순, 매도 호가는 가격 오름차순으로 정렬됩니다.
+     * 
+     * 쿼리 파라미터:
+     * - baseMint: 기준 자산 (필수, 예: "SOL")
+     * - quoteMint: 기준 통화 (선택, 기본값: "USDT")
+     * - depth: 조회할 가격 레벨 개수 (선택, 기본값: 50)
+     * 
+     * 응답:
+     * - 200: 오더북 조회 성공
+     * - 400: 잘못된 요청
+     */
+    @Operation(
+            summary = "오더북 조회",
+            description = "특정 거래쌍의 오더북(호가창)을 조회합니다. 매수 호가는 가격 내림차순, 매도 호가는 가격 오름차순으로 정렬됩니다.\n\n" +
+                         "**쿼리 파라미터:**\n" +
+                         "- `baseMint` (필수): 기준 자산 (예: SOL, USDC)\n" +
+                         "- `quoteMint` (선택): 기준 통화 (기본값: USDT)\n" +
+                         "- `depth` (선택): 조회할 가격 레벨 개수 (기본값: 50)\n\n" +
+                         "**응답 예시:**\n" +
+                         "```json\n" +
+                         "{\n" +
+                         "  \"bids\": [\n" +
+                         "    {\n" +
+                         "      \"id\": \"1850278129743992082\",\n" +
+                         "      \"userId\": 1,\n" +
+                         "      \"orderType\": \"buy\",\n" +
+                         "      \"orderSide\": \"limit\",\n" +
+                         "      \"baseMint\": \"SOL\",\n" +
+                         "      \"quoteMint\": \"USDT\",\n" +
+                         "      \"price\": 100.5,\n" +
+                         "      \"amount\": 1.0,\n" +
+                         "      \"filledAmount\": 0.0,\n" +
+                         "      \"filledQuoteAmount\": 0.0,\n" +
+                         "      \"status\": \"pending\",\n" +
+                         "      \"createdAt\": \"2026-01-29T10:30:00\",\n" +
+                         "      \"updatedAt\": \"2026-01-29T10:30:00\"\n" +
+                         "    }\n" +
+                         "  ],\n" +
+                         "  \"asks\": [\n" +
+                         "    {\n" +
+                         "      \"id\": \"1850278129743992083\",\n" +
+                         "      \"userId\": 2,\n" +
+                         "      \"orderType\": \"sell\",\n" +
+                         "      \"orderSide\": \"limit\",\n" +
+                         "      \"baseMint\": \"SOL\",\n" +
+                         "      \"quoteMint\": \"USDT\",\n" +
+                         "      \"price\": 101.0,\n" +
+                         "      \"amount\": 1.0,\n" +
+                         "      \"filledAmount\": 0.0,\n" +
+                         "      \"filledQuoteAmount\": 0.0,\n" +
+                         "      \"status\": \"pending\",\n" +
+                         "      \"createdAt\": \"2026-01-29T10:31:00\",\n" +
+                         "      \"updatedAt\": \"2026-01-29T10:31:00\"\n" +
+                         "    }\n" +
+                         "  ]\n" +
+                         "}\n" +
+                         "```"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "오더북 조회 성공",
+                    content = @Content(schema = @Schema(implementation = OrderbookResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 요청 (baseMint가 없음)"
+            )
+    })
+    @GetMapping("/orderbook")
+    public ResponseEntity<OrderbookResponse> getOrderbook(
+            @RequestParam String baseMint,
+            @RequestParam(required = false, defaultValue = "USDT") String quoteMint,
+            @RequestParam(required = false) Integer depth
+    ) {
+        OrderbookResponse response = orderService.getOrderbook(baseMint, quoteMint, depth);
+        return ResponseEntity.ok(response);
     }
 }

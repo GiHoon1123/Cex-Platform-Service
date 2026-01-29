@@ -52,6 +52,7 @@ public class OrderbookSyncService {
     private final BotService botService;
     private final BinanceWebSocketClient binanceWebSocketClient;
     private final PlatformTransactionManager transactionManager;
+    private final BinancePriceService binancePriceService;
     
     /**
      * 트랜잭션 템플릿 (비동기 스레드에서 트랜잭션 사용)
@@ -60,18 +61,10 @@ public class OrderbookSyncService {
     private TransactionTemplate transactionTemplate;
     
     /**
-     * 봇 1 (매수)의 활성 주문 추적
-     * Bot 1 (buy) active orders tracking
-     * Key: 가격 (String), Value: 주문 ID
+     * 봇별 활성 주문 추적 (봇 ID -> 가격 -> 주문 ID)
+     * Bot active orders tracking (bot ID -> price -> order ID)
      */
-    private final Map<String, Long> bot1Orders = new HashMap<>();
-    
-    /**
-     * 봇 2 (매도)의 활성 주문 추적
-     * Bot 2 (sell) active orders tracking
-     * Key: 가격 (String), Value: 주문 ID
-     */
-    private final Map<String, Long> bot2Orders = new HashMap<>();
+    private final Map<Long, Map<String, Long>> botOrdersMap = new HashMap<>();
     
     /**
      * 서버 시작 시 오더북 동기화 시작
@@ -84,15 +77,22 @@ public class OrderbookSyncService {
         // TransactionTemplate 초기화
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         
-        // log.info("[OrderbookSyncService] 오더북 동기화 시작...");
-        // log.info("  - 바이낸스 WebSocket URL: {}", botConfig.getBinanceWsUrl());
-        // log.info("  - 오더북 깊이: {}", botConfig.getOrderbookDepth());
-        // log.info("  - 주문 수량: {}", botConfig.getOrderQuantity());
+        // 봇별 주문 맵 초기화
+        int botCount = botConfig.getBotCount();
+        for (long i = 1; i <= botCount; i++) {
+            botOrdersMap.put(i, new HashMap<>());
+        }
+        
+        log.info("[OrderbookSyncService] 오더북 동기화 시작...");
+        log.info("  - 바이낸스 WebSocket URL: {}", botConfig.getBinanceWsUrl());
+        log.info("  - 오더북 깊이: {}", botConfig.getOrderbookDepth());
+        log.info("  - 주문 수량: {}", botConfig.getOrderQuantity());
+        log.info("  - 봇 수: {}", botCount);
         
         // 바이낸스 WebSocket 연결 시작
         binanceWebSocketClient.start(botConfig.getBinanceWsUrl(), this::handleOrderbookUpdate);
         
-        // log.info("[OrderbookSyncService] 오더북 동기화 시작 완료");
+        log.info("[OrderbookSyncService] 오더북 동기화 시작 완료");
     }
     
     /**
@@ -120,6 +120,11 @@ public class OrderbookSyncService {
      *    - 새로운 가격 → 새로 생성
      *    - 사라진 가격 → 취소
      * 
+     * 봇 분배 전략:
+     * - 홀수 봇 (1, 3, 5, ...): 매수 그룹
+     * - 짝수 봇 (2, 4, 6, ...): 매도 그룹
+     * - 각 봇은 BotConfig에서 설정한 baseMint 사용
+     * 
      * @param update 바이낸스 오더북 업데이트
      */
     private void handleOrderbookUpdate(BinanceOrderbookUpdate update) {
@@ -130,6 +135,9 @@ public class OrderbookSyncService {
             List<BinanceOrderbookEntry>[] parsed = BinanceWebSocketClient.parseOrderbookUpdate(update);
             List<BinanceOrderbookEntry> bids = parsed[0];
             List<BinanceOrderbookEntry> asks = parsed[1];
+            
+            // 바이낸스 가격 서비스에 오더북 업데이트 전달
+            binancePriceService.updateOrderbook(bids, asks);
             
             int depth = botConfig.getOrderbookDepth();
             BigDecimal orderQuantity = botConfig.getOrderQuantity();
@@ -145,21 +153,28 @@ public class OrderbookSyncService {
                 topAsks = asks.stream().limit(depth).toList();
             }
             
-            Long bot1UserId = botManagerService.getBot1UserId();
-            Long bot2UserId = botManagerService.getBot2UserId();
+            int botCount = botConfig.getBotCount();
             
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // 2. Bot 1 (매수) 주문 업데이트: 변경된 호가만 처리
+            // 2. 홀수 봇들 (매수) 주문 업데이트
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            if (bot1UserId != null) {
-                updateBotOrders(bot1UserId, bot1Orders, topBids, orderQuantity, true);
+            for (long botId = 1; botId <= botCount; botId += 2) {
+                Long botUserId = botManagerService.getBotUserId(botId);
+                if (botUserId != null) {
+                    Map<String, Long> botOrders = botOrdersMap.get(botId);
+                    updateBotOrders(botId, botUserId, botOrders, topBids, orderQuantity, true);
+                }
             }
             
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // 3. Bot 2 (매도) 주문 업데이트: 변경된 호가만 처리
+            // 3. 짝수 봇들 (매도) 주문 업데이트
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            if (bot2UserId != null) {
-                updateBotOrders(bot2UserId, bot2Orders, topAsks, orderQuantity, false);
+            for (long botId = 2; botId <= botCount; botId += 2) {
+                Long botUserId = botManagerService.getBotUserId(botId);
+                if (botUserId != null) {
+                    Map<String, Long> botOrders = botOrdersMap.get(botId);
+                    updateBotOrders(botId, botUserId, botOrders, topAsks, orderQuantity, false);
+                }
             }
             
         } catch (Exception e) {
@@ -177,13 +192,14 @@ public class OrderbookSyncService {
      *    - 새 호가에 없는 가격 → 취소
      *    - 새 호가에 있는 가격 → 유지 (이미 주문이 있으면) 또는 생성 (없으면)
      * 
+     * @param botId 봇 ID (BotConfig에서 baseMint 가져오기 위해 필요)
      * @param botUserId 봇 사용자 ID
      * @param existingOrders 기존 주문 맵 (가격 -> 주문 ID)
      * @param newEntries 새로운 호가 목록
      * @param orderQuantity 주문 수량
      * @param isBuy 매수 여부 (true: 매수, false: 매도)
      */
-    private void updateBotOrders(Long botUserId, Map<String, Long> existingOrders, 
+    private void updateBotOrders(Long botId, Long botUserId, Map<String, Long> existingOrders, 
                                  List<BinanceOrderbookEntry> newEntries, 
                                  BigDecimal orderQuantity, boolean isBuy) {
         // 새 호가의 가격 목록 생성
@@ -236,18 +252,22 @@ public class OrderbookSyncService {
                 
                 // 주문이 없으면 새로 생성
                 try {
+                    // BotConfig에서 봇의 baseMint 가져오기
+                    String baseMint = botConfig.getBotBaseMint(botId);
+                    
+                    final String finalBaseMint = baseMint;
                     OrderResponse response = txTemplate.execute(status -> {
                         if (isBuy) {
                             return botService.createLimitBuyOrder(
                                     finalBotUserId,
-                                    "SOL",
+                                    finalBaseMint,
                                     entry.getPrice(),
                                     finalOrderQuantity
                             );
                         } else {
                             return botService.createLimitSellOrder(
                                     finalBotUserId,
-                                    "SOL",
+                                    finalBaseMint,
                                     entry.getPrice(),
                                     finalOrderQuantity
                             );
@@ -261,8 +281,8 @@ public class OrderbookSyncService {
                     }
                 } catch (Exception e) {
                     // 주문 생성 실패 (잔고 부족 등) - 에러만 로그
-                    log.error("[OrderbookSyncService] {} 주문 생성 실패: price={}, amount={}, error={}", 
-                            isBuy ? "Bot1" : "Bot2", entry.getPrice(), finalOrderQuantity, e.getMessage());
+                    log.error("[OrderbookSyncService] Bot{} 주문 생성 실패: price={}, amount={}, error={}", 
+                            botId, entry.getPrice(), finalOrderQuantity, e.getMessage());
                 }
             }
         });

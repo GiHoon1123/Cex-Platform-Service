@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
+import dustin.cex.domains.order.model.dto.OrderbookResponse;
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
@@ -418,6 +419,47 @@ public class OrderService {
         return orders.getContent().stream()
                 .map(this::convertToDto)
                 .toList();
+    }
+    
+    /**
+     * 오더북 조회
+     * Get Orderbook
+     * 
+     * 특정 거래쌍의 오더북(호가창)을 조회합니다.
+     * 매수 호가는 가격 내림차순, 매도 호가는 가격 오름차순으로 정렬됩니다.
+     * 
+     * @param baseMint 기준 자산 (예: "SOL")
+     * @param quoteMint 기준 통화 (예: "USDT", 기본값: "USDT")
+     * @param depth 조회할 가격 레벨 개수 (선택, null이면 모든 호가 조회)
+     * @return 오더북 응답 (bids: 매수 호가, asks: 매도 호가)
+     */
+    @Transactional(readOnly = true)
+    public OrderbookResponse getOrderbook(String baseMint, String quoteMint, Integer depth) {
+        String quote = quoteMint != null && !quoteMint.isEmpty() ? quoteMint : "USDT";
+        
+        // depth가 지정되지 않았으면 기본값 50 사용
+        int limit = depth != null && depth > 0 ? depth : 50;
+        Pageable pageable = PageRequest.of(0, limit);
+        
+        // 매수 주문 조회 (가격 내림차순)
+        List<Order> buyOrders = orderRepository.findBuyOrdersByTradingPair(baseMint, quote, pageable);
+        
+        // 매도 주문 조회 (가격 오름차순)
+        List<Order> sellOrders = orderRepository.findSellOrdersByTradingPair(baseMint, quote, pageable);
+        
+        // DTO 변환
+        List<OrderResponse.OrderDto> bids = buyOrders.stream()
+                .map(this::convertToDto)
+                .toList();
+        
+        List<OrderResponse.OrderDto> asks = sellOrders.stream()
+                .map(this::convertToDto)
+                .toList();
+        
+        return OrderbookResponse.builder()
+                .bids(bids)
+                .asks(asks)
+                .build();
     }
     
     /**

@@ -13,7 +13,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

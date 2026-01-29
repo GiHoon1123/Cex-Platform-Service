@@ -162,7 +162,10 @@ public class BinanceWebSocketClient {
                     // 초기 스냅샷도 처리 (depthUpdate로 변환)
                     update.setEventType("depthUpdate");
                     update.setEventTime(System.currentTimeMillis());
-                    update.setSymbol("SOLUSDT");
+                    // symbol은 이미 update에 설정되어 있을 수 있으므로, 없을 때만 설정
+                    if (update.getSymbol() == null) {
+                        update.setSymbol("SOLUSDT"); // 기본값 (BotConfig에서 가져올 수 있지만 여기서는 하드코딩 유지)
+                    }
                     
                     // 콜백으로 전달
                     if (updateCallback != null) {
