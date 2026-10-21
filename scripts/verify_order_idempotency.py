@@ -272,6 +272,32 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         self.assertEqual(len(EngineStub.calls), 0)
         self.record(statuses=statuses, engine_posts=0)
 
+    def test_unrepresentable_commands_are_rejected_without_financial_effect(self):
+        # 실제 Java HTTP 경계에서 BigDecimal 검증이 예약·저장·전송보다 먼저 끝나는지 본다.
+        commands = [dict(self.limit(), price="1", amount="999999999999999999999.123456789"),
+                    dict(self.limit(), price="0.000000001", amount="0.1", orderType="sell")]
+        for command in commands:
+            self.assertEqual(self.post(uuid4(), command)[0], 400)
+        self.assertEqual(self.sql("SELECT count(*) FROM orders"), "0")
+        self.assertEqual(self.sql("SELECT count(*) FROM order_submissions"), "0")
+        self.assertEqual(len(EngineStub.calls), 0)
+        self.assertEqual(self.sql("SELECT available::text||'|'||locked::text FROM user_balances WHERE user_id=101"),
+                         "1000.000000000|25.000000000")
+        self.record(rejections=2, engine_posts=0)
+
+    def test_invalid_balance_and_unrepresentable_split_roll_back_everything(self):
+        for available, locked, command in [
+                ("1000", "-25", self.limit()),
+                ("100000000000000000000", "25", dict(self.limit(), price="0.000000001", amount="1"))]:
+            self.sql(f"UPDATE user_balances SET available={available},locked={locked} WHERE user_id=101")
+            before = self.sql("SELECT available::text||'|'||locked::text FROM user_balances WHERE user_id=101")
+            self.assertEqual(self.post(uuid4(), command)[0], 400)
+            self.assertEqual(self.sql("SELECT available::text||'|'||locked::text FROM user_balances WHERE user_id=101"), before)
+            self.assertEqual(self.sql("SELECT count(*) FROM orders"), "0")
+            self.assertEqual(self.sql("SELECT count(*) FROM order_submissions"), "0")
+            self.assertEqual(len(EngineStub.calls), 0)
+        self.record(rollback_cases=2, engine_posts=0)
+
     def test_market_original_budget_survives_order_changes(self):
         key = uuid4()
         market = {"orderType": "buy", "orderSide": "market", "baseMint": "SOL", "quoteAmount": "123.250000001"}
