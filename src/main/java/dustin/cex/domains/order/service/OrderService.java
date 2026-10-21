@@ -252,6 +252,9 @@ public class OrderService {
                 .quoteMint(order.getQuoteMint())
                 .price(order.getPrice())
                 .amount(order.getAmount())
+                // 예산 기반 주문에만 불변 원본을 읽는다. 수량 주문의 목록 조회에 추가 조회를 만들지 않는다.
+                .quoteAmount("market".equals(order.getOrderSide()) && "buy".equals(order.getOrderType())
+                        ? submissionRepository.findByOrderId(order.getId()).orElseThrow().getQuoteAmount() : null)
                 .filledAmount(order.getFilledAmount())
                 .filledQuoteAmount(order.getFilledQuoteAmount())
                 .status(order.getStatus())
@@ -314,7 +317,7 @@ public class OrderService {
         Order order = transactionTemplate.execute(status ->
             orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
                 .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId)));
-        if ("filled".equals(order.getStatus()) || "rejected".equals(order.getStatus())) {
+        if ("filled".equals(order.getStatus()) || "rejected".equals(order.getStatus()) || "expired".equals(order.getStatus())) {
             throw new IllegalArgumentException("종료된 주문은 취소할 수 없습니다");
         }
         if (!"cancelled".equals(order.getStatus())) {

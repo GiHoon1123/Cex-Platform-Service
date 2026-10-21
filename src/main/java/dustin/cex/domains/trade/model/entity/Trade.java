@@ -29,7 +29,11 @@ import lombok.NoArgsConstructor;
  * 4. 각 사용자의 잔고 업데이트
  */
 @Entity
-@Table(name = "trades")
+// 주문별 체결 건수를 확인할 때 전체 체결 이력을 훑지 않도록 주문 식별자를 선두에 둔다.
+@Table(name = "trades", indexes = {
+    @jakarta.persistence.Index(name = "idx_trades_buy_order", columnList = "buy_order_id, created_at DESC"),
+    @jakarta.persistence.Index(name = "idx_trades_sell_order", columnList = "sell_order_id, created_at DESC")
+})
 @Data
 @Builder
 @NoArgsConstructor

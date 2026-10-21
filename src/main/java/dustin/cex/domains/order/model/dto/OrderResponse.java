@@ -160,20 +160,25 @@ public class OrderResponse {
          * Order Amount
          */
         @Schema(
-            description = "주문 수량 (기준 자산 기준, 예: 1.5 SOL)", 
+            description = "원본 주문 수량. 예산 기반 시장가 매수는 수량 미정을 뜻하는 0이며 quoteAmount를 사용",
             example = "1.0",
             required = true
         )
         // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
         @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
         private BigDecimal amount;
+
+        /** 시장가 매수의 원본 결제 예산이다. 수량 미정인 amount=0과 실제 체결 수량을 구분한다. */
+        @Schema(description = "시장가 매수의 원본 결제 예산. 다른 주문은 null", example = "100")
+        @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
+        private BigDecimal quoteAmount;
         
         /**
          * 체결된 수량
          * Filled Amount
          */
         @Schema(
-            description = "체결된 수량 (기준 자산 기준). filledAmount == amount면 전량 체결",
+            description = "체결된 수량 (기준 자산 기준). 예산 기반 시장가 매수는 amount와 비교하지 않으며 최종 status로 종료 여부 확인",
             example = "0.5",
             required = true
         )
@@ -205,9 +210,9 @@ public class OrderResponse {
          * - 'cancelled': 취소됨
          */
         @Schema(
-            description = "주문 상태: 'pending'(플랫폼 저장, 엔진 제출 결과 불명 포함), 'partial'(부분체결), 'filled'(완료), 'cancelled'(취소)",
+            description = "주문 상태: 'pending'(플랫폼 저장, 엔진 제출 결과 불명 포함), 'partial'(부분체결), 'filled'(완료), 'cancelled'(취소), 'expired'(시장가 미사용 잔량 만료)",
             example = "partial",
-            allowableValues = {"pending", "partial", "filled", "cancelled", "rejected"},
+            allowableValues = {"pending", "partial", "filled", "cancelled", "rejected", "expired"},
             required = true
         )
         private String status;

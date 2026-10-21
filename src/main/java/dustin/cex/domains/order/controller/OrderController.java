@@ -302,7 +302,7 @@ public class OrderController {
      * 현재 로그인한 사용자의 주문 목록을 조회합니다.
      * 
      * 쿼리 파라미터:
-     * - status: 주문 상태 필터 (optional, 'pending', 'partial', 'filled', 'cancelled')
+     * - status: 주문 상태 필터 (optional, 'pending', 'partial', 'filled', 'cancelled', 'rejected', 'expired')
      * - page: 페이지 번호 (optional, 기본값: 0)
      * - size: 페이지 크기 (optional, 기본값: 50)
      * - sort: 정렬 기준 (optional, 예: createdAt,desc)
@@ -315,7 +315,7 @@ public class OrderController {
             summary = "내 주문 목록 조회",
             description = "현재 로그인한 사용자의 주문 목록을 조회합니다. 상태별 필터링 및 페이지네이션을 지원합니다.\n\n" +
                          "**쿼리 파라미터:**\n" +
-                         "- `status` (선택): 주문 상태 필터 ('pending', 'partial', 'filled', 'cancelled')\n" +
+                         "- `status` (선택): 주문 상태 필터 ('pending', 'partial', 'filled', 'cancelled', 'rejected', 'expired')\n" +
                          "- `page` (선택): 페이지 번호 (0부터 시작, 기본값: 0)\n" +
                          "- `size` (선택): 페이지 크기 (기본값: 50)\n" +
                          "- `sort` (선택): 정렬 기준 (예: createdAt,desc 또는 createdAt,asc, 기본값: createdAt,desc)\n\n" +

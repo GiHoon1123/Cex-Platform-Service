@@ -80,6 +80,103 @@ class MarketPathTest {
         var socket=http.newWebSocketBuilder().header("Origin","http://localhost:3003").buildAsync(URI.create("ws://127.0.0.1:"+port+"/ws/market/BTC/USDT"),listener).get(10,TimeUnit.SECONDS);
         try {return received.get(10,TimeUnit.SECONDS);} finally {socket.sendClose(WebSocket.NORMAL_CLOSURE,"검증 완료").join();}
     }
+
+    long place(User user, String body) throws Exception {
+        var response=request("/api/cex/orders","POST",body,jwt.generateAccessToken(user.getId(),user.getEmail()),UUID.randomUUID().toString());
+        assertEquals(201,response.statusCode(),response.body());
+        return Long.parseLong(mapper.readTree(response.body()).path("order").path("id").asText());
+    }
+    String limitBody(boolean buy,String price,String quantity) {
+        return "{\"orderType\":\""+(buy?"buy":"sell")+"\",\"orderSide\":\"limit\",\"baseMint\":\"BTC\",\"quoteMint\":\"USDT\",\"price\":\""+price+"\",\"amount\":\""+quantity+"\"}";
+    }
+    long marketOrder(User user,boolean buy,String value) throws Exception {
+        return place(user,"{\"orderType\":\""+(buy?"buy":"sell")+"\",\"orderSide\":\"market\",\"baseMint\":\"BTC\",\"quoteMint\":\"USDT\",\""+(buy?"quoteAmount":"amount")+"\":\""+value+"\"}");
+    }
+    void completed(long id,String status,String quantity,String quote) {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(()-> {
+            var order=orders.findById(id).orElseThrow(); assertEquals(status,order.getStatus());
+            assertEquals(0,order.getFilledAmount().compareTo(new BigDecimal(quantity)));
+            assertEquals(0,order.getFilledQuoteAmount().compareTo(new BigDecimal(quote)));
+        });
+    }
+    BigDecimal available(User user,String asset) {return balances.findByUserIdAndMintAddress(user.getId(),asset).orElseThrow().getAvailable();}
+    void noReservation(User user,String asset) {assertEquals(0,balances.findByUserIdAndMintAddress(user.getId(),asset).orElseThrow().getLocked().signum());}
+
+    /** 빈 호가·부분·전량·잔여 최소 단위와 실제 재발행을 동일 제품 경로에서 검증한다. */
+    void verifyMarketIoc(User buyer,User seller) throws Exception {
+        BigDecimal before=available(buyer,"USDT");
+        long emptyBuy=marketOrder(buyer,true,"10"); completed(emptyBuy,"expired","0","0");
+        assertEquals(0,available(buyer,"USDT").compareTo(before)); noReservation(buyer,"USDT");
+        before=available(seller,"BTC");
+        long emptySell=marketOrder(seller,false,"0.001"); completed(emptySell,"expired","0","0");
+        assertEquals(0,available(seller,"BTC").compareTo(before)); noReservation(seller,"BTC");
+
+        place(seller,limitBody(false,"60000","0.001"));
+        before=available(buyer,"USDT"); BigDecimal receivedBefore=available(buyer,"BTC");
+        long partialBuy=marketOrder(buyer,true,"100"); completed(partialBuy,"expired","0.001","60");
+        assertEquals(0,available(buyer,"USDT").compareTo(before.subtract(new BigDecimal("60"))));
+        assertEquals(0,available(buyer,"BTC").compareTo(receivedBefore.add(new BigDecimal("0.000998")))); noReservation(buyer,"USDT");
+        var detail=request("/api/cex/orders/"+partialBuy,"GET",null,jwt.generateAccessToken(buyer.getId(),buyer.getEmail()),null);
+        assertEquals(200,detail.statusCode());
+        assertEquals(0,new BigDecimal(mapper.readTree(detail.body()).path("order").path("quoteAmount").asText()).compareTo(new BigDecimal("100")));
+        assertEquals(0,new BigDecimal(mapper.readTree(detail.body()).path("order").path("amount").asText()).signum());
+
+        place(buyer,limitBody(true,"60000","0.001")); before=available(seller,"BTC");
+        long partialSell=marketOrder(seller,false,"0.002"); completed(partialSell,"expired","0.001","60");
+        assertEquals(0,available(seller,"BTC").compareTo(before.subtract(new BigDecimal("0.001")))); noReservation(seller,"BTC");
+        place(seller,limitBody(false,"60000","0.001"));
+        long fullBuy=marketOrder(buyer,true,"60"); completed(fullBuy,"filled","0.001","60"); noReservation(buyer,"USDT");
+        place(buyer,limitBody(true,"60000","0.001"));
+        long fullSell=marketOrder(seller,false,"0.001"); completed(fullSell,"filled","0.001","60"); noReservation(seller,"BTC");
+
+        long dustMaker=place(seller,limitBody(false,"3","0.5")); before=available(buyer,"USDT");
+        long dust=marketOrder(buyer,true,"1"); completed(dust,"expired","0.333333333","0.999999999");
+        assertEquals(0,available(buyer,"USDT").compareTo(before.subtract(new BigDecimal("0.999999999")))); noReservation(buyer,"USDT");
+        var cancel=request("/api/cex/orders/"+dustMaker,"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null);
+        assertEquals(202,cancel.statusCode());
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(()->assertEquals("cancelled",orders.findById(dustMaker).orElseThrow().getStatus()));
+        noReservation(seller,"BTC");
+
+        // 서로 다른 가격의 두 체결을 합산해 예산 소진·종료 건수·수수료를 함께 검증한다.
+        place(seller,limitBody(false,"100","0.001"));
+        long secondLevel=place(seller,limitBody(false,"200","0.001"));
+        before=available(buyer,"USDT"); receivedBefore=available(buyer,"BTC");
+        long multiLevel=marketOrder(buyer,true,"0.25"); completed(multiLevel,"filled","0.00175","0.25");
+        assertEquals(0,available(buyer,"USDT").compareTo(before.subtract(new BigDecimal("0.25"))));
+        assertEquals(0,available(buyer,"BTC").compareTo(receivedBefore.add(new BigDecimal("0.0017465")))); noReservation(buyer,"USDT");
+        var cancelLevel=request("/api/cex/orders/"+secondLevel,"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null);
+        assertEquals(202,cancelLevel.statusCode());
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(()->assertEquals("cancelled",orders.findById(secondLevel).orElseThrow().getStatus()));
+        noReservation(seller,"BTC");
+
+        var expected=java.util.List.of(available(buyer,"BTC"),available(buyer,"USDT"),available(seller,"BTC"),available(seller,"USDT"));
+        var properties=new java.util.Properties(); properties.put("bootstrap.servers",System.getenv("CEX_TEST_KAFKA"));
+        properties.put("group.id","ioc-observer-"+UUID.randomUUID()); properties.put("auto.offset.reset","earliest");
+        properties.put("key.deserializer","org.apache.kafka.common.serialization.StringDeserializer");
+        properties.put("value.deserializer","org.apache.kafka.common.serialization.StringDeserializer");
+        int completions=0;
+        try(var observer=new org.apache.kafka.clients.consumer.KafkaConsumer<String,String>(properties)) {
+            observer.subscribe(java.util.List.of("order-events")); long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(20);
+            while(completions<8 && System.nanoTime()<deadline) {
+                for(var record:observer.poll(Duration.ofMillis(250))) {
+                    if(mapper.readTree(record.value()).path("event_type").asText().equals("market_order_completed")) completions++;
+                    financial.consumeOrderEvent(record.value());
+                }
+            }
+        }
+        assertEquals(8,completions);
+        // 전달 커서만 잃은 장애를 주입한다. 금융 기록은 바꾸지 않으며 실제 WAL 복구·Kafka
+        // 재발행·플랫폼 수신 키가 함께 재차감과 이중 반환을 막는지 검사한다.
+        stopEngine();
+        var reset=new ProcessBuilder("python3","-c","import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE delivery SET sequence=0'); c.commit(); c.close()",Path.of(System.getenv("CEX_ENGINE_DATA_DIR"),"journal.sqlite3").toString()).inheritIO().start();
+        assertEquals(0,reset.waitFor()); startEngine(true);
+        assertEquals(expected,java.util.List.of(available(buyer,"BTC"),available(buyer,"USDT"),available(seller,"BTC"),available(seller,"USDT")));
+        assertEquals("expired",orders.findById(emptyBuy).orElseThrow().getStatus());
+        assertEquals("expired",orders.findById(partialSell).orElseThrow().getStatus());
+        noReservation(buyer,"USDT"); noReservation(seller,"BTC");
+        var frame=mapper.readTree(socketSnapshot()); assertTrue(frame.path("book").path("asks").isEmpty()); assertTrue(frame.path("book").path("bids").isEmpty());
+    }
+
     @Test void botOrderHttpAcceptanceDurableKafkaSnapshotCancelAndReconnect() throws Exception {
         // 실제 비영 수수료·정책 변경·연속 부분 체결을 전체 전달 경로에서 검증한다.
         fees.saveAndFlush(FeeConfig.builder().baseMint("BTC").quoteMint("USDT").feeRate(new BigDecimal("0.001")).feeType("both").isActive(true).build());feeService.loadFeeConfigs();
@@ -140,6 +237,7 @@ class MarketPathTest {
             });
             String sequence=market.view("BTC","USDT").book().sequence();stopEngine();startEngine(true);
             var reconnected=mapper.readTree(socketSnapshot());assertEquals(sequence,reconnected.path("book").path("sequence").asText());assertTrue(reconnected.path("book").path("asks").isEmpty());assertEquals(3,market.view("BTC","USDT").trades().size());
+            verifyMarketIoc(buyer,seller);
         } finally {stopEngine();}
     }
 }

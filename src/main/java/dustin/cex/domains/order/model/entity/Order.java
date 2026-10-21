@@ -33,7 +33,8 @@ import lombok.NoArgsConstructor;
  * - 'pending': 플랫폼에 저장됨. 엔진 접수·처리 여부까지 증명하지는 않는다.
  * - 'partial': 부분 체결 (일부만 체결됨)
  * - 'filled': 전량 체결 완료
- * - 'cancelled': 주문 취소됨
+ * - 'cancelled': 사용자 취소
+ * - 'expired': 시장가 미사용 잔량의 만료. 체결 내역은 보존됨
  * 
  * 예시:
  * - 지정가 매수: "SOL을 100 USDT에 1개 구매하고 싶다"
@@ -48,6 +49,8 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Table(name = "orders")
+// 신규 스키마도 시장가 만료를 정식 종료 상태로 허용한다. 기존 디비 제약을 자동 변환하지 않는다.
+@org.hibernate.annotations.Check(constraints = "status IN ('pending','partial','filled','cancelled','rejected','expired')")
 @Data
 @Builder
 @NoArgsConstructor
@@ -138,7 +141,7 @@ public class Order {
      * 주문 수량
      * Order Amount
      * 
-     * 주문한 총 수량 (baseMint 기준)
+     * 주문한 총 수량. 예산 기반 시장가 매수의 0은 수량 미정이며 체결량 상한이 아니다.
      * 예: SOL 10개 주문 → amount=10.0
      * 
      * 데이터베이스: DECIMAL(30, 9) - 소수점 9자리까지 지원
@@ -152,7 +155,7 @@ public class Order {
      * 
      * 부분 체결 가능
      * 예: SOL 10개 주문 → 3개 체결 → amount=10.0, filledAmount=3.0
-     * filledAmount == amount면 주문이 전량 체결된 것
+     * 예산 기반 시장가 매수는 원본 수량 미정이므로 amount와 비교하지 않고 최종 상태를 확인한다.
      * 
      * 데이터베이스: DECIMAL(30, 9), 기본값: 0
      */
@@ -170,9 +173,9 @@ public class Order {
      * 예: 시장가 매수로 SOL 1개를 평균 100.5 USDT에 구매
      * → filledQuoteAmount = 100.5
      * 
-     * 데이터베이스: DECIMAL(20, 8), 기본값: 0
+     * 누적 대금도 예약·체결과 같은 소수 9자리 계약이다. 8자리 저장은 잔여 예산을 반올림한다.
      */
-    @Column(name = "filled_quote_amount", nullable = false, precision = 20, scale = 8)
+    @Column(name = "filled_quote_amount", nullable = false, precision = 30, scale = 9)
     @Builder.Default
     private BigDecimal filledQuoteAmount = BigDecimal.ZERO;
     
@@ -183,10 +186,11 @@ public class Order {
      * - 'pending': 플랫폼 저장·예약 완료. 엔진 전송 결과가 불명일 수도 있다.
      * - 'partial': 부분 체결 (일부만 체결됨)
      * - 'filled': 전량 체결 완료
-     * - 'cancelled': 주문 취소됨
+     * - 'cancelled': 사용자 취소
+     * - 'expired': 시장가 미사용 잔량의 만료. 체결 내역은 보존됨
      * - 'rejected': 확정된 주문 거부 기록. 통신 실패를 근거로 설정하지 않는다.
      * 
-     * 데이터베이스 제약조건: CHECK (status IN ('pending', 'partial', 'filled', 'cancelled', 'rejected'))
+     * 데이터베이스 제약조건: CHECK (status IN ('pending', 'partial', 'filled', 'cancelled', 'rejected', 'expired'))
      * 기본값: 'pending'
      */
     @Column(name = "status", nullable = false, length = 50)

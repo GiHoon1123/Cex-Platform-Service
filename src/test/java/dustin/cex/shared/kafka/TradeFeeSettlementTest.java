@@ -45,7 +45,8 @@ class TradeFeeSettlementTest {
     long buyer, seller, buy, sell;
     BigDecimal n(String value) { return new BigDecimal(value); }
     void balance(long user, String asset, String available, String locked) {
-        balances.saveAndFlush(UserBalance.builder().userId(user).mintAddress(asset).available(n(available)).locked(n(locked)).build());
+        var row=balances.findByUserIdAndMintAddress(user,asset).orElseGet(()->UserBalance.builder().userId(user).mintAddress(asset).build());
+        row.setAvailable(n(available)); row.setLocked(n(locked)); balances.saveAndFlush(row);
     }
     long order(long user, String side, String price, String rate) {
         var order = orders.saveAndFlush(Order.builder().userId(user).orderType(side).orderSide("limit")
@@ -106,4 +107,100 @@ class TradeFeeSettlementTest {
         assertTrue(balances.findByUserIdAndMintAddress(buyer,"BTC").isEmpty());
         assertEquals(0,orders.findById(buy).orElseThrow().getFilledAmount().signum());
     }
+    long marketOrder(long user, String side, String budgetOrQuantity) {
+        boolean buy = side.equals("buy");
+        var row = orders.saveAndFlush(Order.builder().userId(user).orderType(side).orderSide("market")
+                .baseMint("BTC").quoteMint("USDT").amount(buy ? BigDecimal.ZERO : n(budgetOrQuantity))
+                .filledAmount(BigDecimal.ZERO).filledQuoteAmount(BigDecimal.ZERO).status("pending").build());
+        var command = new OrderCommand(side,"market","BTC","USDT",null,buy ? null : n(budgetOrQuantity),buy ? n(budgetOrQuantity) : null);
+        submissions.saveAndFlush(new OrderSubmission(user,UUID.randomUUID(),row.getId(),command,n(buy ? "0.001" : "0.002")));
+        return row.getId();
+    }
+    String completed(long id, long user, String side, String reserved, String quantity, String spent, String refund, int count, String status) {
+        return """
+            {"event_type":"market_order_completed","event_id":"engine:90:2","engine_id":"engine",
+             "order_id":%d,"user_id":%d,"order_type":"%s","base_mint":"BTC","quote_mint":"USDT",
+             "reserved_amount":"%s","filled_amount":"%s","filled_quote_amount":"%s",
+             "refund_amount":"%s","trade_count":%d,"status":"%s"}
+            """.formatted(id,user,side,reserved,quantity,spent,refund,count,status);
+    }
+    @Test void marketBuyUsesBudgetAndReleasesOnlyItsUnusedReservation() {
+        buy=marketOrder(buyer,"buy","200");
+        consumer.consumeOrderEvent(event(1,"0.0005"));
+        consumer.consumeOrderEvent(event(2,"0.0005"));
+        assertEquals("partial",orders.findById(buy).orElseThrow().getStatus());
+        assertBalance(buyer,"USDT","750","160");
+        consumer.consumeOrderEvent(completed(buy,buyer,"buy","200","1","90","110",2,"expired"));
+        assertBalance(buyer,"USDT","860","50");
+        assertEquals("expired",orders.findById(buy).orElseThrow().getStatus());
+        assertEquals(0,orders.findById(buy).orElseThrow().getAmount().signum());
+        assertBalance(buyer,"BTC","0.999","0");
+        // 다른 식별자로 종료를 반복해도 닫힌 주문에서 반환을 반복하지 않는다.
+        assertThrows(IllegalStateException.class,()->consumer.consumeOrderEvent(completed(buy,buyer,"buy","200","1","90","110",2,"expired")));
+        assertBalance(buyer,"USDT","860","50");
+    }
+    @Test void zeroFillMarketBuyAndSellReturnWholeReservation() {
+        buy=marketOrder(buyer,"buy","200");
+        sell=marketOrder(seller,"sell","2");
+        consumer.consumeOrderEvent(completed(buy,buyer,"buy","200","0","0","200",0,"expired"));
+        consumer.consumeOrderEvent(completed(sell,seller,"sell","2","0","0","2",0,"expired"));
+        assertBalance(buyer,"USDT","950","50"); assertBalance(seller,"BTC","10","0");
+        assertEquals("expired",orders.findById(buy).orElseThrow().getStatus());
+        assertEquals("expired",orders.findById(sell).orElseThrow().getStatus());
+    }
+    @Test void marketSellPartialCompletionPreservesOtherReservation() {
+        sell=marketOrder(seller,"sell","2"); balance(seller,"BTC","7.5","2.5");
+        consumer.consumeOrderEvent(event(1,"0.0005")); consumer.consumeOrderEvent(event(2,"0.0005"));
+        assertEquals("partial",orders.findById(sell).orElseThrow().getStatus());
+        consumer.consumeOrderEvent(completed(sell,seller,"sell","2","1","90","1",2,"expired"));
+        assertBalance(seller,"BTC","8.5","0.5"); assertBalance(seller,"USDT","89.82","0");
+        assertEquals("expired",orders.findById(sell).orElseThrow().getStatus());
+    }
+    @Test void fullySpentMarketBuyWaitsForCompletionAndDoesNotRefund() {
+        buy=marketOrder(buyer,"buy","90"); balance(buyer,"USDT","860","140");
+        consumer.consumeOrderEvent(event(1,"0.0005")); consumer.consumeOrderEvent(event(2,"0.0005"));
+        assertEquals("partial",orders.findById(buy).orElseThrow().getStatus());
+        consumer.consumeOrderEvent(completed(buy,buyer,"buy","90","1","90","0",2,"filled"));
+        assertBalance(buyer,"USDT","860","50"); assertEquals("filled",orders.findById(buy).orElseThrow().getStatus());
+    }
+    @Test void wrongCompletionTotalsCountsAndStatusDoNotReleaseReservation() {
+        buy=marketOrder(buyer,"buy","200");
+        consumer.consumeOrderEvent(event(1,"0.0005"));
+        for (String invalid : java.util.List.of(
+                completed(buy,buyer,"buy","200","0.5","45","0",1,"filled"),
+                completed(buy,buyer,"buy","200","0.5","45","155",2,"expired"),
+                completed(buy,buyer,"buy","200","1","45","155",1,"expired"),
+                completed(buy,buyer,"buy","201","0.5","45","155",1,"expired"))) {
+            assertThrows(IllegalArgumentException.class,()->consumer.consumeOrderEvent(invalid));
+        }
+        assertBalance(buyer,"USDT","750","205"); assertEquals("partial",orders.findById(buy).orElseThrow().getStatus());
+    }
+    @Test void overBudgetTradeAndFailedRefundRollBackAndAllowCorrectCompletion() {
+        buy=marketOrder(buyer,"buy","40");
+        long before=trades.count();
+        assertThrows(IllegalStateException.class,()->consumer.consumeOrderEvent(event(1,"0.0005")));
+        assertEquals(before,trades.count()); assertEquals(0,orders.findById(buy).orElseThrow().getFilledAmount().signum());
+        buy=marketOrder(buyer,"buy","200");
+        balance(buyer,"USDT","750","100");
+        String completion=completed(buy,buyer,"buy","200","0","0","200",0,"expired");
+        assertThrows(IllegalArgumentException.class,()->consumer.consumeOrderEvent(completion));
+        assertEquals("pending",orders.findById(buy).orElseThrow().getStatus()); assertBalance(buyer,"USDT","750","100");
+        balance(buyer,"USDT","750","250"); consumer.consumeOrderEvent(completion);
+        assertBalance(buyer,"USDT","950","50");
+    }
+
+    @Test void marketBudgetDustSurvivesDatabaseCommitWithoutRounding() {
+        buy=marketOrder(buyer,"buy","1"); sell=order(seller,"sell","3","0.002");
+        balance(buyer,"USDT","750","51");
+        String trade=event(1,"0.000333333").replace("\"price\":\"90\"","\"price\":\"3\"")
+                .replace("\"amount\":\"0.5\"","\"amount\":\"0.333333333\"")
+                .replace("\"seller_fee\":\"0.09\"","\"seller_fee\":\"0.001999999\"");
+        consumer.consumeOrderEvent(trade);
+        // 종료는 별도 트랜잭션에서 저장값을 다시 읽는다. 소수 8자리 컬럼이면 여기서 1로 반올림돼 실패한다.
+        assertEquals(0,orders.findById(buy).orElseThrow().getFilledQuoteAmount().compareTo(n("0.999999999")));
+        consumer.consumeOrderEvent(completed(buy,buyer,"buy","1","0.333333333","0.999999999","0.000000001",1,"expired"));
+        assertBalance(buyer,"USDT","750.000000001","50");
+        assertEquals("expired",orders.findById(buy).orElseThrow().getStatus());
+    }
+
 }

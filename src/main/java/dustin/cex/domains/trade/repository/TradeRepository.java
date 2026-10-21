@@ -18,6 +18,10 @@ import dustin.cex.domains.trade.model.entity.Trade;
  */
 @Repository
 public interface TradeRepository extends JpaRepository<Trade, Long> {
+    /** 시장가 종료의 체결 건수가 실제 반영 목록과 같은지 확인한다. */
+    long countByBuyOrderId(Long orderId);
+    long countBySellOrderId(Long orderId);
+
     
     /**
      * 거래쌍별 체결 내역 조회 (최신순)

@@ -51,11 +51,16 @@ public class KafkaOrderEventConsumer {
         try { event = mapper.readTree(message); }
         catch (Exception invalid) { throw new IllegalArgumentException("금융 이벤트 파싱 실패", invalid); }
         String type = event.path("event_type").asText();
-        if (!List.of("trade_executed", "order_cancelled").contains(type)) {
+        if (!List.of("trade_executed", "order_cancelled", "market_order_completed").contains(type)) {
             throw new IllegalArgumentException("지원하지 않는 금융 이벤트입니다");
         }
         if (!engineEventInbox.claim(event.path("event_id").asText(), event.path("engine_id").asText(), message)) return;
-        if (type.equals("trade_executed")) trade(event); else cancel(event);
+        switch (type) {
+            case "trade_executed" -> trade(event);
+            case "market_order_completed" -> completeMarketOrder(event);
+            case "order_cancelled" -> cancel(event);
+            default -> throw new IllegalArgumentException("지원하지 않는 금융 이벤트입니다");
+        }
     }
 
     private void trade(JsonNode event) {
@@ -84,7 +89,7 @@ public class KafkaOrderEventConsumer {
         fill(buy, quantity, value);
         fill(sell, quantity, value);
         // 지정가 매수는 해당 수량의 예약 대금 전체를 해제하고 실제 지출 차이만 반환한다.
-        // 후속 주문 예약은 건드리지 않는다. 시장가 잔여 예산 종료는 다음 사이클에서 완성한다.
+        // 후속 주문 예약은 건드리지 않는다. 시장가의 미사용 예산은 종료 이벤트에서만 반환한다.
         BigDecimal reserved = buy.getPrice() == null ? value : ExactAmount.requirePositive(buy.getPrice().multiply(quantity), "사용 예약금");
         change(buy.getUserId(), quote, reserved.subtract(value), reserved.negate());
         change(buy.getUserId(), base, quantity.subtract(buyerFee), BigDecimal.ZERO);
@@ -128,12 +133,52 @@ public class KafkaOrderEventConsumer {
     }
 
     private void fill(Order order, BigDecimal quantity, BigDecimal value) {
+        var original = submissions.findByOrderId(order.getId()).orElseThrow().command();
         BigDecimal filled = ExactAmount.requireNonNegative(order.getFilledAmount().add(quantity), "누적 체결량");
-        // 시장가 매수의 수량 0·예산 기반 최종 상태는 별도 작업 항목이다. 잘못된 상태를 확정하지 않는다.
-        if (filled.compareTo(order.getAmount()) > 0) throw new IllegalStateException("원본 주문 수량을 초과했습니다");
+        BigDecimal spent = ExactAmount.requireNonNegative(order.getFilledQuoteAmount().add(value), "누적 체결 대금");
+        boolean market = original.orderSide().equals("market");
+        boolean budgetBuy = market && original.orderType().equals("buy");
+        // 시장가 매수의 원본 수량은 미정이다. 상태 테이블의 0을 수량 상한으로 해석하지 않는다.
+        // 그 대신 원본 결제 예산을 검사하며, 수량 주문은 원본 수량을 검사한다.
+        if (budgetBuy ? spent.compareTo(original.quoteAmount()) > 0 : filled.compareTo(original.amount()) > 0) {
+            throw new IllegalStateException("원본 주문의 예산 또는 수량을 초과했습니다");
+        }
         order.setFilledAmount(filled);
-        order.setFilledQuoteAmount(ExactAmount.requireNonNegative(order.getFilledQuoteAmount().add(value), "누적 체결 대금"));
-        order.setStatus(filled.compareTo(order.getAmount()) == 0 ? "filled" : "partial");
+        order.setFilledQuoteAmount(spent);
+        // 시장가는 마지막 체결 뒤에도 종료·미사용 예약 반환이 남는다. 수량을 모두
+        // 채웠더라도 종료 이벤트 이전에는 완료로 표시하지 않아 상태·예약의 경계를 맞춘다.
+        order.setStatus(market ? "partial" : (filled.compareTo(original.amount()) == 0 ? "filled" : "partial"));
+        orderRepository.save(order);
+    }
+
+    /** 체결 0건도 종료 결과가 필요하다. 합계·건수·원본 예약을 확인한 뒤 상태와 반환을 함께 확정한다. */
+    private void completeMarketOrder(JsonNode event) {
+        Order order = order(event.path("order_id").asLong());
+        verifyOrder(order, event.path("user_id").asLong(), event.path("order_type").asText(),
+                event.path("base_mint").asText(), event.path("quote_mint").asText());
+        var original = submissions.findByOrderId(order.getId()).orElseThrow().command();
+        if (!"market".equals(original.orderSide()) || !"market".equals(order.getOrderSide())) {
+            throw new IllegalArgumentException("시장가 이외 주문의 종료 결과입니다");
+        }
+        BigDecimal quantity = number(event, "filled_amount"), spent = number(event, "filled_quote_amount");
+        BigDecimal reserved = number(event, "reserved_amount"), refund = number(event, "refund_amount");
+        boolean buy = original.orderType().equals("buy");
+        BigDecimal used = buy ? spent : quantity;
+        BigDecimal expectedRefund = ExactAmount.requireNonNegative(original.reservationAmount().subtract(used), "시장가 미사용 예약");
+        long actualTrades = buy ? tradeRepository.countByBuyOrderId(order.getId()) : tradeRepository.countBySellOrderId(order.getId());
+        JsonNode count = event.path("trade_count");
+        String status = refund.signum() == 0 ? "filled" : "expired";
+        if (!count.isIntegralNumber() || !count.canConvertToLong() || count.longValue() != actualTrades
+                || quantity.compareTo(order.getFilledAmount()) != 0 || spent.compareTo(order.getFilledQuoteAmount()) != 0
+                || reserved.compareTo(original.reservationAmount()) != 0 || refund.compareTo(expectedRefund) != 0
+                || !status.equals(event.path("status").asText())
+                || (quantity.signum() == 0) != (spent.signum() == 0)) {
+            throw new IllegalArgumentException("시장가 종료가 원본 예약 또는 반영한 체결과 다릅니다");
+        }
+        // 잔여 예약만 반환한다. 동일 종료의 재전달은 수신 키가 앞에서 막고,
+        // 다른 식별자로 종료를 반복하면 활성 상태 검사가 거부한다.
+        if (refund.signum() > 0) change(order.getUserId(), original.reservationMint(), refund, refund.negate());
+        order.setStatus(status);
         orderRepository.save(order);
     }
 

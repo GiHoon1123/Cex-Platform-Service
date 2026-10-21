@@ -100,6 +100,17 @@ class OrderIdempotencyTest {
     }
 
     @Test
+    void marketBudgetIsExposedInResponseAndExpiredOrderCannotBeCancelled() {
+        var request=limit(); request.setOrderSide("market"); request.setPrice(null); request.setAmount(null); request.setQuoteAmount(new BigDecimal("123"));
+        var response=service.createOrder(101L,UUID.randomUUID(),request).response().getOrder();
+        assertThat(response.getAmount()).isEqualByComparingTo("0");
+        assertThat(response.getQuoteAmount()).isEqualByComparingTo("123");
+        var order=orders.findById(Long.parseLong(response.getId())).orElseThrow(); order.setStatus("expired"); orders.saveAndFlush(order);
+        assertThat(catchThrowable(()->service.cancelOrder(101L,order.getId()))).isInstanceOf(IllegalArgumentException.class);
+        verify(engine,never()).cancelOrder(anyLong(),anyLong(),anyString());
+    }
+
+    @Test
     void feePolicyChangesAffectOnlyNewIntentAndInvalidPolicyRollsBackReservation() {
         var key = UUID.randomUUID();
         service.createOrder(101L, key, limit());
