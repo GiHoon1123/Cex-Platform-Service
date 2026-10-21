@@ -83,7 +83,7 @@ Spring이 주입한 소비 서비스의 `@Transactional` 안에서 수신 키와
 | `python3 scripts/verify_engine_inbox.py` | Java **149개 통과**, 실패·오류·제외 0, 제품 JAR 빌드 포함 |
 | `python3 scripts/verify_market_path.py` | 지정가 회귀와 시장가 8건을 포함한 전체 경로 **1개 통합 시나리오 통과** |
 | `python3 scripts/verify_order_idempotency.py` | 실제 HTTP·동시 접수·응답 유실·재시작 **10개 통과** |
-| 엔진 `python3 scripts/verify_order_safety.py` | 고유 Rust **125개 통과**, 필터 중복 포함 **127회**, 전체 테스트 컴파일·제품 빌드 포함 |
+| 엔진 `python3 scripts/verify_order_safety.py` | 고유 Rust **129개 통과**, 필터 중복 포함 **131회**, 전체 테스트 컴파일·제품 빌드 포함 |
 | 엔진 `python3 scripts/verify_engine_output.py` | 실제 출력 순서·강제 종료·디비 불가 복구·Kafka 장애·재발행·정상 종료 **6개 시나리오 통과** |
 | 엔진 `python3 scripts/verify_durable_acceptance.py` | 실제 영속 접수·응답 유실·재시작 **3개 시나리오 통과** |
 | 엔진 `cargo check --locked --benches --features bench_mode` | 벤치 컴파일 확인. 성능 측정은 아님 |
@@ -104,3 +104,7 @@ macOS·Java 21·Rust 1.91·PostgreSQL 16·Kafka 3.9.1을 사용했다. PostgreSQ
 - [플랫폼 구현·테스트 `7eed751`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/7eed7510be774a7d3f493100d958f858f04f37cf)
 
 두 저장소의 종료 이벤트 계약과 저장 정밀도가 함께 바뀐다. 개별 프로세스만 먼저 배포하는 검증은 수행하지 않았다.
+
+## 후속 상태 갱신
+
+거절 결과·응답 불명 자동 복구는 [다음 사이클](010-durable-order-resolution.md)에서 구현·검증했다. 현재 저널 버전은 4다. 이 문서의 버전 3은 당시 저장 계약이다. Rust 집계는 진행 로그로 나뉜 시작 테스트 4개 누락을 정정해 고유 129개/131회로 표시했다.

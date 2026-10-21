@@ -24,4 +24,8 @@ python3 scripts/verify_market_path.py
 - [BTC 주문·자체 시세·봇 경계와 검증](docs/decisions/007-platform-market-gateway.md)
 - [엔진 이벤트의 영속 수신](docs/decisions/006-engine-event-inbox.md)
 
-현재 구현·격리 검증을 운영 보안·금융 정합성·규제 심사 완료로 해석하지 않는다. 남은 수수료·시장가 정산 과제는 구현 기록에서 확인한다.
+현재 구현·격리 검증을 운영 보안·금융 정합성·규제 심사 완료로 해석하지 않는다. 수수료·시장가·주문 실패 복구의 현재 범위와 남은 원장·대사 과제는 구현 기록에서 확인한다.
+
+## 주문 실패·복구의 현재 계약
+
+[응답 불명 자동 재전송과 확정 거절 예약 반환](docs/decisions/010-durable-order-resolution.md)에서 현재 구현·테스트·저장 계약과 운영 한계를 확인한다. 엔진 저널 버전은 4이며 과거 저널을 자동 변환하지 않는다.
