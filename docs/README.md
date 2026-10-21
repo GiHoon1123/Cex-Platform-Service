@@ -9,6 +9,8 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [003. 같은 고객 요청의 주문 중복 생성 방지](decisions/003-idempotent-order-submission.md): 고객별 요청 키·원본 명령 보존, 동시성·응답 유실·재시작 검증과 새 API 계약.
 - [004. 엔진 영속 접수 응답 검증](decisions/004-verify-durable-engine-receipt.md): 상태 코드와 접수 증명 구분, 요청 식별자·상태·시각 검증과 실제 연결 결과.
 
+- [Java·DB·Rust 공통 금액 계약과 예약 검증](decisions/005-common-exact-amount-contract.md): 입력·저장·조회 경계 오류 재현, 수정과 회귀 검증.
+
 ## 기존 설계·측정 문서
 
 - [정산 설계](SETTLEMENT_DESIGN.md)

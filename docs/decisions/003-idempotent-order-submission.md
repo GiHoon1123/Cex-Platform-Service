@@ -214,3 +214,5 @@ PATH=/usr/local/bin:$PATH python3 scripts/verify_order_idempotency.py
 | `4b3d6ab` | PostgreSQL 동시 접수·프로세스 재시작 검증 스크립트 |
 
 문서 커밋까지 완료한 작업 단위로 푸시한다. 공통 루트의 규칙·로드맵은 로컬 공통 문서이며 별도 Git 저장소를 만들지 않는다.
+
+후속 검토: [금액 타입 경계 오류 수정](005-common-exact-amount-contract.md). 이 글의 당시 검증 결과와 후속 변경을 구분한다.
