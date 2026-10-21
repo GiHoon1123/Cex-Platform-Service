@@ -83,6 +83,40 @@ class OrderCommandTest {
         assertThatThrownBy(() -> OrderCommand.from(request)).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"999999999999999999999.123456789", "79228162514264337593.543950336"})
+    void rustDecimalUnrepresentableInputIsRejectedBeforeReservation(String value) {
+        var request = limitBuy();
+        request.setPrice(BigDecimal.ONE);
+        request.setAmount(new BigDecimal(value));
+        assertThatThrownBy(() -> OrderCommand.from(request)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void exactDecimalBoundaryAndTrailingZerosAreAccepted() {
+        var request = limitBuy();
+        request.setPrice(BigDecimal.ONE);
+        request.setAmount(new BigDecimal("79228162514264337593.5439503350"));
+        assertThat(OrderCommand.from(request).amount()).isEqualByComparingTo("79228162514264337593.543950335");
+    }
+
+    @Test
+    void unrepresentableReservationProductIsRejectedBeforeReservation() {
+        var request = limitBuy();
+        request.setPrice(new BigDecimal("99999999999.999999999"));
+        request.setAmount(new BigDecimal("9999999999"));
+        assertThatThrownBy(() -> OrderCommand.from(request)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void limitSellWithInexactQuoteValueIsRejectedLikeLimitBuy() {
+        var request = limitBuy();
+        request.setOrderType("sell");
+        request.setPrice(new BigDecimal("0.000000001"));
+        request.setAmount(new BigDecimal("0.1"));
+        assertThatThrownBy(() -> OrderCommand.from(request)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     private static CreateOrderRequest limitBuy() {
         return CreateOrderRequest.builder().orderType("buy").orderSide("limit").baseMint("SOL")
                 .price(new BigDecimal("100")).amount(new BigDecimal("2")).build();

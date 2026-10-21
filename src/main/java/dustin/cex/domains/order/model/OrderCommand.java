@@ -1,6 +1,7 @@
 package dustin.cex.domains.order.model;
 
 import java.math.BigDecimal;
+import static dustin.cex.shared.model.ExactAmount.requirePositive;
 
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 
@@ -27,7 +28,7 @@ public record OrderCommand(String orderType, String orderSide, String baseMint, 
 
         boolean marketBuy = "buy".equals(orderType) && "market".equals(orderSide);
         if ("limit".equals(orderSide)) {
-            price = positiveDecimal(price, "price");
+            price = requirePositive(price, "price");
         } else if (price != null) {
             throw new IllegalArgumentException("시장가 주문에는 price를 지정할 수 없습니다");
         }
@@ -35,17 +36,17 @@ public record OrderCommand(String orderType, String orderSide, String baseMint, 
             if (amount != null) {
                 throw new IllegalArgumentException("시장가 매수는 amount 대신 quoteAmount를 사용합니다");
             }
-            quoteAmount = positiveDecimal(quoteAmount, "quoteAmount");
+            quoteAmount = requirePositive(quoteAmount, "quoteAmount");
         } else {
-            amount = positiveDecimal(amount, "amount");
+            amount = requirePositive(amount, "amount");
             if (quoteAmount != null) {
                 throw new IllegalArgumentException("시장가 매수 이외에는 quoteAmount를 지정할 수 없습니다");
             }
         }
-        if ("buy".equals(orderType) && !marketBuy) {
-            // DB가 price*amount를 반올림하면 전송 금액과 실제 예약이 달라진다.
+        if ("limit".equals(orderSide)) {
+            // 매수 예약과 매도 예상 대금 모두 같은 정밀도 계약을 적용한다.
             // 현재 잔액 컬럼 DECIMAL(30,9)에 정확히 저장할 수 없는 주문은 미리 거부한다.
-            positiveDecimal(price.multiply(amount), "예약 금액");
+            requirePositive(price.multiply(amount), "지정가 대금");
         }
     }
 
@@ -72,22 +73,4 @@ public record OrderCommand(String orderType, String orderSide, String baseMint, 
         }
     }
 
-    private static BigDecimal positiveDecimal(BigDecimal value, String field) {
-        if (value == null || value.signum() <= 0) {
-            throw new IllegalArgumentException(field + "는 양수여야 합니다");
-        }
-        try {
-            BigDecimal normalized = value.stripTrailingZeros();
-            // setScale(9)로 먼저 확장하면 1E+1000000000 같은 작은 입력이 거대한
-            // 정수 할당을 유발한다. 값 자체를 확장하지 않고 scale과 정수 자릿수로
-            // DECIMAL(30,9)의 범위를 검사한다. long 계산은 scale 뺄셈 오버플로를 막는다.
-            long integerDigits = (long) normalized.precision() - normalized.scale();
-            if (normalized.scale() > 9 || integerDigits > 21) {
-                throw new ArithmeticException("DECIMAL(30,9) range exceeded");
-            }
-            return normalized;
-        } catch (ArithmeticException exception) {
-            throw new IllegalArgumentException(field + "는 DECIMAL(30,9)에 정확히 저장할 수 있어야 합니다", exception);
-        }
-    }
 }
