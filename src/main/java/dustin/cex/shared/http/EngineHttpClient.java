@@ -71,8 +71,8 @@ public class EngineHttpClient {
         requestFactory.setReadTimeout(timeoutMs);
         this.restTemplate = new RestTemplate(requestFactory);
         this.objectMapper = new ObjectMapper();
-        // POST 자동 재시도는 추가하지 않는다. 엔진의 영속적인 중복 방지가 갖춰지기
-        // 전에는 같은 요청을 다시 보내도 금융 효과가 한 번이라는 보장이 없다.
+        // 클라이언트 내부의 숨은 POST 재시도는 없다. 플랫폼의 영속 전송 서비스가
+        // 같은 주문 식별자·불변 원본으로 재확인하며 엔진 저널의 중복 방지를 사용한다.
         // 이 시간은 연결·각 읽기의 제한이며 요청 전체의 절대 마감 시간은 아니다.
     }
     

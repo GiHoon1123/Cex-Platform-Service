@@ -56,10 +56,12 @@ class OrderSubmissionTest {
     @Configuration
     @EntityScan(basePackageClasses = {Order.class, UserBalance.class})
     @EnableJpaRepositories(basePackageClasses = {OrderRepository.class, UserBalanceRepository.class})
-    @Import(OrderService.class)
+    @Import({OrderService.class,OrderDispatchService.class})
     static class Persistence {}
 
     @Autowired OrderService service;
+    @Autowired dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
+    @Autowired OrderDispatchService dispatch;
     @Autowired OrderRepository orders;
     @Autowired dustin.cex.domains.order.repository.OrderSubmissionRepository submissions;
     @Autowired UserBalanceRepository balances;
@@ -72,6 +74,7 @@ class OrderSubmissionTest {
     void seedIsolatedBalances() {
         when(feeService.getFeeConfig(anyString(), anyString())).thenReturn(
                 dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).feeType("both").build());
+        dispatches.deleteAll();
         submissions.deleteAll();
         orders.deleteAll();
         balances.deleteAll();
@@ -263,6 +266,74 @@ class OrderSubmissionTest {
         assertOneSubmissionAndNoCreatedEvent();
     }
 
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    private void makeDue(long id) {
+        // 실행 소유 디비의 시계만 앞당겨 실제 서비스의 영속 재시도 경로를 실행한다.
+        jdbc.update("UPDATE order_dispatches SET next_attempt_at=? WHERE order_id=?", java.sql.Timestamp.from(java.time.Instant.EPOCH),id);
+    }
+    @Test void uncertainDeliveryRetriesSameOriginalWithoutSecondReservation() {
+        whenSubmit().thenThrow(new ResourceAccessException("응답 유실")).thenReturn(true);
+        catchThrowable(()->service.createOrder(101L,java.util.UUID.randomUUID(),buyLimit()));
+        long id=orders.findAll().getFirst().getId();
+        assertThat(dispatches.findById(id).orElseThrow().getAttempts()).isEqualTo(1);
+        dispatch.retryDue();
+        verify(engine,times(1)).submitOrder(anyLong(),anyLong(),anyString(),anyString(),anyString(),anyString(),any(),any(),any());
+        makeDue(id); dispatch.retryDue(); dispatch.retryDue();
+        verify(engine,times(2)).submitOrder(eq(id),eq(101L),eq("buy"),eq("limit"),eq("SOL"),eq("USDT"),eq("100"),eq("2"),isNull());
+        assertThat(dispatches.findById(id).orElseThrow().getConfirmedAt()).isNotNull();
+        assertThat(service.getOrder(101L,id).getOrder().getSubmissionStatus()).isEqualTo("recorded");
+        assertPendingReservation("USDT","800","225"); assertThat(orders.count()).isEqualTo(1);
+    }
+    @Test void committedBeforeSendIsRecoveredByNewServiceInstance() {
+        whenSubmit().thenReturn(true);
+        var command=dustin.cex.domains.order.model.OrderCommand.from(buyLimit());
+        long id=new TransactionTemplate(transactions).execute(status->{
+            var order=orders.saveAndFlush(Order.builder().userId(101L).orderType("buy").orderSide("limit")
+                    .baseMint("SOL").quoteMint("USDT").price(new BigDecimal("100")).amount(new BigDecimal("2")).build());
+            submissions.save(new dustin.cex.domains.order.model.entity.OrderSubmission(101L,java.util.UUID.randomUUID(),order.getId(),command,new BigDecimal("0.001")));
+            var balance=balances.findByUserIdAndMintAddress(101L,"USDT").orElseThrow();
+            balance.setAvailable(new BigDecimal("800")); balance.setLocked(new BigDecimal("225")); balances.save(balance);
+            dispatches.save(new dustin.cex.domains.order.model.entity.OrderDispatch(order)); return order.getId();
+        });
+        makeDue(id);
+        // 별도 서비스 인스턴스에는 이전 호출 스택이나 메모리 재시도 상태가 없다.
+        new OrderDispatchService(dispatches,submissions,engine,transactions).retryDue();
+        assertThat(dispatches.findById(id).orElseThrow().getConfirmedAt()).isNotNull();
+        assertPendingReservation("USDT","800","225");
+        verify(engine).submitOrder(eq(id),eq(101L),eq("buy"),eq("limit"),eq("SOL"),eq("USDT"),eq("100"),eq("2"),isNull());
+    }
+    @Test void claimIsCommittedBeforeHttpAndCompetingWorkerCannotSendAgain() {
+        whenSubmit().thenAnswer(call->{
+            long id=call.getArgument(0,Long.class);
+            assertThat(dispatches.findById(id).orElseThrow().getAttempts()).isEqualTo(1);
+            dispatch.retryDue();
+            return true;
+        });
+        service.createOrder(101L,java.util.UUID.randomUUID(),buyLimit());
+        verify(engine,times(1)).submitOrder(anyLong(),anyLong(),anyString(),anyString(),anyString(),anyString(),any(),any(),any());
+    }
+
+    @Test void concurrentImmediateClaimSendsOneHttpRequest() throws Exception {
+        var entered=new java.util.concurrent.CountDownLatch(1); var release=new java.util.concurrent.CountDownLatch(1);
+        whenSubmit().thenAnswer(call->{
+            entered.countDown();
+            assertThat(release.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            return true;
+        });
+        var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            var first=executor.submit(()->service.createOrder(101L,java.util.UUID.randomUUID(),buyLimit()));
+            assertThat(entered.await(5,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            long id=orders.findAll().getFirst().getId();
+            // 첫 전송은 실제로 네트워크 구간에 멈춰 있고 두 번째 호출은 별도 스레드에서 실행된다.
+            assertThat(dispatch.submitImmediately(id)).isFalse();
+            release.countDown(); first.get(5,java.util.concurrent.TimeUnit.SECONDS);
+            verify(engine,times(1)).submitOrder(anyLong(),anyLong(),anyString(),anyString(),anyString(),anyString(),any(),any(),any());
+            assertPendingReservation("USDT","800","225");
+        } finally {release.countDown(); executor.shutdownNow();}
+    }
+
     private org.mockito.stubbing.OngoingStubbing<Boolean> whenSubmit() {
         return when(engine.submitOrder(anyLong(), anyLong(), anyString(), anyString(),
                 anyString(), anyString(), any(), any(), any()));
@@ -296,6 +367,7 @@ class OrderSubmissionTest {
     void cancellationAcceptanceDoesNotPreemptKafkaStateOrBalanceRelease() {
         var order=orders.saveAndFlush(Order.builder().userId(101L).orderType("sell").orderSide("limit")
             .baseMint("SOL").quoteMint("USDT").price(new BigDecimal("100")).amount(BigDecimal.ONE).build());
+        dispatches.saveAndFlush(new dustin.cex.domains.order.model.entity.OrderDispatch(order));
         when(engine.cancelOrder(order.getId(),101L,"SOL/USDT")).thenAnswer(invocation -> {
             assertThat(orders.findById(order.getId()).orElseThrow().getStatus()).isEqualTo("pending");
             return true;

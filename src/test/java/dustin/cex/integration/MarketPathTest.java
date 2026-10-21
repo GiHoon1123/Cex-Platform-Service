@@ -31,7 +31,7 @@ import java.util.UUID;
 import java.util.concurrent.*;
 
 /** 이 검증의 PostgreSQL·Kafka·Rust 프로세스만 사용해 공개 경로를 끝까지 실행한다. */
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"bot.bot-count=0","spring.kafka.listener.auto-startup=true","spring.jpa.hibernate.ddl-auto=update","jwt.secret=isolated-market-verification-secret-key-only"})
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"order.dispatch.enabled=false","bot.bot-count=0","spring.kafka.listener.auto-startup=true","spring.jpa.hibernate.ddl-auto=update","jwt.secret=isolated-market-verification-secret-key-only"})
 @EnabledIfEnvironmentVariable(named="CEX_MARKET_E2E",matches="1")
 class MarketPathTest {
     @DynamicPropertySource static void endpoints(DynamicPropertyRegistry registry) {
@@ -149,28 +149,42 @@ class MarketPathTest {
         await().atMost(Duration.ofSeconds(30)).untilAsserted(()->assertEquals("cancelled",orders.findById(secondLevel).orElseThrow().getStatus()));
         noReservation(seller,"BTC");
 
+        // 이 가격과 수량은 각각 유효하지만 체결 대금은 최소 단위로 표현되지 않는다.
+        // 실제 코어가 후보 전체를 거절하고 WAL 확정 결과로만 플랫폼 예약을 반환해야 한다.
+        long rejectionMaker=place(seller,limitBody(false,"3.000000002","0.5"));
+        before=available(buyer,"USDT");
+        long rejected=place(buyer,limitBody(true,"4","0.000000001"));
+        completed(rejected,"rejected","0","0");
+        assertEquals(0,available(buyer,"USDT").compareTo(before)); noReservation(buyer,"USDT");
+        assertEquals(0,orders.findById(rejectionMaker).orElseThrow().getFilledAmount().signum());
+        assertEquals(202,request("/api/cex/orders/"+rejectionMaker,"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null).statusCode());
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(()->assertEquals("cancelled",orders.findById(rejectionMaker).orElseThrow().getStatus()));
+        noReservation(seller,"BTC");
+
         var expected=java.util.List.of(available(buyer,"BTC"),available(buyer,"USDT"),available(seller,"BTC"),available(seller,"USDT"));
         var properties=new java.util.Properties(); properties.put("bootstrap.servers",System.getenv("CEX_TEST_KAFKA"));
         properties.put("group.id","ioc-observer-"+UUID.randomUUID()); properties.put("auto.offset.reset","earliest");
         properties.put("key.deserializer","org.apache.kafka.common.serialization.StringDeserializer");
         properties.put("value.deserializer","org.apache.kafka.common.serialization.StringDeserializer");
-        int completions=0;
+        int completions=0, rejections=0;
         try(var observer=new org.apache.kafka.clients.consumer.KafkaConsumer<String,String>(properties)) {
             observer.subscribe(java.util.List.of("order-events")); long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(20);
-            while(completions<8 && System.nanoTime()<deadline) {
+            while((completions<8 || rejections<1) && System.nanoTime()<deadline) {
                 for(var record:observer.poll(Duration.ofMillis(250))) {
                     if(mapper.readTree(record.value()).path("event_type").asText().equals("market_order_completed")) completions++;
+                    if(mapper.readTree(record.value()).path("event_type").asText().equals("order_rejected")) rejections++;
                     financial.consumeOrderEvent(record.value());
                 }
             }
         }
-        assertEquals(8,completions);
+        assertEquals(8,completions); assertEquals(1,rejections);
         // 전달 커서만 잃은 장애를 주입한다. 금융 기록은 바꾸지 않으며 실제 WAL 복구·Kafka
         // 재발행·플랫폼 수신 키가 함께 재차감과 이중 반환을 막는지 검사한다.
         stopEngine();
         var reset=new ProcessBuilder("python3","-c","import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('UPDATE delivery SET sequence=0'); c.commit(); c.close()",Path.of(System.getenv("CEX_ENGINE_DATA_DIR"),"journal.sqlite3").toString()).inheritIO().start();
         assertEquals(0,reset.waitFor()); startEngine(true);
         assertEquals(expected,java.util.List.of(available(buyer,"BTC"),available(buyer,"USDT"),available(seller,"BTC"),available(seller,"USDT")));
+        assertEquals("rejected",orders.findById(rejected).orElseThrow().getStatus());
         assertEquals("expired",orders.findById(emptyBuy).orElseThrow().getStatus());
         assertEquals("expired",orders.findById(partialSell).orElseThrow().getStatus());
         noReservation(buyer,"USDT"); noReservation(seller,"BTC");

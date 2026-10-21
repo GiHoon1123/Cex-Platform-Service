@@ -42,6 +42,7 @@ public class KafkaOrderEventConsumer {
     private final OrderSubmissionRepository submissions;
     private final TradeFeeRepository tradeFeeRepository;
     private final UserRepository userRepository;
+    private final dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @KafkaListener(topics = "order-events", groupId = "cex-consumer-group", containerFactory = "kafkaListenerContainerFactory")
@@ -51,7 +52,7 @@ public class KafkaOrderEventConsumer {
         try { event = mapper.readTree(message); }
         catch (Exception invalid) { throw new IllegalArgumentException("금융 이벤트 파싱 실패", invalid); }
         String type = event.path("event_type").asText();
-        if (!List.of("trade_executed", "order_cancelled", "market_order_completed").contains(type)) {
+        if (!List.of("trade_executed", "order_cancelled", "market_order_completed", "order_rejected").contains(type)) {
             throw new IllegalArgumentException("지원하지 않는 금융 이벤트입니다");
         }
         if (!engineEventInbox.claim(event.path("event_id").asText(), event.path("engine_id").asText(), message)) return;
@@ -59,6 +60,7 @@ public class KafkaOrderEventConsumer {
             case "trade_executed" -> trade(event);
             case "market_order_completed" -> completeMarketOrder(event);
             case "order_cancelled" -> cancel(event);
+            case "order_rejected" -> reject(event);
             default -> throw new IllegalArgumentException("지원하지 않는 금융 이벤트입니다");
         }
     }
@@ -180,6 +182,40 @@ public class KafkaOrderEventConsumer {
         if (refund.signum() > 0) change(order.getUserId(), original.reservationMint(), refund, refund.negate());
         order.setStatus(status);
         orderRepository.save(order);
+    }
+
+    /** 전체 명령 거절만 예약을 전액 반환한다. HTTP 오류나 무응답은 이 경로로 들어오지 않는다. */
+    private void reject(JsonNode event) {
+        Order order=order(event.path("order_id").asLong());
+        verifyOrder(order,event.path("user_id").asLong(),event.path("order_type").asText(),
+                event.path("base_mint").asText(),event.path("quote_mint").asText());
+        var submission=submissions.findByOrderId(order.getId()).orElseThrow();
+        var original=submission.command();
+        if(!"pending".equals(order.getStatus()) || order.getFilledAmount().signum()!=0 || order.getFilledQuoteAmount().signum()!=0
+                || !original.orderType().equals(event.path("order_type").asText())
+                || !original.baseMint().equals(event.path("base_mint").asText())
+                || !original.quoteMint().equals(event.path("quote_mint").asText())
+                || !submission.getUserId().equals(order.getUserId())
+                || !original.orderSide().equals(event.path("order_side").asText())
+                || !sameOptional(event,"price",original.price()) || !sameOptional(event,"amount",original.amount())
+                || !sameOptional(event,"quote_amount",original.quoteAmount())
+                || number(event,"fee_rate").compareTo(submission.getFeeRate())!=0
+                || !"ENGINE_EXECUTION_REJECTED".equals(event.path("reason_code").asText())) {
+            throw new IllegalArgumentException("거절 결과가 미체결 원본과 다릅니다");
+        }
+        boolean buy=original.orderType().equals("buy");
+        long trades=buy ? tradeRepository.countByBuyOrderId(order.getId()) : tradeRepository.countBySellOrderId(order.getId());
+        if(trades!=0) throw new IllegalStateException("이미 체결된 주문의 전체 거절입니다");
+        BigDecimal refund=original.reservationAmount();
+        change(order.getUserId(),original.reservationMint(),refund,refund.negate());
+        order.setStatus("rejected"); orderRepository.save(order);
+        // 전송 확인과 거절 결과의 경쟁에서도 이미 확인된 기록을 다시 대기로 돌리지 않는다.
+        dispatches.findForUpdate(order.getId()).orElseThrow().confirm(Instant.now());
+    }
+    private boolean sameOptional(JsonNode event,String field,BigDecimal expected) {
+        // 누락을 null로 추측하지 않는다. 시장가 원본의 명시적 null과 실제 수량을 구분한다.
+        if(!event.has(field)) return false;
+        return expected==null ? event.get(field).isNull() : number(event,field).compareTo(expected)==0;
     }
 
     private void cancel(JsonNode event) {

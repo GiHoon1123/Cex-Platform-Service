@@ -108,7 +108,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
                    "--spring.kafka.bootstrap-servers=127.0.0.1:1", "--spring.kafka.listener.auto-startup=false",
                    "--spring.kafka.producer.properties.max.block.ms=500",
                    f"--engine.http.url=http://127.0.0.1:{cls.engine.server_port}", "--engine.http.timeout=300",
-                   "--bot.bot-count=0", "--bot.binance-ws-url=ws://127.0.0.1:1",
+                   "--bot.bot-count=0", "--order.dispatch.enabled=false", "--bot.binance-ws-url=ws://127.0.0.1:1",
                    "--server.address=127.0.0.1", f"--server.port={cls.port}", f"--jwt.secret={cls.secret}",
                    "--spring.jpa.hibernate.ddl-auto=" + ("update" if cls.platform_runs == 1 else "validate")]
         with log_path.open("w") as log:
@@ -162,7 +162,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         with EngineStub.lock:
             EngineStub.calls.clear()
         # 이 스크립트가 소유한 임시 DB에만 테스트 데이터를 만든다.
-        self.sql("DELETE FROM order_submissions; DELETE FROM orders; DELETE FROM user_balances")
+        self.sql("DELETE FROM order_dispatches; DELETE FROM order_submissions; DELETE FROM orders; DELETE FROM user_balances")
         self.sql("""INSERT INTO user_balances (user_id,mint_address,available,locked,created_at,updated_at)
                     VALUES (101,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
                            (102,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""")

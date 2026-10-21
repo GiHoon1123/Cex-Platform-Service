@@ -216,6 +216,10 @@ public class OrderResponse {
             required = true
         )
         private String status;
+
+        /** 엔진 저널 접수 또는 영속 결과 확인이다. recorded는 체결 성공을 뜻하지 않는다. */
+        @Schema(description="엔진 원본 기록 확인: pending(재확인 대기), recorded(기록 확인)",allowableValues={"pending","recorded"})
+        private String submissionStatus;
         
         /**
          * 주문 생성 시간

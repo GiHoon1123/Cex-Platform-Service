@@ -39,6 +39,7 @@ class TradeFeeSettlementTest {
     @MockBean EngineEventInbox inbox;
     @Autowired KafkaOrderEventConsumer consumer;
     @Autowired UserRepository users; @Autowired OrderRepository orders;
+    @Autowired OrderDispatchRepository dispatches;
     @Autowired OrderSubmissionRepository submissions; @Autowired UserBalanceRepository balances;
     @Autowired dustin.cex.domains.position.repository.UserPositionRepository positions;
     @Autowired TradeRepository trades; @Autowired TradeFeeRepository fees;
@@ -54,6 +55,7 @@ class TradeFeeSettlementTest {
                 .filledAmount(BigDecimal.ZERO).filledQuoteAmount(BigDecimal.ZERO).status("pending").build());
         var command = new OrderCommand(side,"limit","BTC","USDT",n(price),n("2"),null);
         submissions.saveAndFlush(new OrderSubmission(user,UUID.randomUUID(),order.getId(),command,n(rate)));
+        dispatches.saveAndFlush(new OrderDispatch(order));
         return order.getId();
     }
     @BeforeEach void seed() {
@@ -114,6 +116,7 @@ class TradeFeeSettlementTest {
                 .filledAmount(BigDecimal.ZERO).filledQuoteAmount(BigDecimal.ZERO).status("pending").build());
         var command = new OrderCommand(side,"market","BTC","USDT",null,buy ? null : n(budgetOrQuantity),buy ? n(budgetOrQuantity) : null);
         submissions.saveAndFlush(new OrderSubmission(user,UUID.randomUUID(),row.getId(),command,n(buy ? "0.001" : "0.002")));
+        dispatches.saveAndFlush(new OrderDispatch(row));
         return row.getId();
     }
     String completed(long id, long user, String side, String reserved, String quantity, String spent, String refund, int count, String status) {
@@ -201,6 +204,46 @@ class TradeFeeSettlementTest {
         consumer.consumeOrderEvent(completed(buy,buyer,"buy","1","0.333333333","0.999999999","0.000000001",1,"expired"));
         assertBalance(buyer,"USDT","750.000000001","50");
         assertEquals("expired",orders.findById(buy).orElseThrow().getStatus());
+    }
+
+    String text(BigDecimal value) { return value==null ? null : value.toPlainString(); }
+    String rejected(long id) {
+        var original=submissions.findByOrderId(id).orElseThrow(); var c=original.command();
+        var event=new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
+        event.put("event_type","order_rejected"); event.put("engine_id","engine"); event.put("event_id","engine:91:0");
+        event.put("order_id",id);event.put("user_id",original.getUserId());event.put("order_type",c.orderType());event.put("order_side",c.orderSide());
+        event.put("base_mint",c.baseMint());event.put("quote_mint",c.quoteMint());event.put("reason_code","ENGINE_EXECUTION_REJECTED");
+        event.put("price",text(c.price()));event.put("amount",text(c.amount()));event.put("quote_amount",text(c.quoteAmount()));event.put("fee_rate",text(original.getFeeRate()));
+        return event.toString();
+    }
+    @Test void durableRejectionReturnsOnlyOriginalReservationAndConfirmsDelivery() {
+        consumer.consumeOrderEvent(rejected(buy));
+        assertBalance(buyer,"USDT","950","50");
+        assertEquals("rejected",orders.findById(buy).orElseThrow().getStatus());
+        assertNotNull(dispatches.findById(buy).orElseThrow().getConfirmedAt());
+        assertThrows(IllegalStateException.class,()->consumer.consumeOrderEvent(rejected(buy)));
+        assertBalance(buyer,"USDT","950","50");
+    }
+    @Test void marketBuyRejectionUsesOriginalBudgetWithExplicitNullQuantity() {
+        buy=marketOrder(buyer,"buy","123.250000001"); balance(buyer,"USDT","750","173.250000001");
+        consumer.consumeOrderEvent(rejected(buy)); assertBalance(buyer,"USDT","873.250000001","50");
+        assertEquals("rejected",orders.findById(buy).orElseThrow().getStatus());
+    }
+    @Test void alteredRejectionAndPartiallyFilledOrderCannotReleaseFunds() {
+        String source=rejected(buy);
+        assertThrows(IllegalArgumentException.class,()->consumer.consumeOrderEvent(source.replace("\"price\":\"100", "\"price\":\"101")));
+        consumer.consumeOrderEvent(event(1,"0.0005"));
+        assertThrows(IllegalArgumentException.class,()->consumer.consumeOrderEvent(source));
+        assertBalance(buyer,"USDT","755","200");
+        assertNull(dispatches.findById(buy).orElseThrow().getConfirmedAt());
+    }
+    @Test void failedRejectionRefundRollsBackStateAndDispatchThenAllowsCorrectRetry() {
+        balance(buyer,"USDT","750","100"); String source=rejected(buy);
+        assertThrows(IllegalArgumentException.class,()->consumer.consumeOrderEvent(source));
+        assertEquals("pending",orders.findById(buy).orElseThrow().getStatus());
+        assertNull(dispatches.findById(buy).orElseThrow().getConfirmedAt());
+        balance(buyer,"USDT","750","250"); consumer.consumeOrderEvent(source);
+        assertBalance(buyer,"USDT","950","50");
     }
 
 }

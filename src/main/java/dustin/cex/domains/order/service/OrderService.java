@@ -69,6 +69,8 @@ public class OrderService {
     private final KafkaEventProducer kafkaEventProducer;
     private final dustin.cex.domains.fee.service.FeeConfigService feeConfigService;
     private final TransactionTemplate transactionTemplate;
+    private final dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
+    private final OrderDispatchService dispatch;
     
     /**
      * ObjectMapper 초기화 (JavaTimeModule 등록)
@@ -89,7 +91,9 @@ public class OrderService {
             EngineHttpClient engineHttpClient,
             KafkaEventProducer kafkaEventProducer,
             PlatformTransactionManager transactionManager,
-            dustin.cex.domains.fee.service.FeeConfigService feeConfigService) {
+            dustin.cex.domains.fee.service.FeeConfigService feeConfigService,
+            dustin.cex.domains.order.repository.OrderDispatchRepository dispatches, OrderDispatchService dispatch) {
+        this.dispatches=dispatches; this.dispatch=dispatch;
         this.feeConfigService = feeConfigService;
         this.orderRepository = orderRepository;
         this.submissionRepository = submissionRepository;
@@ -105,7 +109,7 @@ public class OrderService {
      * HTTP 실패는 엔진 미처리의 증거가 아니다. 요청 처리 후 응답만 유실될 수 있어
      * 이미 커밋한 주문·예약을 임의로 되돌리면 같은 자산을 재사용하게 된다.
      * 따라서 실패 시 상태를 보존하고, 주문 ID를 포함한 결과 불명 예외를 반환한다.
-     * 확정 거부·취소에 따른 해제는 향후 영속적인 엔진 결과를 근거로 처리해야 한다.
+     * 확정 거절·취소에 따른 해제는 영속적인 엔진 결과 소비에서만 처리한다.
      *
      * NEVER는 이 메서드를 호출한 쪽의 트랜잭션이 열려 있으면 진입을 거부한다.
      * 내부 TransactionTemplate이 외부 트랜잭션에 합류해 HTTP 이전에 커밋하지 못하는
@@ -131,6 +135,7 @@ public class OrderService {
                 submissionRepository.saveAndFlush(new OrderSubmission(userId, requestId, order.getId(), command,
                         feeConfigService.getFeeConfig(command.baseMint(), command.quoteMint()).getFeeRate()));
                 lockBalance(userId, command.reservationMint(), command.reservationAmount());
+                dispatches.save(new dustin.cex.domains.order.model.entity.OrderDispatch(order));
                 return order;
             });
         } catch (DataIntegrityViolationException exception) {
@@ -152,24 +157,10 @@ public class OrderService {
         // 3. Rust 엔진에 주문 제출 (트랜잭션 커밋 후, HTTP 호출)
         // ============================================
         try {
-            String priceStr = decimalString(command.price());
-            String amountStr = decimalString(command.amount());
-            String quoteAmountStr = decimalString(command.quoteAmount());
-            String quoteMint = savedOrder.getQuoteMint();
-            
-            // DB에 저장된 주문 ID를 Rust 엔진에 전달
-            boolean success = engineHttpClient.submitOrder(
-                    orderId,
-                    userId,
-                    command.orderType(),
-                    command.orderSide(),
-                    command.baseMint(),
-                    quoteMint,
-                    priceStr,
-                    amountStr,
-                    quoteAmountStr
-            );
-            
+            // 정상 경로는 지금처럼 즉시 HTTP로 전달한다. 실패·종료 이후에는 동일 원본의
+            // 영속 전송 기록을 별도 워커가 이어받는다.
+            boolean success=dispatch.submitImmediately(orderId);
+
             if (!success) {
                 // boolean false에는 주문 ID와 연결된 영속적인 거부 근거가 없다.
                 // HTTP 상태나 오류 문자열만으로 예약을 해제하지 않는다.
@@ -230,11 +221,6 @@ public class OrderService {
                 .filledAmount(BigDecimal.ZERO).filledQuoteAmount(BigDecimal.ZERO).status("pending").build();
     }
 
-    /** 소수의 지수 표기 대신 원래 값의 문자열을 보내며, 없는 수량을 0으로 바꾸지 않는다. */
-    private String decimalString(BigDecimal value) {
-        return value == null ? null : value.toPlainString();
-    }
-
     /**
      * Order 엔티티를 DTO로 변환
      * Convert Order Entity to DTO
@@ -258,6 +244,7 @@ public class OrderService {
                 .filledAmount(order.getFilledAmount())
                 .filledQuoteAmount(order.getFilledQuoteAmount())
                 .status(order.getStatus())
+                .submissionStatus(dispatches.findById(order.getId()).orElseThrow().getConfirmedAt()==null ? "pending" : "recorded")
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .build();

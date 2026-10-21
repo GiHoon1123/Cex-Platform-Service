@@ -27,6 +27,7 @@ try:
     env=os.environ.copy()
     env["SPRING_KAFKA_BOOTSTRAP_SERVERS"]="127.0.0.1:1"
     env["BOT_BOT_COUNT"]="0"
+    env["ORDER_DISPATCH_ENABLED"]="false"
     env["ENGINE_HTTP_URL"]="http://127.0.0.1:1"
     env["CEX_TEST_DATABASE_URL"]="jdbc:postgresql://"+address+"/cex_test"
     env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
