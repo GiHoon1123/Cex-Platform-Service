@@ -81,6 +81,6 @@ PATH=/usr/local/bin:$PATH python3 scripts/verify_order_idempotency.py
 
 이 검사는 주문 생성·예약 경계에 적용했다. 기존 Kafka 스냅샷/증감 처리, 입출금, 수수료, 정정 원장 전체를 보장하지 않는다. 주문장·DB·이벤트의 확정, 취소 경쟁, 순서·재생은 여전히 우선 과제다. 현재 금액 오류는 기존 IllegalArgumentException 처리에 따라 HTTP 400으로 반환하며 손상 잔액의 운영 경보·오류 코드 세분화는 후속 범위다.
 
-- `461b993`: 공통 정확한 금액 계약·명령 검증과 테스트.
-- `627e5f0`: 예약 원본·결과 검증과 실제 JPA 롤백 테스트.
-- `4720ad7`: 실제 HTTP·PostgreSQL 신규 2건.
+- `46b5fd6`: 공통 정확한 금액 계약·명령 검증과 테스트.
+- `5a0441e`: 예약 원본·결과 검증과 실제 JPA 롤백 테스트.
+- `fde9210`: 실제 HTTP·PostgreSQL 신규 2건.

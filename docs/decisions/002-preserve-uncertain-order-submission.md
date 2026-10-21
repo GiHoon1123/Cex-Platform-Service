@@ -4,7 +4,7 @@
 
 - 작성·검증일: 2026-10-21.
 - 상태: 플랫폼 생성 경로 구현·격리 로컬 검증 완료. 엔진의 영속 접수·자동 결과 확정·중복 방지는 미완료.
-- 구현 커밋: `f5f95ab`.
+- 구현 커밋: `884e98d`.
 - 후속 변경: [003. 고객 요청 키로 중복 생성 방지](003-idempotent-order-submission.md). 현재 생성 API는 Idempotency-Key가 필수이며 같은 키·내용의 플랫폼 재요청이 가능하다. 아래 응답 예시·미완료 목록은 이 사이클 당시 기록이며 현재 계약은 003을 따른다.
 - 선행 작업: [시작 시 잔액 재입금 제거](001-remove-startup-balance-replay.md), [엔진 불완전 초기 상태 차단](../../../Cex-Engine/docs/decisions/002-block-incomplete-startup-state.md).
 
