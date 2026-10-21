@@ -21,6 +21,8 @@ public class TestConfig {
     @Primary
     public BotConfig testBotConfig() {
         BotConfig config = new BotConfig();
+        // 테스트 컨텍스트가 실제 주문을 만들지 않도록 전역 사용자 지시를 적용한다.
+        config.setBotCount(0);
         config.setBot1Email("bot1@bot.com");
         config.setBot1Password("botpassword");
         config.setBot2Email("bot2@bot.com");
