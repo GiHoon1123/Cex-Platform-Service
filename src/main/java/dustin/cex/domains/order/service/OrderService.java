@@ -19,6 +19,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
 import dustin.cex.domains.order.exception.OrderSubmissionUncertainException;
+import dustin.cex.domains.order.model.OrderCommand;
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.dto.OrderbookResponse;
@@ -103,7 +104,7 @@ public class OrderService {
         // ============================================
         // 1. 주문 유효성 검증
         // ============================================
-        validateOrderRequest(request);
+        OrderCommand command = OrderCommand.from(request);
         
         // ============================================
         // 2. DB에 주문 저장 + 잔고 lock (트랜잭션 내, 명시적 커밋)
@@ -112,11 +113,11 @@ public class OrderService {
         // 이렇게 하면 Rust 엔진에 제출하기 전에 주문이 DB에 확실히 저장됨
         Order savedOrder = transactionTemplate.execute(status -> {
             // 2-1. 주문 저장
-            Order order = buildOrderEntity(userId, request);
+            Order order = buildOrderEntity(userId, command);
             Order saved = orderRepository.save(order);
             
             // 2-2. 잔고 lock (같은 트랜잭션 내)
-            lockBalanceForOrder(saved, request);
+            lockBalance(userId, command.reservationMint(), command.reservationAmount());
             
             return saved;
         });
@@ -134,18 +135,18 @@ public class OrderService {
         // 3. Rust 엔진에 주문 제출 (트랜잭션 커밋 후, HTTP 호출)
         // ============================================
         try {
-            String priceStr = savedOrder.getPrice() != null ? savedOrder.getPrice().toString() : null;
-            String amountStr = savedOrder.getAmount().toString();
-            String quoteAmountStr = request.getQuoteAmount() != null ? request.getQuoteAmount().toString() : null;
+            String priceStr = decimalString(command.price());
+            String amountStr = decimalString(command.amount());
+            String quoteAmountStr = decimalString(command.quoteAmount());
             String quoteMint = savedOrder.getQuoteMint();
             
             // DB에 저장된 주문 ID를 Rust 엔진에 전달
             boolean success = engineHttpClient.submitOrder(
                     orderId,
                     userId,
-                    request.getOrderType(),
-                    request.getOrderSide(),
-                    request.getBaseMint(),
+                    command.orderType(),
+                    command.orderSide(),
+                    command.baseMint(),
                     quoteMint,
                     priceStr,
                     amountStr,
@@ -191,91 +192,19 @@ public class OrderService {
                 .build();
     }
     
-    /**
-     * 주문 유효성 검증
-     * Validate Order Request
-     * 
-     * 주문 생성 요청의 유효성을 검증합니다.
-     * 
-     * 검증 항목:
-     * 1. 주문 타입/방식 검증 (이미 @Valid로 처리됨)
-     * 2. 지정가 주문: 가격 필수, 양수여야 함
-     * 3. 시장가 매수: quoteAmount 필수, 양수여야 함
-     * 4. 시장가 매도: amount 필수, 양수여야 함
-     * 5. 지정가 매수: amount 필수, 양수여야 함
-     * 
-     * @param request 주문 생성 요청
-     * @throws IllegalArgumentException 유효성 검증 실패 시
-     */
-    private void validateOrderRequest(CreateOrderRequest request) {
-        // 지정가 주문: 가격 필수
-        if ("limit".equals(request.getOrderSide())) {
-            if (request.getPrice() == null) {
-                throw new IllegalArgumentException("지정가 주문은 가격이 필수입니다");
-            }
-            if (request.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("가격은 0보다 커야 합니다");
-            }
-        }
-        
-        // 시장가 매수: quoteAmount 필수
-        if ("buy".equals(request.getOrderType()) && "market".equals(request.getOrderSide())) {
-            if (request.getQuoteAmount() == null) {
-                throw new IllegalArgumentException("시장가 매수 주문은 quoteAmount가 필수입니다");
-            }
-            if (request.getQuoteAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("quoteAmount는 0보다 커야 합니다");
-            }
-        } else {
-            // 지정가 매수 또는 모든 매도: amount 필수
-            if (request.getAmount() == null) {
-                throw new IllegalArgumentException("주문 수량(amount)이 필수입니다");
-            }
-            if (request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("주문 수량은 0보다 커야 합니다");
-            }
-        }
+    /** 원본 명령의 amount=null은 시장가 매수라는 의미다. 상태 테이블의 수량만 0으로 시작한다. */
+    private Order buildOrderEntity(Long userId, OrderCommand command) {
+        return Order.builder().userId(userId).orderType(command.orderType()).orderSide(command.orderSide())
+                .baseMint(command.baseMint()).quoteMint(command.quoteMint()).price(command.price())
+                .amount(command.amount() == null ? BigDecimal.ZERO : command.amount())
+                .filledAmount(BigDecimal.ZERO).filledQuoteAmount(BigDecimal.ZERO).status("pending").build();
     }
-    
-    /**
-     * 주문 엔티티 생성
-     * Build Order Entity
-     * 
-     * CreateOrderRequest를 Order 엔티티로 변환합니다.
-     * 
-     * @param userId 사용자 ID
-     * @param request 주문 생성 요청
-     * @return Order 엔티티
-     */
-    private Order buildOrderEntity(Long userId, CreateOrderRequest request) {
-        // quoteMint 기본값 설정
-        String quoteMint = request.getQuoteMint() != null && !request.getQuoteMint().isEmpty() 
-                ? request.getQuoteMint() 
-                : "USDT";
-        
-        // 시장가 매수의 경우 amount 계산 (quoteAmount를 사용하여 추정)
-        // 실제로는 엔진에서 매칭 후 정확한 amount 계산됨
-        BigDecimal amount = request.getAmount();
-        if ("buy".equals(request.getOrderType()) && "market".equals(request.getOrderSide())) {
-            // 시장가 매수: quoteAmount만 있고 amount는 없음
-            // 엔진에서 매칭 후 정확한 amount 계산되므로, 일단 0으로 설정
-            amount = BigDecimal.ZERO;
-        }
-        
-        return Order.builder()
-                .userId(userId)
-                .orderType(request.getOrderType())
-                .orderSide(request.getOrderSide())
-                .baseMint(request.getBaseMint())
-                .quoteMint(quoteMint)
-                .price(request.getPrice())
-                .amount(amount)
-                .filledAmount(BigDecimal.ZERO)
-                .filledQuoteAmount(BigDecimal.ZERO)
-                .status("pending")
-                .build();
+
+    /** 소수의 지수 표기 대신 원래 값의 문자열을 보내며, 없는 수량을 0으로 바꾸지 않는다. */
+    private String decimalString(BigDecimal value) {
+        return value == null ? null : value.toPlainString();
     }
-    
+
     /**
      * Order 엔티티를 DTO로 변환
      * Convert Order Entity to DTO
@@ -530,42 +459,6 @@ public class OrderService {
         } catch (Exception e) {
             throw new RuntimeException("주문 취소 상태 업데이트 실패", e);
         }
-    }
-    
-    /**
-     * 주문에 필요한 잔고 lock
-     * Lock balance for order
-     * 
-     * @param order 저장한 주문. 예약 자산은 저장·전송과 같은 정규화된 값을 사용한다.
-     * @param request 주문 요청
-     */
-    private void lockBalanceForOrder(Order order, CreateOrderRequest request) {
-        if ("buy".equals(request.getOrderType())) {
-            // 매수 주문: quote_mint lock (USDT 등)
-            BigDecimal lockAmount = calculateQuoteAmount(request);
-            lockBalance(order.getUserId(), order.getQuoteMint(), lockAmount);
-        } else {
-            // 매도 주문: base_mint lock
-            lockBalance(order.getUserId(), order.getBaseMint(), request.getAmount());
-        }
-    }
-    
-    /**
-     * quote_amount 계산
-     * Calculate quote amount for buy order
-     */
-    private BigDecimal calculateQuoteAmount(CreateOrderRequest request) {
-        if (request.getQuoteAmount() != null) {
-            return request.getQuoteAmount();
-        }
-        // quoteAmount가 없으면 price * amount 계산
-        if (request.getPrice() != null && request.getAmount() != null) {
-            return request.getPrice().multiply(request.getAmount());
-        }
-        throw new RuntimeException(String.format(
-            "매수 주문의 경우 quoteAmount 또는 (price와 amount)가 필요합니다: price=%s, amount=%s", 
-            request.getPrice(), request.getAmount()
-        ));
     }
     
     /**
