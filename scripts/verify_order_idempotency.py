@@ -31,7 +31,7 @@ ARTIFACTS = WORKSPACE / ".local"
 
 
 class EngineStub(BaseHTTPRequestHandler):
-    mode = 201
+    mode = 202
     calls = []
     lock = threading.Lock()
 
@@ -48,7 +48,8 @@ class EngineStub(BaseHTTPRequestHandler):
         self.send_response(mode)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        self.wfile.write(b"{}")
+        self.wfile.write(json.dumps({"order_id": str(body["order_id"]), "user_id": str(body["user_id"]),
+                                      "receipt_status": "accepted", "accepted_at": "2026-10-21T00:00:00Z"}).encode())
 
     def log_message(self, *_):
         pass
@@ -150,7 +151,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         }, ensure_ascii=False, indent=2))
 
     def setUp(self):
-        EngineStub.mode = 201
+        EngineStub.mode = 202
         with EngineStub.lock:
             EngineStub.calls.clear()
         # 이 스크립트가 소유한 임시 DB에만 테스트 데이터를 만든다.

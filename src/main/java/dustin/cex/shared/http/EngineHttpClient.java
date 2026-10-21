@@ -1,6 +1,7 @@
 package dustin.cex.shared.http;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -90,8 +91,8 @@ public class EngineHttpClient {
      * @param price 지정가 가격 (지정가 주문만)
      * @param amount 주문 수량
      * @param quoteAmount 시장가 매수 금액 (시장가 매수만)
-     * @return 성공 여부
-     * @throws RuntimeException 엔진 통신 실패 시
+     * @return 요청 ID·고객 ID와 일치하는 영속 접수 확인 여부. 체결 완료가 아니다.
+     * @throws RuntimeException 통신 오류 또는 접수 증명 불일치 시
      */
     public boolean submitOrder(
             Long orderId,
@@ -125,13 +126,22 @@ public class EngineHttpClient {
                     String.class
             );
             
-            // 응답 확인
-            if (response.getStatusCode().is2xxSuccessful()) {
-                return true;
-            } else {
-                throw new RuntimeException("엔진 주문 제출 실패: " + response.getStatusCode());
+            // 단순한 2xx나 이전 주문 DTO는 영속 접수의 증거가 아니다.
+            // 신규(202)·기존(200) 접수만 허용하고 요청 ID·고객·접수 시각을 검증한다.
+            int status = response.getStatusCode().value();
+            JsonNode receipt = objectMapper.readTree(response.getBody());
+            if ((status != 200 && status != 202) || receipt == null || !receipt.isObject()
+                    || !receipt.path("order_id").isTextual()
+                    || !orderId.toString().equals(receipt.path("order_id").textValue())
+                    || !receipt.path("user_id").isTextual()
+                    || !userId.toString().equals(receipt.path("user_id").textValue())
+                    || !"accepted".equals(receipt.path("receipt_status").textValue())
+                    || !receipt.path("accepted_at").isTextual()) {
+                throw new IllegalStateException("엔진의 영속 접수 응답을 확인하지 못했습니다");
             }
-            
+            OffsetDateTime.parse(receipt.path("accepted_at").textValue());
+            return true;
+
         } catch (RestClientException e) {
             throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
         } catch (Exception e) {
