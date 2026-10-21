@@ -18,7 +18,7 @@ class KafkaOrderEventConsumerTest {
     final OrderRepository orders=mock(OrderRepository.class);
     final TradeRepository trades=mock(TradeRepository.class);
     final KafkaOrderEventConsumer consumer=new KafkaOrderEventConsumer(inbox,trades,orders,
-            mock(UserBalanceRepository.class),mock(UserPositionRepository.class),mock(FeeConfigService.class),
+            mock(UserBalanceRepository.class),mock(UserPositionRepository.class),mock(dustin.cex.domains.order.repository.OrderSubmissionRepository.class),
             mock(TradeFeeRepository.class),mock(UserRepository.class));
     final String message="""
             {"event_type":"order_cancelled","event_id":"engine:1:0","engine_id":"engine","order_id":1,"user_id":2,"base_mint":"SOL","quote_mint":"USDT"}

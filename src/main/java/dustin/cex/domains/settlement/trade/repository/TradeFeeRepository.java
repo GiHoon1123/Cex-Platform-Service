@@ -39,6 +39,10 @@ import dustin.cex.domains.settlement.trade.model.entity.TradeFee;
  */
 @Repository
 public interface TradeFeeRepository extends JpaRepository<TradeFee, Long> {
+    /** 끝 시각을 제외해 디비의 마이크로초 반올림이 다음 날짜를 포함하지 않게 한다. */
+    @Query("SELECT tf FROM TradeFee tf WHERE tf.createdAt >= :start AND tf.createdAt < :end")
+    List<TradeFee> findForRevenueWindow(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     
     /**
      * 특정 거래의 모든 수수료 내역 조회
@@ -122,8 +126,8 @@ public interface TradeFeeRepository extends JpaRepository<TradeFee, Long> {
      * @param endDate 종료 날짜
      * @return 사용자가 납부한 총 수수료 금액
      */
-    @Query("SELECT COALESCE(SUM(tf.feeAmount), 0) FROM TradeFee tf WHERE tf.user.id = :userId AND tf.createdAt BETWEEN :startDate AND :endDate")
-    java.math.BigDecimal calculateTotalFeeByUser(
+    @Query("SELECT COALESCE(SUM(tf.feeAmount), 0) FROM TradeFee tf WHERE tf.user.id = :userId AND tf.feeMint = 'USDT' AND tf.createdAt BETWEEN :startDate AND :endDate")
+    java.math.BigDecimal calculateTotalQuoteFeeByUser(
         @Param("userId") Long userId,
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate

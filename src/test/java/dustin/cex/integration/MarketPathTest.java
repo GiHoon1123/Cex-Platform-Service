@@ -42,6 +42,7 @@ class MarketPathTest {
     @LocalServerPort int port;
     @Autowired UserRepository users; @Autowired UserBalanceRepository balances; @Autowired OrderRepository orders;
     @Autowired BotService bots; @Autowired MarketService market; @Autowired JwtService jwt;
+    @Autowired dustin.cex.shared.kafka.KafkaOrderEventConsumer financial;
     @Autowired ObjectMapper mapper; @Autowired JdbcTemplate jdbc;
     @Autowired FeeConfigRepository fees; @Autowired FeeConfigService feeService;
     final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
@@ -80,9 +81,8 @@ class MarketPathTest {
         try {return received.get(10,TimeUnit.SECONDS);} finally {socket.sendClose(WebSocket.NORMAL_CLOSURE,"검증 완료").join();}
     }
     @Test void botOrderHttpAcceptanceDurableKafkaSnapshotCancelAndReconnect() throws Exception {
-        // 이 시나리오는 수수료 0인 시장을 명시적으로 준비한다. 수수료 권위와
-        // 엔진·플랫폼 잔액 차이는 별도 정합성 과제이며 여기서 검증했다고 주장하지 않는다.
-        fees.saveAndFlush(FeeConfig.builder().baseMint("BTC").quoteMint("USDT").feeRate(BigDecimal.ZERO).feeType("both").isActive(true).build());feeService.loadFeeConfigs();
+        // 실제 비영 수수료·정책 변경·연속 부분 체결을 전체 전달 경로에서 검증한다.
+        fees.saveAndFlush(FeeConfig.builder().baseMint("BTC").quoteMint("USDT").feeRate(new BigDecimal("0.001")).feeType("both").isActive(true).build());feeService.loadFeeConfigs();
         User seller=users.saveAndFlush(User.builder().email("isolated-seller@local.test").passwordHash("로그인에 사용하지 않는 격리 검증 계정").build());
         User buyer=users.saveAndFlush(User.builder().email("isolated-buyer@local.test").passwordHash("로그인에 사용하지 않는 격리 검증 계정").build());
         balances.saveAndFlush(UserBalance.builder().userId(seller.getId()).mintAddress("BTC").available(new BigDecimal("1")).locked(BigDecimal.ZERO).build());
@@ -90,8 +90,11 @@ class MarketPathTest {
         jdbc.execute(Files.readString(Path.of(System.getenv("CEX_ENGINE_BINARY")).getParent().getParent().getParent().resolve("schema/order_receipts.sql")));
         try {
             startEngine(false);
-            var sell=bots.createLimitSellOrder(seller.getId(),"BTC",new BigDecimal("60000"),new BigDecimal("0.003"));
+            var sell=bots.createLimitSellOrder(seller.getId(),"BTC",new BigDecimal("60000"),new BigDecimal("0.002"));
+            var extraSell=bots.createLimitSellOrder(seller.getId(),"BTC",new BigDecimal("60000"),new BigDecimal("0.001"));
             await().atMost(Duration.ofSeconds(30)).ignoreException(org.springframework.web.server.ResponseStatusException.class).untilAsserted(()->assertEquals("0.003",market.view("BTC","USDT").book().asks().getFirst().get(1)));
+            // 이미 접수한 매도 주문은 기존 적용률을 유지하고 이후 매수 주문만 새 적용률을 쓴다.
+            var current = fees.findByIsActiveTrue().getFirst(); current.setFeeRate(new BigDecimal("0.002")); fees.saveAndFlush(current); feeService.loadFeeConfigs();
             String body="{\"orderType\":\"buy\",\"orderSide\":\"limit\",\"baseMint\":\"BTC\",\"quoteMint\":\"USDT\",\"price\":\"60000\",\"amount\":\"0.001\"}";
             String key=UUID.randomUUID().toString(),token=jwt.generateAccessToken(buyer.getId(),buyer.getEmail());
             var accepted=request("/api/cex/orders","POST",body,token,key);assertEquals(201,accepted.statusCode(),accepted.body());
@@ -99,17 +102,44 @@ class MarketPathTest {
                 var view=market.view("BTC","USDT");assertEquals("0.002",view.book().asks().getFirst().get(1));assertEquals(1,view.trades().size());
                 assertEquals("filled",orders.findById(Long.parseLong(mapper.readTree(accepted.body()).path("order").path("id").asText())).orElseThrow().getStatus());
             });
+            await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+                assertEquals(0, balances.findByUserIdAndMintAddress(buyer.getId(),"BTC").orElseThrow().getAvailable().compareTo(new BigDecimal("0.000998")));
+                assertEquals(0, balances.findByUserIdAndMintAddress(seller.getId(),"USDT").orElseThrow().getAvailable().compareTo(new BigDecimal("59.94")));
+            });
+            var second = request("/api/cex/orders","POST",body.replace("0.001", "0.0015"),token,UUID.randomUUID().toString());
+            assertEquals(201,second.statusCode(),second.body());
+            await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+                assertEquals(0, balances.findByUserIdAndMintAddress(buyer.getId(),"BTC").orElseThrow().getAvailable().compareTo(new BigDecimal("0.002495")));
+                assertEquals(0, balances.findByUserIdAndMintAddress(seller.getId(),"USDT").orElseThrow().getAvailable().compareTo(new BigDecimal("149.85")));
+                assertEquals(0, balances.findByUserIdAndMintAddress(buyer.getId(),"USDT").orElseThrow().getAvailable().compareTo(new BigDecimal("850")));
+                assertEquals(3,market.view("BTC","USDT").trades().size());
+            });
+            // 실제 브로커 원본을 같은 소비 서비스에 재전달해 수신 키가 재차감을 막는지 확인한다.
+            var properties = new java.util.Properties();
+            properties.put("bootstrap.servers",System.getenv("CEX_TEST_KAFKA"));
+            properties.put("group.id","fee-observer-"+UUID.randomUUID()); properties.put("auto.offset.reset","earliest");
+            properties.put("key.deserializer","org.apache.kafka.common.serialization.StringDeserializer");
+            properties.put("value.deserializer","org.apache.kafka.common.serialization.StringDeserializer");
+            try (var observer = new org.apache.kafka.clients.consumer.KafkaConsumer<String,String>(properties)) {
+                observer.subscribe(java.util.List.of("order-events"));
+                var originals = new java.util.ArrayList<String>();
+                long deadline = System.nanoTime()+TimeUnit.SECONDS.toNanos(20);
+                while (originals.size()<3 && System.nanoTime()<deadline) observer.poll(Duration.ofMillis(250)).forEach(record -> originals.add(record.value()));
+                assertTrue(originals.size()>=3);
+                for (var original : originals) financial.consumeOrderEvent(original);
+            }
+            assertEquals(0, balances.findByUserIdAndMintAddress(buyer.getId(),"BTC").orElseThrow().getAvailable().compareTo(new BigDecimal("0.002495")));
             assertEquals(200,request("/api/cex/orders","POST",body,token,key).statusCode());
-            var frame=mapper.readTree(socketSnapshot());assertEquals("BTC",frame.path("book").path("base_mint").asText());assertEquals(1,frame.path("trades").size());
+            var frame=mapper.readTree(socketSnapshot());assertEquals("BTC",frame.path("book").path("base_mint").asText());assertEquals(3,frame.path("trades").size());
             assertEquals(1,market.candles("BTC","USDT").size());
-            var cancel=request("/api/cex/orders/"+sell.getOrder().getId(),"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null);assertEquals(202,cancel.statusCode(),cancel.body());
+            var cancel=request("/api/cex/orders/"+extraSell.getOrder().getId(),"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null);assertEquals(202,cancel.statusCode(),cancel.body());
             await().atMost(Duration.ofSeconds(30)).ignoreException(org.springframework.web.server.ResponseStatusException.class).untilAsserted(()-> {
                 assertTrue(market.view("BTC","USDT").book().asks().isEmpty());
-                assertEquals("cancelled",orders.findById(Long.parseLong(sell.getOrder().getId())).orElseThrow().getStatus());
+                assertEquals("cancelled",orders.findById(Long.parseLong(extraSell.getOrder().getId())).orElseThrow().getStatus());
                 assertEquals(0,balances.findByUserIdAndMintAddress(seller.getId(),"BTC").orElseThrow().getLocked().signum());
             });
             String sequence=market.view("BTC","USDT").book().sequence();stopEngine();startEngine(true);
-            var reconnected=mapper.readTree(socketSnapshot());assertEquals(sequence,reconnected.path("book").path("sequence").asText());assertTrue(reconnected.path("book").path("asks").isEmpty());assertEquals(1,market.view("BTC","USDT").trades().size());
+            var reconnected=mapper.readTree(socketSnapshot());assertEquals(sequence,reconnected.path("book").path("sequence").asText());assertTrue(reconnected.path("book").path("asks").isEmpty());assertEquals(3,market.view("BTC","USDT").trades().size());
         } finally {stopEngine();}
     }
 }

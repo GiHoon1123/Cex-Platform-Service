@@ -90,6 +90,8 @@ public class TradeReportService {
         report.put("totalTrades", settlement.getTotalTrades());
         report.put("totalVolume", settlement.getTotalVolume());
         report.put("totalFeeRevenue", settlement.getTotalFeeRevenue());
+        report.put("feeRevenueAsset", "USDT");
+        report.put("feeRevenueByAsset", tradeSettlementService.calculateFeeRevenueByAsset(date, date));
         report.put("totalUsers", settlement.getTotalUsers());
         report.put("validationStatus", settlement.getValidationStatus());
         report.put("validationError", settlement.getValidationError());
@@ -139,6 +141,8 @@ public class TradeReportService {
         report.put("totalTrades", monthlySettlement.getTotalTrades());
         report.put("totalVolume", monthlySettlement.getTotalVolume());
         report.put("totalFeeRevenue", monthlySettlement.getTotalFeeRevenue());
+        report.put("feeRevenueAsset", "USDT");
+        report.put("feeRevenueByAsset", tradeSettlementService.calculateFeeRevenueByAsset(startDate, startDate.withDayOfMonth(startDate.lengthOfMonth())));
         report.put("totalUsers", monthlySettlement.getTotalUsers());
         report.put("validationStatus", monthlySettlement.getValidationStatus());
         report.put("validationError", monthlySettlement.getValidationError());

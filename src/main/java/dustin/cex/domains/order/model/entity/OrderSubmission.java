@@ -52,11 +52,16 @@ public class OrderSubmission {
     @Column(updatable = false, precision = 30, scale = 9)
     private BigDecimal quoteAmount;
 
+    /** 접수 당시 적용률이다. 정책 변경이나 재요청이 기존 주문의 비용을 바꾸지 않는다. */
+    @Column(nullable = false, updatable = false, precision = 10, scale = 6)
+    private BigDecimal feeRate;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public OrderSubmission(Long userId, UUID requestId, Long orderId, OrderCommand command) {
+    public OrderSubmission(Long userId, UUID requestId, Long orderId, OrderCommand command, BigDecimal feeRate) {
+        this.feeRate = dustin.cex.domains.fee.service.FeeConfigService.requireRate(feeRate);
         this.userId = userId;
         this.requestId = requestId;
         this.orderId = orderId;

@@ -81,7 +81,7 @@ class EngineEventInboxTest {
                 org.mockito.Mockito.mock(dustin.cex.domains.trade.repository.TradeRepository.class), orders,
                 org.mockito.Mockito.mock(dustin.cex.domains.balance.repository.UserBalanceRepository.class),
                 org.mockito.Mockito.mock(dustin.cex.domains.position.repository.UserPositionRepository.class),
-                org.mockito.Mockito.mock(dustin.cex.domains.fee.service.FeeConfigService.class),
+                org.mockito.Mockito.mock(dustin.cex.domains.order.repository.OrderSubmissionRepository.class),
                 org.mockito.Mockito.mock(dustin.cex.domains.settlement.trade.repository.TradeFeeRepository.class),
                 org.mockito.Mockito.mock(dustin.cex.domains.auth.repository.UserRepository.class));
         String payload="""

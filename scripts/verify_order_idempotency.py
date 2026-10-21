@@ -1,7 +1,7 @@
 """새 실행 JAR·임시 PostgreSQL DB·HTTP 엔진 대역으로 접수 멱등성을 검증한다.
 
-사전 조건: ../compose.local.yml의 postgres 서비스, 빌드된 JAR, Java 21, Python 3.
-기존 cex DB·5432·실제 엔진·Kafka에는 접근하지 않는다. 생성한 임시 DB만 정리한다.
+사전 조건: Docker, 빌드된 JAR, Java 21, Python 3.
+기존 데이터베이스·실제 엔진·Kafka에는 접근하지 않는다. 실행 소유 컨테이너만 정리한다.
 실제 매칭·정산 검증은 아니며, 저장·HTTP 전송 경계와 재시작·동시 요청을 검증한다.
 """
 import atexit
@@ -71,12 +71,17 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         # 설정 중 예외가 나도 이 클래스가 만든 리소스만 정리한다.
         cls.addClassCleanup(cls.cleanup)
         atexit.register(cls.cleanup)
-        cls.container = subprocess.check_output([
-            cls.docker, "compose", "-f", str(WORKSPACE / "compose.local.yml"), "ps", "-q", "postgres"
-        ], text=True).strip()
-        if not cls.container:
-            raise RuntimeError("로컬 전용 compose postgres 서비스가 필요합니다")
-        cls.sql(f"CREATE DATABASE {cls.database}", database="postgres")
+        # 공유 로컬 서버 대신 이 실행이 소유한 PostgreSQL 서버를 만든다.
+        cls.container = "cex-idempotency-" + uuid4().hex[:12]
+        subprocess.run([cls.docker,"run","--detach","--rm","--name",cls.container,"--publish","127.0.0.1::5432",
+                        "--tmpfs","/var/lib/postgresql/data","-e","POSTGRES_USER=root","-e","POSTGRES_PASSWORD=1234",
+                        "-e","POSTGRES_DB="+cls.database,"postgres:16"],check=True,stdout=subprocess.DEVNULL)
+        deadline=time.monotonic()+45
+        while subprocess.run([cls.docker,"exec",cls.container,"pg_isready","-h","127.0.0.1","-U","root","-d",cls.database],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
+            if time.monotonic()>deadline: raise RuntimeError("격리 PostgreSQL 시작 시간 초과")
+            time.sleep(0.2)
+        cls.database_address=subprocess.check_output([cls.docker,"port",cls.container,"5432/tcp"],text=True).strip()
+        cls.sql("CREATE TABLE fee_configs(id BIGSERIAL PRIMARY KEY, base_mint VARCHAR(255), quote_mint VARCHAR(255), fee_rate NUMERIC(10,6) NOT NULL, fee_type VARCHAR(20) NOT NULL, is_active BOOLEAN NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL); INSERT INTO fee_configs(fee_rate,fee_type,is_active,created_at,updated_at) VALUES(0.001,'both',true,now(),now());")
         cls.created_database = True
         cls.engine = ThreadingHTTPServer(("127.0.0.1", 0), EngineStub)
         threading.Thread(target=cls.engine.serve_forever, daemon=True).start()
@@ -99,7 +104,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         java_home = os.environ.get("JAVA_HOME", "/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
         log_path = ARTIFACTS / f"order-idempotency-platform-{cls.platform_runs}.log"
         command = [str(Path(java_home) / "bin/java"), "-jar", str(PROJECT / "build/libs/cex-0.0.1-SNAPSHOT.jar"),
-                   f"--spring.datasource.url=jdbc:postgresql://127.0.0.1:5433/{cls.database}",
+                   f"--spring.datasource.url=jdbc:postgresql://{cls.database_address}/{cls.database}",
                    "--spring.kafka.bootstrap-servers=127.0.0.1:1", "--spring.kafka.listener.auto-startup=false",
                    "--spring.kafka.producer.properties.max.block.ms=500",
                    f"--engine.http.url=http://127.0.0.1:{cls.engine.server_port}", "--engine.http.timeout=300",
@@ -145,6 +150,8 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
             cls.sql(f"DROP DATABASE {cls.database} WITH (FORCE)", database="postgres")
             cls.created_database = False
             cls.database_removed = True
+        if getattr(cls,"container",None):
+            subprocess.run([cls.docker,"rm","--force",cls.container],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
         (ARTIFACTS / "order-idempotency-process.json").write_text(json.dumps({
             "database": cls.database, "temporary_database_removed": cls.database_removed,
             "platform_runs": cls.platform_runs, "bots_disabled": True, "checks": cls.results

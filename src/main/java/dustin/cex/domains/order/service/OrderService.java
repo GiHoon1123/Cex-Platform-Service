@@ -67,6 +67,7 @@ public class OrderService {
     private final UserBalanceRepository userBalanceRepository;
     private final EngineHttpClient engineHttpClient;
     private final KafkaEventProducer kafkaEventProducer;
+    private final dustin.cex.domains.fee.service.FeeConfigService feeConfigService;
     private final TransactionTemplate transactionTemplate;
     
     /**
@@ -87,7 +88,9 @@ public class OrderService {
             UserBalanceRepository userBalanceRepository,
             EngineHttpClient engineHttpClient,
             KafkaEventProducer kafkaEventProducer,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            dustin.cex.domains.fee.service.FeeConfigService feeConfigService) {
+        this.feeConfigService = feeConfigService;
         this.orderRepository = orderRepository;
         this.submissionRepository = submissionRepository;
         this.userBalanceRepository = userBalanceRepository;
@@ -125,7 +128,8 @@ public class OrderService {
                 Order order = orderRepository.save(buildOrderEntity(userId, command));
                 // 원본 명령·키·주문·예약을 같은 트랜잭션에 기록한다. 유일 제약 경쟁에서
                 // 진 요청은 여기서 실패하며 주문 행도 롤백된다. 잔액을 먼저 변경하지 않는다.
-                submissionRepository.saveAndFlush(new OrderSubmission(userId, requestId, order.getId(), command));
+                submissionRepository.saveAndFlush(new OrderSubmission(userId, requestId, order.getId(), command,
+                        feeConfigService.getFeeConfig(command.baseMint(), command.quoteMint()).getFeeRate()));
                 lockBalance(userId, command.reservationMint(), command.reservationAmount());
                 return order;
             });

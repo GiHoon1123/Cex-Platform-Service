@@ -79,21 +79,18 @@ public class TradeSettlementService {
     @Value("${settlement.policy.version:default}")
     private String defaultPolicyVersion;
     
-    /**
-     * 일별 거래 정산 집계 및 저장
-     * Aggregate and Save Daily Trade Settlement
-     * 
-     * 처리 과정:
-     * ==========
-     * 1. 거래 집계: 해당 날짜의 모든 거래 조회 및 집계
-     * 2. 수수료 집계: 해당 날짜의 모든 수수료 조회 및 집계
-     * 3. 사용자 수 집계: 해당 날짜 거래에 참여한 고유 사용자 수 계산
-     * 4. 정산 데이터 생성: TradeSettlement 엔티티 생성
-     * 5. 정산 데이터 저장: trade_settlements 테이블에 저장
-     * 
-     * @param settlementDate 정산할 날짜 (예: 2026-01-28을 정산하려면 2026-01-28 전달)
-     * @return 생성된 정산 데이터 (이미 있으면 기존 반환 → 실패 재실행 시 해당 단계부터 재개 가능)
-     */
+    /** 실제 수취 자산별 수익이다. 환율을 가정하지 않으며 기존 USDT 요약과 구분한다. */
+    @Transactional(readOnly = true)
+    public Map<String, BigDecimal> calculateFeeRevenueByAsset(LocalDate start, LocalDate end) {
+        var revenue = new java.util.TreeMap<String, BigDecimal>();
+        // 디비 시각은 기존 정산 계약인 한국 시각이다. 끝 날짜의 다음 날 0시는 포함하지 않는다.
+        for (TradeFee fee : tradeFeeRepository.findForRevenueWindow(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            revenue.merge(fee.getFeeMint(), fee.getFeeAmount(), BigDecimal::add);
+        }
+        return java.util.Map.copyOf(revenue);
+    }
+
+    /** 이미 확정한 날짜는 재사용하고 신규 날짜의 결제 자산 요약을 만든다. */
     @Transactional
     public TradeSettlement createDailySettlement(LocalDate settlementDate) {
         return createDailySettlement(settlementDate, false);
@@ -247,12 +244,12 @@ public class TradeSettlementService {
                 List<TradeFee> tradeFees = feesByTradeId.getOrDefault(trade.getId(), new ArrayList<>());
                 
                 BigDecimal buyerFee = tradeFees.stream()
-                        .filter(fee -> "buyer".equals(fee.getFeeType()))
+                        .filter(fee -> "buyer".equals(fee.getFeeType()) && "USDT".equals(fee.getFeeMint()))
                         .map(TradeFee::getFeeAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 
                 BigDecimal sellerFee = tradeFees.stream()
-                        .filter(fee -> "seller".equals(fee.getFeeType()))
+                        .filter(fee -> "seller".equals(fee.getFeeType()) && "USDT".equals(fee.getFeeMint()))
                         .map(TradeFee::getFeeAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 
@@ -355,7 +352,9 @@ public class TradeSettlementService {
         List<TradeFee> userFees = 
                 tradeFeeRepository.findByUserIdAndCreatedAtBetween(userId, startDateTime, endDateTime);
         
+        // 기존 요약 필드의 단위는 USDT다. BTC 수수료는 자산별 원본에서 별도로 조회한다.
         BigDecimal totalFeesPaid = userFees.stream()
+                .filter(fee -> "USDT".equals(fee.getFeeMint()))
                 .map(TradeFee::getFeeAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
@@ -502,7 +501,9 @@ public class TradeSettlementService {
         List<TradeFee> userFees = 
                 tradeFeeRepository.findByUserIdAndCreatedAtBetween(userId, startDateTime, endDateTime);
         
+        // 기존 요약 필드의 단위는 USDT다. BTC 수수료는 자산별 원본에서 별도로 조회한다.
         BigDecimal totalFeesPaid = userFees.stream()
+                .filter(fee -> "USDT".equals(fee.getFeeMint()))
                 .map(TradeFee::getFeeAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         

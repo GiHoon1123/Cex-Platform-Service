@@ -53,11 +53,14 @@ class OrderIdempotencyTest {
     @Autowired UserBalanceRepository balances;
     @Autowired PlatformTransactionManager transactions;
     @SpyBean OrderSubmissionRepository submissions;
+    @MockBean dustin.cex.domains.fee.service.FeeConfigService feeService;
     @MockBean EngineHttpClient engine;
     @MockBean KafkaEventProducer kafka;
 
     @BeforeEach
     void seed() {
+        when(feeService.getFeeConfig(anyString(), anyString())).thenReturn(
+                dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).feeType("both").build());
         submissions.deleteAll();
         orders.deleteAll();
         balances.deleteAll();
@@ -94,6 +97,25 @@ class OrderIdempotencyTest {
                 .isEqualTo(((OrderSubmissionUncertainException) failure).getOrderId().toString());
         assertSingleReservation();
         verifyNoInteractions(kafka);
+    }
+
+    @Test
+    void feePolicyChangesAffectOnlyNewIntentAndInvalidPolicyRollsBackReservation() {
+        var key = UUID.randomUUID();
+        service.createOrder(101L, key, limit());
+        when(feeService.getFeeConfig(anyString(), anyString())).thenReturn(
+                dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.002")).feeType("both").build());
+        service.createOrder(101L, key, limit());
+        assertThat(submissions.findByUserIdAndRequestId(101L, key).orElseThrow().getFeeRate()).isEqualByComparingTo("0.001");
+        service.createOrder(101L, UUID.randomUUID(), limit());
+        assertThat(submissions.findAll().stream().map(s -> s.getFeeRate().stripTrailingZeros()).toList())
+                .containsExactlyInAnyOrder(new BigDecimal("0.001"), new BigDecimal("0.002"));
+        when(feeService.getFeeConfig(anyString(), anyString())).thenReturn(
+                dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(BigDecimal.ONE).feeType("both").build());
+        assertThat(catchThrowable(() -> service.createOrder(101L, UUID.randomUUID(), limit())))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(orders.count()).isEqualTo(2);
+        assertThat(balances.findByUserIdAndMintAddress(101L,"USDT").orElseThrow().getLocked()).isEqualByComparingTo("425");
     }
 
     static Stream<Consumer<CreateOrderRequest>> changedCommands() {
@@ -192,7 +214,7 @@ class OrderIdempotencyTest {
         var key = UUID.randomUUID();
         service.createOrder(101L, key, limit());
         // 메모리 상태가 없는 새 서비스 인스턴스도 DB의 같은 접수 기록을 사용한다.
-        var fresh = new OrderService(orders, submissions, balances, engine, kafka, transactions);
+        var fresh = new OrderService(orders, submissions, balances, engine, kafka, transactions, feeService);
         assertThat(fresh.createOrder(101L, key, limit()).created()).isFalse();
         assertSingleReservation();
     }

@@ -1,169 +1,64 @@
 package dustin.cex.domains.fee.service;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-
-import jakarta.annotation.PostConstruct;
-
 import org.springframework.stereotype.Service;
-
 import dustin.cex.domains.fee.model.entity.FeeConfig;
 import dustin.cex.domains.fee.repository.FeeConfigRepository;
-
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
- * 수수료 설정 서비스
- * Fee Config Service
- * 
- * 역할:
- * - 서버 시작 시 모든 활성 수수료 설정을 메모리에 로드
- * - 거래쌍별 수수료율 조회 (메모리에서 빠르게 조회)
- * 
- * 성능:
- * - DB 조회 없이 메모리에서 O(1) 조회
- * - 서버 시작 시 한 번만 로드
+ * 플랫폼은 주문에 적용할 정책을 선택하고, 엔진은 고정된 적용률로 실제 차감액을 계산한다.
+ * 빈 정책을 임의 기본률로 숨기지 않는다. 정책이 없는 시장의 신규 접수만 거부한다.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class FeeConfigService {
-    
-    private final FeeConfigRepository feeConfigRepository;
-    
-    /**
-     * 수수료 설정 캐시 (메모리)
-     * Key: "baseMint:quoteMint" 또는 "baseMint:" 또는 ":quoteMint" 또는 "default"
-     */
-    private final Map<String, FeeConfig> feeConfigCache = new ConcurrentHashMap<>();
-    
-    /**
-     * 기본 수수료 설정 (모든 거래쌍에 적용)
-     */
-    private FeeConfig defaultFeeConfig;
-    
-    /**
-     * 서버 시작 시 수수료 설정 로드
-     * Load fee configs on server startup
-     */
+    private final FeeConfigRepository repository;
+    private volatile Map<String, FeeConfig> policies = Map.of();
+
     @PostConstruct
     public void loadFeeConfigs() {
-        log.info("[FeeConfigService] 수수료 설정 로드 시작");
-        
-        List<FeeConfig> activeConfigs = feeConfigRepository.findByIsActiveTrue();
-        log.info("[FeeConfigService] 활성 수수료 설정 개수: {}", activeConfigs.size());
-        
-        // 캐시 초기화
-        feeConfigCache.clear();
-        
-        for (FeeConfig config : activeConfigs) {
-            String key = buildCacheKey(config.getBaseMint(), config.getQuoteMint());
-            feeConfigCache.put(key, config);
-            
-            // 기본 설정 저장 (baseMint와 quoteMint가 모두 NULL인 경우)
-            if (config.getBaseMint() == null && config.getQuoteMint() == null) {
-                defaultFeeConfig = config;
-                log.info("[FeeConfigService] 기본 수수료 설정: feeRate={}, feeType={}", 
-                        config.getFeeRate(), config.getFeeType());
-            } else {
-                log.debug("[FeeConfigService] 수수료 설정 로드: key={}, feeRate={}, feeType={}", 
-                        key, config.getFeeRate(), config.getFeeType());
+        var next = new HashMap<String, FeeConfig>();
+        for (var config : repository.findByIsActiveTrue()) {
+            requireRate(config.getFeeRate());
+            if (!"both".equals(config.getFeeType())) {
+                throw new IllegalArgumentException("현재 지원하는 수수료 정책은 양측 동일률입니다");
+            }
+            // 외부 엔티티의 변경이 공개한 캐시를 바꾸지 않게 사본을 저장한다.
+            var copy = FeeConfig.builder().baseMint(config.getBaseMint()).quoteMint(config.getQuoteMint())
+                    .feeRate(config.getFeeRate()).feeType("both").isActive(true).build();
+            if (next.putIfAbsent(key(copy.getBaseMint(), copy.getQuoteMint()), copy) != null) {
+                throw new IllegalArgumentException("동일 범위의 활성 수수료 정책이 중복되었습니다");
             }
         }
-        
-        if (defaultFeeConfig == null) {
-            log.warn("[FeeConfigService] 기본 수수료 설정이 없습니다. 기본값 사용: 0.0001 (0.01%)");
-            // 기본값 설정
-            defaultFeeConfig = FeeConfig.builder()
-                    .feeRate(new BigDecimal("0.0001"))
-                    .feeType("both")
-                    .build();
-        }
-        
-        log.info("[FeeConfigService] 수수료 설정 로드 완료: 총 {}개", feeConfigCache.size());
+        // 검증 실패는 기존 공개 상태를 부분 변경하지 않는다. 코어의 공유 상태와 무관한 플랫폼 캐시다.
+        policies = Map.copyOf(next);
     }
-    
-    /**
-     * 거래쌍별 수수료 설정 조회
-     * Get fee config for trading pair
-     * 
-     * 우선순위:
-     * 1. base_mint와 quote_mint가 정확히 일치하는 설정
-     * 2. base_mint만 일치하는 설정
-     * 3. quote_mint만 일치하는 설정
-     * 4. 기본 설정 (모두 NULL)
-     * 
-     * @param baseMint 기준 자산 (예: "SOL")
-     * @param quoteMint 기준 통화 (예: "USDT")
-     * @return 수수료 설정
-     */
-    public FeeConfig getFeeConfig(String baseMint, String quoteMint) {
-        // 1. 정확히 일치하는 설정 조회
-        String exactKey = buildCacheKey(baseMint, quoteMint);
-        FeeConfig config = feeConfigCache.get(exactKey);
-        if (config != null) {
-            return config;
+
+    public FeeConfig getFeeConfig(String base, String quote) {
+        for (String scope : new String[]{key(base, quote), key(base, null), key(null, quote), key(null, null)}) {
+            var policy = policies.get(scope);
+            if (policy != null) return FeeConfig.builder().baseMint(policy.getBaseMint()).quoteMint(policy.getQuoteMint())
+                    .feeRate(policy.getFeeRate()).feeType("both").isActive(true).build();
         }
-        
-        // 2. baseMint만 일치하는 설정 조회
-        String baseKey = buildCacheKey(baseMint, null);
-        config = feeConfigCache.get(baseKey);
-        if (config != null) {
-            return config;
-        }
-        
-        // 3. quoteMint만 일치하는 설정 조회
-        String quoteKey = buildCacheKey(null, quoteMint);
-        config = feeConfigCache.get(quoteKey);
-        if (config != null) {
-            return config;
-        }
-        
-        // 4. 기본 설정 반환
-        return defaultFeeConfig;
+        throw new IllegalStateException("거래쌍에 적용할 수수료 정책이 없습니다");
     }
-    
-    /**
-     * 수수료 계산
-     * Calculate fee amount
-     * 
-     * @param baseMint 기준 자산
-     * @param quoteMint 기준 통화
-     * @param tradeAmount 거래 금액 (quote currency 기준)
-     * @return 수수료 금액
-     */
-    public BigDecimal calculateFee(String baseMint, String quoteMint, BigDecimal tradeAmount) {
-        FeeConfig config = getFeeConfig(baseMint, quoteMint);
-        return tradeAmount.multiply(config.getFeeRate());
-    }
-    
-    /**
-     * 캐시 키 생성
-     * Build cache key
-     */
-    private String buildCacheKey(String baseMint, String quoteMint) {
-        if (baseMint == null && quoteMint == null) {
-            return "default";
+
+    /** 현행 디비 적용률 정밀도와 동일하게 검증한다. 할인·음수 리베이트는 아직 지원하지 않는다. */
+    public static BigDecimal requireRate(BigDecimal value) {
+        if (value == null || value.signum() < 0 || value.compareTo(BigDecimal.ONE) >= 0
+                || value.stripTrailingZeros().scale() > 6) {
+            throw new IllegalArgumentException("수수료율은 소수 여섯 자리 이내의 0 이상 1 미만이어야 합니다");
         }
-        if (baseMint == null) {
-            return ":" + quoteMint;
-        }
-        if (quoteMint == null) {
-            return baseMint + ":";
-        }
-        return baseMint + ":" + quoteMint;
+        return value.stripTrailingZeros();
     }
-    
-    /**
-     * 수수료 설정 새로고침 (런타임에 수수료 변경 시 사용)
-     * Refresh fee configs (for runtime updates)
-     */
-    public void refreshFeeConfigs() {
-        log.info("[FeeConfigService] 수수료 설정 새로고침");
-        loadFeeConfigs();
+
+    private static String key(String base, String quote) {
+        return (base == null ? "" : base) + ":" + (quote == null ? "" : quote);
     }
+
+    public void refreshFeeConfigs() { loadFeeConfigs(); }
 }

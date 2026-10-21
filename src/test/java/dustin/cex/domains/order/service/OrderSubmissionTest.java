@@ -64,11 +64,14 @@ class OrderSubmissionTest {
     @Autowired dustin.cex.domains.order.repository.OrderSubmissionRepository submissions;
     @Autowired UserBalanceRepository balances;
     @Autowired PlatformTransactionManager transactions;
+    @MockBean dustin.cex.domains.fee.service.FeeConfigService feeService;
     @MockBean EngineHttpClient engine;
     @MockBean KafkaEventProducer kafka;
 
     @BeforeEach
     void seedIsolatedBalances() {
+        when(feeService.getFeeConfig(anyString(), anyString())).thenReturn(
+                dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).feeType("both").build());
         submissions.deleteAll();
         orders.deleteAll();
         balances.deleteAll();

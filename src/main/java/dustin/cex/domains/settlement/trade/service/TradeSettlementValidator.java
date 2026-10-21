@@ -148,33 +148,22 @@ public class TradeSettlementValidator {
                 tradeFeeRepository.findByCreatedAtBetween(startDateTime, endDateTime);
         log.info("[TradeSettlementValidator] 검증 대상 수수료 건수: {}", tradeFees.size());
         
-        BigDecimal totalBuyerFees = BigDecimal.ZERO;
-        BigDecimal totalSellerFees = BigDecimal.ZERO;
-        
+        // 자산 단위가 다른 수수료를 합산하지 않는다. 각 원본의 수취 자산·적용률·절삭을
+        // 독립 검증하고, 기존 결제 자산 요약과 비교할 금액만 해당 자산으로 제한한다.
         for (TradeFee fee : tradeFees) {
-            if ("buyer".equals(fee.getFeeType())) {
-                totalBuyerFees = totalBuyerFees.add(fee.getFeeAmount());
-            } else if ("seller".equals(fee.getFeeType())) {
-                totalSellerFees = totalSellerFees.add(fee.getFeeAmount());
+            var trade = fee.getTrade();
+            boolean buyer = "buyer".equals(fee.getFeeType());
+            boolean seller = "seller".equals(fee.getFeeType());
+            BigDecimal received = buyer ? trade.getAmount() : trade.getPrice().multiply(trade.getAmount());
+            String asset = buyer ? trade.getBaseMint() : trade.getQuoteMint();
+            BigDecimal expected = received.multiply(fee.getFeeRate()).setScale(9, java.math.RoundingMode.DOWN);
+            if ((!buyer && !seller) || !asset.equals(fee.getFeeMint()) || expected.compareTo(fee.getFeeAmount()) != 0) {
+                result.addError("수수료 원본의 자산 또는 금액 불일치: " + fee.getId());
             }
         }
-        
-        BigDecimal totalFeeRevenue = totalBuyerFees.add(totalSellerFees);
-        
-        // 수수료 검증: 각 거래의 buyerFee + sellerFee = 총 수수료 수익
-        // (실제로는 trade_fees 테이블의 모든 fee_amount 합계가 총 수익)
-        BigDecimal expectedTotalFees = tradeFees.stream()
-                .map(TradeFee::getFeeAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        
-        BigDecimal feeDifference = totalFeeRevenue.subtract(expectedTotalFees).abs();
-        if (feeDifference.compareTo(new BigDecimal("0.000001")) > 0) {
-            result.addError(String.format("수수료 검증 실패: 계산된 총 수익(%s) != 실제 총 수익(%s), 차이=%s", 
-                    totalFeeRevenue, expectedTotalFees, feeDifference));
-        } else {
-            log.info("[TradeSettlementValidator] 수수료 검증 통과: 총 수수료 수익={}", totalFeeRevenue);
-        }
-        
+        BigDecimal totalFeeRevenue = tradeFees.stream().filter(fee -> "USDT".equals(fee.getFeeMint()))
+                .map(TradeFee::getFeeAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         // 3. 전체 시스템 검증
         // System-Wide Validation
