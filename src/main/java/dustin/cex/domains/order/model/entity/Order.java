@@ -30,7 +30,7 @@ import lombok.NoArgsConstructor;
  * - orderSide: 'limit' (지정가) 또는 'market' (시장가)
  * 
  * 주문 상태:
- * - 'pending': 대기 중 (아직 체결 안 됨)
+ * - 'pending': 플랫폼에 저장됨. 엔진 접수·처리 여부까지 증명하지는 않는다.
  * - 'partial': 부분 체결 (일부만 체결됨)
  * - 'filled': 전량 체결 완료
  * - 'cancelled': 주문 취소됨
@@ -180,11 +180,11 @@ public class Order {
      * 주문 상태
      * Order Status
      * 
-     * - 'pending': 대기 중 (체결 안 됨)
+     * - 'pending': 플랫폼 저장·예약 완료. 엔진 전송 결과가 불명일 수도 있다.
      * - 'partial': 부분 체결 (일부만 체결됨)
      * - 'filled': 전량 체결 완료
      * - 'cancelled': 주문 취소됨
-     * - 'rejected': 주문 거부됨 (엔진 통신 실패 또는 엔진 거부)
+     * - 'rejected': 확정된 주문 거부 기록. 통신 실패를 근거로 설정하지 않는다.
      * 
      * 데이터베이스 제약조건: CHECK (status IN ('pending', 'partial', 'filled', 'cancelled', 'rejected'))
      * 기본값: 'pending'

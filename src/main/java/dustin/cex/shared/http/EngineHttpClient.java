@@ -1,7 +1,6 @@
 package dustin.cex.shared.http;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -9,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -33,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
  * 3. 엔진 응답 대기
  * 
  * 주의사항:
- * - 엔진 장애 시 주문 생성 실패 처리
+ * - 통신 오류는 호출자에게 전달한다. 금융 처리의 거부·취소 확정을 의미하지 않는다.
  * - 타임아웃 설정 (5초)
  * - 연결 재사용 (RestTemplate 기본 동작)
  * 
@@ -60,13 +60,19 @@ public class EngineHttpClient {
      */
     @PostConstruct
     public void init() {
-        this.restTemplate = new RestTemplate();
+        // 기존 설정값을 실제 연결·응답 대기에 적용한다. 0은 무제한 대기를 뜻하므로
+        // 잘못된 설정으로 요청 스레드가 끝없이 기다리지 않도록 시작부터 거부한다.
+        if (timeoutMs <= 0) {
+            throw new IllegalArgumentException("engine.http.timeout은 양수여야 합니다");
+        }
+        var requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(timeoutMs);
+        requestFactory.setReadTimeout(timeoutMs);
+        this.restTemplate = new RestTemplate(requestFactory);
         this.objectMapper = new ObjectMapper();
-        
-        // 타임아웃 설정 (RestTemplate은 기본적으로 타임아웃이 없으므로 설정 필요)
-        // TODO: RestTemplate에 타임아웃 설정 추가 (ClientHttpRequestFactory 사용)
-        
-        // log.info("[EngineHttpClient] HTTP 클라이언트 초기화 완료: baseUrl={}", engineBaseUrl);
+        // POST 자동 재시도는 추가하지 않는다. 엔진의 영속적인 중복 방지가 갖춰지기
+        // 전에는 같은 요청을 다시 보내도 금융 효과가 한 번이라는 보장이 없다.
+        // 이 시간은 연결·각 읽기의 제한이며 요청 전체의 절대 마감 시간은 아니다.
     }
     
     /**

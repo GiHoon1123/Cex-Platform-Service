@@ -1,5 +1,7 @@
 package dustin.cex.domains.order.controller;
 
+import java.net.URI;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -7,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
+import dustin.cex.domains.order.model.dto.OrderSubmissionUncertainResponse;
+import dustin.cex.domains.order.exception.OrderSubmissionUncertainException;
 import dustin.cex.domains.order.model.dto.OrderbookResponse;
 import dustin.cex.domains.order.service.OrderService;
 import dustin.cex.shared.model.dto.PageResponse;
@@ -95,7 +100,8 @@ public class OrderController {
      * - 201: 주문 생성 성공
      * - 400: 잘못된 요청 (유효성 검증 실패)
      * - 401: 인증 실패
-     * - 500: 서버 오류 (엔진 통신 실패 등)
+     * - 202: 플랫폼 저장 완료, 엔진 제출 결과 불명. 새 주문 제출 대신 기존 주문 조회
+     * - 500: 서버 오류
      * 
      * 예시:
      * - 지정가 매수: {"orderType":"buy","orderSide":"limit","baseMint":"SOL","price":"100.0","amount":"1.0"}
@@ -142,8 +148,13 @@ public class OrderController {
                     content = @Content(schema = @Schema(implementation = OrderResponse.class))
             ),
             @ApiResponse(
+                    responseCode = "202",
+                    description = "주문·예약 저장 완료, 엔진 제출 결과 불명. 자동 재제출 금지",
+                    content = @Content(schema = @Schema(implementation = OrderSubmissionUncertainResponse.class))
+            ),
+            @ApiResponse(
                     responseCode = "400",
-                    description = "잘못된 요청 (유효성 검증 실패 또는 엔진 거부)"
+                    description = "잘못된 요청 (유효성 검증 실패)"
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -151,7 +162,7 @@ public class OrderController {
             ),
             @ApiResponse(
                     responseCode = "500",
-                    description = "서버 오류 (엔진 통신 실패 등)"
+                    description = "서버 오류"
             )
     })
     @PostMapping
@@ -169,6 +180,22 @@ public class OrderController {
         // 주문 생성
         OrderResponse response = orderService.createOrder(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 이미 주문·예약을 저장했으므로 202 Accepted와 조회 주소를 반환한다.
+     * 이는 엔진 접수·체결 보장이 아니다. 5xx 생성 실패로 오해해 같은 주문을 다시
+     * 만드는 대신 본인 주문 조회 API를 사용하게 한다. 조회의 소유자 검사는 유지한다.
+     * 컨트롤러 내부 처리라 이 주문 예외만 다루며 다른 업무의 실패 응답은 바꾸지 않는다.
+     */
+    @ExceptionHandler(OrderSubmissionUncertainException.class)
+    public ResponseEntity<OrderSubmissionUncertainResponse> submissionUncertain(
+            OrderSubmissionUncertainException exception) {
+        String orderId = exception.getOrderId().toString();
+        String statusUrl = "/api/cex/orders/" + orderId;
+        var response = new OrderSubmissionUncertainResponse(
+                "ORDER_SUBMISSION_UNCERTAIN", orderId, statusUrl, exception.getMessage());
+        return ResponseEntity.accepted().location(URI.create(statusUrl)).body(response);
     }
     
     /**
