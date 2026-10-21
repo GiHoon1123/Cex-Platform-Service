@@ -1,6 +1,7 @@
 package dustin.cex.domains.order.service;
 
 import java.math.BigDecimal;
+import dustin.cex.shared.model.ExactAmount;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -509,30 +510,20 @@ public class OrderService {
         
         UserBalance balance = balanceOpt.get();
         
-        // available null 체크 및 기본값 설정
-        BigDecimal available = balance.getAvailable();
-        if (available == null) {
-            log.warn("[Balance] available이 null입니다. BigDecimal.ZERO로 설정: userId={}, mint={}", userId, mint);
-            available = BigDecimal.ZERO;
-            balance.setAvailable(BigDecimal.ZERO);
-        }
-        
-        // 잔고 확인
+        // 손상 잔액을 0으로 보정하면 금융 기록의 불일치가 숨겨진다. 입력 금액뿐
+        // 아니라 원본과 두 결과를 모두 검증한 뒤 엔티티를 수정한다. 예를 들어 큰
+        // 정수에서 1e-9를 빼면 DB에는 들어가도 Rust의 96비트 계수를 넘을 수 있다.
+        BigDecimal available = ExactAmount.requireNonNegative(balance.getAvailable(), "사용 가능 잔액");
+        BigDecimal locked = ExactAmount.requireNonNegative(balance.getLocked(), "예약 잔액");
         if (available.compareTo(amount) < 0) {
             throw new RuntimeException(String.format(
-                "잔고 부족: userId=%d, mint=%s, available=%s, required=%s", 
-                userId, mint, available, amount
-            ));
+                "잔고 부족: userId=%d, mint=%s, available=%s, required=%s",
+                userId, mint, available, amount));
         }
-        
-        // 잔고 lock
-        BigDecimal locked = balance.getLocked();
-        if (locked == null) {
-            locked = BigDecimal.ZERO;
-        }
-        
-        balance.setAvailable(available.subtract(amount));
-        balance.setLocked(locked.add(amount));
+        BigDecimal nextAvailable = ExactAmount.requireNonNegative(available.subtract(amount), "예약 후 사용 가능 잔액");
+        BigDecimal nextLocked = ExactAmount.requireNonNegative(locked.add(amount), "예약 후 예약 잔액");
+        balance.setAvailable(nextAvailable);
+        balance.setLocked(nextLocked);
         userBalanceRepository.save(balance);
         
         log.info("[Balance] 잔고 lock: userId={}, mint={}, amount={}, available={} -> {}, locked={} -> {}", 

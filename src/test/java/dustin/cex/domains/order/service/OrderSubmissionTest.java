@@ -78,6 +78,39 @@ class OrderSubmissionTest {
                 .available(new BigDecimal("10")).locked(new BigDecimal("2")).build());
     }
 
+    @Test
+    void corruptNegativeReservationIsRejectedWithoutRepairOrSubmission() {
+        var balance = balances.findByUserIdAndMintAddress(101L, "USDT").orElseThrow();
+        balance.setLocked(new BigDecimal("-25"));
+        balances.saveAndFlush(balance);
+        assertThat(catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit())))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(orders.count()).isZero();
+        assertThat(submissions.count()).isZero();
+        assertThat(balances.findByUserIdAndMintAddress(101L,"USDT").orElseThrow().getLocked())
+                .isEqualByComparingTo("-25");
+        verifyNoInteractions(engine, kafka);
+    }
+
+    @Test
+    void unrepresentableReservationSplitRollsBackOrderAndOriginalBalance() {
+        var balance = balances.findByUserIdAndMintAddress(101L,"USDT").orElseThrow();
+        balance.setAvailable(new BigDecimal("100000000000000000000"));
+        balances.saveAndFlush(balance);
+        var request = buyLimit();
+        request.setPrice(new BigDecimal("0.000000001"));
+        request.setAmount(BigDecimal.ONE);
+        // 원래 잔액과 예약 금액은 각각 표현되지만 차감 후 available은 30자리 계수가 된다.
+        assertThat(catchThrowable(() -> service.createOrder(101L,java.util.UUID.randomUUID(),request)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(orders.count()).isZero();
+        assertThat(submissions.count()).isZero();
+        var unchanged = balances.findByUserIdAndMintAddress(101L,"USDT").orElseThrow();
+        assertThat(unchanged.getAvailable()).isEqualByComparingTo("100000000000000000000");
+        assertThat(unchanged.getLocked()).isEqualByComparingTo("25");
+        verifyNoInteractions(engine, kafka);
+    }
+
     static Stream<RuntimeException> unknownFailures() {
         return Stream.of(
                 new ResourceAccessException("response lost", new SocketTimeoutException()),
