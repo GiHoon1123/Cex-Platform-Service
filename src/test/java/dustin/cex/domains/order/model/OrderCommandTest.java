@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 
@@ -72,6 +73,14 @@ class OrderCommandTest {
     void marketBuyCannotCarryBaseAmount() {
         assertThatThrownBy(() -> new OrderCommand("buy", "market", "SOL", "USDT", null,
                 BigDecimal.ONE, BigDecimal.TEN)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1E+1000000000", "1E-1000000000"})
+    void hugeExponentIsRejectedWithoutExpandingTheNumber(String value) {
+        var request = limitBuy();
+        request.setPrice(new BigDecimal(value));
+        assertThatThrownBy(() -> OrderCommand.from(request)).isInstanceOf(IllegalArgumentException.class);
     }
 
     private static CreateOrderRequest limitBuy() {

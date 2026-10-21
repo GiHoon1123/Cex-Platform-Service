@@ -1,7 +1,6 @@
 package dustin.cex.domains.order.model;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 
@@ -78,12 +77,17 @@ public record OrderCommand(String orderType, String orderSide, String baseMint, 
             throw new IllegalArgumentException(field + "는 양수여야 합니다");
         }
         try {
-            if (value.setScale(9, RoundingMode.UNNECESSARY).precision() > 30) {
-                throw new ArithmeticException("precision exceeds 30");
+            BigDecimal normalized = value.stripTrailingZeros();
+            // setScale(9)로 먼저 확장하면 1E+1000000000 같은 작은 입력이 거대한
+            // 정수 할당을 유발한다. 값 자체를 확장하지 않고 scale과 정수 자릿수로
+            // DECIMAL(30,9)의 범위를 검사한다. long 계산은 scale 뺄셈 오버플로를 막는다.
+            long integerDigits = (long) normalized.precision() - normalized.scale();
+            if (normalized.scale() > 9 || integerDigits > 21) {
+                throw new ArithmeticException("DECIMAL(30,9) range exceeded");
             }
+            return normalized;
         } catch (ArithmeticException exception) {
             throw new IllegalArgumentException(field + "는 DECIMAL(30,9)에 정확히 저장할 수 있어야 합니다", exception);
         }
-        return value.stripTrailingZeros();
     }
 }
