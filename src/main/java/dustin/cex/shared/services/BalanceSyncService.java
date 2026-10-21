@@ -18,7 +18,14 @@ import java.math.BigDecimal;
  * 사용 시나리오:
  * 1. 입금 발생 시: syncBalance(userId, mint, +amount)
  * 2. 출금 발생 시: syncBalance(userId, mint, -amount)
- * 3. 서버 시작 시: syncAllBalances() (향후 구현)
+ *
+ * 시작 시 잔액 복원은 이 서비스의 역할이 아니다. 엔진은 시작할 때 DB를 읽으므로
+ * 기존 available을 다시 delta로 전송하면 플랫폼 재시작마다 잔액이 중복 적립된다.
+ * 여기서는 호출자가 명시적으로 요청한 증감만 전달하고, 생명주기 이벤트에는 연결하지 않는다.
+ *
+ * 현재 봇 초기화 코드에서도 참조한다. 봇은 실행 설정으로 비활성화하며,
+ * 이 증감 API는 거래 ID에 의한 중복 방지를 제공하지 않으므로 실제 입출금의
+ * 최종 구현이나 장애 후 자동 재시도 수단으로 사용해서는 안 된다.
  */
 @Slf4j
 @Service
@@ -81,15 +88,4 @@ public class BalanceSyncService {
         syncBalance(userId, mint, amount.negate());
     }
     
-    /**
-     * 서버 시작 시 전체 잔고 동기화
-     * Sync all balances on server startup
-     * 
-     * @deprecated BalanceInitializationService에서 처리하도록 변경됨
-     * 이 메서드는 호환성을 위해 유지하지만 실제로는 사용되지 않음
-     */
-    @Deprecated
-    public void syncAllBalances() {
-        log.warn("[BalanceSyncService] syncAllBalances()는 더 이상 사용되지 않습니다. BalanceInitializationService를 사용하세요.");
-    }
 }
