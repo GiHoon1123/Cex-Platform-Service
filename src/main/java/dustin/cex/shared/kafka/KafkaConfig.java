@@ -96,19 +96,8 @@ public class KafkaConfig {
     }
     
     /**
-     * Kafka Listener Container Factory 생성
-     * Create Kafka Listener Container Factory
-     * 
-     * 가상 스레드 사용: 파티션 하나당 하나의 가상 스레드가 담당
-     * Virtual Thread: One virtual thread per partition
-     * 
-     * 동작 방식:
-     * 1. setConcurrency(12): 12개의 KafkaMessageListenerContainer 생성
-     * 2. 각 컨테이너는 하나의 Kafka Consumer를 가지고 있음
-     * 3. 각 Consumer는 하나의 파티션을 담당 (12개 파티션 / 12개 컨테이너 = 파티션당 1개)
-     * 4. SimpleAsyncTaskExecutor with virtual threads: 각 메시지 처리를 가상 스레드로 실행
-     * 
-     * @KafkaListener 어노테이션이 사용하는 팩토리
+     * 금융 결과를 컨테이너 하나가 순서대로 소비한다. 가상 스레드는 수신 루프의
+     * 실행 스레드이며 이벤트별 금융 작업을 따로 병렬 실행하는 설정이 아니다.
      */
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
@@ -121,21 +110,15 @@ public class KafkaConfig {
         // 재시작하면 미확정 오프셋부터 재수신하며 영속 수신 키로 중복을 막는다.
         factory.setCommonErrorHandler(new org.springframework.kafka.listener.CommonContainerStoppingErrorHandler());
         
-        // 동시성 설정: 파티션 수만큼 설정 (파티션 하나당 하나의 컨테이너/Consumer)
-        // Concurrency: Set to number of partitions (one container per partition)
-        // 각 컨테이너는 하나의 파티션을 담당하므로, 파티션 하나당 하나의 Consumer가 됨
-        factory.setConcurrency(12); // order-events 토픽의 파티션 수: 12개
-        
-        // 가상 스레드 Executor 설정
-        // SimpleAsyncTaskExecutor with virtual threads: 각 메시지 처리를 가상 스레드로 실행
-        // 각 파티션의 메시지가 가상 스레드에서 처리됨
+        // 초기 토픽 한 파티션·단일 금융 수신 루프를 명시한다.
+        factory.setConcurrency(1);
+
         SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor("kafka-listener-");
         asyncTaskExecutor.setVirtualThreads(true); // 가상 스레드 활성화
-        asyncTaskExecutor.setConcurrencyLimit(SimpleAsyncTaskExecutor.UNBOUNDED_CONCURRENCY); // 무제한 동시성
         factory.getContainerProperties().setListenerTaskExecutor(asyncTaskExecutor);
         
-        // 수동 커밋 모드: @Transactional과 함께 사용 시 트랜잭션 커밋 시 자동으로 offset 커밋
-        // BATCH 모드: 트랜잭션이 성공적으로 커밋되면 배치의 모든 offset이 자동으로 커밋됨
+        // 디비 커밋과 브로커 오프셋은 별개다. 정상 배치 뒤 오프셋을 확정하고,
+        // 그 사이 종료로 재수신한 이벤트는 영속 수신 키로 중복 반영을 막는다.
         factory.getContainerProperties().setAckMode(org.springframework.kafka.listener.ContainerProperties.AckMode.BATCH);
         
         return factory;

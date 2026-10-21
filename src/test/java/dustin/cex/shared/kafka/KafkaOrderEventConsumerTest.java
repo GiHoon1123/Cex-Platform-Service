@@ -53,7 +53,9 @@ class KafkaOrderEventConsumerTest {
         org.springframework.test.util.ReflectionTestUtils.setField(config,"autoOffsetReset","earliest");
         assertInstanceOf(org.springframework.kafka.listener.CommonContainerStoppingErrorHandler.class,
                 org.springframework.test.util.ReflectionTestUtils.getField(config.kafkaListenerContainerFactory(),"commonErrorHandler"));
-        assertFalse(config.kafkaListenerContainerFactory().createContainer("isolated-test").isAutoStartup());
+        var isolated=config.kafkaListenerContainerFactory().createContainer("isolated-test");
+        assertEquals(1,isolated.getConcurrency());
+        assertFalse(isolated.isAutoStartup());
         org.springframework.test.util.ReflectionTestUtils.setField(config,"listenerAutoStartup",true);
         assertTrue(config.kafkaListenerContainerFactory().createContainer("isolated-test").isAutoStartup());
     }

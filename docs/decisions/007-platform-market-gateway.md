@@ -108,3 +108,5 @@ python3 scripts/verify_market_path.py
 - [플랫폼 시장 수신·봇·취소·검증](https://github.com/GiHoon1123/Cex-Platform-Service/commit/d6bbe17)
 - [엔진 확정 시장 출력](https://github.com/GiHoon1123/Cex-Engine/commit/92561a3)
 - [프론트 연결](https://github.com/GiHoon1123/Cex-Frontend/commit/89e72dc)
+
+금융 리스너 팩터리의 동시성도 1로 고정했다. 기존 12개 컨테이너 설명을 제거하고, 가상 스레드가 수신 루프를 실행한다는 의미와 DB 커밋·브로커 오프셋의 차이를 주석에 명시했다. 기존 설정 회귀에서 생성한 컨테이너의 동시성 1·자동 시작 금지를 함께 검사한다.
