@@ -1,6 +1,8 @@
 package dustin.cex.domains.order.controller;
 
 import java.net.URI;
+import java.util.UUID;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +25,7 @@ import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.dto.OrderSubmissionUncertainResponse;
 import dustin.cex.domains.order.exception.OrderSubmissionUncertainException;
+import dustin.cex.domains.order.exception.OrderRequestConflictException;
 import dustin.cex.domains.order.model.dto.OrderbookResponse;
 import dustin.cex.domains.order.service.OrderService;
 import dustin.cex.shared.model.dto.PageResponse;
@@ -75,7 +79,7 @@ public class OrderController {
      * 새로운 주문을 생성하고 Rust 엔진에 제출합니다.
      * 
      * 처리 과정:
-     * 1. JWT 토큰에서 사용자 ID 추출
+     * 1. JWT 토큰에서 사용자 ID 추출, Idempotency-Key UUID 필수
      * 2. 주문 생성 요청 유효성 검증 (@Valid)
      * 3. OrderService를 통해 주문 생성
      *    - 주문 DB 저장
@@ -142,6 +146,8 @@ public class OrderController {
             security = @SecurityRequirement(name = "BearerAuth")
     )
     @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "같은 키·내용으로 이미 저장된 주문. 엔진 재전송 없음"),
+            @ApiResponse(responseCode = "409", description = "같은 키에 다른 주문 내용"),
             @ApiResponse(
                     responseCode = "201",
                     description = "주문 생성 성공",
@@ -149,7 +155,7 @@ public class OrderController {
             ),
             @ApiResponse(
                     responseCode = "202",
-                    description = "주문·예약 저장 완료, 엔진 제출 결과 불명. 자동 재제출 금지",
+                    description = "주문·예약 저장 완료, 엔진 제출 결과 불명. 같은 키로 플랫폼 재요청 가능",
                     content = @Content(schema = @Schema(implementation = OrderSubmissionUncertainResponse.class))
             ),
             @ApiResponse(
@@ -167,6 +173,7 @@ public class OrderController {
     })
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
+            @RequestHeader("Idempotency-Key") UUID requestId,
             @Valid @RequestBody CreateOrderRequest request,
             HttpServletRequest httpRequest
     ) {
@@ -178,8 +185,25 @@ public class OrderController {
         }
         
         // 주문 생성
-        OrderResponse response = orderService.createOrder(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        // UUID는 고객이 최초 제출 전에 보존한다. 누락 시 서버가 대신 생성하지 않는다.
+        var result = orderService.createOrder(userId, requestId, request);
+        return ResponseEntity.status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
+                .location(URI.create("/api/cex/orders/" + result.response().getOrder().getId()))
+                .body(result.response());
+    }
+
+    /** 키 충돌은 기존 주문을 변경하지 않고 409로 알린다. 다른 고객의 기록은 조회하지 않는다. */
+    @ExceptionHandler(OrderRequestConflictException.class)
+    public ResponseEntity<Map<String, String>> requestConflict(OrderRequestConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("code", "ORDER_REQUEST_CONFLICT", "message", exception.getMessage()));
+    }
+
+    /** DTO의 교차 필드·금액 검증도 저장 전에 400으로 반환한다. 내부 예외 원인은 공개하지 않는다. */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> invalidOrder(IllegalArgumentException exception) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("code", "INVALID_ORDER", "message", exception.getMessage()));
     }
 
     /**

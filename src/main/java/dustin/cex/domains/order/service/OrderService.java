@@ -2,6 +2,8 @@ package dustin.cex.domains.order.service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +22,10 @@ import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
 import dustin.cex.domains.order.exception.OrderSubmissionUncertainException;
 import dustin.cex.domains.order.model.OrderCommand;
+import dustin.cex.domains.order.model.entity.OrderSubmission;
+import dustin.cex.domains.order.repository.OrderSubmissionRepository;
+import dustin.cex.domains.order.model.dto.OrderCreationResult;
+import dustin.cex.domains.order.exception.OrderRequestConflictException;
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.dto.OrderbookResponse;
@@ -57,6 +63,7 @@ import lombok.extern.slf4j.Slf4j;
 public class OrderService {
     
     private final OrderRepository orderRepository;
+    private final OrderSubmissionRepository submissionRepository;
     private final UserBalanceRepository userBalanceRepository;
     private final EngineHttpClient engineHttpClient;
     private final KafkaEventProducer kafkaEventProducer;
@@ -76,11 +83,13 @@ public class OrderService {
      */
     public OrderService(
             OrderRepository orderRepository,
+            OrderSubmissionRepository submissionRepository,
             UserBalanceRepository userBalanceRepository,
             EngineHttpClient engineHttpClient,
             KafkaEventProducer kafkaEventProducer,
             PlatformTransactionManager transactionManager) {
         this.orderRepository = orderRepository;
+        this.submissionRepository = submissionRepository;
         this.userBalanceRepository = userBalanceRepository;
         this.engineHttpClient = engineHttpClient;
         this.kafkaEventProducer = kafkaEventProducer;
@@ -100,35 +109,39 @@ public class OrderService {
      * 상황을 차단한다. 네트워크 호출 동안 DB 트랜잭션도 유지하지 않는다.
      */
     @Transactional(propagation = Propagation.NEVER)
-    public OrderResponse createOrder(Long userId, CreateOrderRequest request) {
-        // ============================================
-        // 1. 주문 유효성 검증
-        // ============================================
-        OrderCommand command = OrderCommand.from(request);
-        
-        // ============================================
-        // 2. DB에 주문 저장 + 잔고 lock (트랜잭션 내, 명시적 커밋)
-        // ============================================
-        // TransactionTemplate을 사용하여 트랜잭션을 명시적으로 커밋
-        // 이렇게 하면 Rust 엔진에 제출하기 전에 주문이 DB에 확실히 저장됨
-        Order savedOrder = transactionTemplate.execute(status -> {
-            // 2-1. 주문 저장
-            Order order = buildOrderEntity(userId, command);
-            Order saved = orderRepository.save(order);
-            
-            // 2-2. 잔고 lock (같은 트랜잭션 내)
-            lockBalance(userId, command.reservationMint(), command.reservationAmount());
-            
-            return saved;
-        });
-        
-        // 트랜잭션이 커밋되었는지 확인 (주문이 DB에 저장되었는지)
-        if (savedOrder == null || savedOrder.getId() == null) {
-            throw new RuntimeException("주문 저장 실패");
+    public OrderCreationResult createOrder(Long userId, UUID requestId, CreateOrderRequest request) {
+        if (requestId == null || userId == null || userId <= 0) {
+            throw new IllegalArgumentException("유효한 사용자와 Idempotency-Key가 필요합니다");
         }
-        
-        // execute가 정상 반환하면 커밋이 끝난다. 다시 SELECT하는 것은 커밋 증명이
-        // 아니므로 제거한다. 전송에는 방금 저장한 주문의 ID와 정규화한 자산을 쓴다.
+        OrderCommand command = OrderCommand.from(request);
+        var existing = submissionRepository.findByUserIdAndRequestId(userId, requestId);
+        if (existing.isPresent()) {
+            return replay(existing.get(), command);
+        }
+
+        Order savedOrder;
+        try {
+            savedOrder = transactionTemplate.execute(status -> {
+                Order order = orderRepository.save(buildOrderEntity(userId, command));
+                // 원본 명령·키·주문·예약을 같은 트랜잭션에 기록한다. 유일 제약 경쟁에서
+                // 진 요청은 여기서 실패하며 주문 행도 롤백된다. 잔액을 먼저 변경하지 않는다.
+                submissionRepository.saveAndFlush(new OrderSubmission(userId, requestId, order.getId(), command));
+                lockBalance(userId, command.reservationMint(), command.reservationAmount());
+                return order;
+            });
+        } catch (DataIntegrityViolationException exception) {
+            // 제약 오류를 트랜잭션 안에서 잡으면 rollback-only 상태로 조회하게 된다.
+            // execute가 롤백한 뒤 별도 조회한다. 경쟁한 키의 확정 기록이 있을 때만
+            // 기존 접수로 처리하고, 다른 DB 제약 오류는 그대로 전파한다.
+            var winner = submissionRepository.findByUserIdAndRequestId(userId, requestId);
+            if (winner.isEmpty()) {
+                throw exception;
+            }
+            return replay(winner.get(), command);
+        }
+        if (savedOrder == null || savedOrder.getId() == null) {
+            throw new IllegalStateException("주문 저장 실패");
+        }
         Long orderId = savedOrder.getId();
 
         // ============================================
@@ -186,12 +199,25 @@ public class OrderService {
         Order finalOrder = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
         OrderResponse.OrderDto orderDto = convertToDto(finalOrder);
-        return OrderResponse.builder()
-                .order(orderDto)
-                .message("Order created successfully")
-                .build();
+        return new OrderCreationResult(OrderResponse.builder()
+                .order(orderDto).message("Order created successfully").build(), true);
     }
-    
+
+    /**
+     * 재요청은 현재 저장된 주문을 조회할 뿐 엔진에 보내지 않는다. 최초 플랫폼 응답을
+     * 잃었거나 플랫폼이 커밋 직후 종료돼도 같은 키로 기존 주문 ID를 찾을 수 있다.
+     * 엔진 접수 여부는 이 기록만으로 확정할 수 없다. 응답 본문의 바이트 재생도 아니다.
+     */
+    private OrderCreationResult replay(OrderSubmission submission, OrderCommand command) {
+        if (!submission.command().equals(command)) {
+            throw new OrderRequestConflictException();
+        }
+        Order order = orderRepository.findByUserIdAndId(submission.getUserId(), submission.getOrderId())
+                .orElseThrow(() -> new IllegalStateException("접수 기록에 연결된 주문을 찾을 수 없습니다"));
+        return new OrderCreationResult(OrderResponse.builder().order(convertToDto(order))
+                .message("Existing platform order; engine submission is not repeated").build(), false);
+    }
+
     /** 원본 명령의 amount=null은 시장가 매수라는 의미다. 상태 테이블의 수량만 0으로 시작한다. */
     private Order buildOrderEntity(Long userId, OrderCommand command) {
         return Order.builder().userId(userId).orderType(command.orderType()).orderSide(command.orderSide())

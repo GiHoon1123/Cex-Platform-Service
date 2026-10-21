@@ -61,6 +61,7 @@ class OrderSubmissionTest {
 
     @Autowired OrderService service;
     @Autowired OrderRepository orders;
+    @Autowired dustin.cex.domains.order.repository.OrderSubmissionRepository submissions;
     @Autowired UserBalanceRepository balances;
     @Autowired PlatformTransactionManager transactions;
     @MockBean EngineHttpClient engine;
@@ -68,6 +69,7 @@ class OrderSubmissionTest {
 
     @BeforeEach
     void seedIsolatedBalances() {
+        submissions.deleteAll();
         orders.deleteAll();
         balances.deleteAll();
         balances.save(UserBalance.builder().userId(101L).mintAddress("USDT")
@@ -89,7 +91,7 @@ class OrderSubmissionTest {
     void uncertainSubmissionPreservesCommittedOrderAndReservation(RuntimeException failure) {
         whenSubmit().thenThrow(failure);
 
-        var error = catchThrowable(() -> service.createOrder(101L, buyLimit()));
+        var error = catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit()));
         assertThat(error).isInstanceOf(OrderSubmissionUncertainException.class).hasCause(failure);
         assertThat(((OrderSubmissionUncertainException) error).getOrderId())
                 .isEqualTo(orders.findAll().getFirst().getId());
@@ -102,7 +104,7 @@ class OrderSubmissionTest {
     @Test
     void falseResponseDoesNotProveRejectionOrReleaseFunds() {
         whenSubmit().thenReturn(false);
-        assertThat(catchThrowable(() -> service.createOrder(101L, buyLimit()))).isNotNull();
+        assertThat(catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit()))).isNotNull();
         assertPendingReservation("USDT", "800", "225");
         assertOneSubmissionAndNoCreatedEvent();
     }
@@ -112,7 +114,7 @@ class OrderSubmissionTest {
         whenSubmit().thenThrow(new ResourceAccessException("timeout"));
         var request = buyLimit();
         request.setOrderType("sell");
-        assertThat(catchThrowable(() -> service.createOrder(101L, request))).isNotNull();
+        assertThat(catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), request))).isNotNull();
         assertPendingReservation("SOL", "8", "4");
     }
 
@@ -124,7 +126,7 @@ class OrderSubmissionTest {
         request.setPrice(null);
         request.setAmount(null);
         request.setQuoteAmount(new BigDecimal("123.250000001"));
-        assertThat(catchThrowable(() -> service.createOrder(101L, request))).isNotNull();
+        assertThat(catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), request))).isNotNull();
         assertPendingReservation("USDT", "876.749999999", "148.250000001");
     }
 
@@ -136,8 +138,8 @@ class OrderSubmissionTest {
             assertPendingReservation("USDT", "800", "225");
             return true;
         });
-        var response = service.createOrder(101L, buyLimit());
-        assertThat(response.getOrder().getId()).isEqualTo(orders.findAll().getFirst().getId().toString());
+        var response = service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit());
+        assertThat(response.response().getOrder().getId()).isEqualTo(orders.findAll().getFirst().getId().toString());
         verify(kafka).publishOrderCreated(anyString());
     }
 
@@ -151,7 +153,7 @@ class OrderSubmissionTest {
             orders.save(order);
             throw new ResourceAccessException("response lost after processing");
         });
-        assertThat(catchThrowable(() -> service.createOrder(101L, buyLimit()))).isNotNull();
+        assertThat(catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit()))).isNotNull();
         assertThat(orders.findAll().getFirst().getStatus()).isEqualTo("filled");
         assertBalance("USDT", "800", "225");
         assertOneSubmissionAndNoCreatedEvent();
@@ -161,7 +163,7 @@ class OrderSubmissionTest {
     void insufficientBalanceRollsBackOrderBeforeSending() {
         var request = buyLimit();
         request.setAmount(new BigDecimal("100"));
-        assertThat(catchThrowable(() -> service.createOrder(101L, request))).isNotNull();
+        assertThat(catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), request))).isNotNull();
         assertThat(orders.count()).isZero();
         assertBalance("USDT", "1000", "25");
         verify(engine, never()).submitOrder(anyLong(), anyLong(), anyString(), anyString(),
@@ -173,7 +175,7 @@ class OrderSubmissionTest {
         // 외부 트랜잭션에 합류하면 HTTP 이전 커밋 보장이 깨지므로 호출 경계를 거부한다.
         // 외부 롤백 때문에 엔진에 전송한 주문 기록이 사라지는 상황을 막는다.
         var error = catchThrowable(() -> new TransactionTemplate(transactions).execute(status ->
-                service.createOrder(101L, buyLimit())));
+                service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit())));
         assertThat(error).isInstanceOf(IllegalTransactionStateException.class);
         assertThat(orders.count()).isZero();
         assertBalance("USDT", "1000", "25");
@@ -186,8 +188,8 @@ class OrderSubmissionTest {
         whenSubmit().thenReturn(true);
         var request = buyLimit();
         request.setQuoteMint(null);
-        var response = service.createOrder(101L, request);
-        assertThat(response.getOrder().getQuoteMint()).isEqualTo("USDT");
+        var response = service.createOrder(101L, java.util.UUID.randomUUID(), request);
+        assertThat(response.response().getOrder().getQuoteMint()).isEqualTo("USDT");
         assertPendingReservation("USDT", "800", "225");
         verify(engine).submitOrder(anyLong(), eq(101L), eq("buy"), eq("limit"), eq("SOL"),
                 eq("USDT"), eq("100"), eq("2"), isNull());
@@ -197,8 +199,8 @@ class OrderSubmissionTest {
     void createdEventFailureDoesNotUndoOrderOrRepeatSubmission() {
         whenSubmit().thenReturn(true);
         doThrow(new IllegalStateException("broker unavailable")).when(kafka).publishOrderCreated(anyString());
-        var response = service.createOrder(101L, buyLimit());
-        assertThat(response.getOrder().getStatus()).isEqualTo("pending");
+        var response = service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit());
+        assertThat(response.response().getOrder().getStatus()).isEqualTo("pending");
         assertPendingReservation("USDT", "800", "225");
         verify(engine, times(1)).submitOrder(anyLong(), anyLong(), anyString(), anyString(),
                 anyString(), anyString(), any(), any(), any());
@@ -207,7 +209,7 @@ class OrderSubmissionTest {
     @Test
     void unknownOrderCannotBeReadByAnotherOwner() {
         whenSubmit().thenThrow(new ResourceAccessException("response lost"));
-        catchThrowable(() -> service.createOrder(101L, buyLimit()));
+        catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit()));
         var id = orders.findAll().getFirst().getId();
         assertThat(service.getOrder(101L, id).getOrder().getId()).isEqualTo(id.toString());
         assertThat(catchThrowable(() -> service.getOrder(102L, id))).isNotNull();
@@ -216,11 +218,11 @@ class OrderSubmissionTest {
     @Test
     void nextOrderCannotSpendFundsReservedByUnknownSubmission() {
         whenSubmit().thenThrow(new ResourceAccessException("response lost"));
-        catchThrowable(() -> service.createOrder(101L, buyLimit()));
+        catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), buyLimit()));
         var next = buyLimit();
         next.setAmount(new BigDecimal("9"));
         // 200을 먼저 예약했으므로 남은 800으로 900짜리 주문을 만들 수 없어야 한다.
-        assertThat(catchThrowable(() -> service.createOrder(101L, next))).isNotNull();
+        assertThat(catchThrowable(() -> service.createOrder(101L, java.util.UUID.randomUUID(), next))).isNotNull();
         assertPendingReservation("USDT", "800", "225");
         assertOneSubmissionAndNoCreatedEvent();
     }

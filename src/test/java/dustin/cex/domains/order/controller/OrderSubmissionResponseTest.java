@@ -14,6 +14,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import dustin.cex.domains.order.exception.OrderSubmissionUncertainException;
 import dustin.cex.domains.order.model.dto.OrderResponse;
+import dustin.cex.domains.order.model.dto.OrderCreationResult;
+import dustin.cex.domains.order.exception.OrderRequestConflictException;
 import dustin.cex.domains.order.service.OrderService;
 
 /**
@@ -37,9 +39,9 @@ class OrderSubmissionResponseTest {
     @Test
     void uncertainSubmissionReturnsAcceptedWithExactIdAndQueryLocation() throws Exception {
         // JS 안전 정수 범위를 넘는 ID도 문자열로 손실 없이 전달해야 한다.
-        when(service.createOrder(eq(101L), any())).thenThrow(new OrderSubmissionUncertainException(
+        when(service.createOrder(eq(101L), any(java.util.UUID.class), any())).thenThrow(new OrderSubmissionUncertainException(
                 9007199254740993L, new RuntimeException("private-engine-address")));
-        mvc.perform(post("/api/cex/orders").requestAttr("userId", 101L)
+        mvc.perform(post("/api/cex/orders").header("Idempotency-Key", "2ed8a020-04ae-4afc-92c8-d48182726c6c").requestAttr("userId", 101L)
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isAccepted())
                 .andExpect(header().string("Location", "/api/cex/orders/9007199254740993"))
@@ -48,28 +50,28 @@ class OrderSubmissionResponseTest {
                 .andExpect(jsonPath("$.statusUrl").value("/api/cex/orders/9007199254740993"))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("private-engine-address"))));
-        verify(service, times(1)).createOrder(eq(101L), any());
+        verify(service, times(1)).createOrder(eq(101L), any(java.util.UUID.class), any());
     }
 
     @Test
     void confirmedHttpResponseKeepsCreatedContract() throws Exception {
-        when(service.createOrder(eq(101L), any())).thenReturn(OrderResponse.builder()
-                .order(OrderResponse.OrderDto.builder().id("123").status("pending").build()).build());
-        mvc.perform(post("/api/cex/orders").requestAttr("userId", 101L)
+        when(service.createOrder(eq(101L), any(java.util.UUID.class), any())).thenReturn(new OrderCreationResult(OrderResponse.builder()
+                .order(OrderResponse.OrderDto.builder().id("123").status("pending").build()).build(), true));
+        mvc.perform(post("/api/cex/orders").header("Idempotency-Key", "2ed8a020-04ae-4afc-92c8-d48182726c6c").requestAttr("userId", 101L)
                         .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.order.id").value("123"));
     }
 
     @Test
     void missingIdentityDoesNotCreateAnOrder() throws Exception {
-        mvc.perform(post("/api/cex/orders").contentType(MediaType.APPLICATION_JSON).content(REQUEST))
+        mvc.perform(post("/api/cex/orders").header("Idempotency-Key", "2ed8a020-04ae-4afc-92c8-d48182726c6c").contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isUnauthorized());
         verifyNoInteractions(service);
     }
 
     @Test
     void malformedOrderDoesNotEnterUncertainSubmissionHandling() throws Exception {
-        mvc.perform(post("/api/cex/orders").requestAttr("userId", 101L)
+        mvc.perform(post("/api/cex/orders").header("Idempotency-Key", "2ed8a020-04ae-4afc-92c8-d48182726c6c").requestAttr("userId", 101L)
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(service);
@@ -82,5 +84,42 @@ class OrderSubmissionResponseTest {
         mvc.perform(get("/api/cex/orders/123").requestAttr("userId", 101L))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.order.status").value("pending"));
         verify(service).getOrder(101L, 123L);
+    }
+
+    @Test
+    void replayReturnsExistingOrderWithOkAndLocation() throws Exception {
+        var key = java.util.UUID.fromString("2ed8a020-04ae-4afc-92c8-d48182726c6c");
+        when(service.createOrder(eq(101L), eq(key), any())).thenReturn(new OrderCreationResult(
+                OrderResponse.builder().order(OrderResponse.OrderDto.builder().id("123").status("pending").build()).build(), false));
+        mvc.perform(post("/api/cex/orders").header("Idempotency-Key", key.toString()).requestAttr("userId", 101L)
+                        .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
+                .andExpect(status().isOk()).andExpect(header().string("Location", "/api/cex/orders/123"))
+                .andExpect(jsonPath("$.order.id").value("123"));
+        verify(service).createOrder(eq(101L), eq(key), any());
+    }
+
+    @Test
+    void missingRequestKeyIsRejectedBeforeService() throws Exception {
+        mvc.perform(post("/api/cex/orders").requestAttr("userId", 101L)
+                        .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void malformedRequestKeyIsRejectedBeforeService() throws Exception {
+        mvc.perform(post("/api/cex/orders").header("Idempotency-Key", "not-a-uuid").requestAttr("userId", 101L)
+                        .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void differentRequestForSameKeyReturnsConflict() throws Exception {
+        when(service.createOrder(eq(101L), any(java.util.UUID.class), any()))
+                .thenThrow(new OrderRequestConflictException());
+        mvc.perform(post("/api/cex/orders").header("Idempotency-Key", java.util.UUID.randomUUID().toString())
+                        .requestAttr("userId", 101L).contentType(MediaType.APPLICATION_JSON).content(REQUEST))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ORDER_REQUEST_CONFLICT"));
     }
 }

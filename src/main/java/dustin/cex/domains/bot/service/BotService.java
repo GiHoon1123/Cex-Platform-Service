@@ -75,8 +75,9 @@ public class BotService {
         request.setAmount(amount);
         request.setQuoteAmount(quoteAmount);
         
-        // OrderService를 통해 주문 생성
-        OrderResponse response = orderService.createOrder(botUserId, request);
+        // 새 봇 주문 의도마다 키를 생성한다. 실패한 의도를 재시도하는 경로는 추가하지 않는다.
+        // 봇 HTTP API는 고객 API의 Idempotency-Key 계약 대상이 아니며 봇은 비활성화 상태다.
+        OrderResponse response = orderService.createOrder(botUserId, java.util.UUID.randomUUID(), request).response();
         
         // log.debug("[BotService] 봇 주문 생성 완료: orderId={}, botUserId={}", 
         //          response.getOrder().getId(), botUserId);

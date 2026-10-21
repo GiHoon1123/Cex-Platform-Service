@@ -9,7 +9,7 @@ public final class OrderSubmissionUncertainException extends RuntimeException {
     private final Long orderId;
 
     public OrderSubmissionUncertainException(Long orderId, Throwable cause) {
-        super("엔진 제출 결과를 확인하지 못했습니다. 새 주문을 제출하지 말고 기존 주문을 조회하세요.", cause);
+        super("엔진 제출 결과를 확인하지 못했습니다. 같은 Idempotency-Key로 재요청하거나 기존 주문을 조회하세요.", cause);
         this.orderId = orderId;
     }
 
