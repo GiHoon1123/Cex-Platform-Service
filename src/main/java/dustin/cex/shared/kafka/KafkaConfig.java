@@ -41,6 +41,10 @@ public class KafkaConfig {
     @Value("${spring.kafka.consumer.auto-offset-reset:earliest}")
     private String autoOffsetReset;
     
+    // 직접 생성하는 팩터리에서도 Spring 설정의 소비자 시작 여부를 적용한다.
+    @Value("${spring.kafka.listener.auto-startup:true}")
+    private boolean listenerAutoStartup;
+
     /**
      * Kafka Producer Factory 생성
      * Create Kafka Producer Factory
@@ -111,6 +115,11 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = 
             new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
+        factory.setAutoStartup(listenerAutoStartup);
+        // 금융 이벤트 처리 실패를 기본 재시도 횟수 후 버리지 않는다. 실패한
+        // 수신 기록과 금융 변경은 롤백하고 소비를 중단한다. 원인을 해결한 뒤
+        // 재시작하면 미확정 오프셋부터 재수신하며 영속 수신 키로 중복을 막는다.
+        factory.setCommonErrorHandler(new org.springframework.kafka.listener.CommonContainerStoppingErrorHandler());
         
         // 동시성 설정: 파티션 수만큼 설정 (파티션 하나당 하나의 컨테이너/Consumer)
         // Concurrency: Set to number of partitions (one container per partition)
