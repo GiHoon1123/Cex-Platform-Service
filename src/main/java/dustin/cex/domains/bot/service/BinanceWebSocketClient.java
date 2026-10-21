@@ -139,48 +139,17 @@ public class BinanceWebSocketClient {
      */
     private void handleMessage(String message) {
         try {
-            // JSON 파싱
-            BinanceOrderbookUpdate update = objectMapper.readValue(message, BinanceOrderbookUpdate.class);
-            
-            // "depthUpdate" 이벤트만 처리 (초기 스냅샷 등은 무시)
-            int bidsCount = update.getBids() != null ? update.getBids().size() : 0;
-            int asksCount = update.getAsks() != null ? update.getAsks().size() : 0;
-            
-            if ("depthUpdate".equals(update.getEventType())) {
-                // bids나 asks가 있어야 처리
-                if (bidsCount > 0 || asksCount > 0) {
-                    // 콜백으로 전달
-                    if (updateCallback != null) {
-                        updateCallback.accept(update);
-                    }
-                }
-                // bids/asks가 비어있으면 무시 (정상 동작)
-            } else if (update.getEventType() == null) {
-                // event_type이 없으면 초기 스냅샷이거나 다른 형식
-                // bids/asks가 있으면 처리 (초기 스냅샷)
-                if (bidsCount > 0 || asksCount > 0) {
-                    // 초기 스냅샷도 처리 (depthUpdate로 변환)
-                    update.setEventType("depthUpdate");
-                    update.setEventTime(System.currentTimeMillis());
-                    // symbol은 이미 update에 설정되어 있을 수 있으므로, 없을 때만 설정
-                    if (update.getSymbol() == null) {
-                        update.setSymbol("SOLUSDT"); // 기본값 (BotConfig에서 가져올 수 있지만 여기서는 하드코딩 유지)
-                    }
-                    
-                    // 콜백으로 전달
-                    if (updateCallback != null) {
-                        updateCallback.accept(update);
-                    }
-                }
-                // bids/asks가 비어있으면 무시 (정상 동작)
-            }
-            
-        } catch (Exception e) {
-            // 파싱 실패는 무시 (다른 형식의 메시지일 수 있음)
-            log.debug("[BinanceWebSocketClient] 메시지 파싱 실패 (무시): {}", e.getMessage());
+            // 설정된 부분 호가 스트림은 매번 양쪽 상위 호가를 완전히 보낸다.
+            // 증분 이벤트로 변환하거나 SOL 심볼을 임의로 넣는 경로를 제거한다.
+            var update = objectMapper.readValue(message, BinanceOrderbookUpdate.class);
+            if (updateCallback != null) updateCallback.accept(update);
+        } catch (Exception error) {
+            // 잘못된 메시지를 가격으로 사용하지 않는다. 계속 실패하면 가격 서비스의
+            // 마지막 정상 수신 시간이 만료되어 자동 주문이 차단된다.
+            log.warn("봇 참조 호가 해독 실패: {}", error.getMessage());
         }
     }
-    
+
     /**
      * WebSocket 연결 종료
      * Stop WebSocket connection
@@ -201,49 +170,19 @@ public class BinanceWebSocketClient {
      */
     @SuppressWarnings("unchecked")
     public static List<BinanceOrderbookEntry>[] parseOrderbookUpdate(BinanceOrderbookUpdate update) {
-        List<BinanceOrderbookEntry> bids = new ArrayList<>();
-        List<BinanceOrderbookEntry> asks = new ArrayList<>();
-        
-        // 매수 호가 파싱
-        if (update.getBids() != null) {
-            for (List<String> entry : update.getBids()) {
-                if (entry.size() >= 2) {
-                    try {
-                        java.math.BigDecimal price = new java.math.BigDecimal(entry.get(0));
-                        java.math.BigDecimal quantity = new java.math.BigDecimal(entry.get(1));
-                        bids.add(BinanceOrderbookEntry.builder()
-                                .price(price)
-                                .quantity(quantity)
-                                .build());
-                    } catch (NumberFormatException e) {
-                        // 파싱 실패는 무시
-                    }
-                }
-            }
+        if(update.getLastUpdateId()==null || update.getLastUpdateId()<=0) throw new IllegalArgumentException("잘못된 외부 호가 순번입니다");
+        return new List[]{parseSide(update.getBids(),true),parseSide(update.getAsks(),false)};
+    }
+    private static List<BinanceOrderbookEntry> parseSide(List<List<String>> values,boolean buy) {
+        if(values==null || values.isEmpty() || values.size()>20) throw new IllegalArgumentException("잘못된 외부 호가 깊이입니다");
+        List<BinanceOrderbookEntry> result=new ArrayList<>();
+        java.math.BigDecimal previous=null;
+        for(var row:values) {
+            if(row.size()!=2) throw new IllegalArgumentException("잘못된 외부 호가 행입니다");
+            var price=new java.math.BigDecimal(row.get(0));var quantity=new java.math.BigDecimal(row.get(1));
+            if(price.signum()<=0 || quantity.signum()<=0 || (previous!=null && (buy?previous.compareTo(price)<=0:previous.compareTo(price)>=0))) throw new IllegalArgumentException("잘못된 외부 호가 가격·수량입니다");
+            result.add(BinanceOrderbookEntry.builder().price(price).quantity(quantity).build());previous=price;
         }
-        
-        // 매도 호가 파싱
-        if (update.getAsks() != null) {
-            for (List<String> entry : update.getAsks()) {
-                if (entry.size() >= 2) {
-                    try {
-                        java.math.BigDecimal price = new java.math.BigDecimal(entry.get(0));
-                        java.math.BigDecimal quantity = new java.math.BigDecimal(entry.get(1));
-                        asks.add(BinanceOrderbookEntry.builder()
-                                .price(price)
-                                .quantity(quantity)
-                                .build());
-                    } catch (NumberFormatException e) {
-                        // 파싱 실패는 무시
-                    }
-                }
-            }
-        }
-        
-        // 배열로 반환 (bids, asks)
-        List<BinanceOrderbookEntry>[] result = new List[2];
-        result[0] = bids;
-        result[1] = asks;
         return result;
     }
 }

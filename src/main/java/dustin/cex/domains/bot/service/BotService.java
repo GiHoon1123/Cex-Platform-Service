@@ -35,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 public class BotService {
     
     private final OrderService orderService;
+    private final dustin.cex.domains.order.repository.OrderRepository orders;
     
     /**
      * 봇 주문 생성
@@ -65,6 +66,21 @@ public class BotService {
         // log.debug("[BotService] 봇 주문 생성 시작: botUserId={}, orderType={}, orderSide={}, baseMint={}",
         //         botUserId, orderType, orderSide, baseMint);
         
+        // 자동 주문의 자산·건별 수량·예산을 고정된 시연 범위로 제한한다.
+        // 고객 주문 검증과 예약은 아래 일반 주문 서비스에서 다시 수행한다.
+        if (!"BTC".equals(baseMint) || !"USDT".equals(quoteMint)
+                || (amount != null && (amount.signum() <= 0 || amount.compareTo(new BigDecimal("0.01")) > 0))
+                || (quoteAmount != null && (quoteAmount.signum() <= 0 || quoteAmount.compareTo(new BigDecimal("100")) > 0))
+                || (price != null && amount != null && price.multiply(amount).compareTo(new BigDecimal("1000")) > 0)) {
+            throw new IllegalArgumentException("봇 주문 한도를 벗어났습니다");
+        }
+        var active=java.util.List.of("pending","partial");
+        if (orders.countByUserIdAndStatusIn(botUserId,active)>=20) {
+            var oldest=orders.findFirstByUserIdAndStatusInOrderByCreatedAtAsc(botUserId,active).orElseThrow();
+            orderService.cancelOrder(botUserId,oldest.getId());
+            // 취소 결과의 비동기 정산을 기다리는 동안 새 주문을 추가하지 않는다.
+            throw new IllegalStateException("가장 오래된 봇 주문의 취소 반영을 기다립니다");
+        }
         // 주문 생성 요청 생성
         CreateOrderRequest request = new CreateOrderRequest();
         request.setOrderType(orderType);
@@ -76,7 +92,7 @@ public class BotService {
         request.setQuoteAmount(quoteAmount);
         
         // 새 봇 주문 의도마다 키를 생성한다. 실패한 의도를 재시도하는 경로는 추가하지 않는다.
-        // 봇 HTTP API는 고객 API의 Idempotency-Key 계약 대상이 아니며 봇은 비활성화 상태다.
+        // 외부 봇 HTTP API는 제공하지 않는다. 같은 의도의 불확실한 결과를 새 키로 재시도하지 않는다.
         OrderResponse response = orderService.createOrder(botUserId, java.util.UUID.randomUUID(), request).response();
         
         // log.debug("[BotService] 봇 주문 생성 완료: orderId={}, botUserId={}", 

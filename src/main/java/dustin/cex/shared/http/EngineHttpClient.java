@@ -170,7 +170,12 @@ public class EngineHttpClient {
             HttpEntity<String> requestEntity = new HttpEntity<>(headers);
             
             // DELETE 요청 전송 (user_id를 쿼리 파라미터로 전달)
-            String url = engineBaseUrl + "/api/cex/orders/" + orderId + "?user_id=" + userId;
+            String[] pair = tradingPair.split("/", -1);
+            if (pair.length != 2) throw new IllegalArgumentException("잘못된 거래쌍입니다");
+            String url = org.springframework.web.util.UriComponentsBuilder
+                .fromHttpUrl(engineBaseUrl + "/api/cex/orders/" + orderId)
+                .queryParam("user_id", userId).queryParam("base_mint", pair[0])
+                .queryParam("quote_mint", pair[1]).build().encode().toUriString();
             ResponseEntity<String> response = restTemplate.exchange(
                     url,
                     HttpMethod.DELETE,

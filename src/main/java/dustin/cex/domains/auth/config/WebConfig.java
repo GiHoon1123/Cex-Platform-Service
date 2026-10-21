@@ -1,13 +1,15 @@
 package dustin.cex.domains.auth.config;
-
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
-/**
- * Web 설정
- * Web Configuration
- * JWT 필터는 @Component로 자동 등록됨
- */
+/** 프론트는 플랫폼만 호출한다. 허용 출처와 주문 중복 방지 헤더를 명시한다. */
 @Configuration
-public class WebConfig {
-    // JWT 필터는 JwtAuthenticationFilter의 @Component로 자동 등록됨
+public class WebConfig implements WebMvcConfigurer {
+    @Value("${frontend.origin:http://localhost:3003}") private String origin;
+    @Override public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**").allowedOrigins(origin)
+            .allowedMethods("GET","POST","DELETE","OPTIONS")
+            .allowedHeaders("Authorization","Content-Type","Idempotency-Key");
+    }
 }

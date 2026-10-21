@@ -151,6 +151,8 @@ public class OrderResponse {
             example = "100.5",
             required = false
         )
+        // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+        @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
         private BigDecimal price;
         
         /**
@@ -162,6 +164,8 @@ public class OrderResponse {
             example = "1.0",
             required = true
         )
+        // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+        @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
         private BigDecimal amount;
         
         /**
@@ -173,6 +177,8 @@ public class OrderResponse {
             example = "0.5",
             required = true
         )
+        // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+        @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
         private BigDecimal filledAmount;
         
         /**
@@ -184,6 +190,8 @@ public class OrderResponse {
             example = "50.25",
             required = true
         )
+        // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+        @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
         private BigDecimal filledQuoteAmount;
         
         /**

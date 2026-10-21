@@ -33,7 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
         
-        if (path.startsWith("/swagger-ui") || 
+        if (method.equals("OPTIONS") || path.startsWith("/swagger-ui") ||
             path.startsWith("/swagger-ui.html") ||
             path.startsWith("/api-docs") || 
             path.startsWith("/v3/api-docs") ||
@@ -46,10 +46,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             path.startsWith("/api/auth/logout") ||
             // 정산 API는 인증 불필요 (대량 처리 성능 최적화)
             path.startsWith("/api/settlement") ||
-            // 봇 API는 인증 불필요 (테스트용)
-            path.startsWith("/api/bot") ||
+            // 공개 시세만 인증 없이 제공한다. 주문·잔액 정보는 포함하지 않는다.
+            (method.equals("GET") && (path.startsWith("/api/market/") || path.equals("/ws/market/BTC/USDT"))) ||
             // 조회 API 중 public 엔드포인트 (오더북, 체결 내역)
-            (path.startsWith("/api/cex/orders/orderbook") && method.equals("GET")) ||
             (path.startsWith("/api/cex/trades") && method.equals("GET") && !path.contains("/my"))) {
             filterChain.doFilter(request, response);
             return;

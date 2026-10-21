@@ -26,7 +26,6 @@ import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.dto.OrderSubmissionUncertainResponse;
 import dustin.cex.domains.order.exception.OrderSubmissionUncertainException;
 import dustin.cex.domains.order.exception.OrderRequestConflictException;
-import dustin.cex.domains.order.model.dto.OrderbookResponse;
 import dustin.cex.domains.order.service.OrderService;
 import dustin.cex.shared.model.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -471,7 +470,7 @@ public class OrderController {
         
         try {
             OrderResponse response = orderService.cancelOrder(userId, orderId);
-            return ResponseEntity.ok(response);
+            return ResponseEntity.accepted().body(response);
         } catch (RuntimeException e) {
             // 주문을 찾을 수 없거나 취소 불가능한 경우
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -481,87 +480,4 @@ public class OrderController {
         }
     }
     
-    /**
-     * 오더북 조회
-     * Get Orderbook
-     * 
-     * 특정 거래쌍의 오더북(호가창)을 조회합니다.
-     * 매수 호가는 가격 내림차순, 매도 호가는 가격 오름차순으로 정렬됩니다.
-     * 
-     * 쿼리 파라미터:
-     * - baseMint: 기준 자산 (필수, 예: "SOL")
-     * - quoteMint: 기준 통화 (선택, 기본값: "USDT")
-     * - depth: 조회할 가격 레벨 개수 (선택, 기본값: 50)
-     * 
-     * 응답:
-     * - 200: 오더북 조회 성공
-     * - 400: 잘못된 요청
-     */
-    @Operation(
-            summary = "오더북 조회",
-            description = "특정 거래쌍의 오더북(호가창)을 조회합니다. 매수 호가는 가격 내림차순, 매도 호가는 가격 오름차순으로 정렬됩니다.\n\n" +
-                         "**쿼리 파라미터:**\n" +
-                         "- `baseMint` (필수): 기준 자산 (예: SOL, USDC)\n" +
-                         "- `quoteMint` (선택): 기준 통화 (기본값: USDT)\n" +
-                         "- `depth` (선택): 조회할 가격 레벨 개수 (기본값: 50)\n\n" +
-                         "**응답 예시:**\n" +
-                         "```json\n" +
-                         "{\n" +
-                         "  \"bids\": [\n" +
-                         "    {\n" +
-                         "      \"id\": \"1850278129743992082\",\n" +
-                         "      \"userId\": 1,\n" +
-                         "      \"orderType\": \"buy\",\n" +
-                         "      \"orderSide\": \"limit\",\n" +
-                         "      \"baseMint\": \"SOL\",\n" +
-                         "      \"quoteMint\": \"USDT\",\n" +
-                         "      \"price\": 100.5,\n" +
-                         "      \"amount\": 1.0,\n" +
-                         "      \"filledAmount\": 0.0,\n" +
-                         "      \"filledQuoteAmount\": 0.0,\n" +
-                         "      \"status\": \"pending\",\n" +
-                         "      \"createdAt\": \"2026-01-29T10:30:00\",\n" +
-                         "      \"updatedAt\": \"2026-01-29T10:30:00\"\n" +
-                         "    }\n" +
-                         "  ],\n" +
-                         "  \"asks\": [\n" +
-                         "    {\n" +
-                         "      \"id\": \"1850278129743992083\",\n" +
-                         "      \"userId\": 2,\n" +
-                         "      \"orderType\": \"sell\",\n" +
-                         "      \"orderSide\": \"limit\",\n" +
-                         "      \"baseMint\": \"SOL\",\n" +
-                         "      \"quoteMint\": \"USDT\",\n" +
-                         "      \"price\": 101.0,\n" +
-                         "      \"amount\": 1.0,\n" +
-                         "      \"filledAmount\": 0.0,\n" +
-                         "      \"filledQuoteAmount\": 0.0,\n" +
-                         "      \"status\": \"pending\",\n" +
-                         "      \"createdAt\": \"2026-01-29T10:31:00\",\n" +
-                         "      \"updatedAt\": \"2026-01-29T10:31:00\"\n" +
-                         "    }\n" +
-                         "  ]\n" +
-                         "}\n" +
-                         "```"
-    )
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "오더북 조회 성공",
-                    content = @Content(schema = @Schema(implementation = OrderbookResponse.class))
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "잘못된 요청 (baseMint가 없음)"
-            )
-    })
-    @GetMapping("/orderbook")
-    public ResponseEntity<OrderbookResponse> getOrderbook(
-            @RequestParam String baseMint,
-            @RequestParam(required = false, defaultValue = "USDT") String quoteMint,
-            @RequestParam(required = false) Integer depth
-    ) {
-        OrderbookResponse response = orderService.getOrderbook(baseMint, quoteMint, depth);
-        return ResponseEntity.ok(response);
-    }
 }

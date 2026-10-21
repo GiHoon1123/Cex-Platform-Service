@@ -59,14 +59,14 @@ public class BotTradingService {
      * 봇별 스케줄러 Future (취소용)
      * Bot scheduler futures (for cancellation)
      */
-    private final Map<Long, ScheduledFuture<?>> botSchedulers = new HashMap<>();
+    private final Map<Long, ScheduledFuture<?>> botSchedulers = new java.util.concurrent.ConcurrentHashMap<>();
     
     /**
      * 주문 수량 범위 (최소 ~ 최대)
      * Order quantity range (min ~ max)
      */
-    private static final BigDecimal MIN_QUANTITY = BigDecimal.valueOf(0.1);
-    private static final BigDecimal MAX_QUANTITY = BigDecimal.valueOf(10.0);
+    private static final BigDecimal MIN_QUANTITY = new BigDecimal("0.0001");
+    private static final BigDecimal MAX_QUANTITY = new BigDecimal("0.001");
     
     /**
      * 시장가 주문 금액 (USDT)
@@ -83,6 +83,7 @@ public class BotTradingService {
         log.info("[BotTradingService] 봇 거래 스케줄러 시작...");
         
         // 스케줄러 풀 생성 (봇 수만큼 스레드)
+        if (botConfig.getBotCount() == 0) return;
         scheduler = Executors.newScheduledThreadPool(botConfig.getBotCount());
         
         // 각 봇별로 스케줄러 시작
@@ -159,6 +160,8 @@ public class BotTradingService {
      */
     private void executeBotTrade(Long botId, Long botUserId, boolean isBuyBot) {
         try {
+            // 시세가 없거나 끊긴 동안 임의 기본 가격으로 거래하지 않는다.
+            binancePriceService.getMidPrice();
             // 랜덤 전략 선택
             BotTradingStrategy strategy = BotTradingStrategy.selectRandom();
             String baseMint = botConfig.getBotBaseMint(botId);
@@ -315,7 +318,7 @@ public class BotTradingService {
         BigDecimal quantity = MIN_QUANTITY.add(
                 BigDecimal.valueOf(random).multiply(MAX_QUANTITY.subtract(MIN_QUANTITY))
         );
-        return quantity.setScale(4, RoundingMode.HALF_UP);
+        return quantity.setScale(6, RoundingMode.HALF_UP);
     }
     
     /**

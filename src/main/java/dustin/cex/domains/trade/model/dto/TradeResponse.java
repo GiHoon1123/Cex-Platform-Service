@@ -32,6 +32,7 @@ public class TradeResponse {
         example = "456",
         required = true
     )
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private Long id;
     
     /**
@@ -42,6 +43,7 @@ public class TradeResponse {
         example = "123",
         required = true
     )
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private Long buyOrderId;
     
     /**
@@ -52,6 +54,7 @@ public class TradeResponse {
         example = "124",
         required = true
     )
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private Long sellOrderId;
     
     /**
@@ -102,6 +105,8 @@ public class TradeResponse {
         example = "100.5",
         required = true
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal price;
     
     /**
@@ -112,6 +117,8 @@ public class TradeResponse {
         example = "1.0",
         required = true
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal amount;
     
     /**

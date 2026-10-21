@@ -27,7 +27,7 @@ public class EngineEventInbox {
             throw new IllegalStateException("Engine inbox requires the financial transaction");
         }
         UUID.fromString(engineId);
-        if (eventId == null || !eventId.matches(java.util.regex.Pattern.quote(engineId) + ":[1-9][0-9]*:[0-9]+")
+        if (eventId == null || !eventId.matches(java.util.regex.Pattern.quote(engineId) + ":[1-9][0-9]*:(?:[0-9]+|market)")
                 || eventId.length() > 120) {
             throw new IllegalArgumentException("Invalid engine event identity");
         }

@@ -29,7 +29,6 @@ import dustin.cex.domains.order.model.dto.OrderCreationResult;
 import dustin.cex.domains.order.exception.OrderRequestConflictException;
 import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
-import dustin.cex.domains.order.model.dto.OrderbookResponse;
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
 import dustin.cex.shared.http.EngineHttpClient;
@@ -303,191 +302,31 @@ public class OrderService {
     }
     
     /**
-     * 오더북 조회
-     * Get Orderbook
-     * 
-     * 특정 거래쌍의 오더북(호가창)을 조회합니다.
-     * 매수 호가는 가격 내림차순, 매도 호가는 가격 오름차순으로 정렬됩니다.
-     * 
-     * @param baseMint 기준 자산 (예: "SOL")
-     * @param quoteMint 기준 통화 (예: "USDT", 기본값: "USDT")
-     * @param depth 조회할 가격 레벨 개수 (선택, null이면 모든 호가 조회)
-     * @return 오더북 응답 (bids: 매수 호가, asks: 매도 호가)
-     */
-    @Transactional(readOnly = true)
-    public OrderbookResponse getOrderbook(String baseMint, String quoteMint, Integer depth) {
-        String quote = quoteMint != null && !quoteMint.isEmpty() ? quoteMint : "USDT";
-        
-        // depth가 지정되지 않았으면 기본값 50 사용
-        int limit = depth != null && depth > 0 ? depth : 50;
-        Pageable pageable = PageRequest.of(0, limit);
-        
-        // 매수 주문 조회 (가격 내림차순)
-        List<Order> buyOrders = orderRepository.findBuyOrdersByTradingPair(baseMint, quote, pageable);
-        
-        // 매도 주문 조회 (가격 오름차순)
-        List<Order> sellOrders = orderRepository.findSellOrdersByTradingPair(baseMint, quote, pageable);
-        
-        // DTO 변환
-        List<OrderResponse.OrderDto> bids = buyOrders.stream()
-                .map(this::convertToDto)
-                .toList();
-        
-        List<OrderResponse.OrderDto> asks = sellOrders.stream()
-                .map(this::convertToDto)
-                .toList();
-        
-        return OrderbookResponse.builder()
-                .bids(bids)
-                .asks(asks)
-                .build();
-    }
-    
-    /**
-     * 주문 취소
-     * Cancel Order
-     * 
-     * 대기 중이거나 부분 체결된 주문을 취소합니다.
-     * 
-     * 처리 과정:
-     * 1. 주문 조회 및 본인 확인 (트랜잭션 내, 비관적 락)
-     * 2. 주문 상태 확인 (취소 가능한 상태인지)
-     * 3. 트랜잭션 커밋 (락 해제)
-     * 4. Rust 엔진에 취소 요청 (트랜잭션 밖, HTTP 호출)
-     *    - 성공: 주문 상태를 'cancelled'로 업데이트 (별도 트랜잭션)
-     *    - 실패: 예외 발생 (주문 상태는 변경되지 않음)
-     * 5. Kafka 이벤트 발행 (비동기)
-     * 
-     * 트랜잭션 분리 이유:
-     * - 주문 조회만 트랜잭션으로 묶어 커넥션 점유 시간 최소화
-     * - HTTP 호출은 트랜잭션 밖에서 실행 (네트워크 지연 영향 최소화)
-     * - 성공 시 별도 트랜잭션으로 상태 업데이트
-     * 
-     * @param userId 사용자 ID (본인 확인용)
-     * @param orderId 취소할 주문 ID
-     * @return 취소된 주문 정보
-     * @throws RuntimeException 주문을 찾을 수 없거나 취소 불가능한 상태일 때
+     * 본인 주문을 확인한 뒤 엔진에 취소 명령을 보낸다. 디비 락은 조회 트랜잭션에만
+     * 유지하고 네트워크 대기는 밖에서 수행한다. 최종 주문 상태·예약금 해제는
+     * 순서가 보장된 엔진 결과 소비자가 함께 확정한다.
      */
     public OrderResponse cancelOrder(Long userId, Long orderId) {
-        // ============================================
-        // 1. 주문 조회 및 본인 확인 (트랜잭션 내, 비관적 락)
-        // ============================================
-        Order order = transactionTemplate.execute(status -> {
-            return orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
-                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
-        });
-        
-        // ============================================
-        // 2. 주문 상태 확인 (취소 가능한 상태인지)
-        // ============================================
-        if ("filled".equals(order.getStatus())) {
-            throw new RuntimeException("이미 전량 체결된 주문은 취소할 수 없습니다");
+        Order order = transactionTemplate.execute(status ->
+            orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
+                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId)));
+        if ("filled".equals(order.getStatus()) || "rejected".equals(order.getStatus())) {
+            throw new IllegalArgumentException("종료된 주문은 취소할 수 없습니다");
         }
-        if ("cancelled".equals(order.getStatus())) {
-            throw new RuntimeException("이미 취소된 주문입니다");
-        }
-        
-        // 주문 정보 저장 (트랜잭션 종료 후 사용)
-        String baseMint = order.getBaseMint();
-        String quoteMint = order.getQuoteMint();
-        
-        // ============================================
-        // 3. 트랜잭션 커밋 (락 해제)
-        // ============================================
-        // findOrderForCancellation의 트랜잭션이 여기서 종료됨
-        
-        // ============================================
-        // 4. Rust 엔진에 취소 요청 (트랜잭션 밖, HTTP 호출)
-        // ============================================
-        try {
-            String tradingPair = baseMint + "/" + quoteMint;
-            boolean success = engineHttpClient.cancelOrder(orderId, userId, tradingPair);
-            
-            if (!success) {
-                throw new RuntimeException("엔진이 주문 취소를 거부했습니다");
+        if (!"cancelled".equals(order.getStatus())) {
+            // HTTP 성공은 엔진 WAL의 취소 확정이다. 플랫폼 잔액과 주문 상태는
+            // 순서가 보장된 엔진 Kafka 결과를 소비하는 트랜잭션만 변경한다.
+            // 여기서 먼저 cancelled로 바꾸면 소비자가 잔액 해제 전에 종료 주문을
+            // 관찰하고 실패하거나, 앞선 체결 이벤트와 순서가 뒤집힐 수 있다.
+            if (!engineHttpClient.cancelOrder(orderId, userId, order.getBaseMint()+"/"+order.getQuoteMint())) {
+                throw new IllegalStateException("엔진이 주문 취소를 거부했습니다");
             }
-            
-            // 성공 시: 주문 상태를 'cancelled'로 업데이트 (별도 트랜잭션)
-            updateOrderStatusCancelled(orderId);
-            
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("엔진 취소 요청 실패: " + e.getMessage(), e);
         }
-        
-        // ============================================
-        // 5. Kafka 이벤트 발행 (비동기)
-        // ============================================
-        try {
-            // 취소된 주문 정보 조회 (최신 상태)
-            Order cancelledOrder = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
-            
-            String orderJson = objectMapper.writeValueAsString(cancelledOrder);
-            kafkaEventProducer.publishOrderCancelled(orderJson);
-        } catch (Exception e) {
-            // Kafka 이벤트 발행 실패는 무시
-        }
-        
-        // ============================================
-        // 6. 취소된 주문 정보 반환
-        // ============================================
-        Order cancelledOrder = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
-        
-        OrderResponse.OrderDto orderDto = convertToDto(cancelledOrder);
-        return OrderResponse.builder()
-                .order(orderDto)
-                .message("Order cancelled successfully")
-                .build();
+        Order latest=orderRepository.findById(orderId).orElseThrow();
+        return OrderResponse.builder().order(convertToDto(latest))
+            .message("엔진 취소 확정. 플랫폼 상태는 결과 수신 후 반영됩니다.").build();
     }
-    
-    /**
-     * 주문 조회 (취소용, 비관적 락 사용)
-     * Find Order for Cancellation (with Pessimistic Lock)
-     * 
-     * 취소할 주문을 조회하고 본인 확인을 수행합니다.
-     * 비관적 락을 사용하여 동시성 문제를 방지합니다.
-     * 
-     * 동시성 제어:
-     * - SELECT FOR UPDATE로 락을 걸어 다른 트랜잭션의 동시 수정을 방지
-     * - Kafka Consumer가 체결 이벤트를 처리하는 동안 취소 요청이 들어오는 경우 방지
-     * - 주문 상태가 변경되는 동안 취소 요청이 들어오는 경우 방지
-     * 
-     * @param userId 사용자 ID
-     * @param orderId 주문 ID
-     * @return 주문 엔티티
-     * @throws RuntimeException 주문을 찾을 수 없거나 본인 주문이 아닐 때
-     */
-    @Transactional
-    private Order findOrderForCancellation(Long userId, Long orderId) {
-        return orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
-    }
-    
-    /**
-     * 주문 상태를 "cancelled"로 업데이트 (별도 트랜잭션)
-     * Update Order Status to Cancelled (Separate Transaction)
-     * 
-     * HTTP 취소 요청 성공 후 주문 상태를 "cancelled"로 업데이트합니다.
-     * 별도 트랜잭션으로 실행되어 DB 커넥션 점유 시간을 최소화합니다.
-     * 
-     * @param orderId 주문 ID
-     */
-    @Transactional
-    private void updateOrderStatusCancelled(Long orderId) {
-        try {
-            Order order = orderRepository.findById(orderId)
-                    .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
-            
-            order.setStatus("cancelled");
-            orderRepository.save(order);
-        } catch (Exception e) {
-            throw new RuntimeException("주문 취소 상태 업데이트 실패", e);
-        }
-    }
-    
+
     /**
      * 잔고 lock (비관적 락 사용)
      * Lock balance with pessimistic lock

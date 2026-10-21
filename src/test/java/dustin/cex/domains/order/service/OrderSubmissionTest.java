@@ -288,4 +288,28 @@ class OrderSubmissionTest {
                 .baseMint("SOL").quoteMint("USDT").price(new BigDecimal("100"))
                 .amount(new BigDecimal("2")).build();
     }
+
+    @Test
+    void cancellationAcceptanceDoesNotPreemptKafkaStateOrBalanceRelease() {
+        var order=orders.saveAndFlush(Order.builder().userId(101L).orderType("sell").orderSide("limit")
+            .baseMint("SOL").quoteMint("USDT").price(new BigDecimal("100")).amount(BigDecimal.ONE).build());
+        when(engine.cancelOrder(order.getId(),101L,"SOL/USDT")).thenAnswer(invocation -> {
+            assertThat(orders.findById(order.getId()).orElseThrow().getStatus()).isEqualTo("pending");
+            return true;
+        });
+        var response=service.cancelOrder(101L,order.getId());
+        assertThat(response.getOrder().getStatus()).isEqualTo("pending");
+        assertThat(orders.findById(order.getId()).orElseThrow().getStatus()).isEqualTo("pending");
+        assertThat(balances.findByUserIdAndMintAddress(101L,"SOL").orElseThrow().getLocked()).isEqualByComparingTo("2");
+        verify(kafka,never()).publishOrderCancelled(anyString());
+    }
+    @Test
+    void failedCancellationPreservesOrderAndReservation() {
+        var order=orders.saveAndFlush(Order.builder().userId(101L).orderType("sell").orderSide("limit")
+            .baseMint("SOL").quoteMint("USDT").price(new BigDecimal("100")).amount(BigDecimal.ONE).build());
+        when(engine.cancelOrder(anyLong(),anyLong(),anyString())).thenThrow(new RuntimeException("응답 유실"));
+        assertThat(catchThrowable(()->service.cancelOrder(101L,order.getId()))).isInstanceOf(RuntimeException.class);
+        assertThat(orders.findById(order.getId()).orElseThrow().getStatus()).isEqualTo("pending");
+        assertThat(balances.findByUserIdAndMintAddress(101L,"SOL").orElseThrow().getLocked()).isEqualByComparingTo("2");
+    }
 }

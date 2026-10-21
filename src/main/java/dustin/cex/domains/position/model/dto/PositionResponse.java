@@ -41,6 +41,8 @@ public class PositionResponse {
         example = "11.0",
         required = true
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal currentBalance;
     
     /**
@@ -51,6 +53,8 @@ public class PositionResponse {
         example = "10.0",
         required = true
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal available;
     
     /**
@@ -61,6 +65,8 @@ public class PositionResponse {
         example = "1.0",
         required = true
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal locked;
     
     /**
@@ -71,6 +77,8 @@ public class PositionResponse {
         example = "100.5",
         required = false
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal averageEntryPrice;
     
     /**
@@ -81,6 +89,8 @@ public class PositionResponse {
         example = "110.0",
         required = false
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal currentMarketPrice;
     
     /**
@@ -91,6 +101,8 @@ public class PositionResponse {
         example = "1210.0",
         required = false
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal currentValue;
     
     /**
@@ -101,6 +113,8 @@ public class PositionResponse {
         example = "100.0",
         required = false
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal unrealizedPnl;
     
     /**
@@ -111,6 +125,8 @@ public class PositionResponse {
         example = "10.0",
         required = false
     )
+    // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+    @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
     private BigDecimal unrealizedPnlPercent;
     
     /**
@@ -157,6 +173,8 @@ public class PositionResponse {
             example = "50.0",
             required = true
         )
+        // 브라우저가 JSON 숫자를 이진 부동소수점으로 해석하기 전에 십진 문자열로 전달한다.
+        @com.fasterxml.jackson.annotation.JsonFormat(shape = com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING)
         private BigDecimal realizedPnl;
     }
 }
