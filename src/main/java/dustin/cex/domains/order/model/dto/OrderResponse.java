@@ -190,13 +190,14 @@ public class OrderResponse {
          * 주문 상태
          * Order Status
          * 
-         * - 'pending': 대기 중
+         * - 'pending': 플랫폼에 저장됨. 엔진 제출 결과가 불명일 수도 있다.
+         *   이 값만으로 엔진 접수·처리나 향후 완료를 보장하지 않는다.
          * - 'partial': 부분 체결
          * - 'filled': 전량 체결
          * - 'cancelled': 취소됨
          */
         @Schema(
-            description = "주문 상태: 'pending'(대기), 'partial'(부분체결), 'filled'(완료), 'cancelled'(취소)", 
+            description = "주문 상태: 'pending'(플랫폼 저장, 엔진 제출 결과 불명 포함), 'partial'(부분체결), 'filled'(완료), 'cancelled'(취소)",
             example = "partial",
             allowableValues = {"pending", "partial", "filled", "cancelled", "rejected"},
             required = true

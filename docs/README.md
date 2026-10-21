@@ -5,6 +5,7 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 ## 결정과 검증 기록
 
 - [001. 플랫폼 시작 시 기존 잔액 재입금 제거](decisions/001-remove-startup-balance-replay.md): 시작 이벤트가 자산 증감 요청을 만들던 경로 삭제와 회귀 검증.
+- [002. 엔진 전송 결과 불명 시 주문·예약 보존](decisions/002-preserve-uncertain-order-submission.md): 응답 실패를 거부로 처리하던 보상 삭제, 202·조회 계약, HTTP 대기 제한과 검증.
 
 ## 기존 설계·측정 문서
 
