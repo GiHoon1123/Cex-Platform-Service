@@ -40,6 +40,12 @@ public class SecurityConfiguration {
                     "/api/auth/operator-mfa/authenticate/options","/api/auth/operator-mfa/authenticate").authenticated()
                 .requestMatchers(HttpMethod.GET,"/api/auth/operator-mfa/credentials").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.DELETE,"/api/auth/operator-mfa/credentials/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/role-requests").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/role-requests/*/approve/options",
+                    "/api/admin/operator-security/role-requests/*/reject/options","/api/admin/operator-security/role-requests/*/approve",
+                    "/api/admin/operator-security/role-requests/*/reject").access(audited(audit,sessions,"APPROVER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/operator-security/role-requests","/api/admin/operator-security/role-targets/*")
+                    .access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/recoveries","/api/admin/operator-security/access-reviews").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/requests/*/approve","/api/admin/operator-security/requests/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/operators/*/revoke").access(audited(audit,sessions,"OPERATOR","APPROVER"))

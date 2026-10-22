@@ -78,3 +78,29 @@ CREATE TRIGGER operator_security_requests_no_change BEFORE UPDATE OR DELETE ON o
 DROP TRIGGER IF EXISTS operator_security_requests_no_truncate ON operator_security_requests;
 CREATE TRIGGER operator_security_requests_no_truncate BEFORE TRUNCATE ON operator_security_requests
  FOR EACH STATEMENT EXECUTE FUNCTION security_audit_immutable();
+
+-- 일반 역할 부여·변경도 업무 내용이 고정된 요청으로 보존한다. 기존 금융·감사 기록은 유지한다.
+CREATE TABLE IF NOT EXISTS operator_role_requests (
+ id uuid PRIMARY KEY, requester_id bigint NOT NULL, requester_person uuid NOT NULL, requester_version bigint NOT NULL,
+ target_id bigint NOT NULL, target_person uuid NOT NULL, target_version bigint NOT NULL,
+ previous_role varchar(16) NOT NULL CHECK(previous_role IN ('CUSTOMER','OPERATOR','APPROVER','AUDITOR')),
+ requested_role varchar(16) NOT NULL CHECK(requested_role IN ('OPERATOR','APPROVER','AUDITOR')),
+ access_until timestamptz NOT NULL, reason varchar(200) NOT NULL,
+ identity_evidence varchar(100) NOT NULL, notification_evidence varchar(100) NOT NULL,
+ payload_hash varchar(64) NOT NULL, expires_at timestamptz NOT NULL,
+ status varchar(16) NOT NULL DEFAULT 'PENDING', approver_id bigint, created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ CHECK(previous_role<>requested_role)
+);
+DROP TRIGGER IF EXISTS operator_role_requests_no_change ON operator_role_requests;
+CREATE TRIGGER operator_role_requests_no_change BEFORE UPDATE OR DELETE ON operator_role_requests
+ FOR EACH ROW EXECUTE FUNCTION operator_request_immutable();
+DROP TRIGGER IF EXISTS operator_role_requests_no_truncate ON operator_role_requests;
+CREATE TRIGGER operator_role_requests_no_truncate BEFORE TRUNCATE ON operator_role_requests
+ FOR EACH STATEMENT EXECUTE FUNCTION security_audit_immutable();
+-- 이 표는 업무 이력이 아닌 단기 인증 옵션이다. 원본 서명·개인키·등록 비밀은 저장하지 않는다.
+CREATE TABLE IF NOT EXISTS operator_role_challenges (
+ id uuid PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id), session_id uuid NOT NULL,
+ request_id uuid NOT NULL REFERENCES operator_role_requests(id), payload_hash varchar(64) NOT NULL,
+ approve boolean NOT NULL, options text NOT NULL, expires_at timestamptz NOT NULL, consumed boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS operator_role_challenge_session ON operator_role_challenges(session_id);

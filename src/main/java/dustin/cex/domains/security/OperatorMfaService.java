@@ -112,21 +112,7 @@ public class OperatorMfaService {
     public Verified authenticate(long actor,UUID sid,UUID id,JsonNode credential) {
         return operation(actor,()->{
             lock(actor,sid);var stored=consume(actor,sid,id,"AUTHENTICATE");
-            var options=restoreAuthentication(stored);
-            validateProof(credential,false);
-            var type=json.getTypeFactory().constructParametricType(PublicKeyCredential.class,AuthenticatorAssertionResponse.class);
-            PublicKeyCredential<AuthenticatorAssertionResponse> key=json.convertValue(credential,type);
-            var existing=credentials.findByCredentialId(key.getRawId());
-            var identity=identities.findByUsername(Long.toString(actor));
-            if(existing==null || identity==null || !identity.getId().equals(existing.getUserEntityUserId())) throw denied();
-            var handle=key.getResponse().getUserHandle();
-            if(handle!=null && !handle.equals(identity.getId())) throw denied();
-            var authenticated=relyingParty.authenticate(new RelyingPartyAuthenticationRequest(options,key));
-            if(!authenticated.getName().equals(Long.toString(actor))) throw denied();
-            // 일부 동기화 패스키는 카운터 0을 쓴다. 카운터를 쓰는 기기는 마지막 성공 값보다 증가해야 한다.
-            // 인증 데이터의 앞 32바이트는 RP 해시, 다음 1바이트는 플래그, 이어지는 4바이트는 부호 없는 카운터다.
-            long current=Integer.toUnsignedLong(ByteBuffer.wrap(key.getResponse().getAuthenticatorData().getBytes(),33,4).getInt());
-            if((existing.getSignatureCount()!=0 || current!=0) && current<=existing.getSignatureCount()) throw denied();
+            var key=verifyAssertion(actor,stored,credential);
             // 인증 수준을 높일 때 세션을 교체한다. 이전 대기 토큰을 훔친 사람에게 운영 권한이 생기지 않는다.
             tokens.revokeAllByUserId(actor,LocalDateTime.now());
             String raw=jwt.generateRefreshToken();LocalDateTime verifiedAt=LocalDateTime.now();
@@ -135,6 +121,74 @@ public class OperatorMfaService {
             audit.record(actor,"MFA_AUTHENTICATE","user:"+actor,"SUCCESS","USER_VERIFIED:sha256="+sha256Hex(key.getRawId().toBase64UrlString()));
             return new Verified(jwt.generateAccessToken(actor,verified.getSessionId()),raw);
         });
+    }
+    /** 서명 검증을 로그인과 업무 승인에서 공유한다. 호출자는 사용자 잠금과 트랜잭션을 유지한다. */
+    private PublicKeyCredential<AuthenticatorAssertionResponse> verifyAssertion(long actor,String stored,JsonNode credential) {
+        var options=restoreAuthentication(stored);
+        validateProof(credential,false);
+        var type=json.getTypeFactory().constructParametricType(PublicKeyCredential.class,AuthenticatorAssertionResponse.class);
+        PublicKeyCredential<AuthenticatorAssertionResponse> key=json.convertValue(credential,type);
+        var existing=credentials.findByCredentialId(key.getRawId());
+        var identity=identities.findByUsername(Long.toString(actor));
+        if(existing==null || identity==null || !identity.getId().equals(existing.getUserEntityUserId())) throw denied();
+        var handle=key.getResponse().getUserHandle();
+        if(handle!=null && !handle.equals(identity.getId())) throw denied();
+        var authenticated=relyingParty.authenticate(new RelyingPartyAuthenticationRequest(options,key));
+        if(!authenticated.getName().equals(Long.toString(actor))) throw denied();
+        // 일부 동기화 패스키는 카운터 0을 쓴다. 카운터를 쓰는 기기는 마지막 성공 값보다 증가해야 한다.
+        // 인증 데이터의 앞 32바이트는 RP 해시, 다음 1바이트는 플래그, 이어지는 4바이트는 부호 없는 카운터다.
+        long current=Integer.toUnsignedLong(ByteBuffer.wrap(key.getResponse().getAuthenticatorData().getBytes(),33,4).getInt());
+        if((existing.getSignatureCount()!=0 || current!=0) && current<=existing.getSignatureCount()) throw denied();
+        return key;
+    }
+    public record AuthorizationProof(UUID challengeId,JsonNode credential) {
+        // 디버깅이나 DTO 로그에도 서명 원문을 남기지 않는다.
+        @Override public String toString() {return "AuthorizationProof[서명 생략]";}
+    }
+    /**
+     * 역할 승인 서비스만 호출하는 내부 경로다. 요청 잠금 → 사용자 잠금 → 챌린지 잠금 순서를 지킨다.
+     * 인증 옵션만 발급하며 세션의 MFA 시각이나 수명은 늘리지 않는다.
+     */
+    Options roleAuthorizationOptions(long actor,UUID sid,UUID requestId,String payloadHash,boolean approve) {
+        requireBusinessTransaction();
+        return operation(actor,()->{
+            requireFresh(lock(actor,sid));
+            var identity=identities.findByUsername(Long.toString(actor));
+            if(identity==null || credentials.findByUserId(identity.getId()).isEmpty()) throw denied();
+            var auth=UsernamePasswordAuthenticationToken.authenticated(Long.toString(actor),null,List.of());
+            var options=relyingParty.createCredentialRequestOptions(new ImmutablePublicKeyCredentialRequestOptionsRequest(auth));
+            UUID id=UUID.randomUUID();String encoded=json.writeValueAsString(options);
+            // 한 세션에서 새 업무 확인을 시작하면 이전 업무 옵션은 폐기한다. 오래된 옵션도 함께 정리한다.
+            jdbc.update("DELETE FROM operator_role_challenges WHERE session_id=? OR expires_at<clock_timestamp()",sid);
+            jdbc.update("""
+                INSERT INTO operator_role_challenges(id,user_id,session_id,request_id,payload_hash,approve,options,expires_at)
+                VALUES(?,?,?,?,?,?,?,clock_timestamp()+interval '2 minutes')
+                """,id,actor,sid,requestId,payloadHash,approve,encoded);
+            audit.record(actor,"ROLE_AUTHORIZATION_OPTIONS","request:"+requestId,"SUCCESS",(approve?"APPROVE:":"REJECT:")+payloadHash);
+            return new Options(id,json.readTree(encoded));
+        });
+    }
+    void authorizeRole(long actor,UUID sid,UUID requestId,String payloadHash,boolean approve,AuthorizationProof proof) {
+        requireBusinessTransaction();
+        operation(actor,()->{
+            requireFresh(lock(actor,sid));
+            if(proof==null || proof.challengeId()==null || proof.credential()==null) throw denied();
+            var rows=jdbc.queryForList("""
+                SELECT options FROM operator_role_challenges WHERE id=? AND user_id=? AND session_id=?
+                 AND request_id=? AND payload_hash=? AND approve=? AND NOT consumed AND expires_at>clock_timestamp() FOR UPDATE
+                """,proof.challengeId(),actor,sid,requestId,payloadHash,approve);
+            if(rows.isEmpty()) throw denied();
+            var key=verifyAssertion(actor,(String)rows.getFirst().get("options"),proof.credential());
+            jdbc.update("UPDATE operator_role_challenges SET consumed=true WHERE id=?",proof.challengeId());
+            // 서명 소비·공개키 카운터·역할 변경·감사는 같은 업무 트랜잭션에서 확정된다.
+            audit.record(actor,"ROLE_AUTHORIZATION","request:"+requestId,"SUCCESS",
+                (approve?"APPROVE:":"REJECT:")+payloadHash+":key="+sha256Hex(key.getRawId().toBase64UrlString()));
+            return null;
+        });
+    }
+    private void requireBusinessTransaction() {
+        if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())
+            throw new IllegalStateException("업무 트랜잭션 안에서만 추가 인증을 처리할 수 있습니다");
     }
     // 공식 모듈은 옵션의 응답 직렬화를 제공하지만 DB JSON에서 옵션 생성자를 복원하지 않는다.
     // 임의 타입 역직렬화나 Java 객체 스트림 대신 서버가 저장한 필드만 표준 빌더로 재구성한다.

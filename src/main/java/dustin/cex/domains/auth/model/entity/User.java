@@ -29,7 +29,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class User {
     
-    // 공개 가입에는 역할 입력을 받지 않는다. 운영 권한은 별도 명시적 초기화로만 부여한다.
+    // 공개 가입에는 역할 입력을 받지 않는다. 운영 권한은 별도 초기화 또는 독립 승인된 역할 부여로만 부여한다.
     @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
