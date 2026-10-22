@@ -173,6 +173,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
                     VALUES (101,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
                            (102,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""")
         self.sql((PROJECT/"src/test/resources/ledger-opening-fixture.sql").read_text())
+        self.sql((PROJECT/"src/test/resources/kyc-verified-fixture.sql").read_text())
 
     def token(self, user):
         sid = str(uuid4())

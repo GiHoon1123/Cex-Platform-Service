@@ -304,6 +304,7 @@ class PlatformSecurityTest {
     }
     @Test void restrictionStillAllowsOwnCancellationButNeverAnotherCustomersOrder() throws Exception {
         fund();var result=orders.createOrder(customer.getId(),UUID.randomUUID(),order());decide(request());
+        jdbc.update("UPDATE kyc_profiles SET valid_until=clock_timestamp()-interval '1 second' WHERE user_id=?",customer.getId());
         when(engine.cancelOrder(anyLong(),anyLong(),anyString())).thenReturn(true);
         String path="/api/cex/orders/"+result.response().getOrder().getId();
         mvc.perform(delete(path).header("Authorization","Bearer "+token(customer))).andExpect(status().isAccepted());
@@ -372,6 +373,7 @@ class PlatformSecurityTest {
         assertTrue(json.readTree(content).size()<=50);
     }
     void fund() {
+        dustin.cex.domains.kyc.KycFixtures.verified(jdbc,customer.getId());
         tx.executeWithoutResult(status->{
             jdbc.update("INSERT INTO user_balances(user_id,mint_address,available,locked,created_at,updated_at) VALUES(?,'USDT',1000,0,now(),now())",customer.getId());
             ledger.record("fund:"+customer.getId(),"TEST",List.of(LedgerService.p(customer.getId(),"AVAILABLE","USDT",new BigDecimal("1000")),LedgerService.p(0,"OPENING","USDT",new BigDecimal("-1000"))));

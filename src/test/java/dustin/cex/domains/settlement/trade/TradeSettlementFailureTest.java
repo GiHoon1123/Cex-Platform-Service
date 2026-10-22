@@ -42,6 +42,8 @@ class TradeSettlementFailureTest {
     // 이 테스트는 정산 실행 기록만 검증한다. 원장의 PostgreSQL 제약은 별도 실제 디비 테스트가 담당한다.
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.ledger.LedgerService ledger;
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.security.AuditService audit;
+    // 이 H2 테스트는 정산 실행 기록만 다룬다. KYC 스키마·불변 제약은 전용 PostgreSQL 통합 테스트에서 검증한다.
+    @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.kyc.KycSchemaInitializer kycSchema;
 
     @Autowired
     private TradeSettlementService tradeSettlementService;

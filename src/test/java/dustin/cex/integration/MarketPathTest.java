@@ -209,6 +209,8 @@ class MarketPathTest {
         fees.saveAndFlush(FeeConfig.builder().baseMint("BTC").quoteMint("USDT").feeRate(new BigDecimal("0.001")).feeType("both").isActive(true).build());feeService.loadFeeConfigs();
         User seller=users.saveAndFlush(User.builder().email("isolated-seller@local.test").passwordHash("로그인에 사용하지 않는 격리 검증 계정").build());
         User buyer=users.saveAndFlush(User.builder().email("isolated-buyer@local.test").passwordHash("로그인에 사용하지 않는 격리 검증 계정").build());
+        dustin.cex.domains.kyc.KycFixtures.verified(jdbc,seller.getId());
+        dustin.cex.domains.kyc.KycFixtures.verified(jdbc,buyer.getId());
         balances.saveAndFlush(UserBalance.builder().userId(seller.getId()).mintAddress("BTC").available(new BigDecimal("1")).locked(BigDecimal.ZERO).build());
         balances.saveAndFlush(UserBalance.builder().userId(buyer.getId()).mintAddress("USDT").available(new BigDecimal("1000")).locked(BigDecimal.ZERO).build());
         jdbc.execute(Files.readString(Path.of(System.getenv("CEX_ENGINE_BINARY")).getParent().getParent().getParent().resolve("schema/order_receipts.sql")));

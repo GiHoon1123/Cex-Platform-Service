@@ -22,8 +22,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain)
             throws ServletException,IOException {
         req.setAttribute("requestId",UUID.randomUUID());
-        // 토큰과 기기 등록 응답을 브라우저·중간 프록시 캐시에 남기지 않는다.
-        if(req.getRequestURI().startsWith("/api/auth/") || req.getRequestURI().startsWith("/api/admin/")) res.setHeader("Cache-Control","no-store");
+        // 토큰·기기 등록·개인별 신분 확인 링크를 브라우저와 중간 프록시 캐시에 남기지 않는다.
+        if(req.getRequestURI().startsWith("/api/kyc/") || req.getRequestURI().startsWith("/api/auth/") || req.getRequestURI().startsWith("/api/admin/")) res.setHeader("Cache-Control","no-store");
         String header=req.getHeader("Authorization");
         if(header!=null) {
             try {
