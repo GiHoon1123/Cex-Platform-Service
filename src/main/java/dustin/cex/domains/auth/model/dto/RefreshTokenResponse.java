@@ -17,9 +17,11 @@ import lombok.NoArgsConstructor;
 @Schema(description = "토큰 갱신 응답")
 public class RefreshTokenResponse {
     @Schema(description = "새 Access Token", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    @lombok.ToString.Exclude
     private String accessToken;
     
     @Schema(description = "새 Refresh Token", example = "abc123def456...")
+    @lombok.ToString.Exclude
     private String refreshToken;
     
     @Schema(description = "성공 메시지", example = "Token refreshed successfully")

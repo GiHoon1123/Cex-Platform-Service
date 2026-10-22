@@ -31,6 +31,7 @@ class EngineHttpClientTest {
     @ValueSource(ints = {0, -1})
     void nonpositiveTimeoutIsRejectedAtInitialization(int timeout) {
         var client = new EngineHttpClient();
+        ReflectionTestUtils.setField(client, "serviceToken", "isolated-engine-service-token-32-bytes");
         ReflectionTestUtils.setField(client, "timeoutMs", timeout);
         assertThatThrownBy(client::init).isInstanceOf(IllegalArgumentException.class);
     }
@@ -126,8 +127,24 @@ class EngineHttpClientTest {
         }
     }
 
+    /** 주문·취소·잔액 전달 모두 별도 서비스 신원을 사용하고 고객 JWT를 재사용하지 않는다. */
+    @Test void allEngineCommandsCarryServiceIdentity() throws Exception {
+        var seen=new java.util.concurrent.CopyOnWriteArrayList<String>();
+        var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/api/cex/",exchange->{
+            seen.add(exchange.getRequestHeaders().getFirst("x-engine-service-token"));
+            exchange.getRequestBody().readAllBytes();byte[] bytes=VALID_RECEIPT.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(202,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();
+        });server.start();
+        try {
+            var client=client(server,2000);submit(client);client.cancelOrder(123L,101L,"BTC/USDT");client.syncBalance(101L,"BTC",java.math.BigDecimal.ONE);
+            assertThat(seen).containsExactly("isolated-engine-service-token-32-bytes","isolated-engine-service-token-32-bytes","isolated-engine-service-token-32-bytes");
+        } finally {server.stop(0);}
+    }
+
     private EngineHttpClient client(HttpServer server, int timeout) {
         var client = new EngineHttpClient();
+        ReflectionTestUtils.setField(client, "serviceToken", "isolated-engine-service-token-32-bytes");
         ReflectionTestUtils.setField(client, "engineBaseUrl", "http://127.0.0.1:" + server.getAddress().getPort());
         ReflectionTestUtils.setField(client, "timeoutMs", timeout);
         client.init();

@@ -1,257 +1,105 @@
 package dustin.cex.domains.auth.service;
 
 import java.time.LocalDateTime;
-
+import java.util.*;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import de.mkammerer.argon2.Argon2;
-import de.mkammerer.argon2.Argon2Factory;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import dustin.cex.domains.auth.exception.AuthException;
-import dustin.cex.domains.auth.model.dto.RefreshTokenResponse;
-import dustin.cex.domains.auth.model.dto.SigninRequest;
-import dustin.cex.domains.auth.model.dto.SigninResponse;
-import dustin.cex.domains.auth.model.dto.SignupRequest;
-import dustin.cex.domains.auth.model.dto.SignupResponse;
-import dustin.cex.domains.auth.model.dto.UserResponse;
-import dustin.cex.domains.auth.model.entity.RefreshToken;
-import dustin.cex.domains.auth.model.entity.User;
-import dustin.cex.domains.auth.repository.RefreshTokenRepository;
-import dustin.cex.domains.auth.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import dustin.cex.domains.auth.model.dto.*;
+import dustin.cex.domains.auth.model.entity.*;
+import dustin.cex.domains.auth.repository.*;
+import dustin.cex.domains.security.AuditService;
 
-/**
- * 인증 서비스
- * Auth Service - handles authentication business logic
- */
+/** 세션 교체·회수와 성공 감사는 함께 커밋한다. 거부 감사는 업무 롤백 후 별도로 기록한다. */
 @Service
-@RequiredArgsConstructor
 public class AuthService {
-    
-    private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final JwtService jwtService;
-    
-    private static final Argon2 ARGON2 = Argon2Factory.create();
-    private static final int REFRESH_TOKEN_EXPIRATION_DAYS = 7;
-    
-    /**
-     * 회원가입
-     * Signup
-     */
-    @Transactional
+    private final UserRepository users;
+    private final RefreshTokenRepository tokens;
+    private final JwtService jwt;
+    private final PasswordService passwords;
+    private final AuditService audit;
+    private final TransactionTemplate tx;
+    public AuthService(UserRepository users,RefreshTokenRepository tokens,JwtService jwt,PasswordService passwords,
+            AuditService audit,PlatformTransactionManager manager) {
+        this.users=users;this.tokens=tokens;this.jwt=jwt;this.passwords=passwords;this.audit=audit;
+        tx=new TransactionTemplate(manager);
+    }
     public SignupResponse signup(SignupRequest request) {
-        // 이메일 중복 확인
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new AuthException("Email already exists: " + request.getEmail());
-        }
-        
-        // 비밀번호 해싱
-        String passwordHash = hashPassword(request.getPassword());
-        
-        // 사용자 생성
-        User user = User.builder()
-                .email(request.getEmail())
-                .passwordHash(passwordHash)
-                .username(request.getUsername())
-                .build();
-        
-        user = userRepository.save(user);
-        
-        // 응답 생성
-        UserResponse userResponse = UserResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .username(user.getUsername())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
-        
-        return SignupResponse.builder()
-                .user(userResponse)
-                .message("User created successfully")
-                .build();
+        return attempt(null,"SIGNUP",()->tx.execute(status->{
+            if(users.existsByEmail(request.getEmail())) throw new AuthException("Invalid signup");
+            var user=users.saveAndFlush(User.builder().email(request.getEmail())
+                .passwordHash(passwords.hash(request.getPassword())).username(request.getUsername()).build());
+            audit.record(user.getId(),"SIGNUP","user:"+user.getId(),"SUCCESS","CUSTOMER");
+            return SignupResponse.builder().user(response(user)).message("User created successfully").build();
+        }));
     }
-    
-    /**
-     * 로그인
-     * Signin
-     */
-    @Transactional
     public SigninResponse signin(SigninRequest request) {
-        // 사용자 조회
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new AuthException("Invalid email or password"));
-        
-        // 비밀번호 검증
-        if (!verifyPassword(request.getPassword(), user.getPasswordHash())) {
-            throw new AuthException("Invalid email or password");
-        }
-        
-        // 이전 Refresh Token들 무효화
-        refreshTokenRepository.revokeAllByUserId(user.getId(), LocalDateTime.now());
-        
-        // 새 Refresh Token 생성 및 저장
-        String refreshToken = createRefreshToken(user.getId());
-        
-        // Access Token 생성
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
-        
-        // 응답 생성
-        UserResponse userResponse = UserResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .username(user.getUsername())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
-        
-        return SigninResponse.builder()
-                .user(userResponse)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .message("Login successful")
-                .build();
+        var result=tx.execute(status->{
+            // 사용자 잠금 아래 실패 횟수를 확인하고 기록하여 동시 시도의 한도 우회를 막는다.
+            var user=users.lockByEmail(request.getEmail()).orElse(null);
+            if(user==null) {
+                audit.record(null,"SIGNIN","authentication","DENIED","INVALID_CREDENTIALS");return null;
+            }
+            String target="user:"+user.getId();
+            if(!user.isEnabled() || audit.tooManyFailures(user.getId(),"SIGNIN",target)) {
+                audit.record(user.getId(),"SIGNIN",target,"DENIED","ACCOUNT_UNAVAILABLE");return null;
+            }
+            if(!passwords.verify(request.getPassword(),user.getPasswordHash())) {
+                audit.record(user.getId(),"SIGNIN",target,"DENIED","WRONG_PASSWORD");return null;
+            }
+            tokens.revokeAllByUserId(user.getId(),LocalDateTime.now());
+            var pair=create(user.getId());
+            audit.record(user.getId(),"SIGNIN",target,"SUCCESS","SESSION_REPLACED");
+            return SigninResponse.builder().user(response(user)).accessToken(pair.access()).refreshToken(pair.refresh())
+                .message("Login successful").build();
+        });
+        // 거부 감사까지 커밋된 다음 예외로 바꾼다. 예외로 감사 기록까지 롤백하지 않는다.
+        if(result==null) throw new AuthException("Invalid credentials");return result;
     }
-    
-    /**
-     * Refresh Token 생성 및 DB 저장
-     * Create and store refresh token
-     */
-    @Transactional
-    public String createRefreshToken(Long userId) {
-        // Refresh Token 생성
-        String refreshToken = jwtService.generateRefreshToken();
-        
-        // 토큰 해싱
-        String tokenHash = jwtService.hashRefreshToken(refreshToken);
-        
-        // 만료 시간 설정 (7일)
-        LocalDateTime expiresAt = LocalDateTime.now().plusDays(REFRESH_TOKEN_EXPIRATION_DAYS);
-        
-        // DB에 저장
-        RefreshToken token = RefreshToken.builder()
-                .userId(userId)
-                .tokenHash(tokenHash)
-                .expiresAt(expiresAt)
-                .revoked(false)
-                .build();
-        
-        refreshTokenRepository.save(token);
-        
-        // 원본 토큰 반환 (해싱 전)
-        return refreshToken;
+    public RefreshTokenResponse refreshAccessToken(String raw) {
+        return attempt(null,"REFRESH",()->tx.execute(status->{
+            String hash=jwt.hashRefreshToken(raw);
+            var owner=tokens.findOwnerByHash(hash).orElseThrow(()->new AuthException("Invalid token"));
+            var user=users.lockById(owner).orElseThrow(()->new AuthException("Invalid token"));
+            var token=tokens.lockByHash(hash).orElseThrow(()->new AuthException("Invalid token"));
+            if(!user.isEnabled() || token.getRevoked() || !token.getExpiresAt().isAfter(LocalDateTime.now()))
+                throw new AuthException("Invalid token");
+            // 동일 갱신 토큰의 동시 사용은 행 잠금 뒤 재검사하여 하나만 성공시킨다.
+            token.setRevoked(true); tokens.saveAndFlush(token);
+            var pair=create(user.getId());
+            audit.record(user.getId(),"REFRESH","user:"+user.getId(),"SUCCESS","SESSION_ROTATED");
+            return RefreshTokenResponse.builder().accessToken(pair.access()).refreshToken(pair.refresh())
+                .message("Token refreshed successfully").build();
+        }));
     }
-    
-    /**
-     * Refresh Token 검증 및 새 Access Token 발급
-     * Verify refresh token and issue new access token
-     */
-    @Transactional
-    public RefreshTokenResponse refreshAccessToken(String refreshToken) {
-        // Refresh Token 해싱
-        String tokenHash = jwtService.hashRefreshToken(refreshToken);
-        
-        // DB에서 조회
-        RefreshToken storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new AuthException("Invalid or expired refresh token"));
-        
-        // 토큰 유효성 검증
-        if (storedToken.getRevoked()) {
-            throw new AuthException("Invalid or expired refresh token");
-        }
-        
-        if (storedToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new AuthException("Invalid or expired refresh token");
-        }
-        
-        // 사용자 정보 조회
-        User user = userRepository.findById(storedToken.getUserId())
-                .orElseThrow(() -> new AuthException("User not found"));
-        
-        // 새 Access Token 생성
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
-        
-        // 기존 Refresh Token 무효화
-        storedToken.setRevoked(true);
-        storedToken.setUpdatedAt(LocalDateTime.now());
-        refreshTokenRepository.save(storedToken);
-        
-        // 새 Refresh Token 생성 (Rotation - 보안 강화)
-        String newRefreshToken = createRefreshToken(user.getId());
-        
-        return RefreshTokenResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(newRefreshToken)
-                .message("Token refreshed successfully")
-                .build();
+    public void logout(long userId,UUID sessionId,String raw) {
+        attempt(userId,"LOGOUT",()->tx.execute(status->{
+            users.lockById(userId).orElseThrow(()->new AuthException("Invalid token"));
+            var token=tokens.lockByHash(jwt.hashRefreshToken(raw)).orElseThrow(()->new AuthException("Invalid token"));
+            if(token.getUserId()!=userId || !token.getSessionId().equals(sessionId) || token.getRevoked())
+                throw new AuthException("Invalid token");
+            token.setRevoked(true);tokens.save(token);
+            audit.record(userId,"LOGOUT","user:"+userId,"SUCCESS","SESSION_REVOKED");
+            return null;
+        }));
     }
-    
-    /**
-     * 로그아웃 - Refresh Token 무효화
-     * Logout - Revoke refresh token
-     */
-    @Transactional
-    public void logout(String refreshToken) {
-        // Refresh Token 해싱
-        String tokenHash = jwtService.hashRefreshToken(refreshToken);
-        
-        // 토큰 무효화
-        RefreshToken storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new AuthException("Invalid token"));
-        
-        storedToken.setRevoked(true);
-        storedToken.setUpdatedAt(LocalDateTime.now());
-        refreshTokenRepository.save(storedToken);
+    private record Pair(String access,String refresh) {}
+    private Pair create(long userId) {
+        String raw=jwt.generateRefreshToken();
+        var token=tokens.save(RefreshToken.builder().userId(userId).tokenHash(jwt.hashRefreshToken(raw))
+            .expiresAt(LocalDateTime.now().plusDays(7)).build());
+        return new Pair(jwt.generateAccessToken(userId,token.getSessionId()),raw);
     }
-    
-    /**
-     * 사용자의 모든 Refresh Token 무효화 (모든 기기에서 로그아웃)
-     * Revoke all refresh tokens for user (logout from all devices)
-     */
-    @Transactional
-    public void logoutAllDevices(Long userId) {
-        refreshTokenRepository.revokeAllByUserId(userId, LocalDateTime.now());
+    private <T> T attempt(Long actor,String action,java.util.function.Supplier<T> operation) {
+        try { return operation.get(); }
+        catch(AuthException denied) { audit.denied(actor,action,"authentication","INVALID_CREDENTIALS");throw denied; }
     }
-    
-    /**
-     * 사용자 정보 조회
-     * Get user info
-     */
     public UserResponse getUserInfo(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AuthException("User not found"));
-        
-        return UserResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .username(user.getUsername())
-                .createdAt(user.getCreatedAt())
-                .updatedAt(user.getUpdatedAt())
-                .build();
+        return response(users.findById(userId).orElseThrow(()->new AuthException("User not found")));
     }
-    
-    /**
-     * 비밀번호 해싱
-     * Hash password
-     */
-    private String hashPassword(String password) {
-        try {
-            return ARGON2.hash(10, 65536, 1, password.toCharArray());
-        } catch (Exception e) {
-            throw new AuthException("Failed to hash password: " + e.getMessage());
-        }
-    }
-    
-    /**
-     * 비밀번호 검증
-     * Verify password
-     */
-    private boolean verifyPassword(String password, String passwordHash) {
-        try {
-            return ARGON2.verify(passwordHash, password.toCharArray());
-        } catch (Exception e) {
-            return false;
-        }
+    private UserResponse response(User user) {
+        return UserResponse.builder().id(user.getId()).email(user.getEmail()).username(user.getUsername())
+            .createdAt(user.getCreatedAt()).updatedAt(user.getUpdatedAt()).build();
     }
 }

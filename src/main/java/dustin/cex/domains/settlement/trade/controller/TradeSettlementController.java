@@ -12,15 +12,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import dustin.cex.domains.settlement.trade.scheduler.TradeSettlementScheduler;
 import dustin.cex.domains.settlement.trade.service.TradeReportService;
 import dustin.cex.domains.settlement.trade.service.TradeSettlementService;
-import dustin.cex.domains.settlement.trade.service.TradeSettlementValidator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,12 +28,10 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 거래 정산 컨트롤러
- * Trade Settlement Controller
  * 
  * 역할:
  * - 거래 정산 리포트 조회 REST API 엔드포인트 제공
  * - 수수료 수익 조회 API 제공
- * - 거래 정산 검증 API 제공
  * 
  * 하위 도메인 분리:
  * ================
@@ -50,7 +45,6 @@ import lombok.extern.slf4j.Slf4j;
  * - GET /api/settlement/trade/revenue/daily - 일별 수수료 수익 조회
  * - GET /api/settlement/trade/revenue/monthly - 월별 수수료 수익 조회
  * - GET /api/settlement/trade/revenue/by-pair - 거래쌍별 수수료 수익 조회
- * - POST /api/settlement/trade/validate/{date} - 정산 검증 실행
  * - GET /api/settlement/trade/validation-status/{date} - 정산 검증 상태 조회
  * - GET /api/settlement/trade/report/daily/{date} - 일별 정산 리포트 조회
  * - GET /api/settlement/trade/report/monthly/{year}/{month} - 월별 정산 리포트 조회
@@ -65,8 +59,6 @@ public class TradeSettlementController {
     
     private final TradeReportService tradeReportService;
     private final TradeSettlementService tradeSettlementService;
-    private final TradeSettlementValidator tradeSettlementValidator;
-    private final TradeSettlementScheduler tradeSettlementScheduler;
     
     /**
      * 일별 수수료 수익 조회
@@ -244,71 +236,7 @@ public class TradeSettlementController {
         }
     }
     
-    /**
-     * 정산 검증 실행
-     * Execute Settlement Validation
-     * 
-     * POST /api/settlement/trade/validate/2026-01-28
-     * 
-     * @param date 검증할 날짜 (YYYY-MM-DD 형식)
-     * @return 검증 결과
-     */
-    @Operation(
-            summary = "거래 정산 검증 실행",
-            description = "특정 날짜의 거래 정산 데이터에 대한 복식부기 검증을 실행합니다.\n\n" +
-                         "**경로 변수:**\n" +
-                         "- `date` (필수): 검증할 날짜 (YYYY-MM-DD 형식)\n\n" +
-                         "**응답 예시:**\n" +
-                         "```json\n" +
-                         "{\n" +
-                         "  \"date\": \"2026-01-28\",\n" +
-                         "  \"status\": \"validated\",\n" +
-                         "  \"totalTrades\": 1000,\n" +
-                         "  \"totalTradeVolume\": 1000000.0,\n" +
-                         "  \"totalFeeRevenue\": 200.0,\n" +
-                         "  \"errors\": []\n" +
-                         "}\n" +
-                         "```"
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "검증 완료"),
-            @ApiResponse(responseCode = "400", description = "잘못된 요청", content = @Content)
-    })
-    @PostMapping("/validate/{date}")
-    public ResponseEntity<Map<String, Object>> validateSettlement(
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
-        log.info("[TradeSettlementController] 거래 정산 검증 실행 요청: date={}", date);
-        
-        try {
-            TradeSettlementValidator.ValidationResult result = tradeSettlementValidator.validateDoubleEntryBookkeeping(date);
-            
-            // 검증 결과를 DB에 저장 (상태를 대문자로 변환)
-            String errorMessage = result.getErrors().isEmpty() ? null : String.join("; ", result.getErrors());
-            String finalStatus = "validated".equals(result.getStatus()) ? "VALIDATED" : "FAILED";
-            tradeSettlementService.updateValidationStatus(date, finalStatus, errorMessage);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("date", result.getDate());
-            response.put("status", result.getStatus());
-            response.put("totalTrades", result.getTotalTrades());
-            response.put("totalTradeVolume", result.getTotalTradeVolume());
-            response.put("totalFeeRevenue", result.getTotalFeeRevenue());
-            response.put("totalUserBalances", result.getTotalUserBalances());
-            response.put("errors", result.getErrors());
-            response.put("startTime", result.getStartTime());
-            response.put("endTime", result.getEndTime());
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("[TradeSettlementController] 거래 정산 검증 실행 실패: date={}", date, e);
-            
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
-    }
+
     
     /**
      * 정산 검증 상태 조회
@@ -568,57 +496,7 @@ public class TradeSettlementController {
         }
     }
     
-    /**
-     * 수동 일별 정산 실행 (전체 4단계: 스냅샷 → 집계 → 사용자별 → 검증)
-     * Manual Daily Settlement Execution (full 4-step flow, same as 00:00 scheduler)
-     *
-     * POST /api/settlement/trade/manual/daily?date=2026-01-30&forceRecreate=false
-     *
-     * @param date 정산할 날짜
-     * @param forceRecreate true면 2단계에서 기존 정산 삭제 후 재생성, false면 단계별 재개
-     * @return 정산 결과
-     */
-    @Operation(
-            summary = "수동 일별 정산 실행 (전체 4단계)",
-            description = "특정 날짜의 일별 정산을 수동으로 실행합니다. 스케줄러와 동일한 4단계(스냅샷→집계→사용자별→검증)를 수행합니다."
-    )
-    @PostMapping("/manual/daily")
-    public ResponseEntity<Map<String, Object>> manualDailySettlement(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam(required = false, defaultValue = "false") boolean forceRecreate) {
 
-        log.info("[TradeSettlementController] 수동 일별 정산 실행 요청 (전체 4단계): date={}, forceRecreate={}", date, forceRecreate);
-
-        try {
-            // 스케줄러와 동일한 4단계 전체 실행 (trade_settlement_runs, trade_settlement_failures 포함)
-            tradeSettlementScheduler.runDailySettlementForDate(date, forceRecreate);
-            
-            // 정산 결과 조회
-            dustin.cex.domains.settlement.trade.model.entity.TradeSettlement settlement = tradeSettlementService.getSettlementByDate(date);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("date", date);
-            response.put("settlementId", settlement.getId());
-            response.put("validationStatus", settlement.getValidationStatus());
-            response.put("codeVersion", settlement.getCodeVersion());
-            response.put("policyVersion", settlement.getPolicyVersion());
-            response.put("totalTrades", settlement.getTotalTrades());
-            response.put("totalVolume", settlement.getTotalVolume());
-            response.put("totalFeeRevenue", settlement.getTotalFeeRevenue());
-            response.put("message", "정산이 성공적으로 실행되었습니다.");
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("[TradeSettlementController] 수동 일별 정산 실행 실패: date={}", date, e);
-            
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("error", e.getMessage());
-            
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
-        }
-    }
     
     /**
      * 정산 상세 정보 조회 (감사 로그, 아이템 포함)

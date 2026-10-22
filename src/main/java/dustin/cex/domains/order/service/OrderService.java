@@ -72,6 +72,7 @@ public class OrderService {
     private final dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
     private final OrderDispatchService dispatch;
     private final dustin.cex.domains.ledger.LedgerService ledger;
+    private final dustin.cex.domains.security.TradingAccessPolicy access;
     
     /**
      * ObjectMapper 초기화 (JavaTimeModule 등록)
@@ -93,8 +94,8 @@ public class OrderService {
             KafkaEventProducer kafkaEventProducer,
             PlatformTransactionManager transactionManager,
             dustin.cex.domains.fee.service.FeeConfigService feeConfigService,
-            dustin.cex.domains.order.repository.OrderDispatchRepository dispatches, OrderDispatchService dispatch, dustin.cex.domains.ledger.LedgerService ledger) {
-        this.ledger=ledger;
+            dustin.cex.domains.order.repository.OrderDispatchRepository dispatches, OrderDispatchService dispatch, dustin.cex.domains.ledger.LedgerService ledger, dustin.cex.domains.security.TradingAccessPolicy access) {
+        this.ledger=ledger;this.access=access;
         this.dispatches=dispatches; this.dispatch=dispatch;
         this.feeConfigService = feeConfigService;
         this.orderRepository = orderRepository;
@@ -131,6 +132,8 @@ public class OrderService {
         Order savedOrder;
         try {
             savedOrder = transactionTemplate.execute(status -> {
+                // 제한 변경과 신규 예약이 사용자 행에서 순서를 정한다. 기존 접수 재조회는 허용한다.
+                access.requireNewOrder(userId);
                 Order order = orderRepository.save(buildOrderEntity(userId, command));
                 // 원본 명령·키·주문·예약을 같은 트랜잭션에 기록한다. 유일 제약 경쟁에서
                 // 진 요청은 여기서 실패하며 주문 행도 롤백된다. 잔액을 먼저 변경하지 않는다.
@@ -142,6 +145,7 @@ public class OrderService {
                     dustin.cex.domains.ledger.LedgerService.p(userId,"AVAILABLE",command.reservationMint(),command.reservationAmount().negate()),
                     dustin.cex.domains.ledger.LedgerService.p(userId,"LOCKED",command.reservationMint(),command.reservationAmount())));
                 dispatches.save(new dustin.cex.domains.order.model.entity.OrderDispatch(order));
+                access.recordReservation(userId,order.getId());
                 return order;
             });
         } catch (DataIntegrityViolationException exception) {
@@ -307,9 +311,13 @@ public class OrderService {
      * 순서가 보장된 엔진 결과 소비자가 함께 확정한다.
      */
     public OrderResponse cancelOrder(Long userId, Long orderId) {
-        Order order = transactionTemplate.execute(status ->
-            orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId)));
+        Order order = transactionTemplate.execute(status -> {
+            var owned=orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
+                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
+            // 외부 효과 이전에 의도를 영속 기록한다. 취소 확정은 엔진 결과로 따로 확인한다.
+            access.recordCancellationIntent(userId,orderId);
+            return owned;
+        });
         if ("filled".equals(order.getStatus()) || "rejected".equals(order.getStatus()) || "expired".equals(order.getStatus())) {
             throw new IllegalArgumentException("종료된 주문은 취소할 수 없습니다");
         }

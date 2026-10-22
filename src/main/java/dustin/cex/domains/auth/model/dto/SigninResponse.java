@@ -20,9 +20,11 @@ public class SigninResponse {
     private UserResponse user;
     
     @Schema(description = "JWT Access Token (짧은 수명)", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    @lombok.ToString.Exclude
     private String accessToken;
     
     @Schema(description = "Refresh Token (긴 수명, DB에 저장)", example = "abc123def456...")
+    @lombok.ToString.Exclude
     private String refreshToken;
     
     @Schema(description = "성공 메시지", example = "Login successful")

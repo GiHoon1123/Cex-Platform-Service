@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
  * - 연결 재사용 (RestTemplate 기본 동작)
  * 
  * 인증:
- * - Rust 엔진의 주문 생성/취소 API는 인증 불필요 (Java에서 인증 처리)
+ * - 고객 권한은 플랫폼에서 검증하며 엔진에는 별도 서비스 키로 플랫폼 신원을 증명한다.
  * - user_id는 요청 본문(생성) 또는 쿼리 파라미터(취소)로 전달
  */
 @Slf4j
@@ -52,6 +52,9 @@ public class EngineHttpClient {
     @Value("${engine.http.timeout:5000}")
     private int timeoutMs;
     
+    @Value("${engine.service.token}")
+    private String serviceToken;
+
     private RestTemplate restTemplate;
     private ObjectMapper objectMapper;
     
@@ -66,6 +69,8 @@ public class EngineHttpClient {
         if (timeoutMs <= 0) {
             throw new IllegalArgumentException("engine.http.timeout은 양수여야 합니다");
         }
+        if(serviceToken == null || serviceToken.length()<32 || serviceToken.length()>1024)
+            throw new IllegalArgumentException("엔진 서비스 키는 32~1024자여야 합니다");
         var requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
@@ -114,6 +119,7 @@ public class EngineHttpClient {
             // HTTP 헤더 설정
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-engine-service-token",serviceToken);
             
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
             
@@ -166,6 +172,7 @@ public class EngineHttpClient {
             // HTTP 헤더 설정
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-engine-service-token",serviceToken);
             
             HttpEntity<String> requestEntity = new HttpEntity<>(headers);
             
@@ -217,6 +224,7 @@ public class EngineHttpClient {
             // HTTP 헤더 설정
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-engine-service-token",serviceToken);
             
             HttpEntity<String> requestEntity = new HttpEntity<>(requestBody, headers);
             

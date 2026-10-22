@@ -22,7 +22,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * Refresh Token 엔티티
- * Refresh Token Entity
  */
 @Entity
 @Table(name = "refresh_tokens", indexes = {
@@ -36,6 +35,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RefreshToken {
     
+    // 접근 토큰을 영속 세션과 연결한다. 토큰 회수 후에는 접근 토큰도 사용할 수 없다.
+    @Column(nullable = false, unique = true, updatable = false)
+    @Builder.Default
+    private java.util.UUID sessionId = java.util.UUID.randomUUID();
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -48,6 +52,7 @@ public class RefreshToken {
     private User user;
     
     @Column(name = "token_hash", nullable = false, unique = true, columnDefinition = "TEXT")
+    @lombok.ToString.Exclude
     private String tokenHash;
     
     @Column(name = "expires_at", nullable = false)

@@ -22,6 +22,13 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
      * Find refresh token by token hash
      */
     Optional<RefreshToken> findByTokenHash(String tokenHash);
+    @Query("select t.userId from RefreshToken t where t.tokenHash = :hash")
+    Optional<Long> findOwnerByHash(@Param("hash") String hash);
+    Optional<RefreshToken> findBySessionId(java.util.UUID sessionId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from RefreshToken t where t.tokenHash = :hash")
+    Optional<RefreshToken> lockByHash(@Param("hash") String hash);
     
     /**
      * 사용자의 모든 Refresh Token 무효화

@@ -18,7 +18,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 사용자 엔티티
- * User Entity
  */
 @Entity
 @Table(name = "users", indexes = {
@@ -30,6 +29,27 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class User {
     
+    // 공개 가입에는 역할 입력을 받지 않는다. 운영 권한은 별도 명시적 초기화로만 부여한다.
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private UserRole role = UserRole.CUSTOMER;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean enabled = true;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean tradingRestricted = false;
+
+    // 같은 사람이 계정을 두 개 만들어 자기 승인을 하는 경우까지 차단할 식별자다.
+    // 신원 확인과 식별자 발급의 신뢰성은 조직의 인사·권한 부여 절차가 책임진다.
+    private java.util.UUID operatorPersonId;
+
+    @jakarta.persistence.Version
+    private long version;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -38,6 +58,7 @@ public class User {
     private String email;
     
     @Column(name = "password_hash", nullable = false, length = 255)
+    @lombok.ToString.Exclude
     private String passwordHash;
     
     @Column(length = 100)

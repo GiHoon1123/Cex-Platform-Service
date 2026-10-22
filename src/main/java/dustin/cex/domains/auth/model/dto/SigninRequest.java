@@ -24,5 +24,7 @@ public class SigninRequest {
     
     @Schema(description = "비밀번호", example = "password123", required = true)
     @NotBlank(message = "비밀번호는 필수입니다")
+    @jakarta.validation.constraints.Size(max = 256)
+    @lombok.ToString.Exclude
     private String password;
 }

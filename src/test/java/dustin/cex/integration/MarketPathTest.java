@@ -37,10 +37,17 @@ class MarketPathTest {
     @DynamicPropertySource static void endpoints(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",()->System.getenv("CEX_TEST_DATABASE_URL"));
         registry.add("spring.kafka.bootstrap-servers",()->System.getenv("CEX_TEST_KAFKA"));
+        registry.add("engine.service.token",()->System.getenv("CEX_TEST_SERVICE_TOKEN"));
         registry.add("engine.audit.token",()->System.getenv("CEX_TEST_AUDIT_TOKEN"));
         registry.add("engine.http.url",()->System.getenv("CEX_TEST_ENGINE_URL"));
     }
     @LocalServerPort int port;
+    @Autowired dustin.cex.domains.auth.repository.RefreshTokenRepository sessions;
+    String token(User user) {
+        var session=sessions.save(dustin.cex.domains.auth.model.entity.RefreshToken.builder().userId(user.getId())
+            .tokenHash(UUID.randomUUID().toString()).expiresAt(java.time.LocalDateTime.now().plusDays(1)).build());
+        return jwt.generateAccessToken(user.getId(),session.getSessionId());
+    }
     @Autowired UserRepository users; @Autowired UserBalanceRepository balances; @Autowired OrderRepository orders;
     @Autowired BotService bots; @Autowired MarketService market; @Autowired JwtService jwt;
     @Autowired dustin.cex.shared.kafka.KafkaOrderEventConsumer financial;
@@ -56,6 +63,7 @@ class MarketPathTest {
         var env=builder.environment();
         env.put("DATABASE_HOST",System.getenv("CEX_TEST_DATABASE_URL").replace("jdbc:postgresql://","").replace("/cex",""));
         env.put("ENGINE_HTTP_ADDRESS",URI.create(System.getenv("CEX_TEST_ENGINE_URL")).getAuthority());
+        env.put("ENGINE_SERVICE_TOKEN",System.getenv("CEX_TEST_SERVICE_TOKEN"));
         env.put("ENGINE_AUDIT_TOKEN",System.getenv("CEX_TEST_AUDIT_TOKEN"));
         env.put("ENGINE_DATA_DIR",System.getenv("CEX_ENGINE_DATA_DIR"));env.put("KAFKA_BOOTSTRAP_SERVERS",System.getenv("CEX_TEST_KAFKA"));
         var log=new java.io.File(System.getenv("CEX_ENGINE_LOG"));
@@ -87,7 +95,7 @@ class MarketPathTest {
     }
 
     long place(User user, String body) throws Exception {
-        var response=request("/api/cex/orders","POST",body,jwt.generateAccessToken(user.getId(),user.getEmail()),UUID.randomUUID().toString());
+        var response=request("/api/cex/orders","POST",body,token(user),UUID.randomUUID().toString());
         assertEquals(201,response.statusCode(),response.body());
         return Long.parseLong(mapper.readTree(response.body()).path("order").path("id").asText());
     }
@@ -121,7 +129,7 @@ class MarketPathTest {
         long partialBuy=marketOrder(buyer,true,"100"); completed(partialBuy,"expired","0.001","60");
         assertEquals(0,available(buyer,"USDT").compareTo(before.subtract(new BigDecimal("60"))));
         assertEquals(0,available(buyer,"BTC").compareTo(receivedBefore.add(new BigDecimal("0.000998")))); noReservation(buyer,"USDT");
-        var detail=request("/api/cex/orders/"+partialBuy,"GET",null,jwt.generateAccessToken(buyer.getId(),buyer.getEmail()),null);
+        var detail=request("/api/cex/orders/"+partialBuy,"GET",null,token(buyer),null);
         assertEquals(200,detail.statusCode());
         assertEquals(0,new BigDecimal(mapper.readTree(detail.body()).path("order").path("quoteAmount").asText()).compareTo(new BigDecimal("100")));
         assertEquals(0,new BigDecimal(mapper.readTree(detail.body()).path("order").path("amount").asText()).signum());
@@ -137,7 +145,7 @@ class MarketPathTest {
         long dustMaker=place(seller,limitBody(false,"3","0.5")); before=available(buyer,"USDT");
         long dust=marketOrder(buyer,true,"1"); completed(dust,"expired","0.333333333","0.999999999");
         assertEquals(0,available(buyer,"USDT").compareTo(before.subtract(new BigDecimal("0.999999999")))); noReservation(buyer,"USDT");
-        var cancel=request("/api/cex/orders/"+dustMaker,"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null);
+        var cancel=request("/api/cex/orders/"+dustMaker,"DELETE",null,token(seller),null);
         assertEquals(202,cancel.statusCode());
         await().atMost(Duration.ofSeconds(30)).untilAsserted(()->assertEquals("cancelled",orders.findById(dustMaker).orElseThrow().getStatus()));
         noReservation(seller,"BTC");
@@ -149,7 +157,7 @@ class MarketPathTest {
         long multiLevel=marketOrder(buyer,true,"0.25"); completed(multiLevel,"filled","0.00175","0.25");
         assertEquals(0,available(buyer,"USDT").compareTo(before.subtract(new BigDecimal("0.25"))));
         assertEquals(0,available(buyer,"BTC").compareTo(receivedBefore.add(new BigDecimal("0.0017465")))); noReservation(buyer,"USDT");
-        var cancelLevel=request("/api/cex/orders/"+secondLevel,"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null);
+        var cancelLevel=request("/api/cex/orders/"+secondLevel,"DELETE",null,token(seller),null);
         assertEquals(202,cancelLevel.statusCode());
         await().atMost(Duration.ofSeconds(30)).untilAsserted(()->assertEquals("cancelled",orders.findById(secondLevel).orElseThrow().getStatus()));
         noReservation(seller,"BTC");
@@ -162,7 +170,7 @@ class MarketPathTest {
         completed(rejected,"rejected","0","0");
         assertEquals(0,available(buyer,"USDT").compareTo(before)); noReservation(buyer,"USDT");
         assertEquals(0,orders.findById(rejectionMaker).orElseThrow().getFilledAmount().signum());
-        assertEquals(202,request("/api/cex/orders/"+rejectionMaker,"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null).statusCode());
+        assertEquals(202,request("/api/cex/orders/"+rejectionMaker,"DELETE",null,token(seller),null).statusCode());
         await().atMost(Duration.ofSeconds(30)).untilAsserted(()->assertEquals("cancelled",orders.findById(rejectionMaker).orElseThrow().getStatus()));
         noReservation(seller,"BTC");
 
@@ -213,7 +221,7 @@ class MarketPathTest {
             // 이미 접수한 매도 주문은 기존 적용률을 유지하고 이후 매수 주문만 새 적용률을 쓴다.
             var current = fees.findByIsActiveTrue().getFirst(); current.setFeeRate(new BigDecimal("0.002")); fees.saveAndFlush(current); feeService.loadFeeConfigs();
             String body="{\"orderType\":\"buy\",\"orderSide\":\"limit\",\"baseMint\":\"BTC\",\"quoteMint\":\"USDT\",\"price\":\"60000\",\"amount\":\"0.001\"}";
-            String key=UUID.randomUUID().toString(),token=jwt.generateAccessToken(buyer.getId(),buyer.getEmail());
+            String key=UUID.randomUUID().toString(),token=token(buyer);
             var accepted=request("/api/cex/orders","POST",body,token,key);assertEquals(201,accepted.statusCode(),accepted.body());
             await().atMost(Duration.ofSeconds(30)).ignoreException(org.springframework.web.server.ResponseStatusException.class).untilAsserted(()-> {
                 var view=market.view("BTC","USDT");assertEquals("0.002",view.book().asks().getFirst().get(1));assertEquals(1,view.trades().size());
@@ -249,7 +257,7 @@ class MarketPathTest {
             assertEquals(200,request("/api/cex/orders","POST",body,token,key).statusCode());
             var frame=mapper.readTree(socketSnapshot());assertEquals("BTC",frame.path("book").path("base_mint").asText());assertEquals(3,frame.path("trades").size());
             assertEquals(1,market.candles("BTC","USDT").size());
-            var cancel=request("/api/cex/orders/"+extraSell.getOrder().getId(),"DELETE",null,jwt.generateAccessToken(seller.getId(),seller.getEmail()),null);assertEquals(202,cancel.statusCode(),cancel.body());
+            var cancel=request("/api/cex/orders/"+extraSell.getOrder().getId(),"DELETE",null,token(seller),null);assertEquals(202,cancel.statusCode(),cancel.body());
             await().atMost(Duration.ofSeconds(30)).ignoreException(org.springframework.web.server.ResponseStatusException.class).untilAsserted(()-> {
                 assertTrue(market.view("BTC","USDT").book().asks().isEmpty());
                 assertEquals("cancelled",orders.findById(Long.parseLong(extraSell.getOrder().getId())).orElseThrow().getStatus());
@@ -294,6 +302,8 @@ class MarketPathTest {
                 "--spring.kafka.listener.auto-startup=false","--spring.kafka.bootstrap-servers="+System.getenv("CEX_TEST_KAFKA"),
                 "--spring.datasource.url="+System.getenv("CEX_TEST_DATABASE_URL"),"--spring.jpa.hibernate.ddl-auto=validate",
                 "--engine.http.url="+System.getenv("CEX_TEST_ENGINE_URL"));
+            cli.environment().put("JWT_SECRET","isolated-market-verification-secret-key-only");
+            cli.environment().put("ENGINE_SERVICE_TOKEN",System.getenv("CEX_TEST_SERVICE_TOKEN"));
             cli.environment().put("ENGINE_AUDIT_TOKEN",System.getenv("CEX_TEST_AUDIT_TOKEN"));
             var checker=cli.redirectErrorStream(true).redirectOutput(cliLog).start();
             try { assertTrue(checker.waitFor(40,TimeUnit.SECONDS),"대사 명령 종료 시간 초과"); assertEquals(0,checker.exitValue(),()->{try{return Files.readString(cliLog.toPath());}catch(Exception e){return e.toString();}}); }

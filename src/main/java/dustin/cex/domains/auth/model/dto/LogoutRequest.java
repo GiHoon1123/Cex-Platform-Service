@@ -18,5 +18,6 @@ public class LogoutRequest {
     
     @Schema(description = "Refresh Token", example = "abc123def456...", required = true)
     @NotBlank(message = "Refresh Token은 필수입니다")
+    @lombok.ToString.Exclude
     private String refreshToken;
 }

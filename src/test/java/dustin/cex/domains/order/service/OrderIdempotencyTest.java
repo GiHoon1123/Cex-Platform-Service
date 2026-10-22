@@ -57,6 +57,7 @@ class OrderIdempotencyTest {
     @SpyBean OrderSubmissionRepository submissions;
     @MockBean dustin.cex.domains.fee.service.FeeConfigService feeService;
     @MockBean dustin.cex.domains.ledger.LedgerService ledger;
+    @MockBean dustin.cex.domains.security.TradingAccessPolicy access;
     @MockBean EngineHttpClient engine;
     @MockBean KafkaEventProducer kafka;
 
@@ -229,7 +230,7 @@ class OrderIdempotencyTest {
         var key = UUID.randomUUID();
         service.createOrder(101L, key, limit());
         // 메모리 상태가 없는 새 서비스 인스턴스도 DB의 같은 접수 기록을 사용한다.
-        var fresh = new OrderService(orders, submissions, balances, engine, kafka, transactions, feeService, dispatches, dispatch, ledger);
+        var fresh = new OrderService(orders, submissions, balances, engine, kafka, transactions, feeService, dispatches, dispatch, ledger, access);
         assertThat(fresh.createOrder(101L, key, limit()).created()).isFalse();
         assertSingleReservation();
     }

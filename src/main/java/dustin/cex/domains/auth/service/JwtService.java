@@ -1,106 +1,51 @@
 package dustin.cex.domains.auth.service;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.SecureRandom;
+import java.security.*;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.Date;
+import java.util.*;
 
-/**
- * JWT 서비스
- * JWT Service for token generation and verification
- */
+/** 서명·발급자·수신자·용도를 검증한 뒤에도 영속 세션과 현재 권한을 별도로 확인한다. */
 @Service
 public class JwtService {
-    
-    private final SecretKey secretKey;
-    private final SecureRandom secureRandom;
-    
-    public JwtService(@Value("${jwt.secret:cex-engine-jwt-secret-key-2024-production}") String secret) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.secureRandom = new SecureRandom();
+    private final SecretKey key;
+    private final SecureRandom random=new SecureRandom();
+    public JwtService(@Value("${jwt.secret}") String secret) {
+        if(secret.getBytes(StandardCharsets.UTF_8).length<32) throw new IllegalArgumentException("JWT 비밀키는 32바이트 이상이어야 합니다");
+        key=Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
-    
-    /**
-     * Access Token 발급 (1시간 만료)
-     * Generate Access Token (1 hour expiration)
-     */
-    public String generateAccessToken(Long userId, String email) {
-        Instant now = Instant.now();
-        Instant expiration = now.plus(1, ChronoUnit.HOURS);
-        
-        return Jwts.builder()
-                .subject(String.valueOf(userId))
-                .claim("email", email)
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiration))
-                .signWith(secretKey)
-                .compact();
+    public String generateAccessToken(Long userId,UUID sessionId) {
+        Instant now=Instant.now();
+        return Jwts.builder().issuer("cex-platform").audience().add("cex-api").and()
+            .subject(userId.toString()).claim("type","access").claim("sid",sessionId.toString())
+            .issuedAt(Date.from(now)).expiration(Date.from(now.plusSeconds(900)))
+            .signWith(key,Jwts.SIG.HS256).compact();
     }
-    
-    /**
-     * Refresh Token 생성 (랜덤 문자열)
-     * Generate Refresh Token (random string)
-     */
-    public String generateRefreshToken() {
-        byte[] randomBytes = new byte[32];
-        secureRandom.nextBytes(randomBytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
-    }
-    
-    /**
-     * Refresh Token 해싱 (DB 저장용)
-     * Hash Refresh Token (for database storage)
-     */
-    public String hashRefreshToken(String token) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to hash refresh token", e);
-        }
-    }
-    
-    /**
-     * Access Token 검증 및 Claims 추출
-     * Verify Access Token and extract Claims
-     */
     public Claims verifyAccessToken(String token) {
-        try {
-            return Jwts.parser()
-                    .verifyWith(secretKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-        } catch (Exception e) {
-            throw new RuntimeException("Invalid or expired token", e);
-        }
+        var signed=Jwts.parser().verifyWith(key)
+            .requireIssuer("cex-platform").requireAudience("cex-api").require("type","access")
+            .build().parseSignedClaims(token);
+        if(!"HS256".equals(signed.getHeader().getAlgorithm())) throw new IllegalArgumentException("허용하지 않는 서명 알고리즘");
+        var claims=signed.getPayload();
+        if(claims.getExpiration()==null || claims.getIssuedAt()==null
+                || claims.getExpiration().toInstant().isAfter(claims.getIssuedAt().toInstant().plusSeconds(900))
+                || claims.getIssuedAt().toInstant().isAfter(Instant.now()))
+            throw new IllegalArgumentException("잘못된 토큰 수명");
+        if(Long.parseLong(claims.getSubject())<=0) throw new IllegalArgumentException("잘못된 사용자");
+        UUID.fromString(claims.get("sid",String.class));
+        return claims;
     }
-    
-    /**
-     * Access Token에서 사용자 ID 추출
-     * Extract user ID from Access Token
-     */
-    public Long extractUserId(String token) {
-        Claims claims = verifyAccessToken(token);
-        return Long.parseLong(claims.getSubject());
+    public String generateRefreshToken() {
+        byte[] bytes=new byte[32]; random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+    public String hashRefreshToken(String token) {
+        try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8))); }
+        catch(NoSuchAlgorithmException failure) { throw new IllegalStateException(failure); }
     }
 }

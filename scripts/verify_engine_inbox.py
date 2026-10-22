@@ -25,6 +25,8 @@ try:
         time.sleep(0.2)
     address=subprocess.check_output([DOCKER,"port",name,"5432/tcp"],text=True).strip()
     env=os.environ.copy()
+    env["JWT_SECRET"]="isolated-process-jwt-secret-at-least-32-bytes"
+    env["ENGINE_SERVICE_TOKEN"]="isolated-engine-service-token-32-bytes"
     env["SPRING_KAFKA_BOOTSTRAP_SERVERS"]="127.0.0.1:1"
     env["BOT_BOT_COUNT"]="0"
     env["ORDER_DISPATCH_ENABLED"]="false"

@@ -36,6 +36,9 @@ class EngineStub(BaseHTTPRequestHandler):
     lock = threading.Lock()
 
     def do_POST(self):
+        if self.headers.get("x-engine-service-token") != self.service_token:
+            self.send_error(401)
+            return
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))))
         with self.lock:
             self.calls.append(body)
@@ -62,6 +65,8 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         cls.docker = shutil.which("docker") or "/usr/local/bin/docker"
         cls.database = "cex_idempotency_" + uuid4().hex[:12]
         cls.secret = secrets.token_hex(32)
+        cls.service_token = secrets.token_hex(32)
+        EngineStub.service_token = cls.service_token
         cls.process = None
         cls.engine = None
         cls.created_database = False
@@ -109,7 +114,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
                    "--spring.kafka.producer.properties.max.block.ms=500",
                    f"--engine.http.url=http://127.0.0.1:{cls.engine.server_port}", "--engine.http.timeout=300",
                    "--bot.bot-count=0", "--order.dispatch.enabled=false", "--bot.binance-ws-url=ws://127.0.0.1:1",
-                   "--server.address=127.0.0.1", f"--server.port={cls.port}", f"--jwt.secret={cls.secret}",
+                   "--server.address=127.0.0.1", f"--server.port={cls.port}", f"--jwt.secret={cls.secret}", f"--engine.service.token={cls.service_token}",
                    "--spring.jpa.hibernate.ddl-auto=" + ("update" if cls.platform_runs == 1 else "validate")]
         with log_path.open("w") as log:
             cls.process = subprocess.Popen(command, cwd=PROJECT, stdout=log, stderr=subprocess.STDOUT)
@@ -163,16 +168,19 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
             EngineStub.calls.clear()
         # 이 스크립트가 소유한 임시 DB에만 테스트 데이터를 만든다.
         self.sql("DELETE FROM order_dispatches; DELETE FROM order_submissions; DELETE FROM orders; DELETE FROM user_balances")
+        self.sql("INSERT INTO users(id,email,password_hash,role,enabled,trading_restricted,version,created_at,updated_at) VALUES(101,'one@test.invalid','unused','CUSTOMER',true,false,0,now(),now()),(102,'two@test.invalid','unused','CUSTOMER',true,false,0,now(),now()) ON CONFLICT(id) DO NOTHING")
         self.sql("""INSERT INTO user_balances (user_id,mint_address,available,locked,created_at,updated_at)
                     VALUES (101,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
                            (102,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""")
         self.sql((PROJECT/"src/test/resources/ledger-opening-fixture.sql").read_text())
 
     def token(self, user):
+        sid = str(uuid4())
+        self.sql(f"INSERT INTO refresh_tokens(user_id,session_id,token_hash,expires_at,revoked,created_at,updated_at) VALUES({int(user)},'{sid}','{sid}',now()+interval '1 day',false,now(),now())")
         def encode(value):
             return base64.urlsafe_b64encode(json.dumps(value, separators=(",", ":")).encode()).rstrip(b"=").decode()
         unsigned = encode({"alg": "HS256", "typ": "JWT"}) + "." + encode({
-            "sub": str(user), "iat": int(time.time()), "exp": int(time.time()) + 600})
+            "iss":"cex-platform", "aud":"cex-api", "type":"access", "sid":sid, "sub": str(user), "iat": int(time.time()), "exp": int(time.time()) + 600})
         signature = base64.urlsafe_b64encode(hmac.new(self.secret.encode(), unsigned.encode(), hashlib.sha256).digest()).rstrip(b"=").decode()
         return unsigned + "." + signature
 

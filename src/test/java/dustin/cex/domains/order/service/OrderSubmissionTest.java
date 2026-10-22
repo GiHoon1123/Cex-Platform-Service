@@ -68,6 +68,7 @@ class OrderSubmissionTest {
     @Autowired PlatformTransactionManager transactions;
     @MockBean dustin.cex.domains.fee.service.FeeConfigService feeService;
     @MockBean dustin.cex.domains.ledger.LedgerService ledger;
+    @MockBean dustin.cex.domains.security.TradingAccessPolicy access;
     @MockBean EngineHttpClient engine;
     @MockBean KafkaEventProducer kafka;
 
