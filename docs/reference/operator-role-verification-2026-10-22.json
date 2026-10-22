@@ -1,0 +1,268 @@
+{
+  "checked_date": "2026-10-22",
+  "scope": "운영 역할 부여·변경 및 해당 승인·거절의 업무별 추가 인증",
+  "junit": {
+    "tests": 350,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_role_tests": 48,
+  "new_test_methods": 41,
+  "process_scenarios": 12,
+  "results": {
+    "roles": {
+      "container": "cex-operator-roles-b556f41c3f84",
+      "exit": 0,
+      "tests": {
+        "tests": 48,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "lifecycle": {
+      "container": "cex-operator-lifecycle-e786741f7e6b",
+      "exit": 0,
+      "tests": {
+        "tests": 37,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "mfa": {
+      "container": "cex-operator-mfa-c9ed4b7d7e3c",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "access": {
+      "container": "cex-security-23409c72f8d0",
+      "exit": 0,
+      "tests": {
+        "tests": 39,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "financial": {
+      "container": "cex-inbox-be1847f56f62",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "market": {
+      "postgres": "cex-market-pg-e193b017dd",
+      "kafka": "cex-market-broker-f083be352b",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    },
+    "admin_process": {
+      "database": "cex_idempotency_3aa396c6f167",
+      "temporary_database_removed": true,
+      "platform_runs": 1,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "dedicated_grant_without_ddl_or_workers",
+          "passed": true
+        },
+        {
+          "test": "reject_financial_customer_and_duplicate_grant",
+          "passed": true
+        }
+      ]
+    },
+    "orders_process": {
+      "database": "cex_idempotency_fbdf16ddc89b",
+      "temporary_database_removed": true,
+      "platform_runs": 2,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "test_concurrent_same_key",
+          "new": 1,
+          "existing": 11,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_concurrent_same_key_different_content",
+          "new": 1,
+          "existing": 5,
+          "conflicts": 6,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_invalid_balance_and_unrepresentable_split_roll_back_everything",
+          "rollback_cases": 2,
+          "engine_posts": 0
+        },
+        {
+          "test": "test_invalid_header_and_command_have_no_financial_effect",
+          "statuses": [
+            400,
+            400,
+            400
+          ],
+          "engine_posts": 0
+        },
+        {
+          "test": "test_key_is_scoped_to_authenticated_user",
+          "users": 2,
+          "engine_posts": 2
+        },
+        {
+          "test": "test_lost_response_then_same_key",
+          "statuses": [
+            202,
+            200
+          ],
+          "engine_posts": 1
+        },
+        {
+          "test": "test_market_original_budget_survives_order_changes",
+          "quote_amount": "123.250000001",
+          "replay": 200,
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_process_restart_uses_committed_key",
+          "after_restart": 200,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_same_key_different_content",
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_unrepresentable_commands_are_rejected_without_financial_effect",
+          "rejections": 2,
+          "engine_posts": 0
+        }
+      ]
+    },
+    "dependencies": {
+      "checked_at": "2026-10-22T05:30:29.700398+00:00",
+      "status": "NO_KNOWN_FINDINGS",
+      "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+      "package_versions": 222,
+      "findings": []
+    },
+    "integrity": {
+      "check": "gradle_rejects_altered_checksum",
+      "original_cache_modified": false,
+      "gradle_exit": 1,
+      "passed": true,
+      "temporary_copy_removed": true
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_lifecycle.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_mfa.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_platform_security.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_engine_inbox.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_order_idempotency.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0
+    }
+  ],
+  "intermediate_failures": [
+    {
+      "stage": "실제 HTTP 테스트의 컴파일",
+      "cause": "LocalServerPort 패키지 경로 오기",
+      "corrected": "org.springframework.boot.test.web.server.LocalServerPort",
+      "final_retest": 48
+    }
+  ],
+  "limitations": [
+    "선택 회귀이며 전체 저장소 테스트가 아님",
+    "실물 보안키·브라우저·운영 HTTPS·EC2·성능은 미검증",
+    "기존 복구·재검토·거래 제한 승인의 업무별 서명은 후속 범위",
+    "관리 JAR·DB/OS 관리자 및 외부 신원·통지 증적은 별도 신뢰 경계",
+    "배포하지 않음"
+  ]
+}

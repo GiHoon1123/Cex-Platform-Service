@@ -43,3 +43,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 
 - [014. 운영자 WebAuthn 등록·인증](decisions/014-operator-webauthn-mfa.md): 비밀번호 대기 세션, 실제 보안키 서명, 최근 MFA·예비 키와 검증.
 - [015. 분실 기기 폐기·계정 복구·권한 만료와 회수](decisions/015-operator-recovery-and-access-lifecycle.md): 독립 인물 승인·기한 재검토·필수 감사, 비웹 관리 JAR과 실제 프로세스 검증.
+
+- [운영 역할 부여·변경 승인과 업무별 보안키 서명](decisions/016-operator-role-approval-and-bound-authentication.md)
