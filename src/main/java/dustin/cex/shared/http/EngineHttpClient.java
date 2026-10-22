@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -180,7 +180,7 @@ public class EngineHttpClient {
             String[] pair = tradingPair.split("/", -1);
             if (pair.length != 2) throw new IllegalArgumentException("잘못된 거래쌍입니다");
             String url = org.springframework.web.util.UriComponentsBuilder
-                .fromHttpUrl(engineBaseUrl + "/api/cex/orders/" + orderId)
+                .fromUriString(engineBaseUrl + "/api/cex/orders/" + orderId)
                 .queryParam("user_id", userId).queryParam("base_mint", pair[0])
                 .queryParam("quote_mint", pair[1]).build().encode().toUriString();
             ResponseEntity<String> response = restTemplate.exchange(
@@ -299,16 +299,16 @@ public class EngineHttpClient {
             
             // 지정가 주문인 경우 price 추가
             if (price != null && !price.isEmpty()) {
-                ((com.fasterxml.jackson.databind.node.ObjectNode) requestNode)
+                ((tools.jackson.databind.node.ObjectNode) requestNode)
                         .put("price", price);
             }
             
             // 시장가 매수인 경우 quote_amount 추가, 그 외에는 amount 추가
             if ("market".equals(orderSide) && "buy".equals(orderType) && quoteAmount != null && !quoteAmount.isEmpty()) {
-                ((com.fasterxml.jackson.databind.node.ObjectNode) requestNode)
+                ((tools.jackson.databind.node.ObjectNode) requestNode)
                         .put("quote_amount", quoteAmount);
             } else if (amount != null && !amount.isEmpty()) {
-                ((com.fasterxml.jackson.databind.node.ObjectNode) requestNode)
+                ((tools.jackson.databind.node.ObjectNode) requestNode)
                         .put("amount", amount);
             }
             

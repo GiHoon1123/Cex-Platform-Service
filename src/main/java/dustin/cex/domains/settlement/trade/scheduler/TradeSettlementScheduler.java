@@ -4,9 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Recover;
-import org.springframework.retry.annotation.Retryable;
+import org.springframework.resilience.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -71,16 +69,18 @@ public class TradeSettlementScheduler {
      * 
      * 재시도 전략:
      * ===========
-     * - 최대 3회 재시도
-     * - 지수 백오프: 2초 → 4초 → 8초
+     * - 최초 실행 포함 총 3회
+     * - 실패 사이 대기: 2초 → 4초
      * - RuntimeException 발생 시에만 재시도
-     * - 재시도 실패 시 recover 메서드 호출
+     * - 소진 후 마지막 오류 전파
      */
     @Scheduled(cron = "0 0 0 * * ?") // 매일 자정
     @Retryable(
-            retryFor = {RuntimeException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 2000, multiplier = 2)
+            includes = RuntimeException.class,
+            // 최초 실행 한 번과 추가 재시도 두 번으로 기존 총 세 번을 유지한다.
+            maxRetries = 2,
+            delay = 2000,
+            multiplier = 2
     )
     public void createDailySettlement() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
@@ -212,9 +212,11 @@ public class TradeSettlementScheduler {
      */
     @Scheduled(cron = "0 0 0 1 * ?") // 매월 1일 자정
     @Retryable(
-            retryFor = {RuntimeException.class},
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 2000, multiplier = 2)
+            includes = RuntimeException.class,
+            // 최초 실행 한 번과 추가 재시도 두 번으로 기존 총 세 번을 유지한다.
+            maxRetries = 2,
+            delay = 2000,
+            multiplier = 2
     )
     public void createMonthlySettlement() {
         log.info("[TradeSettlementScheduler] 월별 거래 정산 프로세스 배치 작업 시작");
@@ -258,10 +260,15 @@ public class TradeSettlementScheduler {
                         // 개별 사용자 실패는 전체 프로세스를 중단하지 않음
                     }
                 }
+                // 개별 실패를 수집한 뒤 미완료 사실을 전파해 전체 재시도와 실패 관측을 유지한다.
+                if (userSettlementCount < userIds.size()) {
+                    throw new IllegalStateException("사용자별 월별 정산 미완료");
+                }
                 log.info("[TradeSettlementScheduler] 2단계 완료: 사용자별 월별 거래 정산 집계 완료, count={}", userSettlementCount);
             } catch (Exception e) {
                 log.error("[TradeSettlementScheduler] 거래 정산 집계 실패: year={}, month={}", year, month, e);
-                // 거래 정산 실패는 다른 정산을 중단하지 않음
+                // 실패를 삼키면 재시도 프록시가 성공으로 판단한다. 마지막 오류를 위로 전달한다.
+                throw e;
             }
             
             log.info("[TradeSettlementScheduler] 월별 거래 정산 프로세스 배치 작업 완료: year={}, month={}, tradeSettlementId={}, userSettlementCount={}", 
@@ -273,36 +280,6 @@ public class TradeSettlementScheduler {
         }
     }
     
-    /**
-     * 일별 정산 재시도 실패 시 복구 처리
-     * Recover from Daily Settlement Retry Failure
-     * 
-     * 모든 재시도가 실패한 경우 호출됩니다.
-     * 알림 발송, 상태 업데이트 등의 복구 작업을 수행합니다.
-     */
-    @Recover
-    public void recoverDailySettlement(RuntimeException e) {
-        log.error("[TradeSettlementScheduler] 일별 거래 정산 프로세스 재시도 실패 - 복구 처리 시작", e);
-        
-        // TODO: 알림 발송 (이메일, 슬랙 등)
-        // TODO: 실패 상태를 DB에 기록
-        // TODO: 관리자 대시보드에 알림 표시
-        
-        log.error("[TradeSettlementScheduler] 일별 거래 정산 프로세스 복구 처리 완료");
-    }
-    
-    /**
-     * 월별 정산 재시도 실패 시 복구 처리
-     * Recover from Monthly Settlement Retry Failure
-     */
-    @Recover
-    public void recoverMonthlySettlement(RuntimeException e) {
-        log.error("[TradeSettlementScheduler] 월별 거래 정산 프로세스 재시도 실패 - 복구 처리 시작", e);
-        
-        // TODO: 알림 발송 (이메일, 슬랙 등)
-        // TODO: 실패 상태를 DB에 기록
-        // TODO: 관리자 대시보드에 알림 표시
-        
-        log.error("[TradeSettlementScheduler] 월별 거래 정산 프로세스 복구 처리 완료");
-    }
+    // 재시도 소진 후 마지막 오류를 호출자·스케줄러에 전달한다.
+    // 일별 실행 기록은 기존 서비스가 담당한다. 로그만 남기고 성공처럼 삼키지 않는다.
 }

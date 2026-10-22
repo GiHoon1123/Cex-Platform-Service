@@ -12,8 +12,8 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.mock.mockito.*;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.bean.override.mockito.*;
 import org.springframework.test.context.*;
 import org.springframework.test.web.servlet.*;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,7 +21,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.web.server.ResponseStatusException;
-import com.fasterxml.jackson.databind.*;
+import tools.jackson.databind.*;
 import dustin.cex.domains.auth.model.entity.*;
 import dustin.cex.domains.auth.model.dto.*;
 import dustin.cex.domains.auth.repository.*;
@@ -51,10 +51,10 @@ class PlatformSecurityTest {
     @Autowired PasswordService passwords;@Autowired AuthService auth;@Autowired OperatorApprovalService approvals;
     @Autowired TradingAccessPolicy access;@Autowired OrderService orders;@Autowired LedgerService ledger;
     @Autowired PlatformTransactionManager manager;
-    @SpyBean AuditService audit;
-    @MockBean EngineHttpClient engine;
-    @MockBean dustin.cex.shared.kafka.KafkaEventProducer producer;
-    @MockBean dustin.cex.domains.fee.service.FeeConfigService fees;
+    @MockitoSpyBean AuditService audit;
+    @MockitoBean EngineHttpClient engine;
+    @MockitoBean dustin.cex.shared.kafka.KafkaEventProducer producer;
+    @MockitoBean dustin.cex.domains.fee.service.FeeConfigService fees;
     String hash;User customer,operator,approver,auditor;TransactionTemplate tx;
     @BeforeAll void opening() {hash=passwords.hash("security-test-password");tx=new TransactionTemplate(manager);ledger.initializeOpening();}
     User user(UserRole role,UUID person) {
@@ -81,6 +81,20 @@ class PlatformSecurityTest {
         mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andExpect(header().doesNotExist("Location")).andExpect(header().doesNotExist("WWW-Authenticate"));
         mvc.perform(get("/login")).andExpect(status().isUnauthorized()).andExpect(header().doesNotExist("Location"));
+    }
+    @Test void newPathMatchingDoesNotOpenSimilarOrNestedPrivateRoutes() throws Exception {
+        for(String path:List.of("/api/auth/signin-extra","/api/auth/me/extra","/api/admin/requests/extra/private")) {
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+            mvc.perform(get(path).header("Authorization","Bearer "+token(customer))).andExpect(status().isForbidden());
+        }
+    }
+    @Test void corsAllowsOnlyConfiguredFrontendAndReviewedHeaders() throws Exception {
+        mvc.perform(options("/api/cex/orders").header("Origin","http://localhost:3003")
+            .header("Access-Control-Request-Method","POST").header("Access-Control-Request-Headers","Authorization,Content-Type,Idempotency-Key"))
+            .andExpect(status().isOk()).andExpect(header().string("Access-Control-Allow-Origin","http://localhost:3003"));
+        mvc.perform(options("/api/cex/orders").header("Origin","https://untrusted.example")
+            .header("Access-Control-Request-Method","POST")).andExpect(status().isForbidden());
+        verifyNoInteractions(engine);
     }
     @Test void settlementAndPrivateTradeDataAreNotPublic() throws Exception {
         for(String path:List.of("/api/settlement/trade/failures","/api/cex/trades"))

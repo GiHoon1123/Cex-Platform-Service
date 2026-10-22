@@ -1,6 +1,6 @@
 package dustin.cex.domains.bot.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import dustin.cex.domains.bot.model.BinanceOrderbookEntry;
 import dustin.cex.domains.bot.model.BinanceOrderbookUpdate;
 import lombok.extern.slf4j.Slf4j;

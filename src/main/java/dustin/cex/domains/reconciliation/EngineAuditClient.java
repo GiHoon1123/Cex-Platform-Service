@@ -1,6 +1,6 @@
 package dustin.cex.domains.reconciliation;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -21,7 +21,7 @@ public class EngineAuditClient {
     }
     public JsonNode page(long after,Long through,String engineId) {
         if(token.length()<32) throw new IllegalStateException("엔진 감사 조회 키가 필요합니다");
-        var uri=UriComponentsBuilder.fromHttpUrl(baseUrl).path("/internal/audit/results").queryParam("after",after).queryParam("limit",50);
+        var uri=UriComponentsBuilder.fromUriString(baseUrl).path("/internal/audit/results").queryParam("after",after).queryParam("limit",50);
         if(through!=null) uri.queryParam("through",through);
         if(engineId!=null) uri.queryParam("engine_id",engineId);
         var headers=new HttpHeaders();headers.set("x-engine-audit-token",token);

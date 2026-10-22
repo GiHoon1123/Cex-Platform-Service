@@ -1,15 +1,34 @@
-plugins {
-	id 'java'
-	id 'org.springframework.boot' version '3.2.5'
-	id 'io.spring.dependency-management' version '1.1.4'
-	id 'me.champeau.jmh' version '0.7.2'
+// Boot 플러그인 자체의 JSON 의존성도 보안 공지의 수정 버전으로 맞춘다.
+// 애플리케이션 BOM만 바꾸면 빌드 프로세스의 취약 버전은 남으므로 범위를 구분한다.
+buildscript {
+    configurations.classpath {
+        resolutionStrategy.activateDependencyLocking()
+        resolutionStrategy.force 'tools.jackson.core:jackson-core:3.1.8',
+                'tools.jackson.core:jackson-databind:3.1.8',
+                'org.apache.commons:commons-lang3:3.21.0'
+    }
 }
 
-// Spring Boot 의존성 관리 명시적 설정
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.1.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'me.champeau.jmh' version '0.7.3'
+}
+
+// 플러그인 버전과 같은 BOM을 자동 적용한다. 서로 다른 Spring 버전을 중복 고정하지 않는다.
+
+// 2026-10-22 보안 공지 대조 결과 기본 BOM보다 후속 패치가 필요하다.
+// 동일 계열의 패치만 선택하고 아래 버전·잠금·전체 회귀 결과를 함께 관리한다.
+ext['jackson-bom.version'] = '3.1.8'
+ext['jackson-2-bom.version'] = '2.21.8'
+ext['tomcat.version'] = '11.0.27'
+// H2 2.4.240의 연결 간 CHECK 제약 회귀를 수정한 공식 릴리스를 사용한다.
+ext['h2.version'] = '2.5.252'
 dependencyManagement {
-	imports {
-		mavenBom "org.springframework.boot:spring-boot-dependencies:3.2.5"
-	}
+    dependencies {
+        dependency 'at.yawk.lz4:lz4-java:1.11.4'
+    }
 }
 
 group = 'dustin'
@@ -33,7 +52,7 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	// 경로별 기본 거부와 역할 검증은 표준 보안 필터 체인에 맡긴다.
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	// 동일 플랫폼 포트에서 공개 시세 스트림을 제공한다.
@@ -41,32 +60,32 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.postgresql:postgresql'
-	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
-	implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
-	implementation 'de.mkammerer:argon2-jvm:2.11'
+	implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
+	// Swagger가 이미 요구하는 Jackson 2를 JWT 내부에서도 사용해 세 번째 JSON 라이브러리를 추가하지 않는다.
+	// 애플리케이션의 HTTP·금융 JSON은 Jackson 3이며 이전 매퍼로 우회하지 않는다.
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
+	implementation 'de.mkammerer:argon2-jvm:2.12'
 	
-	// SpringDoc OpenAPI (Swagger) - Spring Boot 3.2.x 호환 버전
-	// Spring Boot 3.2.x는 Spring Framework 6.1.x 사용
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+	// Spring Boot 4.1의 Jackson 3·MVC 구성에 맞는 공식 문서화 모듈을 사용한다.
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1'
 	
-	// Spring Retry
-	implementation 'org.springframework.retry:spring-retry'
-	annotationProcessor 'org.springframework.retry:spring-retry'
+	// 정산 재시도는 Spring Framework 7에 포함된 기능을 사용한다.
 	
 	// Kafka
-	implementation 'org.springframework.kafka:spring-kafka'
+	implementation 'org.springframework.boot:spring-boot-starter-kafka'
 	
 	// WebSocket Client (바이낸스 WebSocket 연결용)
-	implementation 'org.java-websocket:Java-WebSocket:1.5.7'
+	implementation 'org.java-websocket:Java-WebSocket:1.6.0'
 	
 	// JSON 처리 (Jackson은 이미 Spring Boot에 포함됨)
 	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.kafka:spring-kafka-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-kafka-test'
 	testImplementation 'com.h2database:h2'
 	testImplementation 'org.awaitility:awaitility:4.2.0'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -124,4 +143,39 @@ jmh {
 	}
 
 	jvmArgs = baseArgs
+}
+
+// 검증한 전이 의존성도 고정해 다음 빌드가 다른 라이브러리를 고르지 않게 한다.
+dependencyLocking { lockAllConfigurations() }
+
+// 실행·테스트·벤치·빌드의 실제 버전과 파일 해시를 보안 점검 증적으로 내보낸다.
+tasks.register('writeDependencyInventory') {
+    def destination = layout.buildDirectory.file('reports/dependencies/inventory.json')
+    outputs.file(destination)
+    outputs.upToDateWhen { false }
+    doLast {
+        def entries = []
+        def sources = [runtime: configurations.runtimeClasspath,
+                       test: configurations.testRuntimeClasspath,
+                       benchmark: configurations.jmhRuntimeClasspath,
+                       build: buildscript.configurations.classpath]
+        sources.each { scope, configuration ->
+            configuration.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+                def id = artifact.moduleVersion.id
+                def digest = java.security.MessageDigest.getInstance('SHA-256')
+                artifact.file.withInputStream { stream ->
+                    byte[] buffer = new byte[65536]
+                    int count
+                    while ((count = stream.read(buffer)) != -1) digest.update(buffer, 0, count)
+                }
+                entries.add([scope: scope, group: id.group, name: id.name, version: id.version,
+                             file: artifact.file.name, sha256: digest.digest().encodeHex().toString()])
+            }
+        }
+        def output = destination.get().asFile
+        output.parentFile.mkdirs()
+        output.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(entries.sort { a,b ->
+            (a.scope + ':' + a.group + ':' + a.name) <=> (b.scope + ':' + b.group + ':' + b.name)
+        }))
+    }
 }

@@ -2,7 +2,7 @@ package dustin.cex.domains.market;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import dustin.cex.shared.kafka.EngineEventInbox;
 import org.junit.jupiter.api.Test;
 import java.time.Instant;
@@ -17,7 +17,7 @@ class MarketSafetyTest {
     @Test void acceptsSortedSnapshotAndSerializesNoPrivateAccountFields() throws Exception {
         var event=event(List.of(List.of("100","0.001")),List.of(List.of("101","0.002")));
         MarketService.validate(event);
-        String payload=new ObjectMapper().findAndRegisterModules().writeValueAsString(event);
+        String payload=new ObjectMapper().writeValueAsString(event);
         assertFalse(payload.contains("user_id"));assertFalse(payload.contains("balance"));assertTrue(payload.contains("\"sequence\":\"2\""));
     }
     @Test void rejectsUnsortedNegativeAndOversizedDepth() {
@@ -31,7 +31,7 @@ class MarketSafetyTest {
         assertThrows(IllegalArgumentException.class,()->MarketService.validate(new MarketSnapshot("market_snapshot",engine+":2:market",engine,"2","1","BTC","USDT",Instant.now(),List.of(),List.of(),List.of(print,print))));
     }
     @Test void duplicateReceiptDoesNotRewriteBookOrTrades() throws Exception {
-        var mapper=new ObjectMapper().findAndRegisterModules();var inbox=mock(EngineEventInbox.class);
+        var mapper=new ObjectMapper();var inbox=mock(EngineEventInbox.class);
         var states=mock(MarketStateRepository.class);var prints=mock(MarketPrintRepository.class);
         var event=event(List.of(),List.of());String payload=mapper.writeValueAsString(event);
         when(inbox.claim(event.eventId(),engine,payload)).thenReturn(false);
@@ -40,7 +40,7 @@ class MarketSafetyTest {
     }
 
     @Test void accountAmountsAndTradeIdsSerializeWithoutBrowserNumberLoss() throws Exception {
-        var mapper=new ObjectMapper().findAndRegisterModules();
+        var mapper=new ObjectMapper();
         var balance=dustin.cex.domains.balance.model.dto.BalanceResponse.builder().available(new java.math.BigDecimal("999999999999999999999.000000001")).locked(java.math.BigDecimal.ZERO).build();
         var body=mapper.valueToTree(balance);assertTrue(body.get("available").isTextual());assertEquals("999999999999999999999.000000001",body.get("available").asText());
         var trade=dustin.cex.domains.trade.model.dto.TradeResponse.builder().id(9007199254740993L).buyOrderId(9007199254740994L).price(new java.math.BigDecimal("60000.000000001")).build();

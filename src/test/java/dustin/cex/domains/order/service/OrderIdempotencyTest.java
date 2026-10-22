@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
@@ -54,12 +54,12 @@ class OrderIdempotencyTest {
     @Autowired OrderRepository orders;
     @Autowired UserBalanceRepository balances;
     @Autowired PlatformTransactionManager transactions;
-    @SpyBean OrderSubmissionRepository submissions;
-    @MockBean dustin.cex.domains.fee.service.FeeConfigService feeService;
-    @MockBean dustin.cex.domains.ledger.LedgerService ledger;
-    @MockBean dustin.cex.domains.security.TradingAccessPolicy access;
-    @MockBean EngineHttpClient engine;
-    @MockBean KafkaEventProducer kafka;
+    @MockitoSpyBean OrderSubmissionRepository submissions;
+    @MockitoBean dustin.cex.domains.fee.service.FeeConfigService feeService;
+    @MockitoBean dustin.cex.domains.ledger.LedgerService ledger;
+    @MockitoBean dustin.cex.domains.security.TradingAccessPolicy access;
+    @MockitoBean EngineHttpClient engine;
+    @MockitoBean KafkaEventProducer kafka;
 
     @BeforeEach
     void seed() {

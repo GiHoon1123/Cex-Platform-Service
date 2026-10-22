@@ -97,8 +97,8 @@ class EngineHttpClientTest {
     @ParameterizedTest
     @ValueSource(strings = {"{}", "wrong-order", "wrong-user", "numeric-id", "missing-time", "invalid-time", "wrong-state"})
     void successfulHttpWithoutMatchingReceiptIsNotAcceptance(String defect) throws Exception {
-        var node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(VALID_RECEIPT);
-        var receipt = (com.fasterxml.jackson.databind.node.ObjectNode) node;
+        var node = new tools.jackson.databind.ObjectMapper().readTree(VALID_RECEIPT);
+        var receipt = (tools.jackson.databind.node.ObjectNode) node;
         switch (defect) {
             case "wrong-order" -> receipt.put("order_id", "124");
             case "wrong-user" -> receipt.put("user_id", "102");

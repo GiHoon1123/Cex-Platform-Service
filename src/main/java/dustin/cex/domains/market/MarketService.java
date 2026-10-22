@@ -1,6 +1,6 @@
 package dustin.cex.domains.market;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import dustin.cex.shared.kafka.EngineEventInbox;
 import lombok.RequiredArgsConstructor;
 import org.springframework.kafka.annotation.KafkaListener;

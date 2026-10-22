@@ -10,7 +10,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.*;
 import org.springframework.transaction.support.TransactionTemplate;
-import com.fasterxml.jackson.databind.*;
+import tools.jackson.databind.*;
 import dustin.cex.domains.order.model.OrderCommand;
 import dustin.cex.domains.order.model.entity.OrderSubmission;
 import dustin.cex.domains.order.repository.OrderSubmissionRepository;
@@ -114,8 +114,8 @@ class OrderLedgerTest {
         assertEquals(0,issues(report,"BALANCE_AVAILABLE"));
     }
     @Test void changedPageIdentityCannotProduceSuccessfulReport() {
-        var first=(com.fasterxml.jackson.databind.node.ObjectNode)page(2,List.of());first.put("next_after",1);
-        var second=(com.fasterxml.jackson.databind.node.ObjectNode)page(2,List.of());second.put("engine_id",UUID.randomUUID().toString());
+        var first=(tools.jackson.databind.node.ObjectNode)page(2,List.of());first.put("next_after",1);
+        var second=(tools.jackson.databind.node.ObjectNode)page(2,List.of());second.put("engine_id",UUID.randomUUID().toString());
         when(source.page(anyLong(),any(),any())).thenReturn(first,second);
         assertEquals("FAILED",reconciliation.run().status());
     }

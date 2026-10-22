@@ -10,7 +10,6 @@ import org.springframework.security.authorization.*;
 import org.springframework.security.web.*;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 /** 로그인 화면이나 리다이렉트 없이 JSON API의 인증·인가만 제공한다. */
 @Configuration
@@ -44,7 +43,7 @@ public class SecurityConfiguration {
                     "/api/settlement/trade/validation-status/*","/api/settlement/trade/failures",
                     "/api/settlement/trade/report/daily/*","/api/settlement/trade/report/monthly/*/*",
                     "/api/settlement/trade/report/user/*/*","/api/settlement/trade/details/*").access(audited(audit,"OPERATOR","APPROVER","AUDITOR"))
-                .requestMatchers(new AntPathRequestMatcher("/api/cex/trades","GET")).access(audited(audit,"AUDITOR"))
+                .requestMatchers(HttpMethod.GET,"/api/cex/trades").access(audited(audit,"AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/cex/orders").access(audited(audit,"CUSTOMER"))
                 .requestMatchers(HttpMethod.DELETE,"/api/cex/orders/*").access(audited(audit,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/cex/orders/my","/api/cex/orders/*","/api/cex/trades/my",

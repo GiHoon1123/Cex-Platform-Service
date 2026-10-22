@@ -7,9 +7,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -36,8 +36,8 @@ class TradeFeeSettlementTest {
     @EnableJpaRepositories(basePackages="dustin.cex.domains")
     @Import(KafkaOrderEventConsumer.class)
     static class Persistence {}
-    @MockBean dustin.cex.domains.ledger.LedgerService ledger;
-    @MockBean EngineEventInbox inbox;
+    @MockitoBean dustin.cex.domains.ledger.LedgerService ledger;
+    @MockitoBean EngineEventInbox inbox;
     @Autowired KafkaOrderEventConsumer consumer;
     @Autowired UserRepository users; @Autowired OrderRepository orders;
     @Autowired OrderDispatchRepository dispatches;
@@ -211,7 +211,7 @@ class TradeFeeSettlementTest {
     String text(BigDecimal value) { return value==null ? null : value.toPlainString(); }
     String rejected(long id) {
         var original=submissions.findByOrderId(id).orElseThrow(); var c=original.command();
-        var event=new com.fasterxml.jackson.databind.ObjectMapper().createObjectNode();
+        var event=new tools.jackson.databind.ObjectMapper().createObjectNode();
         event.put("event_type","order_rejected"); event.put("engine_id","engine"); event.put("event_id","engine:91:0");
         event.put("order_id",id);event.put("user_id",original.getUserId());event.put("order_type",c.orderType());event.put("order_side",c.orderSide());
         event.put("base_mint",c.baseMint());event.put("quote_mint",c.quoteMint());event.put("reason_code","ENGINE_EXECUTION_REJECTED");

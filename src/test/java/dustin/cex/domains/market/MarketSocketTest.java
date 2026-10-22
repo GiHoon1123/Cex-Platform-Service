@@ -3,7 +3,7 @@ package dustin.cex.domains.market;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 
 /** 공개 소켓의 유한 연결 수와 명령 우회 금지를 포트 없이 검증한다. */
 class MarketSocketTest {

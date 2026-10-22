@@ -52,7 +52,7 @@ class BotSafetyTest {
     }
 
     @Test void actualPartialDepthContractUpdatesBtcReferenceAndIgnoresOlderSnapshot() throws Exception {
-        var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
+        var mapper=new tools.jackson.databind.ObjectMapper();
         var service=new BinancePriceService(new BotConfig(),mock(BinanceWebSocketClient.class));
         var snapshot=mapper.readValue("{\"lastUpdateId\":2,\"bids\":[[\"60000\",\"1\"]],\"asks\":[[\"60002\",\"1\"]]}",dustin.cex.domains.bot.model.BinanceOrderbookUpdate.class);
         service.update(snapshot);assertEquals(new BigDecimal("60001.00"),service.getMidPrice());

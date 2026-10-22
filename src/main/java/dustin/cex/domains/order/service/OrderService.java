@@ -15,9 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
 
 import dustin.cex.domains.balance.model.entity.UserBalance;
 import dustin.cex.domains.balance.repository.UserBalanceRepository;
@@ -74,13 +72,9 @@ public class OrderService {
     private final dustin.cex.domains.ledger.LedgerService ledger;
     private final dustin.cex.domains.security.TradingAccessPolicy access;
     
-    /**
-     * ObjectMapper 초기화 (JavaTimeModule 등록)
-     * Initialize ObjectMapper with JavaTimeModule for LocalDateTime serialization
-     */
-    private final ObjectMapper objectMapper = new ObjectMapper()
-            .registerModule(new JavaTimeModule()) // LocalDateTime 직렬화 지원
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // ISO 8601 형식 사용
+    // Jackson 3에는 시간 타입 지원이 기본 포함된다. JSON 설정을 빌더에서 확정해 공유한다.
+    private final ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder()
+            .disable(tools.jackson.databind.cfg.DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build();
     
     /**
      * 생성자: TransactionTemplate 초기화

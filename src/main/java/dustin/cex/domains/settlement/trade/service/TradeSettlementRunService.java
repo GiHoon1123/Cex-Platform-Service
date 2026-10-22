@@ -7,9 +7,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import dustin.cex.domains.settlement.trade.model.entity.TradeSettlementRun;
 import dustin.cex.domains.settlement.trade.repository.TradeSettlementRunRepository;
@@ -70,7 +70,7 @@ public class TradeSettlementRunService {
             if (failedUserIds != null && !failedUserIds.isEmpty()) {
                 try {
                     run.setFailedUserIdsJson(objectMapper.writeValueAsString(failedUserIds));
-                } catch (JsonProcessingException e) {
+                } catch (JacksonException e) {
                     log.warn("[TradeSettlementRunService] failedUserIds JSON 직렬화 실패", e);
                 }
             }
@@ -85,7 +85,7 @@ public class TradeSettlementRunService {
         }
         try {
             return objectMapper.readValue(json, new TypeReference<>() {});
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.warn("[TradeSettlementRunService] failedUserIds JSON 파싱 실패: {}", json, e);
             return List.of();
         }

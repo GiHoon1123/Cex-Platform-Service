@@ -2,7 +2,7 @@ package dustin.cex.integration;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.awaitility.Awaitility.await;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import dustin.cex.domains.auth.model.entity.User;
 import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.auth.service.JwtService;

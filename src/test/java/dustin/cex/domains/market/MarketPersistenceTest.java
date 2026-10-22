@@ -3,15 +3,15 @@ package dustin.cex.domains.market;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.transaction.annotation.*;
 import org.springframework.jdbc.core.JdbcTemplate;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import dustin.cex.shared.kafka.EngineEventInbox;
 import java.time.Instant;
 import java.util.*;
@@ -24,7 +24,7 @@ import java.util.*;
 @Transactional(propagation=Propagation.NOT_SUPPORTED)
 class MarketPersistenceTest {
     @org.springframework.boot.test.context.TestConfiguration static class JsonConfig {
-        @Bean ObjectMapper mapper() {return new ObjectMapper().findAndRegisterModules().disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);}
+        @Bean ObjectMapper mapper() {return tools.jackson.databind.json.JsonMapper.builder().disable(tools.jackson.databind.cfg.DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build();}
     }
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",()->System.getenv("CEX_TEST_DATABASE_URL"));

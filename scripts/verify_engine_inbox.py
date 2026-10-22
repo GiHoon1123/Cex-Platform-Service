@@ -35,7 +35,7 @@ try:
     env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
     ARTIFACTS.mkdir(exist_ok=True)
     with (ARTIFACTS/"wal-java-inbox.log").open("w") as log:
-        completed=subprocess.run(["./gradlew","test","--tests","*EngineEventInboxTest","--tests","*FeeConfigServiceTest","--tests","*FeeRevenueTest","--tests","*TradeFeeSettlementTest","--tests","dustin.cex.domains.market.*","--tests","*BotSafetyTest","--tests","*KafkaOrderEventConsumerTest","--tests","*Order*Test","--tests","*EngineHttpClientTest","--tests","*BalanceSyncServiceTest","--tests","*PlatformBalanceStartupTest","--tests","*TradeSettlement*Test","bootJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+        completed=subprocess.run(["./gradlew","test","--tests","*FrameworkContractTest","--tests","*EngineEventInboxTest","--tests","*FeeConfigServiceTest","--tests","*FeeRevenueTest","--tests","*TradeFeeSettlementTest","--tests","dustin.cex.domains.market.*","--tests","*BotSafetyTest","--tests","*KafkaOrderEventConsumerTest","--tests","*Order*Test","--tests","*EngineHttpClientTest","--tests","*BalanceSyncServiceTest","--tests","*PlatformBalanceStartupTest","--tests","*TradeSettlement*Test","bootJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
     result["exit"]=completed.returncode
     if completed.returncode:
         raise RuntimeError("플랫폼 회귀 실패: .local/wal-java-inbox.log 확인")

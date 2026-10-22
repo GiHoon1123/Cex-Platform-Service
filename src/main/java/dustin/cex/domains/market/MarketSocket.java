@@ -1,6 +1,6 @@
 package dustin.cex.domains.market;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.scheduling.annotation.Scheduled;
