@@ -55,6 +55,9 @@ class PlatformSecurityTest {
     @MockitoBean EngineHttpClient engine;
     @MockitoBean dustin.cex.shared.kafka.KafkaEventProducer producer;
     @MockitoBean dustin.cex.domains.fee.service.FeeConfigService fees;
+    @Autowired OperatorMfaService mfa;
+    String approverAccess;UUID approverSid;SoftwareAuthenticator approverKey;
+    final java.util.concurrent.atomic.AtomicLong signingCount=new java.util.concurrent.atomic.AtomicLong(1);
     String hash;User customer,operator,approver,auditor;TransactionTemplate tx;
     @BeforeAll void opening() {hash=passwords.hash("security-test-password");tx=new TransactionTemplate(manager);ledger.initializeOpening();}
     User user(UserRole role,UUID person) {
@@ -62,12 +65,14 @@ class PlatformSecurityTest {
             .role(role).operatorPersonId(person).operatorAccessExpiresAt(Instant.now().plusSeconds(86400)).build());
     }
     @BeforeEach void setup() {
+        approverAccess=null;approverSid=null;approverKey=null;signingCount.set(1);
         customer=user(UserRole.CUSTOMER,null);operator=user(UserRole.OPERATOR,UUID.randomUUID());
         approver=user(UserRole.APPROVER,UUID.randomUUID());auditor=user(UserRole.AUDITOR,UUID.randomUUID());
         when(fees.getFeeConfig(anyString(),anyString())).thenReturn(dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).build());
         when(engine.submitOrder(anyLong(),anyLong(),anyString(),anyString(),anyString(),anyString(),any(),any(),any())).thenReturn(true);
     }
     String token(User user) {
+        if(user.getId().equals(approver.getId()) && approverAccess!=null) return approverAccess;
         var row=tokens.saveAndFlush(RefreshToken.builder().userId(user.getId()).tokenHash(UUID.randomUUID().toString())
             // 이 회귀의 초점은 역할·승인·감사다. MFA 서명은 별도 실제 서명 테스트에서 검증한다.
             .mfaVerifiedAt(user.getRole()==UserRole.CUSTOMER ? null : LocalDateTime.now())
@@ -78,8 +83,30 @@ class PlatformSecurityTest {
         return encoded;
     }
     String body(Object value) throws Exception {return json.writeValueAsString(value);}
-    OperatorApprovalService.Request request() {return approvals.request(operator.getId(),customer.getId(),customer.getVersion(),true,"보안 검토");}
-    void decide(OperatorApprovalService.Request r) {approvals.decide(approver.getId(),r.id(),r.payloadHash(),"security-test-password",true);}
+    UUID session(User user) {return UUID.fromString(jwt.verifyAccessToken(token(user)).get("sid",String.class));}
+    void ensureApprover() {
+        if(approverAccess!=null) return;
+        try {
+            String secret="isolated-enrollment-256-bit-secret-at-least-43-characters";
+            jdbc.update("INSERT INTO operator_enrollment(user_id,token_hash,expires_at) VALUES(?,?,clock_timestamp()+interval '10 minutes')",approver.getId(),OperatorMfaService.sha256Hex(secret));
+            UUID pending=session(approver);approverKey=new SoftwareAuthenticator();
+            var register=mfa.registrationOptions(approver.getId(),pending,secret);
+            mfa.register(approver.getId(),pending,register.challengeId(),approverKey.registration(register,"http://localhost:3003",true));
+            var options=mfa.authenticationOptions(approver.getId(),pending);
+            var verified=mfa.authenticate(approver.getId(),pending,options.challengeId(),approverKey.assertion(options,"http://localhost:3003",true,1,null));
+            approverAccess=verified.accessToken();approverSid=UUID.fromString(jwt.verifyAccessToken(approverAccess).get("sid",String.class));
+        } catch(Exception e) {throw new IllegalStateException("테스트 승인자 준비 실패",e);}
+    }
+    UUID approverSession() {ensureApprover();return approverSid;}
+    OperatorApprovalService.Request request() {return approvals.request(operator.getId(),session(operator),customer.getId(),customer.getVersion(),true,"보안 검토");}
+    OperatorMfaService.AuthorizationProof proof(OperatorApprovalService.Request r,boolean approve) {
+        ensureApprover();var options=approvals.options(approver.getId(),approverSid,r.id(),r.payloadHash(),approve).authentication();
+        try {return new OperatorMfaService.AuthorizationProof(options.challengeId(),approverKey.assertion(options,"http://localhost:3003",true,signingCount.incrementAndGet(),null));}
+        catch(Exception e) {throw new IllegalStateException("테스트 서명 생성 실패",e);}
+    }
+    void decide(OperatorApprovalService.Request r) {
+        var signed=proof(r,true);approvals.decide(approver.getId(),approverSid,r.id(),r.payloadHash(),true,signed);
+    }
     @Test void apiNeverRedirectsToLoginPageOrChallengesBasic() throws Exception {
         mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andExpect(header().doesNotExist("Location")).andExpect(header().doesNotExist("WWW-Authenticate"));
@@ -230,8 +257,9 @@ class PlatformSecurityTest {
             .contentType(MediaType.APPLICATION_JSON).content(body(Map.of("targetUserId",customer.getId(),"expectedVersion",customer.getVersion(),"restricted",true,"reason","보안 검토"))))
             .andExpect(status().isOk()).andReturn();
         var r=json.readTree(created.getResponse().getContentAsString());
+        var signed=proof(json.treeToValue(r,OperatorApprovalService.Request.class),true);
         mvc.perform(post("/api/admin/requests/"+r.path("id").asText()+"/approve").header("Authorization","Bearer "+token(approver))
-            .contentType(MediaType.APPLICATION_JSON).content(body(Map.of("payloadHash",r.path("payloadHash").asText(),"password","security-test-password"))))
+            .contentType(MediaType.APPLICATION_JSON).content(body(Map.of("payloadHash",r.path("payloadHash").asText(),"proof",signed))))
             .andExpect(status().isOk());
         assertTrue(users.findById(customer.getId()).orElseThrow().isTradingRestricted());
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE action='RESTRICTION_APPROVE' AND target=?",Long.class,"request:"+r.path("id").asText()));
@@ -248,17 +276,17 @@ class PlatformSecurityTest {
         assertEquals(403,assertThrows(ResponseStatusException.class,()->decide(r)).getStatusCode().value());
         assertFalse(users.findById(customer.getId()).orElseThrow().isTradingRestricted());
     }
-    @Test void changedPayloadAndWrongPasswordAreRejected() {
+    @Test void changedPayloadAndMissingProofAreRejected() {
         var r=request();
-        assertThrows(ResponseStatusException.class,()->approvals.decide(approver.getId(),r.id(),"0".repeat(64),"security-test-password",true));
-        assertThrows(ResponseStatusException.class,()->approvals.decide(approver.getId(),r.id(),r.payloadHash(),"wrong",true));
+        assertThrows(ResponseStatusException.class,()->approvals.decide(approver.getId(),approverSession(),r.id(),"0".repeat(64),true,null));
+        assertThrows(ResponseStatusException.class,()->approvals.decide(approver.getId(),approverSession(),r.id(),r.payloadHash(),true,null));
         assertFalse(users.findById(customer.getId()).orElseThrow().isTradingRestricted());
     }
     @Test void changedTargetVersionAndRevokedRequesterInvalidateApproval() {
         var r=request();customer.setUsername("변경");users.saveAndFlush(customer);
         assertThrows(ResponseStatusException.class,()->decide(r));
         var current=users.findById(customer.getId()).orElseThrow();
-        var second=approvals.request(operator.getId(),customer.getId(),current.getVersion(),true,"재요청");
+        var second=approvals.request(operator.getId(),session(operator),customer.getId(),current.getVersion(),true,"재요청");
         operator.setEnabled(false);users.saveAndFlush(operator);
         assertThrows(ResponseStatusException.class,()->decide(second));
     }
@@ -266,12 +294,12 @@ class PlatformSecurityTest {
         UUID id=UUID.randomUUID();String digest="a".repeat(64);
         jdbc.update("INSERT INTO operator_requests(id,requester_id,requester_person,target_id,target_version,restricted,reason,payload_hash,expires_at) VALUES(?,?,?,?,?,true,'만료 검증',?,now()-interval '1 second')",
             id,operator.getId(),operator.getOperatorPersonId(),customer.getId(),customer.getVersion(),digest);
-        assertThrows(ResponseStatusException.class,()->approvals.decide(approver.getId(),id,digest,"security-test-password",true));
+        assertThrows(ResponseStatusException.class,()->approvals.decide(approver.getId(),approverSession(),id,digest,true,null));
         assertFalse(users.findById(customer.getId()).orElseThrow().isTradingRestricted());
     }
     @Test void restrictionCanBeLiftedOnlyByAnotherApprovedRequest() {
         decide(request());var current=users.findById(customer.getId()).orElseThrow();
-        var lift=approvals.request(operator.getId(),customer.getId(),current.getVersion(),false,"심사 완료");decide(lift);
+        var lift=approvals.request(operator.getId(),session(operator),customer.getId(),current.getVersion(),false,"심사 완료");decide(lift);
         assertFalse(users.findById(customer.getId()).orElseThrow().isTradingRestricted());
     }
     @Test void restrictionStillAllowsOwnCancellationButNeverAnotherCustomersOrder() throws Exception {
@@ -289,8 +317,8 @@ class PlatformSecurityTest {
         assertThrows(dustin.cex.domains.auth.exception.AuthException.class,()->auth.signin(new SigninRequest(customer.getEmail(),"security-test-password")));
         var claims=jwt.verifyAccessToken(old);sessionService.authenticate(customer.getId(),UUID.fromString(claims.get("sid",String.class)));
     }
-    @Test void approvalPasswordGuessingIsBoundedWithoutApplyingEffect() {
-        var r=request();for(int i=0;i<5;i++) assertThrows(ResponseStatusException.class,()->approvals.decide(approver.getId(),r.id(),r.payloadHash(),"wrong",true));
+    @Test void approvalProofGuessingIsBoundedWithoutApplyingEffect() {
+        var r=request();for(int i=0;i<5;i++) assertThrows(ResponseStatusException.class,()->approvals.decide(approver.getId(),approverSession(),r.id(),r.payloadHash(),true,null));
         assertEquals(429,assertThrows(ResponseStatusException.class,()->decide(r)).getStatusCode().value());
         assertFalse(users.findById(customer.getId()).orElseThrow().isTradingRestricted());
     }
@@ -298,14 +326,14 @@ class PlatformSecurityTest {
         var r=request();decide(r);assertThrows(ResponseStatusException.class,()->decide(r));
     }
     @Test void concurrentApprovalsExecuteExactlyOnce() throws Exception {
-        var r=request();try(var pool=Executors.newFixedThreadPool(2)) {
-            var work=(Callable<Boolean>)()->{try {decide(r);return true;} catch(ResponseStatusException denied){return false;}};
+        var r=request();var signed=proof(r,true);try(var pool=Executors.newFixedThreadPool(2)) {
+            var work=(Callable<Boolean>)()->{try {approvals.decide(approver.getId(),approverSid,r.id(),r.payloadHash(),true,signed);return true;} catch(ResponseStatusException denied){return false;}};
             var a=pool.submit(work);var b=pool.submit(work);assertNotEquals(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS));
         }
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE action='RESTRICTION_APPROVE' AND outcome='SUCCESS' AND target=?",Long.class,"request:"+r.id()));
     }
     @Test void rejectionDoesNotApplyRestrictionAndCannotBeReused() {
-        var r=request();approvals.decide(approver.getId(),r.id(),r.payloadHash(),"security-test-password",false);
+        var r=request();approvals.decide(approver.getId(),approverSession(),r.id(),r.payloadHash(),false,proof(r,false));
         assertFalse(users.findById(customer.getId()).orElseThrow().isTradingRestricted());assertThrows(ResponseStatusException.class,()->decide(r));
     }
     @Test void mandatoryAuditFailureRollsBackApprovalAndCustomerState() {

@@ -12,23 +12,22 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import dustin.cex.domains.auth.model.entity.*;
 import dustin.cex.domains.auth.repository.UserRepository;
-import dustin.cex.domains.auth.service.PasswordService;
 
 /** 불변 요청의 확인과 효과·감사를 하나의 트랜잭션에 묶는다. 별도 실행 우회 경로는 없다. */
 @Service
 public class OperatorApprovalService {
-    private final UserRepository users;private final PasswordService passwords;
+    private final UserRepository users;private final OperatorMfaService mfa;private final OperatorSessionPolicy policy;
     private final AuditService audit;private final JdbcTemplate jdbc;private final TransactionTemplate tx;
-    public OperatorApprovalService(UserRepository users,PasswordService passwords,AuditService audit,
+    public OperatorApprovalService(UserRepository users,OperatorMfaService mfa,OperatorSessionPolicy policy,AuditService audit,
             JdbcTemplate jdbc,PlatformTransactionManager manager) {
-        this.users=users;this.passwords=passwords;this.audit=audit;this.jdbc=jdbc;tx=new TransactionTemplate(manager);
+        this.users=users;this.mfa=mfa;this.policy=policy;this.audit=audit;this.jdbc=jdbc;tx=new TransactionTemplate(manager);
     }
     public record Request(UUID id,long requesterId,UUID requesterPerson,long targetId,long targetVersion,
         boolean restricted,String reason,String payloadHash,Instant expiresAt,String status) {}
-    public Request request(long actor,long target,long version,boolean restricted,String reason) {
+    public Request request(long actor,UUID sid,long target,long version,boolean restricted,String reason) {
         return attempt(actor,"RESTRICTION_REQUEST","user:"+target,()->tx.execute(status->{
             if(reason==null || reason.isBlank() || reason.length()>300) throw deny(HttpStatus.BAD_REQUEST,"사유가 필요합니다");
-            var locked=lockUsers(actor,target); var requester=requireRole(locked.get(actor),UserRole.OPERATOR);
+            var locked=lockUsers(actor,target); var requester=locked.get(actor);policy.requireFresh(requester,sid,UserRole.OPERATOR);
             var customer=locked.get(target);
             if(customer==null || customer.getRole()!=UserRole.CUSTOMER || !customer.isEnabled()
                     || customer.getVersion()!=version || customer.isTradingRestricted()==restricted)
@@ -38,40 +37,45 @@ public class OperatorApprovalService {
             String hash=hash(id+"|"+actor+"|"+requester.getOperatorPersonId()+"|"+target+"|"+version+"|"+restricted+"|"+expiry+"|"+reason);
             jdbc.update("INSERT INTO operator_requests(id,requester_id,requester_person,target_id,target_version,restricted,reason,payload_hash,expires_at) VALUES(?,?,?,?,?,?,?,?,?)",
                 id,actor,requester.getOperatorPersonId(),target,version,restricted,reason,hash,java.sql.Timestamp.from(expiry));
+            mfa.bindApproval(OperatorMfaService.ApprovalKind.TRADING_RESTRICTION,id,actor,requester.getVersion(),hash,expiry);
             audit.record(actor,"RESTRICTION_REQUEST","request:"+id,"SUCCESS",hash);
             return read(id,false);
         }));
     }
-    public Request decide(long actor,UUID id,String expectedHash,String password,boolean approve) {
+    public Request decide(long actor,UUID sid,UUID id,String expectedHash,boolean approve,OperatorMfaService.AuthorizationProof proof) {
         return attempt(actor,approve?"RESTRICTION_APPROVE":"RESTRICTION_REJECT","request:"+id,()->tx.execute(status->{
             Request request=read(id,true);
-            var locked=lockUsers(actor,request.requesterId(),request.targetId());
-            var approver=requireRole(locked.get(actor),UserRole.APPROVER);
-            var requester=requireRole(locked.get(request.requesterId()),UserRole.OPERATOR);
-            if(approver.getId().equals(requester.getId()) || approver.getOperatorPersonId().equals(request.requesterPerson())
-                    || !requester.getOperatorPersonId().equals(request.requesterPerson()))
-                throw deny(HttpStatus.FORBIDDEN,"요청자와 승인자는 다른 사람이어야 합니다");
-            if(!"PENDING".equals(request.status()) || !request.expiresAt().isAfter(Instant.now())
-                    || !request.payloadHash().equals(expectedHash)) throw deny(HttpStatus.CONFLICT,"승인 대상이 유효하지 않습니다");
-            String target="request:"+id;
-            if(audit.tooManyFailures(actor,"OPERATOR_REAUTHENTICATION",target))
-                throw deny(HttpStatus.TOO_MANY_REQUESTS,"재인증 시도 한도를 초과했습니다");
-            if(!passwords.verify(password,approver.getPasswordHash())) {
-                // 요청 행 잠금을 풀기 전에 실패 기록을 확정한다. 업무 트랜잭션은 이후 롤백한다.
-                audit.denied(actor,"OPERATOR_REAUTHENTICATION",target,"WRONG_PASSWORD");
-                throw deny(HttpStatus.FORBIDDEN,"재인증 실패");
-            }
-            var customer=locked.get(request.targetId());
+            var customer=checkDecision(actor,sid,request,expectedHash);
+            mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.TRADING_RESTRICTION,id,request.payloadHash(),approve,proof);
             if(approve) {
-                if(customer==null || !customer.isEnabled() || customer.getRole()!=UserRole.CUSTOMER
-                        || customer.getVersion()!=request.targetVersion() || customer.isTradingRestricted()==request.restricted())
-                    throw deny(HttpStatus.CONFLICT,"고객 상태가 변경되었습니다");
                 customer.setTradingRestricted(request.restricted());users.saveAndFlush(customer);
             }
             jdbc.update("UPDATE operator_requests SET status=?,approver_id=? WHERE id=?",approve?"APPROVED":"REJECTED",actor,id);
             audit.record(actor,approve?"RESTRICTION_APPROVE":"RESTRICTION_REJECT","request:"+id,"SUCCESS",request.payloadHash());
             return read(id,false);
         }));
+    }
+    public record Confirmation(Request request,boolean approve,OperatorMfaService.Options authentication) {}
+    public Confirmation options(long actor,UUID sid,UUID id,String hash,boolean approve) {
+        return attempt(actor,"RESTRICTION_OPTIONS","request:"+id,()->tx.execute(status->{
+            var request=read(id,true);checkDecision(actor,sid,request,hash);
+            return new Confirmation(request,approve,mfa.approvalOptions(actor,sid,OperatorMfaService.ApprovalKind.TRADING_RESTRICTION,id,request.payloadHash(),approve));
+        }));
+    }
+    private User checkDecision(long actor,UUID sid,Request request,String expectedHash) {
+        var locked=lockUsers(actor,request.requesterId(),request.targetId());
+        var approver=locked.get(actor);policy.requireFresh(approver,sid,UserRole.APPROVER);
+        var requester=requireRole(locked.get(request.requesterId()),UserRole.OPERATOR);
+        if(approver.getId().equals(requester.getId()) || approver.getOperatorPersonId().equals(request.requesterPerson())
+                || !requester.getOperatorPersonId().equals(request.requesterPerson()))
+            throw deny(HttpStatus.FORBIDDEN,"요청자와 승인자는 다른 사람이어야 합니다");
+        if(!"PENDING".equals(request.status()) || !request.expiresAt().isAfter(Instant.now())
+                || !request.payloadHash().equals(expectedHash)) throw deny(HttpStatus.CONFLICT,"승인 대상이 유효하지 않습니다");
+        var customer=locked.get(request.targetId());
+        if(customer==null || !customer.isEnabled() || customer.getRole()!=UserRole.CUSTOMER
+                || customer.getVersion()!=request.targetVersion() || customer.isTradingRestricted()==request.restricted())
+            throw deny(HttpStatus.CONFLICT,"고객 상태가 변경되었습니다");
+        return customer;
     }
     public List<Request> page(int page) {
         if(page<0 || page>10000) throw deny(HttpStatus.BAD_REQUEST,"잘못된 요청 페이지");

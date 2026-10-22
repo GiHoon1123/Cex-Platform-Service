@@ -146,45 +146,63 @@ public class OperatorMfaService {
         @Override public String toString() {return "AuthorizationProof[서명 생략]";}
     }
     /**
-     * 역할 승인 서비스만 호출하는 내부 경로다. 요청 잠금 → 사용자 잠금 → 챌린지 잠금 순서를 지킨다.
+     * 각 승인 서비스에서만 호출하는 내부 경로다. 요청 잠금 → 사용자 잠금 → 챌린지 잠금 순서를 지킨다.
      * 인증 옵션만 발급하며 세션의 MFA 시각이나 수명은 늘리지 않는다.
      */
-    Options roleAuthorizationOptions(long actor,UUID sid,UUID requestId,String payloadHash,boolean approve) {
+    Options approvalOptions(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve) {
         requireBusinessTransaction();
         return operation(actor,()->{
             requireFresh(lock(actor,sid));
+            checkBinding(kind,requestId,payloadHash);
             var identity=identities.findByUsername(Long.toString(actor));
             if(identity==null || credentials.findByUserId(identity.getId()).isEmpty()) throw denied();
             var auth=UsernamePasswordAuthenticationToken.authenticated(Long.toString(actor),null,List.of());
             var options=relyingParty.createCredentialRequestOptions(new ImmutablePublicKeyCredentialRequestOptionsRequest(auth));
             UUID id=UUID.randomUUID();String encoded=json.writeValueAsString(options);
             // 한 세션에서 새 업무 확인을 시작하면 이전 업무 옵션은 폐기한다. 오래된 옵션도 함께 정리한다.
-            jdbc.update("DELETE FROM operator_role_challenges WHERE session_id=? OR expires_at<clock_timestamp()",sid);
+            jdbc.update("DELETE FROM operator_authorization_challenges WHERE session_id=? OR expires_at<clock_timestamp()",sid);
             jdbc.update("""
-                INSERT INTO operator_role_challenges(id,user_id,session_id,request_id,payload_hash,approve,options,expires_at)
-                VALUES(?,?,?,?,?,?,?,clock_timestamp()+interval '2 minutes')
-                """,id,actor,sid,requestId,payloadHash,approve,encoded);
-            audit.record(actor,"ROLE_AUTHORIZATION_OPTIONS","request:"+requestId,"SUCCESS",(approve?"APPROVE:":"REJECT:")+payloadHash);
+                INSERT INTO operator_authorization_challenges(id,user_id,session_id,kind,request_id,payload_hash,approve,options,expires_at)
+                VALUES(?,?,?,?,?,?,?,?,clock_timestamp()+interval '2 minutes')
+                """,id,actor,sid,kind.name(),requestId,payloadHash,approve,encoded);
+            audit.record(actor,"APPROVAL_OPTIONS","request:"+requestId,"SUCCESS",kind+":"+(approve?"APPROVE:":"REJECT:")+payloadHash);
             return new Options(id,json.readTree(encoded));
         });
     }
-    void authorizeRole(long actor,UUID sid,UUID requestId,String payloadHash,boolean approve,AuthorizationProof proof) {
+    void authorizeApproval(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve,AuthorizationProof proof) {
         requireBusinessTransaction();
         operation(actor,()->{
             requireFresh(lock(actor,sid));
+            checkBinding(kind,requestId,payloadHash);
             if(proof==null || proof.challengeId()==null || proof.credential()==null) throw denied();
             var rows=jdbc.queryForList("""
-                SELECT options FROM operator_role_challenges WHERE id=? AND user_id=? AND session_id=?
-                 AND request_id=? AND payload_hash=? AND approve=? AND NOT consumed AND expires_at>clock_timestamp() FOR UPDATE
-                """,proof.challengeId(),actor,sid,requestId,payloadHash,approve);
+                SELECT options FROM operator_authorization_challenges WHERE id=? AND user_id=? AND session_id=?
+                 AND kind=? AND request_id=? AND payload_hash=? AND approve=? AND NOT consumed AND expires_at>clock_timestamp() FOR UPDATE
+                """,proof.challengeId(),actor,sid,kind.name(),requestId,payloadHash,approve);
             if(rows.isEmpty()) throw denied();
             var key=verifyAssertion(actor,(String)rows.getFirst().get("options"),proof.credential());
-            jdbc.update("UPDATE operator_role_challenges SET consumed=true WHERE id=?",proof.challengeId());
-            // 서명 소비·공개키 카운터·역할 변경·감사는 같은 업무 트랜잭션에서 확정된다.
-            audit.record(actor,"ROLE_AUTHORIZATION","request:"+requestId,"SUCCESS",
-                (approve?"APPROVE:":"REJECT:")+payloadHash+":key="+sha256Hex(key.getRawId().toBase64UrlString()));
+            jdbc.update("UPDATE operator_authorization_challenges SET consumed=true WHERE id=?",proof.challengeId());
+            // 서명 소비·공개키 카운터·업무 변경·감사는 같은 업무 트랜잭션에서 확정된다.
+            audit.record(actor,"APPROVAL_AUTHORIZATION","request:"+requestId,"SUCCESS",
+                kind+":"+(approve?"APPROVE:":"REJECT:")+payloadHash+":key="+sha256Hex(key.getRawId().toBase64UrlString()));
             return null;
         });
+    }
+    /** 현재 구현된 네 업무만 구분한다. 임의 명령 이름이나 동적 실행기를 받지 않는다. */
+    enum ApprovalKind { ROLE, MFA_RECOVERY, ACCESS_REVIEW, TRADING_RESTRICTION }
+    void bindApproval(ApprovalKind kind,UUID id,long requester,long version,String hash,Instant expires) {
+        requireBusinessTransaction();
+        jdbc.update("INSERT INTO operator_approval_bindings(kind,request_id,requester_id,requester_version,payload_hash,expires_at) VALUES(?,?,?,?,?,?)",
+            kind.name(),id,requester,version,hash,java.sql.Timestamp.from(expires));
+    }
+    private void checkBinding(ApprovalKind kind,UUID id,String hash) {
+        // 각 호출 서비스가 연관 사용자 행을 이미 잠갔다. 여기서 다른 순서로 잠금을 다시 잡지 않는다.
+        // 과거 요청에 결합 정보가 없으면 추측해서 채우지 않고 거부한다. 읽기용 업무 이력은 보존한다.
+        var rows=jdbc.queryForList("""
+            SELECT b.requester_version,u.version FROM operator_approval_bindings b JOIN users u ON u.id=b.requester_id
+            WHERE b.kind=? AND b.request_id=? AND b.payload_hash=? AND b.expires_at>clock_timestamp()
+            """,kind.name(),id,hash);
+        if(rows.size()!=1 || !rows.getFirst().get("requester_version").equals(rows.getFirst().get("version"))) throw denied();
     }
     private void requireBusinessTransaction() {
         if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())

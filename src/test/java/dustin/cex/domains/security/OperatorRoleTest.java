@@ -164,7 +164,7 @@ class OperatorRoleTest {
     }
     @Test void expiredChallengeCannotExecute() throws Exception {
         var r=request();var p=proof(checker,r,true);
-        jdbc.update("UPDATE operator_role_challenges SET expires_at=clock_timestamp()-interval '1 second' WHERE id=?",p.challengeId());
+        jdbc.update("UPDATE operator_authorization_challenges SET expires_at=clock_timestamp()-interval '1 second' WHERE id=?",p.challengeId());
         assertThrows(ResponseStatusException.class,()->decide(checker,r,true,p));assertEquals(UserRole.CUSTOMER,candidate().getRole());
     }
     @Test void newOptionsInvalidatePreviousChallengeAndDoNotExtendSessionMfa() throws Exception {
@@ -183,7 +183,7 @@ class OperatorRoleTest {
         if(mutation.equals("CLIENT_CHALLENGE")) response.put("clientDataJSON",SoftwareAuthenticator.encoded(json.writeValueAsBytes(Map.of("type","webauthn.get","challenge","AAAA","origin","http://localhost:3003"))));
         var p=new OperatorMfaService.AuthorizationProof(options.challengeId(),node);
         assertThrows(ResponseStatusException.class,()->decide(checker,r,true,p));assertEquals(UserRole.CUSTOMER,candidate().getRole());
-        assertFalse(jdbc.queryForObject("SELECT consumed FROM operator_role_challenges WHERE id=?",Boolean.class,p.challengeId()));
+        assertFalse(jdbc.queryForObject("SELECT consumed FROM operator_authorization_challenges WHERE id=?",Boolean.class,p.challengeId()));
     }
     @Test void fiveInvalidProofsLimitFurtherOptionsAndDecision() throws Exception {
         var r=request();var p=proof(checker,r,true);
@@ -270,7 +270,7 @@ class OperatorRoleTest {
         assertThrows(IllegalStateException.class,()->decide(checker,r,true,p));assertEquals(UserRole.CUSTOMER,candidate().getRole());
         assertDoesNotThrow(()->sessions.authenticate(candidate.getId(),sid(old.getAccessToken())));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM operator_enrollment WHERE user_id=?",Long.class,candidate.getId()));
-        assertFalse(jdbc.queryForObject("SELECT consumed FROM operator_role_challenges WHERE id=?",Boolean.class,p.challengeId()));
+        assertFalse(jdbc.queryForObject("SELECT consumed FROM operator_authorization_challenges WHERE id=?",Boolean.class,p.challengeId()));
         assertEquals(1,jdbc.queryForObject("SELECT signature_count FROM user_credentials WHERE credential_id=?",Long.class,checker.key().id()));
         assertEquals("PENDING",jdbc.queryForObject("SELECT status FROM operator_role_requests WHERE id=?",String.class,r.payload().id()));
         reset(audit);assertEquals("APPROVED",decide(checker,r,true,p).request().status());
@@ -364,8 +364,8 @@ class OperatorRoleTest {
         assertThrows(ResponseStatusException.class,()->tx.executeWithoutResult(status->trading.requireNewOrder(candidate.getId())));
     }
     @Test void authorizationHelpersCannotRunOutsideBusinessTransaction() {
-        assertThrows(IllegalStateException.class,()->mfa.roleAuthorizationOptions(checker.user().getId(),checker.sid(),UUID.randomUUID(),"a".repeat(64),true));
-        assertThrows(IllegalStateException.class,()->mfa.authorizeRole(checker.user().getId(),checker.sid(),UUID.randomUUID(),"a".repeat(64),true,null));
+        assertThrows(IllegalStateException.class,()->mfa.approvalOptions(checker.user().getId(),checker.sid(),OperatorMfaService.ApprovalKind.ROLE,UUID.randomUUID(),"a".repeat(64),true));
+        assertThrows(IllegalStateException.class,()->mfa.authorizeApproval(checker.user().getId(),checker.sid(),OperatorMfaService.ApprovalKind.ROLE,UUID.randomUUID(),"a".repeat(64),true,null));
     }
 
     @org.springframework.boot.test.web.server.LocalServerPort int port;

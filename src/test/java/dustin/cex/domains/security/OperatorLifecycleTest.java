@@ -46,13 +46,14 @@ class OperatorLifecycleTest {
     @MockitoBean dustin.cex.domains.fee.service.FeeConfigService fees;
     record Account(User user,SoftwareAuthenticator key,OperatorMfaService.Verified verified,UUID sid) {}
     Account maker,checker,owner;String hash;
+    final java.util.concurrent.atomic.AtomicLong counter=new java.util.concurrent.atomic.AtomicLong(1);
     final String enrollment="isolated-enrollment-256-bit-test-secret-at-least-43-characters";
     @BeforeAll void password() {
         hash=passwords.hash("security-test-password");
         // 전체 복구 시나리오도 작은 Long 캐시를 벗어난 실제 DB 사용자로 검증한다.
         jdbc.queryForObject("SELECT setval(pg_get_serial_sequence('users','id'),1000,false)",Long.class);
     }
-    @BeforeEach void setup() throws Exception {maker=account(UserRole.OPERATOR);checker=account(UserRole.APPROVER);owner=account(UserRole.AUDITOR);}
+    @BeforeEach void setup() throws Exception {maker=account(UserRole.OPERATOR);checker=account(UserRole.APPROVER);owner=account(UserRole.AUDITOR);counter.set(1);}
     Account account(UserRole role) throws Exception {
         var user=users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@example.test").passwordHash(hash).role(role)
             .operatorPersonId(UUID.randomUUID()).operatorAccessExpiresAt(Instant.now().plusSeconds(86400)).build());
@@ -70,7 +71,14 @@ class OperatorLifecycleTest {
     User current(Account a) {return users.findById(a.user().getId()).orElseThrow();}
     OperatorLifecycleService.Request recovery() {return service.request(maker.user().getId(),maker.sid(),owner.user().getId(),current(owner).getVersion(),OperatorLifecycleService.Kind.RECOVER_MFA,null,"분실 신고","IDENTITY_100","NOTICE_100");}
     OperatorLifecycleService.Request review() {return service.request(maker.user().getId(),maker.sid(),owner.user().getId(),current(owner).getVersion(),OperatorLifecycleService.Kind.REVIEW_ACCESS,Instant.now().plusSeconds(7*86400),"권한 재검토","REVIEW_100","NOTICE_100");}
-    OperatorLifecycleService.Decision approve(OperatorLifecycleService.Request r) {return service.decide(checker.user().getId(),checker.sid(),r.id(),r.payloadHash(),true);}
+    OperatorMfaService.AuthorizationProof proof(OperatorLifecycleService.Request r,boolean approve) {
+        var options=service.options(checker.user().getId(),checker.sid(),r.id(),r.payloadHash(),approve).authentication();
+        try {return new OperatorMfaService.AuthorizationProof(options.challengeId(),checker.key().assertion(options,"http://localhost:3003",true,counter.incrementAndGet(),null));}
+        catch(Exception e) {throw new IllegalStateException("테스트 서명 생성 실패",e);}
+    }
+    OperatorLifecycleService.Decision approve(OperatorLifecycleService.Request r) {
+        return service.decide(checker.user().getId(),checker.sid(),r.id(),r.payloadHash(),true,proof(r,true));
+    }
     @Test void recoveryImmediatelyBlocksSessionsRefreshSigninAndOldChallenges() throws Exception {
         var challenge=mfa.authenticationOptions(owner.user().getId(),owner.sid());var request=recovery();
         assertEquals(request.id(),current(owner).getOperatorRecoveryRequestId());
@@ -115,7 +123,7 @@ class OperatorLifecycleTest {
     }
     @Test void expiredRequestAndWrongHashCannotRecover() {
         var request=recovery();
-        assertThrows(ResponseStatusException.class,()->service.decide(checker.user().getId(),checker.sid(),request.id(),"0".repeat(64),true));
+        assertThrows(ResponseStatusException.class,()->service.decide(checker.user().getId(),checker.sid(),request.id(),"0".repeat(64),true,null));
         // 불변 테이블에는 만료 fixture를 처음부터 삽입한다. 트리거를 끄거나 원본 요청을 수정하지 않는다.
         UUID id=UUID.randomUUID();
         jdbc.update("""
@@ -123,11 +131,11 @@ class OperatorLifecycleTest {
              reason,identity_evidence,notification_evidence,payload_hash,expires_at)
             VALUES(?,'REVIEW_ACCESS',?,?,?,?,?,'만료','IDENTITY_100','NOTICE_100',?,clock_timestamp()-interval '1 second')
             """,id,maker.user().getId(),maker.user().getOperatorPersonId(),owner.user().getId(),owner.user().getOperatorPersonId(),current(owner).getVersion(),"a".repeat(64));
-        assertThrows(ResponseStatusException.class,()->service.decide(checker.user().getId(),checker.sid(),id,"a".repeat(64),true));
+        assertThrows(ResponseStatusException.class,()->service.decide(checker.user().getId(),checker.sid(),id,"a".repeat(64),true,null));
         assertNotNull(current(owner).getOperatorRecoveryRequestId());
     }
     @Test void rejectionDoesNotRestoreReportedCompromisedKeyAccess() {
-        var request=recovery();var rejected=service.decide(checker.user().getId(),checker.sid(),request.id(),request.payloadHash(),false);
+        var request=recovery();var rejected=service.decide(checker.user().getId(),checker.sid(),request.id(),request.payloadHash(),false,proof(request,false));
         assertEquals("REJECTED",rejected.request().status());assertNull(rejected.enrollmentToken());
         assertNotNull(current(owner).getOperatorRecoveryRequestId());
         assertThrows(RuntimeException.class,()->auth.signin(new SigninRequest(owner.user().getEmail(),"security-test-password")));
@@ -150,8 +158,8 @@ class OperatorLifecycleTest {
         assertDoesNotThrow(()->sessions.authenticate(owner.user().getId(),owner.sid()));
     }
     @Test void concurrentRecoveryApprovalsHaveOneWinner() throws Exception {
-        var request=recovery();try(var pool=Executors.newFixedThreadPool(2)) {
-            var gate=new CountDownLatch(1);Callable<Boolean> work=()->{gate.await();try {approve(request);return true;} catch(ResponseStatusException e){return false;}};
+        var request=recovery();var signed=proof(request,true);try(var pool=Executors.newFixedThreadPool(2)) {
+            var gate=new CountDownLatch(1);Callable<Boolean> work=()->{gate.await();try {service.decide(checker.user().getId(),checker.sid(),request.id(),request.payloadHash(),true,signed);return true;} catch(ResponseStatusException e){return false;}};
             var a=pool.submit(work);var b=pool.submit(work);gate.countDown();assertNotEquals(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS));
         }
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE actor_id=? AND action='OPERATOR_SECURITY_DECIDE' AND outcome='SUCCESS' AND target=?",Long.class,checker.user().getId(),"request:"+request.id()));
@@ -252,10 +260,11 @@ class OperatorLifecycleTest {
         var request=mvc.perform(post("/api/admin/operator-security/recoveries").header("Authorization","Bearer "+maker.verified().accessToken())
             .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("targetId",owner.user().getId(),"expectedVersion",current(owner).getVersion(),"reason","분실 신고","identityEvidence","IDENTITY_100","notificationEvidence","NOTICE_100"))))
             .andExpect(status().isOk()).andReturn();var r=json.readTree(request.getResponse().getContentAsString());
+        var stored=json.treeToValue(r,OperatorLifecycleService.Request.class);var signed=proof(stored,true);
         mvc.perform(post("/api/admin/operator-security/requests/"+r.path("id").asText()+"/approve").header("Authorization","Bearer "+maker.verified().accessToken())
-            .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("payloadHash",r.path("payloadHash").asText())))).andExpect(status().isForbidden());
+            .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("payloadHash",r.path("payloadHash").asText(),"proof",signed)))).andExpect(status().isForbidden());
         mvc.perform(post("/api/admin/operator-security/requests/"+r.path("id").asText()+"/approve").header("Authorization","Bearer "+checker.verified().accessToken())
-            .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("payloadHash",r.path("payloadHash").asText())))).andExpect(status().isOk())
+            .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("payloadHash",r.path("payloadHash").asText(),"proof",signed)))).andExpect(status().isOk())
             .andExpect(header().string("Cache-Control","no-store")).andExpect(jsonPath("$.enrollmentToken").isNotEmpty());
     }
     @Test void requestReadsAreBoundedAndUnknownRoutesRemainDenied() throws Exception {

@@ -23,7 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException,IOException {
         req.setAttribute("requestId",UUID.randomUUID());
         // 토큰과 기기 등록 응답을 브라우저·중간 프록시 캐시에 남기지 않는다.
-        if(req.getRequestURI().startsWith("/api/auth/") || req.getRequestURI().startsWith("/api/admin/operator-security/")) res.setHeader("Cache-Control","no-store");
+        if(req.getRequestURI().startsWith("/api/auth/") || req.getRequestURI().startsWith("/api/admin/")) res.setHeader("Cache-Control","no-store");
         String header=req.getHeader("Authorization");
         if(header!=null) {
             try {

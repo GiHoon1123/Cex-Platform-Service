@@ -97,10 +97,23 @@ CREATE TRIGGER operator_role_requests_no_change BEFORE UPDATE OR DELETE ON opera
 DROP TRIGGER IF EXISTS operator_role_requests_no_truncate ON operator_role_requests;
 CREATE TRIGGER operator_role_requests_no_truncate BEFORE TRUNCATE ON operator_role_requests
  FOR EACH STATEMENT EXECUTE FUNCTION security_audit_immutable();
--- 이 표는 업무 이력이 아닌 단기 인증 옵션이다. 원본 서명·개인키·등록 비밀은 저장하지 않는다.
-CREATE TABLE IF NOT EXISTS operator_role_challenges (
- id uuid PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id), session_id uuid NOT NULL,
- request_id uuid NOT NULL REFERENCES operator_role_requests(id), payload_hash varchar(64) NOT NULL,
- approve boolean NOT NULL, options text NOT NULL, expires_at timestamptz NOT NULL, consumed boolean NOT NULL DEFAULT false
+-- 승인 근거는 원래 요청과 별도로 불변 보관한다. 과거 업무·감사 표를 바꾸거나 이전하지 않는다.
+-- 요청 당시 담당자 버전까지 고정해 역할을 바꿨다 되돌려도 예전 요청이 살아나지 못하게 한다.
+CREATE TABLE IF NOT EXISTS operator_approval_bindings (
+ kind varchar(24) NOT NULL CHECK(kind IN ('ROLE','MFA_RECOVERY','ACCESS_REVIEW','TRADING_RESTRICTION')),
+ request_id uuid NOT NULL, requester_id bigint NOT NULL REFERENCES users(id), requester_version bigint NOT NULL,
+ payload_hash varchar(64) NOT NULL, expires_at timestamptz NOT NULL,
+ PRIMARY KEY(kind,request_id)
 );
-CREATE INDEX IF NOT EXISTS operator_role_challenge_session ON operator_role_challenges(session_id);
+DROP TRIGGER IF EXISTS operator_approval_binding_no_change ON operator_approval_bindings;
+CREATE TRIGGER operator_approval_binding_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON operator_approval_bindings
+ FOR EACH STATEMENT EXECUTE FUNCTION security_audit_immutable();
+-- 옛 역할 전용 옵션은 단기 인증 상태일 뿐 업무·감사 이력이 아니다. 우회·호환 경로 없이 폐기한다.
+DROP TABLE IF EXISTS operator_role_challenges;
+CREATE TABLE IF NOT EXISTS operator_authorization_challenges (
+ id uuid PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id), session_id uuid NOT NULL,
+ kind varchar(24) NOT NULL, request_id uuid NOT NULL, payload_hash varchar(64) NOT NULL,
+ approve boolean NOT NULL, options text NOT NULL, expires_at timestamptz NOT NULL, consumed boolean NOT NULL DEFAULT false,
+ FOREIGN KEY(kind,request_id) REFERENCES operator_approval_bindings(kind,request_id)
+);
+CREATE INDEX IF NOT EXISTS operator_authorization_challenge_session ON operator_authorization_challenges(session_id);

@@ -47,11 +47,11 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/operator-security/role-requests","/api/admin/operator-security/role-targets/*")
                     .access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/recoveries","/api/admin/operator-security/access-reviews").access(audited(audit,sessions,"OPERATOR"))
-                .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/requests/*/approve","/api/admin/operator-security/requests/*/reject").access(audited(audit,sessions,"APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/requests/*/approve","/api/admin/operator-security/requests/*/reject","/api/admin/operator-security/requests/*/approve/options","/api/admin/operator-security/requests/*/reject/options").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/operators/*/revoke").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/operator-security/requests","/api/admin/operator-security/operators/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/trading-restrictions").access(audited(audit,sessions,"OPERATOR"))
-                .requestMatchers(HttpMethod.POST,"/api/admin/requests/*/approve","/api/admin/requests/*/reject").access(audited(audit,sessions,"APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/requests/*/approve","/api/admin/requests/*/reject","/api/admin/requests/*/approve/options","/api/admin/requests/*/reject/options").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/requests","/api/admin/audit","/api/admin/customers/*",
                     "/api/settlement/trade/revenue/daily","/api/settlement/trade/dates-with-trades",
                     "/api/settlement/trade/revenue/monthly","/api/settlement/trade/revenue/by-pair",

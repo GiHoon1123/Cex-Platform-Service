@@ -15,21 +15,31 @@ public class OperatorController {
     public OperatorController(OperatorApprovalService approvals,AuditService audit,dustin.cex.domains.auth.repository.UserRepository users) {this.approvals=approvals;this.audit=audit;this.users=users;}
     public record Restriction(@NotNull @Positive Long targetUserId,@NotNull @PositiveOrZero Long expectedVersion,@NotNull Boolean restricted,
         @NotBlank @Size(max=300) String reason) {}
-    public record Decision(@NotBlank @Pattern(regexp="[0-9a-f]{64}") String payloadHash,@NotBlank @Size(max=256) String password) {
-        // 자격 증명이 DTO 로그나 디버깅 문자열에 노출되지 않게 한다.
-        @Override public String toString() { return "Decision[redacted]"; }
+    public record Confirmation(@NotBlank @Pattern(regexp="[0-9a-f]{64}") String payloadHash) {}
+    public record Decision(@NotBlank @Pattern(regexp="[0-9a-f]{64}") String payloadHash,
+        @NotNull OperatorMfaService.AuthorizationProof proof) {
+        // 서명 원문은 요청 DTO의 디버깅 문자열에도 남기지 않는다.
+        @Override public String toString() {return "Decision[서명 생략]";}
     }
     @PostMapping("/trading-restrictions")
     public OperatorApprovalService.Request request(@Valid @RequestBody Restriction body,HttpServletRequest req) {
-        return approvals.request((Long)req.getAttribute("userId"),body.targetUserId(),body.expectedVersion(),body.restricted(),body.reason());
+        return approvals.request((Long)req.getAttribute("userId"),(UUID)req.getAttribute("sessionId"),body.targetUserId(),body.expectedVersion(),body.restricted(),body.reason());
     }
     @PostMapping("/requests/{id}/approve")
     public OperatorApprovalService.Request approve(@PathVariable UUID id,@Valid @RequestBody Decision body,HttpServletRequest req) {
-        return approvals.decide((Long)req.getAttribute("userId"),id,body.payloadHash(),body.password(),true);
+        return approvals.decide((Long)req.getAttribute("userId"),(UUID)req.getAttribute("sessionId"),id,body.payloadHash(),true,body.proof());
     }
     @PostMapping("/requests/{id}/reject")
     public OperatorApprovalService.Request reject(@PathVariable UUID id,@Valid @RequestBody Decision body,HttpServletRequest req) {
-        return approvals.decide((Long)req.getAttribute("userId"),id,body.payloadHash(),body.password(),false);
+        return approvals.decide((Long)req.getAttribute("userId"),(UUID)req.getAttribute("sessionId"),id,body.payloadHash(),false,body.proof());
+    }
+    @PostMapping("/requests/{id}/approve/options")
+    public OperatorApprovalService.Confirmation approvalOptions(@PathVariable UUID id,@Valid @RequestBody Confirmation b,@RequestAttribute long userId,@RequestAttribute UUID sessionId) {
+        return approvals.options(userId,sessionId,id,b.payloadHash(),true);
+    }
+    @PostMapping("/requests/{id}/reject/options")
+    public OperatorApprovalService.Confirmation rejectionOptions(@PathVariable UUID id,@Valid @RequestBody Confirmation b,@RequestAttribute long userId,@RequestAttribute UUID sessionId) {
+        return approvals.options(userId,sessionId,id,b.payloadHash(),false);
     }
     public record CustomerStatus(long id,long version,boolean enabled,boolean tradingRestricted) {}
     @GetMapping("/customers/{id}") public CustomerStatus customer(@PathVariable long id) {

@@ -65,6 +65,7 @@ public class OperatorRoleService {
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,payload.id(),actor,payload.requesterPerson(),payload.requesterVersion(),target,person,version,payload.previousRole().name(),role.name(),
                 Timestamp.from(payload.accessUntil()),reason,identityEvidence,notificationEvidence,hash,Timestamp.from(payload.expiresAt()));
+            mfa.bindApproval(OperatorMfaService.ApprovalKind.ROLE,payload.id(),actor,maker.getVersion(),hash,payload.expiresAt());
             audit.record(actor,"ROLE_REQUEST","request:"+payload.id(),"SUCCESS",hash);
             return read(payload.id(),false);
         }));
@@ -74,7 +75,7 @@ public class OperatorRoleService {
         return attempt(actor,"ROLE_OPTIONS",()->tx.execute(status->{
             var request=read(id,true);
             checkDecision(actor,sid,request,expectedHash);
-            return new Confirmation(request,approve,mfa.roleAuthorizationOptions(actor,sid,id,request.payloadHash(),approve));
+            return new Confirmation(request,approve,mfa.approvalOptions(actor,sid,OperatorMfaService.ApprovalKind.ROLE,id,request.payloadHash(),approve));
         }));
     }
     public Decision decide(long actor,UUID sid,UUID id,String expectedHash,boolean approve,OperatorMfaService.AuthorizationProof proof) {
@@ -82,7 +83,7 @@ public class OperatorRoleService {
             var request=read(id,true);
             var owner=checkDecision(actor,sid,request,expectedHash);
             // 인증을 분리된 성공 토큰으로 바꾸지 않는다. 최종 효과 직전에 같은 트랜잭션에서 검증·소비한다.
-            mfa.authorizeRole(actor,sid,id,request.payloadHash(),approve,proof);
+            mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.ROLE,id,request.payloadHash(),approve,proof);
             String raw=null;
             if(approve) {
                 var p=request.payload();checkUntil(p.accessUntil());
@@ -91,7 +92,7 @@ public class OperatorRoleService {
                 users.saveAndFlush(owner);
                 tokens.revokeAllByUserId(owner.getId(),LocalDateTime.now());
                 jdbc.update("DELETE FROM operator_mfa_challenges WHERE user_id=?",owner.getId());
-                jdbc.update("DELETE FROM operator_role_challenges WHERE user_id=?",owner.getId());
+                jdbc.update("DELETE FROM operator_authorization_challenges WHERE user_id=?",owner.getId());
                 jdbc.update("UPDATE operator_enrollment SET consumed=true WHERE user_id=?",owner.getId());
                 if(p.previousRole()==UserRole.CUSTOMER) {
                     // 신규 직원은 비밀번호 로그인→별도 등록 비밀→키 등록→서명 인증을 모두 거친다.

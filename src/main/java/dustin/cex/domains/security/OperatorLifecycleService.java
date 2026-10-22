@@ -29,10 +29,10 @@ public class OperatorLifecycleService {
     }
     public record OperatorStatus(long id,long version,UserRole role,boolean enabled,Instant accessUntil,Instant lastReviewedAt,boolean recoveryPending) {}
     private final UserRepository users;private final RefreshTokenRepository tokens;private final OperatorSessionPolicy policy;
-    private final AuditService audit;private final JdbcTemplate jdbc;private final JwtService jwt;private final TransactionTemplate tx;
+    private final OperatorMfaService mfa;private final AuditService audit;private final JdbcTemplate jdbc;private final JwtService jwt;private final TransactionTemplate tx;
     public OperatorLifecycleService(UserRepository users,RefreshTokenRepository tokens,OperatorSessionPolicy policy,
-            AuditService audit,JdbcTemplate jdbc,JwtService jwt,PlatformTransactionManager manager) {
-        this.users=users;this.tokens=tokens;this.policy=policy;this.audit=audit;this.jdbc=jdbc;this.jwt=jwt;tx=new TransactionTemplate(manager);
+            AuditService audit,JdbcTemplate jdbc,JwtService jwt,OperatorMfaService mfa,PlatformTransactionManager manager) {
+        this.mfa=mfa;this.users=users;this.tokens=tokens;this.policy=policy;this.audit=audit;this.jdbc=jdbc;this.jwt=jwt;tx=new TransactionTemplate(manager);
     }
     public Request request(long actor,UUID sid,long target,long version,Kind kind,Instant accessUntil,
             String reason,String identityEvidence,String notificationEvidence) {
@@ -57,23 +57,16 @@ public class OperatorLifecycleService {
                  access_until,reason,identity_evidence,notification_evidence,payload_hash,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,id,kind.name(),actor,requester.getOperatorPersonId(),target,owner.getOperatorPersonId(),owner.getVersion(),
                 timestamp(accessUntil),reason,identityEvidence,notificationEvidence,hash,Timestamp.from(expires));
+            mfa.bindApproval(approvalKind(kind),id,actor,requester.getVersion(),hash,expires);
             audit.record(actor,"OPERATOR_SECURITY_REQUEST","request:"+id,"SUCCESS",kind+":"+hash);
             return read(id,false);
         }));
     }
-    public Decision decide(long actor,UUID sid,UUID id,String expectedHash,boolean approve) {
+    public Decision decide(long actor,UUID sid,UUID id,String expectedHash,boolean approve,OperatorMfaService.AuthorizationProof proof) {
         return attempt(actor,"OPERATOR_SECURITY_DECIDE",()->tx.execute(status->{
             var request=read(id,true);
-            var locked=lockUsers(actor,request.requesterId(),request.targetId());var approver=locked.get(actor);
-            policy.requireFresh(approver,sid,UserRole.APPROVER);
-            var requester=locked.get(request.requesterId());var owner=target(locked.get(request.targetId()),request.targetVersion());
-            if(requester==null || !requester.isAuthenticationAllowed() || requester.getRole()!=UserRole.OPERATOR
-                    || !request.requesterPerson().equals(requester.getOperatorPersonId())
-                    || !request.targetPerson().equals(owner.getOperatorPersonId())) throw denied(HttpStatus.FORBIDDEN);
-            different(approver,requester);different(approver,owner);different(requester,owner);
-            if(!request.status().equals("PENDING") || !request.expiresAt().isAfter(Instant.now())
-                    || !request.payloadHash().equals(expectedHash)) throw denied(HttpStatus.CONFLICT);
-            if(request.kind()==Kind.RECOVER_MFA && !id.equals(owner.getOperatorRecoveryRequestId())) throw denied(HttpStatus.CONFLICT);
+            var owner=checkDecision(actor,sid,request,expectedHash);
+            mfa.authorizeApproval(actor,sid,approvalKind(request.kind()),id,request.payloadHash(),approve,proof);
             String raw=null;
             if(approve) {
                 if(request.kind()==Kind.RECOVER_MFA) {
@@ -99,6 +92,29 @@ public class OperatorLifecycleService {
             return new Decision(read(id,false),raw);
         }));
     }
+    public record Confirmation(Request request,boolean approve,OperatorMfaService.Options authentication) {}
+    public Confirmation options(long actor,UUID sid,UUID id,String hash,boolean approve) {
+        return attempt(actor,"OPERATOR_SECURITY_OPTIONS",()->tx.execute(status->{
+            var request=read(id,true);checkDecision(actor,sid,request,hash);
+            return new Confirmation(request,approve,mfa.approvalOptions(actor,sid,approvalKind(request.kind()),id,request.payloadHash(),approve));
+        }));
+    }
+    private User checkDecision(long actor,UUID sid,Request request,String expectedHash) {
+        var locked=lockUsers(actor,request.requesterId(),request.targetId());var approver=locked.get(actor);
+        policy.requireFresh(approver,sid,UserRole.APPROVER);
+        var requester=locked.get(request.requesterId());var owner=target(locked.get(request.targetId()),request.targetVersion());
+        if(requester==null || !requester.isAuthenticationAllowed() || requester.getRole()!=UserRole.OPERATOR
+                || !request.requesterPerson().equals(requester.getOperatorPersonId())
+                || !request.targetPerson().equals(owner.getOperatorPersonId())) throw denied(HttpStatus.FORBIDDEN);
+        different(approver,requester);different(approver,owner);different(requester,owner);
+        if(!request.status().equals("PENDING") || !request.expiresAt().isAfter(Instant.now())
+                || !request.payloadHash().equals(expectedHash)) throw denied(HttpStatus.CONFLICT);
+        if(request.kind()==Kind.RECOVER_MFA && !request.id().equals(owner.getOperatorRecoveryRequestId())) throw denied(HttpStatus.CONFLICT);
+        return owner;
+    }
+    private OperatorMfaService.ApprovalKind approvalKind(Kind kind) {
+        return kind==Kind.RECOVER_MFA?OperatorMfaService.ApprovalKind.MFA_RECOVERY:OperatorMfaService.ApprovalKind.ACCESS_REVIEW;
+    }
     public void revokeAccess(long actor,UUID sid,long target,long version,String reason,String notificationEvidence) {
         attempt(actor,"OPERATOR_ACCESS_REVOKE",()->tx.execute(status->{
             checkText(reason,"REVOCATION",notificationEvidence);
@@ -123,6 +139,7 @@ public class OperatorLifecycleService {
     private void invalidate(long target) {
         tokens.revokeAllByUserId(target,LocalDateTime.now());
         jdbc.update("DELETE FROM operator_mfa_challenges WHERE user_id=?",target);
+        jdbc.update("DELETE FROM operator_authorization_challenges WHERE user_id=?",target);
         jdbc.update("UPDATE operator_enrollment SET consumed=true WHERE user_id=?",target);
     }
     private Map<Long,User> lockUsers(long... ids) {
