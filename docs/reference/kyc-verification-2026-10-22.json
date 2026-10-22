@@ -1,0 +1,342 @@
+{
+  "checked_date": "2026-10-22",
+  "scope": "Didit 신분 확인·서명·외부 세션 복원·고객 신규 주문 정책",
+  "junit": {
+    "tests": 473,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_kyc_tests": 61,
+  "python_canonical_fixtures": 300,
+  "process_scenarios": 12,
+  "reports": {
+    "kyc": {
+      "container": "cex-kyc-b412ccb89ba5",
+      "exit": 0,
+      "tests": {
+        "tests": 61,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "bound": {
+      "container": "cex-bound-approvals-b0702619ca87",
+      "groups": [
+        {
+          "name": "bound",
+          "exit": 0,
+          "tests": {
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "roles",
+          "exit": 0,
+          "tests": {
+            "tests": 48,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "lifecycle",
+          "exit": 0,
+          "tests": {
+            "tests": 37,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "security",
+          "exit": 0,
+          "tests": {
+            "tests": 39,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 186,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "mfa": {
+      "container": "cex-operator-mfa-db2ef83c3d50",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "financial": {
+      "container": "cex-inbox-e711d2d5b8d2",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "market": {
+      "postgres": "cex-market-pg-08a07c838a",
+      "kafka": "cex-market-broker-ad2a6a8e95",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    },
+    "admin_process": {
+      "database": "cex_idempotency_4fe260cf7daf",
+      "temporary_database_removed": true,
+      "platform_runs": 1,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "dedicated_grant_without_ddl_or_workers",
+          "passed": true
+        },
+        {
+          "test": "reject_financial_customer_and_duplicate_grant",
+          "passed": true
+        }
+      ]
+    },
+    "orders_process": {
+      "database": "cex_idempotency_489a4a7b519b",
+      "temporary_database_removed": true,
+      "platform_runs": 2,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "test_concurrent_same_key",
+          "new": 1,
+          "existing": 11,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_concurrent_same_key_different_content",
+          "new": 1,
+          "existing": 5,
+          "conflicts": 6,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_invalid_balance_and_unrepresentable_split_roll_back_everything",
+          "rollback_cases": 2,
+          "engine_posts": 0
+        },
+        {
+          "test": "test_invalid_header_and_command_have_no_financial_effect",
+          "statuses": [
+            400,
+            400,
+            400
+          ],
+          "engine_posts": 0
+        },
+        {
+          "test": "test_key_is_scoped_to_authenticated_user",
+          "users": 2,
+          "engine_posts": 2
+        },
+        {
+          "test": "test_lost_response_then_same_key",
+          "statuses": [
+            202,
+            200
+          ],
+          "engine_posts": 1
+        },
+        {
+          "test": "test_market_original_budget_survives_order_changes",
+          "quote_amount": "123.250000001",
+          "replay": 200,
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_process_restart_uses_committed_key",
+          "after_restart": 200,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_same_key_different_content",
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_unrepresentable_commands_are_rejected_without_financial_effect",
+          "rejections": 2,
+          "engine_posts": 0
+        }
+      ]
+    },
+    "dependencies": {
+      "checked_at": "2026-10-22T14:50:25.690721+00:00",
+      "status": "NO_KNOWN_FINDINGS",
+      "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+      "package_versions": 222,
+      "findings": []
+    },
+    "integrity": {
+      "check": "gradle_rejects_altered_checksum",
+      "original_cache_modified": false,
+      "gradle_exit": 1,
+      "passed": true,
+      "temporary_copy_removed": true
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_bound_approvals.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 153.07
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_mfa.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 17.93
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_engine_inbox.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 31.53
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.41
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 14.87
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_order_idempotency.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 17.42
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 23.39
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.35
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 0.88
+    }
+  ],
+  "intermediate_failures": [
+    {
+      "phase": "초기 컴파일",
+      "errors": 5,
+      "cause": "Jackson 3 JsonFactory 경로와 Timestamp 와일드카드 충돌",
+      "fix": "실제 설치된 타입의 명시적 import"
+    },
+    {
+      "phase": "초기 KYC 통합",
+      "tests": 51,
+      "failures": 1,
+      "cause": "같은 초 충돌 fixture의 변경 시각이 서명 전송 시각보다 미래",
+      "fix": "전송 시각을 변경 시각 이상으로 수정, 제품 검증 유지"
+    },
+    {
+      "phase": "첫 기존 승인 회귀",
+      "bound_tests": 62,
+      "bound_failures": 0,
+      "role_tests": 48,
+      "role_failures": 2,
+      "observed_test_seconds": 905.554,
+      "cause": "벽시계 경과 급증과 인증 기한 만료 관찰, 실행 환경 중단 가능성; 원인 확정 아님",
+      "fix": "기록 보존 후 제품 기한 변경 없이 재실행"
+    },
+    {
+      "phase": "두 번째 기존 승인 회귀",
+      "bound_tests": 62,
+      "bound_failures": 3,
+      "observed_test_seconds": 931.48,
+      "cause": "다시 벽시계 경과 급증·인증 기한 만료 관찰; 원인 확정 아님",
+      "fix": "절전 방지 실행에서 전체 신규/기존 회귀 다시 검증, 제품/테스트 기한 미변경"
+    },
+    {
+      "phase": "첫 금융 회귀",
+      "tests": 183,
+      "failures": 9,
+      "cause": "기존 H2 정산 실행 기록 테스트 두 곳에서 PostgreSQL 전용 KYC DDL 초기화",
+      "fix": "두 테스트에 KycSchemaInitializer MockitoBean; 제품 H2 폴백 없음; 실제 PG KYC 통합 검증 유지"
+    }
+  ],
+  "limits": [
+    "선택 회귀이며 전체 저장소 테스트가 아님",
+    "Didit 공급사는 루프백 HTTP 대역; 실제 계정·샌드박스·운영 연동·개인정보 제출 없음",
+    "생성 응답 유실의 링크/세션 복원만 구현; 누락 판정 웹훅의 결정 API 자동 대사 미구현",
+    "계정 정보/확인 신원 일치·중복 인물·실소유자·목적/자금 출처·위험 평가·제재/정치적 주요인물·지속 모니터링·보고 등 전체 CDD/AML 미완료",
+    "공급사 계약/DPA·국외 이전·학습 사용 거부·보유/삭제·실제 TLS/브라우저/EC2/부하·조직/인증/신고 미검증",
+    "KYC 전용 프로세스 강제 종료/재시작 미검증; 금융 프로세스 재시작 회귀와 구분",
+    "봇 0명·기존 DB/Kafka 미사용·배포 안 함"
+  ]
+}

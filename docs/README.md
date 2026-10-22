@@ -47,3 +47,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [운영 역할 부여·변경 승인과 업무별 보안키 서명](decisions/016-operator-role-approval-and-bound-authentication.md)
 
 - [복구·재검토·거래 제한 승인에 업무별 보안키 서명 적용](decisions/017-bound-approval-for-existing-operations.md)
+
+- [018. Didit 신분 확인·결과 불명 복원과 신규 주문 정책](decisions/018-didit-identity-verification-and-trading-policy.md): 서명·환경/고객 결합·중복/역순/충돌·필수 감사·로컬 대역 검증. 실제 공급사 연동과 전체 CDD/AML은 별도 미완료.
