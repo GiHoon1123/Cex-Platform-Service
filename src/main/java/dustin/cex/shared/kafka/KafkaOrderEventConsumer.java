@@ -1,6 +1,7 @@
 package dustin.cex.shared.kafka;
 
 import java.math.BigDecimal;
+import static dustin.cex.domains.ledger.LedgerService.p;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -34,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class KafkaOrderEventConsumer {
+    private final dustin.cex.domains.ledger.LedgerService ledger;
     private final EngineEventInbox engineEventInbox;
     private final TradeRepository tradeRepository;
     private final OrderRepository orderRepository;
@@ -85,7 +87,7 @@ public class KafkaOrderEventConsumer {
         BigDecimal sellerFee = verifiedFee(sell, value, sellerRate, number(event, "seller_fee"));
         // 시각 누락·손상을 현재 시각으로 숨기면 재발행 결과가 달라진다.
         LocalDateTime time = LocalDateTime.ofInstant(Instant.parse(event.path("timestamp").asText()), ZoneId.of("Asia/Seoul"));
-        var saved = tradeRepository.save(Trade.builder().buyOrderId(buy.getId()).sellOrderId(sell.getId())
+        var saved = tradeRepository.save(Trade.builder().engineEventId(event.path("event_id").asText()).buyOrderId(buy.getId()).sellOrderId(sell.getId())
                 .buyerId(buy.getUserId()).sellerId(sell.getUserId()).baseMint(base).quoteMint(quote)
                 .price(price).amount(quantity).createdAt(time).build());
         fill(buy, quantity, value);
@@ -105,6 +107,11 @@ public class KafkaOrderEventConsumer {
                         .feeAmount(buyerFee).feeMint(base).tradeValue(value).createdAt(time).build(),
                 TradeFee.builder().trade(saved).user(seller).feeType("seller").feeRate(sellerRate)
                         .feeAmount(sellerFee).feeMint(quote).tradeValue(value).createdAt(time).build()));
+        // 고객 간 이동과 수수료 귀속을 자산별로 균형 있게 기록한다. 원장은 잔고 반영과 같은 트랜잭션이다.
+        ledger.record("engine:"+event.path("event_id").asText(),"TRADE",List.of(
+            p(buy.getUserId(),"AVAILABLE",quote,reserved.subtract(value)),p(buy.getUserId(),"LOCKED",quote,reserved.negate()),
+            p(buy.getUserId(),"AVAILABLE",base,quantity.subtract(buyerFee)),p(sell.getUserId(),"LOCKED",base,quantity.negate()),
+            p(sell.getUserId(),"AVAILABLE",quote,value.subtract(sellerFee)),p(0,"FEE",base,buyerFee),p(0,"FEE",quote,sellerFee)));
         updatePositionForTrade(buy.getUserId(), base, quote, quantity.subtract(buyerFee), price, value);
         updatePositionForTrade(sell.getUserId(), base, quote, quantity.negate(), price, BigDecimal.ZERO);
     }
@@ -180,6 +187,7 @@ public class KafkaOrderEventConsumer {
         // 잔여 예약만 반환한다. 동일 종료의 재전달은 수신 키가 앞에서 막고,
         // 다른 식별자로 종료를 반복하면 활성 상태 검사가 거부한다.
         if (refund.signum() > 0) change(order.getUserId(), original.reservationMint(), refund, refund.negate());
+        refundLedger(event,order,original.reservationMint(),refund,"MARKET_COMPLETED");
         order.setStatus(status);
         orderRepository.save(order);
     }
@@ -208,6 +216,7 @@ public class KafkaOrderEventConsumer {
         if(trades!=0) throw new IllegalStateException("이미 체결된 주문의 전체 거절입니다");
         BigDecimal refund=original.reservationAmount();
         change(order.getUserId(),original.reservationMint(),refund,refund.negate());
+        refundLedger(event,order,original.reservationMint(),refund,"REJECTED");
         order.setStatus("rejected"); orderRepository.save(order);
         // 전송 확인과 거절 결과의 경쟁에서도 이미 확인된 기록을 다시 대기로 돌리지 않는다.
         dispatches.findForUpdate(order.getId()).orElseThrow().confirm(Instant.now());
@@ -225,8 +234,15 @@ public class KafkaOrderEventConsumer {
         boolean buy = order.getOrderType().equals("buy");
         BigDecimal refund = buy ? ExactAmount.requirePositive(remaining.multiply(order.getPrice()), "취소 예약금") : remaining;
         change(order.getUserId(), buy ? order.getQuoteMint() : order.getBaseMint(), refund, refund.negate());
+        refundLedger(event,order,buy ? order.getQuoteMint() : order.getBaseMint(),refund,"CANCELLED");
         order.setStatus("cancelled");
         orderRepository.save(order);
+    }
+
+    private void refundLedger(JsonNode event,Order order,String asset,BigDecimal refund,String kind) {
+        // 반환 0도 결과를 확인한 업무 기록은 남긴다. 불필요한 금액 0 항목은 저장하지 않는다.
+        ledger.record("engine:"+event.path("event_id").asText(),kind,List.of(
+            p(order.getUserId(),"AVAILABLE",asset,refund),p(order.getUserId(),"LOCKED",asset,refund.negate())));
     }
 
     /** 기존 행은 비관적 락으로 갱신하고, 수취 계정만 없을 때 생성한다. 음수·NULL을 복구값으로 숨기지 않는다. */

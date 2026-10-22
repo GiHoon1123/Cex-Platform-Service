@@ -166,6 +166,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         self.sql("""INSERT INTO user_balances (user_id,mint_address,available,locked,created_at,updated_at)
                     VALUES (101,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
                            (102,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""")
+        self.sql((PROJECT/"src/test/resources/ledger-opening-fixture.sql").read_text())
 
     def token(self, user):
         def encode(value):

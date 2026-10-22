@@ -17,7 +17,7 @@ class KafkaOrderEventConsumerTest {
     final EngineEventInbox inbox=mock(EngineEventInbox.class);
     final OrderRepository orders=mock(OrderRepository.class);
     final TradeRepository trades=mock(TradeRepository.class);
-    final KafkaOrderEventConsumer consumer=new KafkaOrderEventConsumer(inbox,trades,orders,
+    final KafkaOrderEventConsumer consumer=new KafkaOrderEventConsumer(mock(dustin.cex.domains.ledger.LedgerService.class), inbox,trades,orders,
             mock(UserBalanceRepository.class),mock(UserPositionRepository.class),mock(dustin.cex.domains.order.repository.OrderSubmissionRepository.class),
             mock(TradeFeeRepository.class),mock(UserRepository.class),mock(dustin.cex.domains.order.repository.OrderDispatchRepository.class));
     final String message="""

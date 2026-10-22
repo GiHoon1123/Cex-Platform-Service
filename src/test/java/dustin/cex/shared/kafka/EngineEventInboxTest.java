@@ -77,7 +77,7 @@ class EngineEventInboxTest {
     void actualConsumerFailureRollsBackTheRealInboxClaim() {
         var orders=org.mockito.Mockito.mock(dustin.cex.domains.order.repository.OrderRepository.class);
         org.mockito.Mockito.when(orders.findByIdForUpdate(1L)).thenReturn(java.util.Optional.empty());
-        var consumer=new KafkaOrderEventConsumer(inbox,
+        var consumer=new KafkaOrderEventConsumer(org.mockito.Mockito.mock(dustin.cex.domains.ledger.LedgerService.class), inbox,
                 org.mockito.Mockito.mock(dustin.cex.domains.trade.repository.TradeRepository.class), orders,
                 org.mockito.Mockito.mock(dustin.cex.domains.balance.repository.UserBalanceRepository.class),
                 org.mockito.Mockito.mock(dustin.cex.domains.position.repository.UserPositionRepository.class),

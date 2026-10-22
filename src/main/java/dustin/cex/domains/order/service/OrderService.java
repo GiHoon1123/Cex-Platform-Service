@@ -71,6 +71,7 @@ public class OrderService {
     private final TransactionTemplate transactionTemplate;
     private final dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
     private final OrderDispatchService dispatch;
+    private final dustin.cex.domains.ledger.LedgerService ledger;
     
     /**
      * ObjectMapper 초기화 (JavaTimeModule 등록)
@@ -92,7 +93,8 @@ public class OrderService {
             KafkaEventProducer kafkaEventProducer,
             PlatformTransactionManager transactionManager,
             dustin.cex.domains.fee.service.FeeConfigService feeConfigService,
-            dustin.cex.domains.order.repository.OrderDispatchRepository dispatches, OrderDispatchService dispatch) {
+            dustin.cex.domains.order.repository.OrderDispatchRepository dispatches, OrderDispatchService dispatch, dustin.cex.domains.ledger.LedgerService ledger) {
+        this.ledger=ledger;
         this.dispatches=dispatches; this.dispatch=dispatch;
         this.feeConfigService = feeConfigService;
         this.orderRepository = orderRepository;
@@ -135,6 +137,10 @@ public class OrderService {
                 submissionRepository.saveAndFlush(new OrderSubmission(userId, requestId, order.getId(), command,
                         feeConfigService.getFeeConfig(command.baseMint(), command.quoteMint()).getFeeRate()));
                 lockBalance(userId, command.reservationMint(), command.reservationAmount());
+                // 주문·예약·전송 기록과 원장 이동은 함께 커밋하거나 함께 롤백한다.
+                ledger.record("reserve:"+order.getId(),"RESERVE",java.util.List.of(
+                    dustin.cex.domains.ledger.LedgerService.p(userId,"AVAILABLE",command.reservationMint(),command.reservationAmount().negate()),
+                    dustin.cex.domains.ledger.LedgerService.p(userId,"LOCKED",command.reservationMint(),command.reservationAmount())));
                 dispatches.save(new dustin.cex.domains.order.model.entity.OrderDispatch(order));
                 return order;
             });

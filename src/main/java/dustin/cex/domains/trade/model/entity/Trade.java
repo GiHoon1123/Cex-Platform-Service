@@ -46,6 +46,10 @@ public class Trade {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** 엔진 확정 결과와 저장 체결을 직접 연결한다. 누락·중복 대사의 업무 식별자다. */
+    @Column(name="engine_event_id",nullable=false,unique=true,updatable=false,length=120)
+    private String engineEventId;
     
     /**
      * 매수 주문 ID (누가 구매했는지)

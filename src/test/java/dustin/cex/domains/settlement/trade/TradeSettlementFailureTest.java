@@ -39,6 +39,8 @@ import dustin.cex.domains.settlement.trade.service.TradeSettlementService;
 })
 @org.springframework.context.annotation.Import(dustin.cex.config.TestConfig.class)
 class TradeSettlementFailureTest {
+    // 이 테스트는 정산 실행 기록만 검증한다. 원장의 PostgreSQL 제약은 별도 실제 디비 테스트가 담당한다.
+    @org.springframework.boot.test.mock.mockito.MockBean dustin.cex.domains.ledger.LedgerService ledger;
 
     @Autowired
     private TradeSettlementService tradeSettlementService;

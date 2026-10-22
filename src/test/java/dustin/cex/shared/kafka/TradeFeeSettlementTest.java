@@ -36,6 +36,7 @@ class TradeFeeSettlementTest {
     @EnableJpaRepositories(basePackages="dustin.cex.domains")
     @Import(KafkaOrderEventConsumer.class)
     static class Persistence {}
+    @MockBean dustin.cex.domains.ledger.LedgerService ledger;
     @MockBean EngineEventInbox inbox;
     @Autowired KafkaOrderEventConsumer consumer;
     @Autowired UserRepository users; @Autowired OrderRepository orders;
@@ -43,6 +44,7 @@ class TradeFeeSettlementTest {
     @Autowired OrderSubmissionRepository submissions; @Autowired UserBalanceRepository balances;
     @Autowired dustin.cex.domains.position.repository.UserPositionRepository positions;
     @Autowired TradeRepository trades; @Autowired TradeFeeRepository fees;
+    final String eventEngine=UUID.randomUUID().toString();
     long buyer, seller, buy, sell;
     BigDecimal n(String value) { return new BigDecimal(value); }
     void balance(long user, String asset, String available, String locked) {
@@ -73,7 +75,7 @@ class TradeFeeSettlementTest {
              "base_mint":"BTC","quote_mint":"USDT","price":"90","amount":"0.5",
              "buyer_fee_rate":"0.001","seller_fee_rate":"0.002","buyer_fee":"%s","seller_fee":"0.09",
              "timestamp":"2026-10-22T00:00:00Z"}
-            """.formatted(sequence,buy,sell,buyer,seller,buyerFee);
+            """.formatted(sequence,buy,sell,buyer,seller,buyerFee).replace("engine:",eventEngine+":").replace("\"engine_id\":\"engine\"","\"engine_id\":\""+eventEngine+"\"");
     }
     void assertBalance(long user, String asset, String available, String locked) {
         var result = balances.findByUserIdAndMintAddress(user,asset).orElseThrow();
