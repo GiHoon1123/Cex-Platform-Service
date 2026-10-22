@@ -13,6 +13,17 @@ public class SessionService {
     private final UserRepository users;
     private final RefreshTokenRepository tokens;
     public SessionService(UserRepository users,RefreshTokenRepository tokens) { this.users=users;this.tokens=tokens; }
+    // 고객 세션에는 적용하지 않는다. 운영 역할과 인증 수준은 각각 현재 서버 상태로 확인한다.
+    @Transactional(readOnly=true)
+    public boolean hasOperatorMfa(UUID sessionId) {
+        var session=tokens.findBySessionId(sessionId).orElseThrow();
+        return session.getMfaVerifiedAt()!=null && session.getMfaVerifiedAt().plusHours(12).isAfter(LocalDateTime.now());
+    }
+    @Transactional(readOnly=true)
+    public boolean hasFreshOperatorMfa(UUID sessionId) {
+        var session=tokens.findBySessionId(sessionId).orElseThrow();
+        return session.getMfaVerifiedAt()!=null && session.getMfaVerifiedAt().plusMinutes(5).isAfter(LocalDateTime.now());
+    }
     @Transactional(readOnly=true)
     public User authenticate(long userId,UUID sessionId) {
         var user=users.findById(userId).orElseThrow(()->new IllegalArgumentException("유효하지 않은 인증"));

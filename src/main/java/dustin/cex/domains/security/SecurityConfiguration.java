@@ -35,29 +35,36 @@ public class SecurityConfiguration {
                 .requestMatchers("/swagger-ui/**","/swagger-ui.html","/api-docs/**","/v3/api-docs/**").permitAll()
                 .requestMatchers(HttpMethod.GET,"/api/auth/me").authenticated()
                 .requestMatchers(HttpMethod.POST,"/api/auth/logout").authenticated()
-                .requestMatchers(HttpMethod.POST,"/api/admin/trading-restrictions").access(audited(audit,"OPERATOR"))
-                .requestMatchers(HttpMethod.POST,"/api/admin/requests/*/approve","/api/admin/requests/*/reject").access(audited(audit,"APPROVER"))
+                // 미검증 운영 세션도 보안키 등록·인증은 할 수 있지만 고객·운영 업무 권한은 없다.
+                .requestMatchers(HttpMethod.POST,"/api/auth/operator-mfa/register/options","/api/auth/operator-mfa/register",
+                    "/api/auth/operator-mfa/authenticate/options","/api/auth/operator-mfa/authenticate").authenticated()
+                .requestMatchers(HttpMethod.POST,"/api/admin/trading-restrictions").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/requests/*/approve","/api/admin/requests/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/requests","/api/admin/audit","/api/admin/customers/*",
                     "/api/settlement/trade/revenue/daily","/api/settlement/trade/dates-with-trades",
                     "/api/settlement/trade/revenue/monthly","/api/settlement/trade/revenue/by-pair",
                     "/api/settlement/trade/validation-status/*","/api/settlement/trade/failures",
                     "/api/settlement/trade/report/daily/*","/api/settlement/trade/report/monthly/*/*",
-                    "/api/settlement/trade/report/user/*/*","/api/settlement/trade/details/*").access(audited(audit,"OPERATOR","APPROVER","AUDITOR"))
-                .requestMatchers(HttpMethod.GET,"/api/cex/trades").access(audited(audit,"AUDITOR"))
-                .requestMatchers(HttpMethod.POST,"/api/cex/orders").access(audited(audit,"CUSTOMER"))
-                .requestMatchers(HttpMethod.DELETE,"/api/cex/orders/*").access(audited(audit,"CUSTOMER"))
+                    "/api/settlement/trade/report/user/*/*","/api/settlement/trade/details/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.GET,"/api/cex/trades").access(audited(audit,sessions,"AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/cex/orders").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.DELETE,"/api/cex/orders/*").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/cex/orders/my","/api/cex/orders/*","/api/cex/trades/my",
-                    "/api/cex/balances","/api/cex/balances/*","/api/cex/positions","/api/cex/positions/*").access(audited(audit,"CUSTOMER"))
+                    "/api/cex/balances","/api/cex/balances/*","/api/cex/positions","/api/cex/positions/*").access(audited(audit,sessions,"CUSTOMER"))
                 // 새 엔드포인트는 명시적으로 권한을 정하기 전까지 열리지 않는다.
-                .anyRequest().access(audited(audit)));
+                .anyRequest().access(audited(audit,sessions)));
         return http.build();
     }
-    private AuthorizationManager<RequestAuthorizationContext> audited(AuditService audit,String... roles) {
+    private AuthorizationManager<RequestAuthorizationContext> audited(AuditService audit,SessionService sessions,String... roles) {
         return (supplier,context)->{
             var auth=supplier.get();
             boolean allowed=auth!=null && auth.isAuthenticated() && java.util.Arrays.stream(roles)
                 .anyMatch(role->auth.getAuthorities().stream().anyMatch(g->g.getAuthority().equals("ROLE_"+role)));
             Long actor=auth!=null && auth.getPrincipal() instanceof Long id ? id : null;
+            // 운영 변경에는 최근 5분 안의 사용자 확인이 필요하다. 고객 주문에는 이 조건을 적용하지 않는다.
+            if(allowed && auth.getAuthorities().stream().noneMatch(g->g.getAuthority().equals("ROLE_CUSTOMER"))
+                    && !context.getRequest().getMethod().equals("GET"))
+                allowed=context.getRequest().getAttribute("sessionId") instanceof java.util.UUID sid && sessions.hasFreshOperatorMfa(sid);
             String path=context.getRequest().getRequestURI();
             String target=roles.length>0 && path.length()<=150 ? "http:"+path : "unmapped";
             audit.record(actor,"HTTP_AUTHORIZATION",target,allowed?"ALLOWED":"DENIED",context.getRequest().getMethod());

@@ -38,3 +38,27 @@ CREATE TRIGGER operator_request_no_change BEFORE UPDATE OR DELETE ON operator_re
 DROP TRIGGER IF EXISTS operator_request_no_truncate ON operator_requests;
 CREATE TRIGGER operator_request_no_truncate BEFORE TRUNCATE ON operator_requests
  FOR EACH STATEMENT EXECUTE FUNCTION security_audit_immutable();
+
+-- 보안키 사용자·공개키는 Spring Security의 JDBC 저장 계약을 따른다. 개인키는 서버에 오지 않는다.
+CREATE TABLE IF NOT EXISTS user_entities (
+ id varchar(1000) PRIMARY KEY, name varchar(100) NOT NULL UNIQUE, display_name varchar(200) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS user_credentials (
+ credential_id varchar(1400) PRIMARY KEY, user_entity_user_id varchar(1000) NOT NULL REFERENCES user_entities(id),
+ public_key bytea NOT NULL, signature_count bigint NOT NULL, uv_initialized boolean NOT NULL,
+ backup_eligible boolean NOT NULL, authenticator_transports varchar(100) NOT NULL,
+ public_key_credential_type varchar(100) NOT NULL, backup_state boolean NOT NULL,
+ attestation_object bytea NOT NULL, attestation_client_data_json bytea NOT NULL,
+ created timestamp NOT NULL, last_used timestamp NOT NULL, label varchar(100) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS operator_enrollment (
+ user_id bigint PRIMARY KEY REFERENCES users(id), token_hash varchar(64) NOT NULL,
+ expires_at timestamptz NOT NULL, consumed boolean NOT NULL DEFAULT false
+);
+-- 챌린지는 사용자·세션·목적에 묶는다. 재시작 후에도 일회성 소비 여부가 유지된다.
+CREATE TABLE IF NOT EXISTS operator_mfa_challenges (
+ id uuid PRIMARY KEY, user_id bigint NOT NULL REFERENCES users(id), session_id uuid NOT NULL,
+ purpose varchar(16) NOT NULL CHECK(purpose IN ('REGISTER','AUTHENTICATE')),
+ options text NOT NULL, expires_at timestamptz NOT NULL, consumed boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS operator_mfa_challenge_session ON operator_mfa_challenges(session_id);

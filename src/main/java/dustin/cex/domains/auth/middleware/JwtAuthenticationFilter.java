@@ -22,6 +22,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override protected void doFilterInternal(HttpServletRequest req,HttpServletResponse res,FilterChain chain)
             throws ServletException,IOException {
         req.setAttribute("requestId",UUID.randomUUID());
+        // 토큰과 기기 등록 응답을 브라우저·중간 프록시 캐시에 남기지 않는다.
+        if(req.getRequestURI().startsWith("/api/auth/")) res.setHeader("Cache-Control","no-store");
         String header=req.getHeader("Authorization");
         if(header!=null) {
             try {
@@ -30,7 +32,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 long userId=Long.parseLong(claims.getSubject()); UUID sid=UUID.fromString(claims.get("sid",String.class));
                 var user=sessions.authenticate(userId,sid);
                 var auth=UsernamePasswordAuthenticationToken.authenticated(userId,null,
-                    List.of(new SimpleGrantedAuthority("ROLE_"+user.getRole().name())));
+                    List.of(new SimpleGrantedAuthority("ROLE_"+(user.getRole()==dustin.cex.domains.auth.model.entity.UserRole.CUSTOMER || sessions.hasOperatorMfa(sid)
+                        ? user.getRole().name() : "MFA_PENDING"))));
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 req.setAttribute("userId",userId);req.setAttribute("sessionId",sid);
             } catch(io.jsonwebtoken.JwtException | IllegalArgumentException failure) {

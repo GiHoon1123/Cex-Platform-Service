@@ -19,15 +19,18 @@ import dustin.cex.domains.auth.repository.*;
 public class OperatorBootstrapRunner implements ApplicationRunner {
     private final TransactionTemplate tx;private final UserRepository users;private final RefreshTokenRepository tokens;
     private final AuditService audit;private final JdbcTemplate jdbc;private final ConfigurableApplicationContext context;
+    private final String enrollmentToken;
     private final long userId;private final UUID personId;private final UserRole role;
     public OperatorBootstrapRunner(PlatformTransactionManager manager,UserRepository users,RefreshTokenRepository tokens,
             AuditService audit,JdbcTemplate jdbc,ConfigurableApplicationContext context,
             @Value("${operator.bootstrap.user-id}") long userId,@Value("${operator.bootstrap.person-id}") UUID personId,
-            @Value("${operator.bootstrap.role}") UserRole role) {
+            @Value("${operator.bootstrap.role}") UserRole role,
+            @Value("${operator.bootstrap.enrollment-token}") String enrollmentToken) {
         this.tx=new TransactionTemplate(manager);this.users=users;this.tokens=tokens;this.audit=audit;
-        this.jdbc=jdbc;this.context=context;this.userId=userId;this.personId=personId;this.role=role;
+        this.jdbc=jdbc;this.context=context;this.userId=userId;this.personId=personId;this.role=role;this.enrollmentToken=enrollmentToken;
     }
     public void run(ApplicationArguments args) {
+        if(enrollmentToken.length()<43 || enrollmentToken.length()>256) throw new IllegalArgumentException("충분히 무작위인 등록 비밀이 필요합니다");
         if(role==UserRole.CUSTOMER) throw new IllegalArgumentException("운영 역할을 지정해야 합니다");
         tx.executeWithoutResult(status->{
             var user=users.lockById(userId).orElseThrow();
@@ -38,6 +41,9 @@ public class OperatorBootstrapRunner implements ApplicationRunner {
                 throw new IllegalStateException("금융 이력이 없는 전용 운영 계정만 초기화할 수 있습니다");
             user.setRole(role);user.setOperatorPersonId(personId);users.saveAndFlush(user);
             tokens.revokeAllByUserId(userId,LocalDateTime.now());
+            // 등록 권한은 사용자·10분 만료에 묶고 원본 비밀은 저장하지 않는다.
+            jdbc.update("INSERT INTO operator_enrollment(user_id,token_hash,expires_at) VALUES(?,?,clock_timestamp()+interval '10 minutes')",
+                userId,OperatorMfaService.sha256Hex(enrollmentToken));
             audit.record(null,"OPERATOR_BOOTSTRAP","user:"+userId,"SUCCESS",role+":"+personId);
         });
         // 이 프로세스만 종료한다. 상시 서비스에서 자동으로 권한을 부여하지 않는다.

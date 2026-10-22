@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 로그인 응답 DTO
- * Signin Response DTO
  */
 @Data
 @Builder
@@ -29,4 +28,7 @@ public class SigninResponse {
     
     @Schema(description = "성공 메시지", example = "Login successful")
     private String message;
+
+    // 참이면 반환된 토큰은 보안키 인증 전용이며 운영 업무에는 사용할 수 없다.
+    private boolean mfaRequired;
 }

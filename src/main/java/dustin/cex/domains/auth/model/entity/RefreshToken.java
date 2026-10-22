@@ -58,6 +58,9 @@ public class RefreshToken {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
     
+    // 운영 세션은 보안키 검증 시각을 서버에 보관한다. JWT의 주장만으로 권한을 높이지 않는다.
+    private LocalDateTime mfaVerifiedAt;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean revoked = false;
