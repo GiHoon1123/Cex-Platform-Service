@@ -111,6 +111,8 @@ public class ReconciliationService {
             SELECT event_id FROM engine_event_receipts WHERE engine_id=? AND split_part(event_id,':',3) ~ '^[0-9]+$' AND split_part(event_id,':',2)::bigint<=?
               AND NOT EXISTS(SELECT 1 FROM reconciliation_evidence e WHERE e.run_id=? AND e.event_id=engine_event_receipts.event_id)
             """,row->{issue(run,"UNEXPECTED_RECEIPT",row.getString(1),"engine result","missing");},engine,cut,run);
+        jdbc.query("SELECT DISTINCT engine_id FROM engine_event_receipts WHERE engine_id<>? AND split_part(event_id,':',3) ~ '^[0-9]+$'",
+            row->{issue(run,"ENGINE_ID_MISMATCH",row.getString(1),engine,"other engine history");},engine);
         long mismatch=jdbc.queryForObject("SELECT count(*) FROM reconciliation_issues WHERE run_id=? AND category<>'EVENT_PENDING'",Long.class,run);
         long pending=jdbc.queryForObject("SELECT count(*) FROM reconciliation_issues WHERE run_id=? AND category='EVENT_PENDING'",Long.class,run);
         return mismatch>0?"MISMATCH":pending>0?"INCOMPLETE":"MATCHED";
@@ -154,6 +156,9 @@ public class ReconciliationService {
                 p(s,"LOCKED",base,q.negate()),p(s,"AVAILABLE",quote,value.subtract(sf)),p(0,"FEE",base,bf),p(0,"FEE",quote,sf));
         }
         var original=submissions.findByOrderId(e.path("order_id").asLong()).orElseThrow();var c=original.command();
+        String terminal=type.equals("market_order_completed")?e.path("status").asText():type.equals("order_rejected")?"rejected":"cancelled";
+        String actualStatus=jdbc.queryForObject("SELECT status FROM orders WHERE id=?",String.class,original.getOrderId());
+        if(!terminal.equals(actualStatus)) throw new IllegalArgumentException("확정 종료와 주문 상태 불일치");
         BigDecimal refund=switch(type) {
             case "order_rejected" -> c.reservationAmount();
             case "market_order_completed" -> c.reservationAmount().subtract(money(e,c.orderType().equals("buy")?"filled_quote_amount":"filled_amount"));
@@ -175,11 +180,17 @@ public class ReconciliationService {
         for(String field:List.of("buyer_id","seller_id","buy_order_id","sell_order_id")) {
             if(((Number)trade.get(field)).longValue()!=event.path(field).asLong()) issue(run,"TRADE_OWNER",id+":"+field,event.path(field).asText(),trade.get(field).toString());
         }
+        for(String asset:List.of("base_mint","quote_mint")) {
+            if(!event.path(asset).asText().equals(trade.get(asset))) issue(run,"TRADE_ASSET",id+":"+asset,event.path(asset).asText(),Objects.toString(trade.get(asset)));
+        }
         for(String side:List.of("buyer","seller")) {
-            var fees=jdbc.queryForList("SELECT fee_amount,fee_mint FROM trade_fees WHERE trade_id=? AND fee_type=?",trade.get("id"),side);
+            var fees=jdbc.queryForList("SELECT fee_amount,fee_mint,fee_rate,trade_value,user_id FROM trade_fees WHERE trade_id=? AND fee_type=?",trade.get("id"),side);
             if(fees.size()!=1) issue(run,"FEE_MISSING",id+":"+side,"one fee",Integer.toString(fees.size()));
             else {
                 difference(run,"FEE_VALUE",id+":"+side,money(event,side+"_fee"),(BigDecimal)fees.getFirst().get("fee_amount"));
+                difference(run,"FEE_RATE",id+":"+side,money(event,side+"_fee_rate"),(BigDecimal)fees.getFirst().get("fee_rate"));
+                difference(run,"FEE_TRADE_VALUE",id+":"+side,money(event,"amount").multiply(money(event,"price")),(BigDecimal)fees.getFirst().get("trade_value"));
+                if(((Number)fees.getFirst().get("user_id")).longValue()!=event.path(side+"_id").asLong()) issue(run,"FEE_OWNER",id+":"+side,event.path(side+"_id").asText(),fees.getFirst().get("user_id").toString());
                 String mint=event.path(side.equals("buyer")?"base_mint":"quote_mint").asText();
                 if(!mint.equals(fees.getFirst().get("fee_mint"))) issue(run,"FEE_ASSET",id+":"+side,mint,fees.getFirst().get("fee_mint").toString());
             }

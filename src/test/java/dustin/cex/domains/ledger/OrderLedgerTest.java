@@ -140,4 +140,18 @@ class OrderLedgerTest {
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM ledger_transactions",Long.class));
     }
 
+    @Test void terminalStateCannotDisagreeWithDurableResult() throws Exception {
+        reserve();String event=rejection();
+        String hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(event.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        tx.executeWithoutResult(status->{
+            ledger.record("engine:"+engine+":1:0","REJECTED",List.of(p(1,"AVAILABLE","USDT",n("200")),p(1,"LOCKED","USDT",n("-200"))));
+            jdbc.execute("UPDATE user_balances SET available=1000,locked=0 WHERE user_id=1");
+            jdbc.execute("UPDATE orders SET status='cancelled'");
+            jdbc.update("INSERT INTO engine_event_receipts VALUES(?,?,?)",engine+":1:0",engine,hash);
+        });
+        when(source.page(anyLong(),any(),any())).thenReturn(page(1,List.of(event)));
+        var report=reconciliation.run();assertEquals("MISMATCH",report.status());assertEquals(1,issues(report,"EVENT_CONTRACT"));
+        assertEquals(0,issues(report,"BALANCE_AVAILABLE"));assertEquals(0,issues(report,"RESERVATION"));
+    }
+
 }

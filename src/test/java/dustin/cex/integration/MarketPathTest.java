@@ -271,6 +271,11 @@ class MarketPathTest {
             var wrongFee=reconciliation.run();assertEquals("MISMATCH",wrongFee.status());
             assertTrue(jdbc.queryForObject("SELECT count(*) FROM reconciliation_issues WHERE run_id=? AND category='FEE_VALUE'",Long.class,wrongFee.id())>0);
             jdbc.update("UPDATE trade_fees SET fee_amount=fee_amount-1 WHERE id=?",feeId);
+            var tradeId=jdbc.queryForObject("SELECT min(id) FROM trades",Long.class);
+            jdbc.update("UPDATE trades SET base_mint='WRONG' WHERE id=?",tradeId);
+            var wrongAsset=reconciliation.run();assertEquals("MISMATCH",wrongAsset.status());
+            assertTrue(jdbc.queryForObject("SELECT count(*) FROM reconciliation_issues WHERE run_id=? AND category='TRADE_ASSET'",Long.class,wrongAsset.id())>0);
+            jdbc.update("UPDATE trades SET base_mint='BTC' WHERE id=?",tradeId);
             // 실제 금융 소비만 중지해 전달 지연을 만든다. 원장은 맞더라도 미수신 확정 결과가 있으면 완료가 아니다.
             var financialContainers=listeners.getAllListenerContainers().stream().filter(container->java.util.Arrays.asList(container.getContainerProperties().getTopics()).contains("order-events")).toList();
             assertEquals(1,financialContainers.size());financialContainers.forEach(org.springframework.kafka.listener.MessageListenerContainer::stop);
