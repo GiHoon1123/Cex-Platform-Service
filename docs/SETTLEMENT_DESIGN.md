@@ -130,8 +130,8 @@
 
 ---
 
-## 수동 실행
+## 수동 실행과 접근 통제의 현재 상태
 
-- `POST /api/settlement/trade/manual/daily?date=yyyy-MM-dd&forceRecreate=false`
-  - `forceRecreate=false`: 이미 있으면 2단계는 기존 반환, 3·4단계만 이어서 실행(실패 지점부터 재개).
-  - `forceRecreate=true`: 해당일 일별 정산을 삭제한 뒤 1단계부터 전부 다시 실행.
+2026-10-22 접근 통제 사이클에서 승인 없이 정산을 변경하던 `POST /api/settlement/trade/manual/daily`와 `POST /api/settlement/trade/validate/{date}`를 삭제했다. 현재 HTTP 컨트롤러는 역할이 있는 운영자·승인자·감사자에게 조회만 제공한다. 정산 서비스·예약 실행·기존 이력은 유지한다.
+
+승인된 정산 재실행·정정은 후속 업무다. 기존 서비스의 강제 재생성 기능을 운영 API로 다시 노출하기 전에 금융 이력 보존, 불변 승인 내용과 실행 권한을 별도로 검토해야 한다. [현재 접근 통제·승인·감사 계약](decisions/012-platform-access-approval-audit.md)을 따른다.
