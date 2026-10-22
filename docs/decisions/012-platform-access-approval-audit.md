@@ -47,6 +47,8 @@ Spring Security의 경로 인가를 사용하고, 설치된 JJWT 0.12.5와 Argon
 
 ### 최초 운영 계정 부여
 
+후속 [운영자 MFA](014-operator-webauthn-mfa.md)에서 `operator.bootstrap.enrollment-token`이 필수로 추가되었다. 실행 예시에는 원본 비밀을 넣지 않는다. 승인된 환경/비밀 전달 수단으로 별도 공급해야 하며 비밀번호만으로는 운영 업무를 실행할 수 없다. 초기화 프로세스의 운영 실행 경계·권한 회수는 해당 후속 문서의 미완료 범위를 따른다.
+
 [OperatorBootstrapRunner](../../src/main/java/dustin/cex/domains/security/OperatorBootstrapRunner.java)는 `operator.bootstrap.enabled=true`로 시작한 일회성 프로세스에서만 실행한다. 기존의 활성 고객 계정 중 금융 이력·잔액이 없는 전용 계정만 `OPERATOR`, `APPROVER`, `AUDITOR`로 설정한다. 기존 세션 회수·역할·인물 ID·감사는 함께 커밋하고 해당 프로세스를 종료한다.
 
 ```sh
@@ -60,7 +62,7 @@ java -jar build/libs/cex-0.0.1-SNAPSHOT.jar \
   --spring.kafka.listener.auto-startup=false
 ```
 
-DB·Kafka·필수 비밀키 환경은 별도로 준비한다. 이미 실행 중인 서비스에 붙여 역할을 자동 부여하는 기능이 아니다. OS·배포·DB 접근권한을 가진 관리자와 실제 인물 매핑 절차가 신뢰 경계다. 이 명령만으로 신원이 증명되는 것은 아니다. 역할 변경·퇴사 회수의 전체 운영 절차와 MFA 등록은 남아 있다.
+DB·Kafka·필수 비밀키 환경은 별도로 준비한다. 이미 실행 중인 서비스에 붙여 역할을 자동 부여하는 기능이 아니다. OS·배포·DB 접근권한을 가진 관리자와 실제 인물 매핑 절차가 신뢰 경계다. 이 명령만으로 신원이 증명되는 것은 아니다. 역할 변경·퇴사 회수의 전체 운영 절차는 남아 있다. MFA 등록·인증의 최신 결과는 후속 문서에 기록했다.
 
 ### 요청 → 승인 → 신규 주문 제한
 
