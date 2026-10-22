@@ -29,3 +29,7 @@ python3 scripts/verify_market_path.py
 ## 주문 실패·복구의 현재 계약
 
 [응답 불명 자동 재전송과 확정 거절 예약 반환](docs/decisions/010-durable-order-resolution.md)에서 현재 구현·테스트·저장 계약과 운영 한계를 확인한다. 엔진 저널 버전은 4이며 과거 저널을 자동 변환하지 않는다.
+
+## 원장·독립 대사
+
+[주문 자산 원장과 독립 대사](docs/decisions/011-asset-ledger-and-reconciliation.md)에서 현재 범위와 실행 조건을 확인한다. 최초 반입·운영 접근·저장 계약은 문서의 조건을 충족해야 한다.

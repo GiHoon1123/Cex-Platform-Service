@@ -32,3 +32,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [009. 시장가 예산·IOC 종료·예약 반환](decisions/009-market-ioc-settlement.md): 수량 미정 처리·만료·정밀도 수정·실제 재발행 검증.
 
 - [응답 불명 자동 재전송과 확정 거절 예약 반환](decisions/010-durable-order-resolution.md): 원본 검증·재시작·중복 처리·실제 장애 주입 검증.
+
+- [주문 자산 원장과 독립 대사](decisions/011-asset-ledger-and-reconciliation.md): 확정 근거·불변 기록·오류 탐지·실제 프로세스 검증.
