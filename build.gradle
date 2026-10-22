@@ -55,6 +55,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	// 경로별 기본 거부와 역할 검증은 표준 보안 필터 체인에 맡긴다.
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	// 보안키의 서명·출처·사용자 확인 검증은 유지보수되는 표준 구현에 맡긴다.
+	implementation 'org.springframework.security:spring-security-webauthn'
 	// 동일 플랫폼 포트에서 공개 시세 스트림을 제공한다.
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
