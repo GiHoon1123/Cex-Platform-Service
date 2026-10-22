@@ -186,6 +186,16 @@ java -jar build/libs/cex-0.0.1-SNAPSHOT-operator-admin.jar \
 | `reviewAuditFailureDoesNotExtendRightsOrRevokeExistingSession` | 기한·세션·검토 결과 롤백 |
 | `regularServerHasNoBootstrapRunnerOrManagementConfiguration` | 일반 앱에 관리 설정·부여 서비스·실행 훅 없음 |
 
+[OperatorSessionPolicyTest](../../src/test/java/dustin/cex/domains/security/OperatorSessionPolicyTest.java)는 추가 3개다.
+
+- `equalLargeUserIdsAreAcceptedAcrossSeparateBoxedInstances`: 128·1000·Long 최댓값을 서로 다른 객체로 생성해 같은 ID가 허용되는지 확인.
+- `differentUserIdNeverReceivesOwnersSession`: 다른 ID 소유자의 세션은 거부.
+- `revokedStaleOrUnboundSessionsCannotAuthenticate`: 회수·오래된 MFA·서명 키 결합 누락은 여전히 거부.
+
+마지막 검토에서 새 정책의 `Long != Long` 참조 비교 오류를 발견했다. 작은 ID만 쓴 기존 fixture에서는 정수 캐시가 오류를 가렸다. 수정 전 `./gradlew test --tests '*OperatorSessionPolicyTest'`로 3개 중 1개 실패를 재현했고, `.equals()` 값 비교로 바꿨다. 이후 실제 PostgreSQL의 전체 복구 fixture도 ID 1000부터 생성하도록 바꿔 34개 업무와 정책 3개를 모두 다시 통과했다.
+
+Java의 두 `Long` 객체를 `==`/`!=`로 비교하는 것은 TypeScript의 원시 숫자 비교와 다르다. 한쪽이 원시 `long`이면 언박싱되므로 모든 `!=`가 잘못된 것은 아니다. [Java 21 Long 공식 문서](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Long.html)의 값 비교·객체 래핑 계약을 확인했다. 이 차이는 구현 주석과 회귀에도 남겼다.
+
 기존 [OperatorMfaTest](../../src/test/java/dustin/cex/domains/security/OperatorMfaTest.java)에 `timestampWithoutSigningKeyBindingCannotGrantRightsOrAddBackup`을 추가했다. 시각만 있는 세션은 운영 권한·갱신·추가 키 등록이 불가능하며 실제 WebAuthn 재검증은 가능해야 한다. 기존 보안 테스트의 운영 계정에는 명시적인 권한 기한과 인증 fixture를 넣는다. fixture는 실제 서명 증적으로 간주하지 않는다.
 
 [verify_operator_admin.py](../../scripts/verify_operator_admin.py)는 기존 실제 프로세스 검증의 격리 PostgreSQL·플랫폼 준비를 재사용하고 증적 디렉터리를 분리한다. 두 테스트만 명시적으로 선택한다.
@@ -210,7 +220,7 @@ python3 scripts/verify_dependency_integrity.py
 
 | 실행 | 실제 결과 | 범위 |
 |---|---|---|
-| `verify_operator_lifecycle.py` | **34개 통과**, 실패/제외 0 | 실제 PostgreSQL·세 인물의 WebAuthn·복구/회수·트랜잭션·병렬 승인 |
+| `verify_operator_lifecycle.py` | **37개 통과**, 실패/제외 0 | 실제 PostgreSQL·세 인물의 WebAuthn·복구/회수 34개와 큰 ID 정책 3개. 전체 DB 사용자 ID는 1000부터 시작 |
 | `verify_operator_mfa.py` | **42개 통과**, 실패/제외 0 | 기존 실제 서명·실제 HTTP·RP/출처·UV·세션, 신규 서명 키 결합 검사 |
 | `verify_platform_security.py` | **39개 통과**, 실패/제외 0 | 역할·기존 승인·감사·최초 부여 서비스와 금융 이력 보호 |
 | `verify_engine_inbox.py` | **183개 통과**, 실패/제외 0 | 선택한 주문·수수료·원장·정산·재시도·시장 회귀 |
@@ -221,7 +231,7 @@ python3 scripts/verify_dependency_integrity.py
 | `audit_dependencies.py` | **222개 패키지 버전, 알려진 OSV 검출 0** | 새 라이브러리/버전 변경 없음. 목록 해시는 이전 MFA 사이클과 동일 |
 | `verify_dependency_integrity.py` | 통과 | 임시 복사본의 체크섬 변조를 Gradle이 종료 코드 1로 거부. 원본 캐시 미수정 |
 
-선택한 JUnit 299개와 별도 프로세스 시나리오 12개가 통과했다. 전체 저장소의 모든 테스트·실물 기기·운영 배포 검증으로 표현하지 않는다. 실행 소유 DB·Kafka·프로세스는 정리했고 기존 서비스·데이터와 봇 0명 정책을 유지했다.
+선택한 JUnit 302개와 별도 프로세스 시나리오 12개가 통과했다. 전체 저장소의 모든 테스트·실물 기기·운영 배포 검증으로 표현하지 않는다. 실행 소유 DB·Kafka·프로세스는 정리했고 기존 서비스·데이터와 봇 0명 정책을 유지했다.
 
 [고정 검증 증적](../reference/operator-lifecycle-verification-2026-10-22.json)에 검사별 결과·자원 정리·의존성 해시를 남겼다. 패키지별 파일 해시는 [동일한 의존성 목록](../reference/operator-mfa-dependencies-2026-10-22.json)을 따른다. 런타임·테스트·벤치·빌드 잠금/검증 메타데이터의 버전 변경은 없다. OS/JDK/이미지·JNI·배포 전체 보안 판정은 아니다.
 

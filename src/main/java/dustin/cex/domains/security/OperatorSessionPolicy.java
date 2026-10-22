@@ -21,7 +21,8 @@ public class OperatorSessionPolicy {
                 || Arrays.stream(roles).noneMatch(r->r==user.getRole())) throw denied();
         var session=tokens.findBySessionId(sid).orElseThrow(OperatorSessionPolicy::denied);
         LocalDateTime now=LocalDateTime.now();
-        if(session.getUserId()!=user.getId() || session.getRevoked() || !session.getExpiresAt().isAfter(now)
+        // 두 값 모두 Long 객체다. 참조 비교는 작은 정수 캐시 밖의 정상 사용자까지 거부하므로 값으로 비교한다.
+        if(!session.getUserId().equals(user.getId()) || session.getRevoked() || !session.getExpiresAt().isAfter(now)
                 || !session.hasVerifiedMfa() || !session.getMfaVerifiedAt().plusMinutes(5).isAfter(now)) throw denied();
         return session;
     }

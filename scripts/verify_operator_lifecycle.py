@@ -35,7 +35,7 @@ try:
     env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
     ARTIFACTS.mkdir(exist_ok=True)
     with (ARTIFACTS/"operator-lifecycle.log").open("w") as log:
-        completed=subprocess.run(["./gradlew","test","--tests","*OperatorLifecycleTest","--rerun-tasks","bootJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+        completed=subprocess.run(["./gradlew","test","--tests","*OperatorLifecycleTest","--tests","*OperatorSessionPolicyTest","--rerun-tasks","bootJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
     result["exit"]=completed.returncode
     if completed.returncode:
         raise RuntimeError("플랫폼 회귀 실패: .local/operator-lifecycle.log 확인")

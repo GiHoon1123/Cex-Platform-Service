@@ -47,7 +47,11 @@ class OperatorLifecycleTest {
     record Account(User user,SoftwareAuthenticator key,OperatorMfaService.Verified verified,UUID sid) {}
     Account maker,checker,owner;String hash;
     final String enrollment="isolated-enrollment-256-bit-test-secret-at-least-43-characters";
-    @BeforeAll void password() {hash=passwords.hash("security-test-password");}
+    @BeforeAll void password() {
+        hash=passwords.hash("security-test-password");
+        // 전체 복구 시나리오도 작은 Long 캐시를 벗어난 실제 DB 사용자로 검증한다.
+        jdbc.queryForObject("SELECT setval(pg_get_serial_sequence('users','id'),1000,false)",Long.class);
+    }
     @BeforeEach void setup() throws Exception {maker=account(UserRole.OPERATOR);checker=account(UserRole.APPROVER);owner=account(UserRole.AUDITOR);}
     Account account(UserRole role) throws Exception {
         var user=users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@example.test").passwordHash(hash).role(role)

@@ -1,10 +1,10 @@
 {
   "checked_at": "2026-10-22T04:58:29.249925+00:00",
   "security_lifecycle": {
-    "container": "cex-operator-lifecycle-424699ab3fef",
+    "container": "cex-operator-lifecycle-edeca3002b49",
     "exit": 0,
     "tests": {
-      "tests": 34,
+      "tests": 37,
       "failures": 0,
       "errors": 0,
       "skipped": 0
@@ -154,7 +154,21 @@
   "deployed": false,
   "engine_source_changed": false,
   "frontend_source_changed": false,
-  "junit_selected_tests": 299,
+  "junit_selected_tests": 302,
   "process_scenarios": 12,
-  "completed_at": "2026-10-22T05:06:23.676933+00:00"
+  "completed_at": "2026-10-22T05:11:01.807307+00:00",
+  "id_comparison_regression": {
+    "before_fix": {
+      "command": "./gradlew test --tests '*OperatorSessionPolicyTest'",
+      "tests": 3,
+      "failures": 1
+    },
+    "after_fix": {
+      "policy_tests": 3,
+      "postgres_lifecycle_tests": 34,
+      "postgres_first_user_id": 1000,
+      "failures": 0,
+      "skipped": 0
+    }
+  }
 }
