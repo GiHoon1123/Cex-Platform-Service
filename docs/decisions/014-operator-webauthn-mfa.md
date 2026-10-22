@@ -1,6 +1,6 @@
 # 운영자의 비밀번호 세션에 업무 권한을 주지 않고 WebAuthn으로 인증 수준을 높이기
 
-2026-10-22. 운영자 MFA의 첫 구현 사이클이다. 기기 등록·로그인·추가 키 등록과 세션 교체를 끝까지 연결한다. 분실 기기 폐기·계정 복구·권한 만료/회수/재검토 업무는 후속 사이클이다. 고객 MFA·화면·엔진 정책을 추가한 작업이 아니다.
+2026-10-22. 운영자 MFA의 첫 구현 사이클이다. **후속 [기기 폐기·복구·권한 만료/회수](015-operator-recovery-and-access-lifecycle.md)에서 아래의 후속 과제를 구현했고 최초 부여 실행 경계도 교체했다.** 이 문서의 검증 개수와 미완료 목록은 첫 사이클 당시의 기록이다. 기기 등록·로그인·추가 키 등록과 세션 교체를 끝까지 연결한다. 분실 기기 폐기·계정 복구·권한 만료/회수/재검토 업무는 후속 사이클이다. 고객 MFA·화면·엔진 정책을 추가한 작업이 아니다.
 
 ## 문제와 기존 동작
 
@@ -45,7 +45,7 @@
 - [OperatorMfaController](../../src/main/java/dustin/cex/domains/security/OperatorMfaController.java): JSON API. 요청의 사용자 ID를 신뢰하지 않고 필터가 확인한 사용자/세션을 사용한다. 인증 본문·토큰의 자동 문자열 표현을 숨긴다.
 - [AuthService](../../src/main/java/dustin/cex/domains/auth/service/AuthService.java), [RefreshToken](../../src/main/java/dustin/cex/domains/auth/model/entity/RefreshToken.java): 운영 비밀번호 세션 5분, `mfaRequired=true`, 미검증 갱신 거부, 검증 시각을 보존하는 갱신.
 - [필터](../../src/main/java/dustin/cex/domains/auth/middleware/JwtAuthenticationFilter.java), [인가](../../src/main/java/dustin/cex/domains/security/SecurityConfiguration.java), [세션](../../src/main/java/dustin/cex/domains/security/SessionService.java): 미검증 운영자는 `ROLE_MFA_PENDING`. 모든 기존 운영 HTTP 업무는 MFA를 통과해야 한다. 인증 응답은 `Cache-Control: no-store`.
-- [최초 운영자 초기화](../../src/main/java/dustin/cex/domains/security/OperatorBootstrapRunner.java): 금융 이력이 없는 전용 계정에 역할 부여, 모든 세션 회수, 10분 등록 권한의 SHA-256 해시, 감사 기록을 함께 커밋. 등록 비밀은 필수 입력이며 자동 로그에 출력하지 않는다.
+- [최초 운영자 부여 업무](../../src/main/java/dustin/cex/domains/security/OperatorBootstrapService.java): 금융 이력이 없는 전용 계정에 역할 부여, 모든 세션 회수, 10분 등록 권한의 SHA-256 해시, 감사 기록을 함께 커밋. 등록 비밀은 필수 입력이며 자동 로그에 출력하지 않는다.
 - [스키마](../../src/main/resources/security/schema.sql): 공개키, 등록 권한, 챌린지. 수명이 짧은 챌린지를 지우는 것은 금융/감사 기록 삭제가 아니다. 영속 감사는 기존 불변 트리거로 유지한다.
 - [CORS](../../src/main/java/dustin/cex/domains/auth/config/WebConfig.java): 설정한 고객/어드민 출처만 허용. 와일드카드와 쿠키 인증은 사용하지 않는다.
 
