@@ -35,7 +35,7 @@
 
 | 요구사항 | 근거 | 코드·검증 | 상태와 한계 |
 |---|---|---|---|
-| 기본 거부·서버 인가 | [Spring Security 요청 인가](https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html), [OWASP 거래 승인 2.1~2.3](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html) | `SecurityConfiguration`, `PlatformSecurityTest`의 API·역할·기존 우회 경로 검사 | 명시한 경로/메서드만 허용. Spring Boot 3.2.5가 선택한 Security 6.2.4의 실제 타입과 컴파일을 확인. 지원 버전이 아니며 다음 최우선 선행 과제로 교체 필요. 최신 보안 패치 적용·운영 배포 조건 미충족 |
+| 기본 거부·서버 인가 | [Spring Security 요청 인가](https://docs.spring.io/spring-security/reference/servlet/authorization/authorize-http-requests.html), [OWASP 거래 승인 2.1~2.3](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html) | `SecurityConfiguration`, `PlatformSecurityTest`의 API·역할·기존 우회 경로 검사 | 명시한 경로/메서드만 허용. 후속 [런타임 교체](../decisions/013-supported-runtime-and-dependency-audit.md)로 Boot 4.1.1·Security 7.1.1 및 전이 의존성 패치·잠금·체크섬을 검증. 조회 시점 알려진 취약점 결과와 운영 배포 적합성 전체를 구분 |
 | 권한·세션 회수 | 현재 DB 사용자·세션을 권위로 사용 | `SessionService`, `AuthService`; 로그아웃·역할 변경·비활성화·갱신 경쟁 테스트 | 매 요청 DB 비용, 단일 활성 로그인 정책. 이미 인증을 통과해 진행 중인 외부 효과를 소급 취소하지 않음 |
 | 승인 내용 고정·재사용 금지 | OWASP 거래 승인 2.3, 2.5, 2.9~2.10 | `OperatorApprovalService`, 불변 요청 트리거; 동일인·해시·버전·만료·중복·경쟁 검사 | 신규 주문 제한/해제만 구현. 정산 재실행·출금·원장 정정 승인으로 확장한 상태가 아님 |
 | 비밀번호 추측 제한 | OWASP 거래 승인 2.4 | 계정 로그인과 요청별 재인증 실패 5회/15분, 영속 감사 및 잠금 아래 횟수 검사 | 분산 IP·알 수 없는 계정에 대한 앞단 요청량 제한, 비상 복구·보안 경보 필요. 실패 제한은 정상 사용자에게도 잠금 비용을 줌 |

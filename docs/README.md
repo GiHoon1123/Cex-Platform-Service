@@ -36,3 +36,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [주문 자산 원장과 독립 대사](decisions/011-asset-ledger-and-reconciliation.md): 확정 근거·불변 기록·오류 탐지·실제 프로세스 검증.
 
 - [세션 회수·운영 요청/승인·필수 감사](decisions/012-platform-access-approval-audit.md): API 전용 인증·서비스 경계·실제 검증·남은 운영 요건.
+
+- [지원 런타임·전이 의존성 보안 패치와 검증](decisions/013-supported-runtime-and-dependency-audit.md): Boot 4.1·Security 7.1, Jackson 3·내장 재시도, 취약점 대조·버전 잠금·체크섬 검증.
