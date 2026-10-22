@@ -181,3 +181,11 @@ tasks.register('writeDependencyInventory') {
         }))
     }
 }
+
+// 운영자 초기화는 웹 앱과 별도 진입점의 실행 파일로 배포한다. 일반 서버에서는 자동 실행되지 않는다.
+tasks.register('operatorAdminJar', org.springframework.boot.gradle.tasks.bundling.BootJar) {
+    archiveClassifier = 'operator-admin'
+    targetJavaVersion = JavaVersion.VERSION_21
+    mainClass = 'dustin.operator.OperatorAdminApplication'
+    classpath = sourceSets.main.runtimeClasspath
+}

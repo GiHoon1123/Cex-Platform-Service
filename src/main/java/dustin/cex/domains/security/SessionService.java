@@ -17,18 +17,18 @@ public class SessionService {
     @Transactional(readOnly=true)
     public boolean hasOperatorMfa(UUID sessionId) {
         var session=tokens.findBySessionId(sessionId).orElseThrow();
-        return session.getMfaVerifiedAt()!=null && session.getMfaVerifiedAt().plusHours(12).isAfter(LocalDateTime.now());
+        return session.hasVerifiedMfa() && session.getMfaVerifiedAt().plusHours(12).isAfter(LocalDateTime.now());
     }
     @Transactional(readOnly=true)
     public boolean hasFreshOperatorMfa(UUID sessionId) {
         var session=tokens.findBySessionId(sessionId).orElseThrow();
-        return session.getMfaVerifiedAt()!=null && session.getMfaVerifiedAt().plusMinutes(5).isAfter(LocalDateTime.now());
+        return session.hasVerifiedMfa() && session.getMfaVerifiedAt().plusMinutes(5).isAfter(LocalDateTime.now());
     }
     @Transactional(readOnly=true)
     public User authenticate(long userId,UUID sessionId) {
         var user=users.findById(userId).orElseThrow(()->new IllegalArgumentException("유효하지 않은 인증"));
         var session=tokens.findBySessionId(sessionId).orElseThrow(()->new IllegalArgumentException("유효하지 않은 인증"));
-        if(!user.isEnabled() || session.getUserId()!=userId || session.getRevoked()
+        if(!user.isAuthenticationAllowed() || session.getUserId()!=userId || session.getRevoked()
                 || !session.getExpiresAt().isAfter(LocalDateTime.now())) throw new IllegalArgumentException("유효하지 않은 인증");
         return user;
     }

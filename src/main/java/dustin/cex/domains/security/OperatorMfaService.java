@@ -131,7 +131,7 @@ public class OperatorMfaService {
             tokens.revokeAllByUserId(actor,LocalDateTime.now());
             String raw=jwt.generateRefreshToken();LocalDateTime verifiedAt=LocalDateTime.now();
             var verified=tokens.saveAndFlush(RefreshToken.builder().userId(actor).tokenHash(jwt.hashRefreshToken(raw))
-                .mfaVerifiedAt(verifiedAt).expiresAt(verifiedAt.plusHours(12)).build());
+                .mfaVerifiedAt(verifiedAt).mfaCredentialFingerprint(sha256Hex(key.getRawId().toBase64UrlString())).expiresAt(verifiedAt.plusHours(12)).build());
             audit.record(actor,"MFA_AUTHENTICATE","user:"+actor,"SUCCESS","USER_VERIFIED:sha256="+sha256Hex(key.getRawId().toBase64UrlString()));
             return new Verified(jwt.generateAccessToken(actor,verified.getSessionId()),raw);
         });
@@ -187,7 +187,7 @@ public class OperatorMfaService {
     private RefreshToken lock(long actor,UUID sid) {
         var user=users.lockById(actor).orElseThrow(OperatorMfaService::denied);
         var session=tokens.findBySessionId(sid).orElseThrow(OperatorMfaService::denied);
-        if(!user.isEnabled() || user.getRole()==UserRole.CUSTOMER || user.getOperatorPersonId()==null
+        if(!user.isAuthenticationAllowed() || user.getRole()==UserRole.CUSTOMER || user.getOperatorPersonId()==null
                 || session.getUserId()!=actor || session.getRevoked() || !session.getExpiresAt().isAfter(LocalDateTime.now())) throw denied();
         // 사용자 잠금 안에서 실패를 다시 확인하므로 병렬 요청으로 한도를 넘길 수 없다.
         if(jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE actor_id=? AND action='MFA' AND outcome='DENIED' AND detail='VERIFICATION_DENIED' AND occurred_at>clock_timestamp()-interval '15 minutes'",Long.class,actor)>=5)
@@ -195,7 +195,7 @@ public class OperatorMfaService {
         return session;
     }
     private void requireFresh(RefreshToken session) {
-        if(session.getMfaVerifiedAt()==null || !session.getMfaVerifiedAt().plusMinutes(5).isAfter(LocalDateTime.now())) throw denied();
+        if(!session.hasVerifiedMfa() || !session.getMfaVerifiedAt().plusMinutes(5).isAfter(LocalDateTime.now())) throw denied();
     }
     private <T> T operation(long actor,java.util.function.Supplier<T> work) {
         return tx.execute(status->{

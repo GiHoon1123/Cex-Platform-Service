@@ -11,7 +11,8 @@ import tools.jackson.databind.JsonNode;
 @RequestMapping("/api/auth/operator-mfa")
 public class OperatorMfaController {
     private final OperatorMfaService service;
-    public OperatorMfaController(OperatorMfaService service) {this.service=service;}
+    private final OperatorDeviceService devices;
+    public OperatorMfaController(OperatorMfaService service,OperatorDeviceService devices) {this.service=service;this.devices=devices;}
     public record Enrollment(@Size(max=256) String enrollmentToken) {
         @Override public String toString() {return "Enrollment[비밀 생략]";}
     }
@@ -34,4 +35,11 @@ public class OperatorMfaController {
             @RequestAttribute long userId,@RequestAttribute UUID sessionId,@Valid @RequestBody Proof body) {
         return service.authenticate(userId,sessionId,body.challengeId(),body.publicKey());
     }
+    @GetMapping("/credentials") public java.util.List<OperatorDeviceService.Device> devices(@RequestAttribute long userId,@RequestAttribute UUID sessionId) {
+        return devices.devices(userId,sessionId);
+    }
+    @DeleteMapping("/credentials/{fingerprint}") public void revoke(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable String fingerprint) {
+        devices.revoke(userId,sessionId,fingerprint);
+    }
+
 }

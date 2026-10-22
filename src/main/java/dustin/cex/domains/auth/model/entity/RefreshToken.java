@@ -61,6 +61,10 @@ public class RefreshToken {
     // 운영 세션은 보안키 검증 시각을 서버에 보관한다. JWT의 주장만으로 권한을 높이지 않는다.
     private LocalDateTime mfaVerifiedAt;
 
+    // 세션을 인증한 공개키 지문이다. 분실 키를 폐기할 때 다른 키로 인증했는지 확인한다.
+    @Column(length=64)
+    private String mfaCredentialFingerprint;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean revoked = false;
@@ -71,6 +75,12 @@ public class RefreshToken {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
     
+    // 시각만 남은 과거 세션을 검증된 세션으로 취급하지 않는다. 실제 서명 키 결합도 필수다.
+    @jakarta.persistence.Transient
+    public boolean hasVerifiedMfa() {
+        return mfaVerifiedAt!=null && mfaCredentialFingerprint!=null && mfaCredentialFingerprint.matches("[0-9a-f]{64}");
+    }
+
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();

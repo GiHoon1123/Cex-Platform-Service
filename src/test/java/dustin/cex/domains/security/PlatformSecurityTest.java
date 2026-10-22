@@ -59,7 +59,7 @@ class PlatformSecurityTest {
     @BeforeAll void opening() {hash=passwords.hash("security-test-password");tx=new TransactionTemplate(manager);ledger.initializeOpening();}
     User user(UserRole role,UUID person) {
         return users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@example.test").passwordHash(hash)
-            .role(role).operatorPersonId(person).build());
+            .role(role).operatorPersonId(person).operatorAccessExpiresAt(Instant.now().plusSeconds(86400)).build());
     }
     @BeforeEach void setup() {
         customer=user(UserRole.CUSTOMER,null);operator=user(UserRole.OPERATOR,UUID.randomUUID());
@@ -71,6 +71,7 @@ class PlatformSecurityTest {
         var row=tokens.saveAndFlush(RefreshToken.builder().userId(user.getId()).tokenHash(UUID.randomUUID().toString())
             // 이 회귀의 초점은 역할·승인·감사다. MFA 서명은 별도 실제 서명 테스트에서 검증한다.
             .mfaVerifiedAt(user.getRole()==UserRole.CUSTOMER ? null : LocalDateTime.now())
+            .mfaCredentialFingerprint(user.getRole()==UserRole.CUSTOMER ? null : "a".repeat(64))
             .expiresAt(LocalDateTime.now().plusDays(1)).build());
         String encoded=jwt.generateAccessToken(user.getId(),row.getSessionId());
         jwt.verifyAccessToken(encoded);sessionService.authenticate(user.getId(),row.getSessionId());
@@ -177,46 +178,46 @@ class PlatformSecurityTest {
         assertEquals(before,tokens.count());
     }
     @Test void bootstrapIsExplicitRevokesSessionsAndAuditsRoleGrant() {
-        var context=mock(org.springframework.context.ConfigurableApplicationContext.class);UUID person=UUID.randomUUID();String old=token(customer);
-        var runner=new OperatorBootstrapRunner(manager,users,tokens,audit,jdbc,context,customer.getId(),person,UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters");
-        runner.run(new org.springframework.boot.DefaultApplicationArguments());
+        UUID person=UUID.randomUUID();String old=token(customer);
+        Runnable grant=()->new OperatorBootstrapService(manager,users,tokens,audit,jdbc).grant(customer.getId(),person,UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters");
+        grant.run();
         var current=users.findById(customer.getId()).orElseThrow();assertEquals(UserRole.OPERATOR,current.getRole());assertEquals(person,current.getOperatorPersonId());
         var claims=jwt.verifyAccessToken(old);assertThrows(IllegalArgumentException.class,()->sessionService.authenticate(customer.getId(),UUID.fromString(claims.get("sid",String.class))));
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE action='OPERATOR_BOOTSTRAP' AND target=?",Long.class,"user:"+customer.getId()));
         String stored=jdbc.queryForObject("SELECT token_hash FROM operator_enrollment WHERE user_id=? AND NOT consumed AND expires_at>clock_timestamp() AND expires_at<=clock_timestamp()+interval '10 minutes'",String.class,customer.getId());
         assertEquals(OperatorMfaService.sha256Hex("isolated-enrollment-secret-256-bits-at-least-43-characters"),stored);
-        verify(context).close();
+        assertTrue(current.getOperatorAccessExpiresAt().isAfter(Instant.now()));
     }
     @Test void bootstrapRejectsShortEnrollmentSecretWithoutGrantingRole() {
-        var context=mock(org.springframework.context.ConfigurableApplicationContext.class);
-        var runner=new OperatorBootstrapRunner(manager,users,tokens,audit,jdbc,context,customer.getId(),UUID.randomUUID(),UserRole.OPERATOR,"short");
-        assertThrows(IllegalArgumentException.class,()->runner.run(new org.springframework.boot.DefaultApplicationArguments()));
-        assertEquals(UserRole.CUSTOMER,users.findById(customer.getId()).orElseThrow().getRole());verifyNoInteractions(context);
+
+        Runnable grant=()->new OperatorBootstrapService(manager,users,tokens,audit,jdbc).grant(customer.getId(),UUID.randomUUID(),UserRole.OPERATOR,"short");
+        assertThrows(IllegalArgumentException.class,()->grant.run());
+        assertEquals(UserRole.CUSTOMER,users.findById(customer.getId()).orElseThrow().getRole());
     }
     @Test void bootstrapAuditFailureRollsBackRoleEnrollmentAndSessionRevocation() {
-        String old=token(customer);var context=mock(org.springframework.context.ConfigurableApplicationContext.class);
+        String old=token(customer);
         doThrow(new IllegalStateException("초기화 감사 장애 주입")).when(audit).record(isNull(),eq("OPERATOR_BOOTSTRAP"),anyString(),eq("SUCCESS"),anyString());
-        var runner=new OperatorBootstrapRunner(manager,users,tokens,audit,jdbc,context,customer.getId(),UUID.randomUUID(),UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters");
-        assertThrows(IllegalStateException.class,()->runner.run(new org.springframework.boot.DefaultApplicationArguments()));
+        Runnable grant=()->new OperatorBootstrapService(manager,users,tokens,audit,jdbc).grant(customer.getId(),UUID.randomUUID(),UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters");
+        assertThrows(IllegalStateException.class,()->grant.run());
         assertEquals(UserRole.CUSTOMER,users.findById(customer.getId()).orElseThrow().getRole());
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM operator_enrollment WHERE user_id=?",Long.class,customer.getId()));
-        sessionService.authenticate(customer.getId(),UUID.fromString(jwt.verifyAccessToken(old).get("sid",String.class)));verifyNoInteractions(context);
+        sessionService.authenticate(customer.getId(),UUID.fromString(jwt.verifyAccessToken(old).get("sid",String.class)));
     }
     @Test void bootstrapRejectsCustomerWithFinancialState() {
-        fund();var context=mock(org.springframework.context.ConfigurableApplicationContext.class);
-        var runner=new OperatorBootstrapRunner(manager,users,tokens,audit,jdbc,context,customer.getId(),UUID.randomUUID(),UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters");
-        assertThrows(IllegalStateException.class,()->runner.run(new org.springframework.boot.DefaultApplicationArguments()));
-        assertEquals(UserRole.CUSTOMER,users.findById(customer.getId()).orElseThrow().getRole());verifyNoInteractions(context);
+        fund();
+        Runnable grant=()->new OperatorBootstrapService(manager,users,tokens,audit,jdbc).grant(customer.getId(),UUID.randomUUID(),UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters");
+        assertThrows(IllegalStateException.class,()->grant.run());
+        assertEquals(UserRole.CUSTOMER,users.findById(customer.getId()).orElseThrow().getRole());
     }
     @Test void bootstrapRejectsZeroBalanceWithHistoricalLedgerEntries() {
         fund();tx.executeWithoutResult(status->{
             jdbc.update("UPDATE user_balances SET available=0 WHERE user_id=?",customer.getId());
             ledger.record("fund-return:"+customer.getId(),"TEST",List.of(LedgerService.p(customer.getId(),"AVAILABLE","USDT",new BigDecimal("-1000")),LedgerService.p(0,"OPENING","USDT",new BigDecimal("1000"))));
         });
-        var context=mock(org.springframework.context.ConfigurableApplicationContext.class);
-        var runner=new OperatorBootstrapRunner(manager,users,tokens,audit,jdbc,context,customer.getId(),UUID.randomUUID(),UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters");
-        assertThrows(IllegalStateException.class,()->runner.run(new org.springframework.boot.DefaultApplicationArguments()));
-        assertEquals(UserRole.CUSTOMER,users.findById(customer.getId()).orElseThrow().getRole());verifyNoInteractions(context);
+
+        Runnable grant=()->new OperatorBootstrapService(manager,users,tokens,audit,jdbc).grant(customer.getId(),UUID.randomUUID(),UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters");
+        assertThrows(IllegalStateException.class,()->grant.run());
+        assertEquals(UserRole.CUSTOMER,users.findById(customer.getId()).orElseThrow().getRole());
     }
     @Test void publicSignupCannotChooseOperatorRole() throws Exception {
         String email=UUID.randomUUID()+"@example.test";

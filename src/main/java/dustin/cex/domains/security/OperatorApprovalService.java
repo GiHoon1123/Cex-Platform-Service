@@ -93,7 +93,7 @@ public class OperatorApprovalService {
         return result;
     }
     private User requireRole(User user,UserRole role) {
-        if(user==null || !user.isEnabled() || user.getRole()!=role || user.getOperatorPersonId()==null)
+        if(user==null || !user.isAuthenticationAllowed() || user.getRole()!=role || user.getOperatorPersonId()==null)
             throw deny(HttpStatus.FORBIDDEN,"현재 운영 권한이 없습니다");return user;
     }
     private <T>T attempt(long actor,String action,String target,java.util.function.Supplier<T> work) {

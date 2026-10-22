@@ -42,14 +42,14 @@ public class AuthService {
                 audit.record(null,"SIGNIN","authentication","DENIED","INVALID_CREDENTIALS");return null;
             }
             String target="user:"+user.getId();
-            if(!user.isEnabled() || audit.tooManyFailures(user.getId(),"SIGNIN",target)) {
+            if(!user.isAuthenticationAllowed() || audit.tooManyFailures(user.getId(),"SIGNIN",target)) {
                 audit.record(user.getId(),"SIGNIN",target,"DENIED","ACCOUNT_UNAVAILABLE");return null;
             }
             if(!passwords.verify(request.getPassword(),user.getPasswordHash())) {
                 audit.record(user.getId(),"SIGNIN",target,"DENIED","WRONG_PASSWORD");return null;
             }
             tokens.revokeAllByUserId(user.getId(),LocalDateTime.now());
-            var pair=create(user,null);
+            var pair=create(user,null,null);
             audit.record(user.getId(),"SIGNIN",target,"SUCCESS","SESSION_REPLACED");
             return SigninResponse.builder().user(response(user)).accessToken(pair.access()).refreshToken(pair.refresh())
                 .mfaRequired(user.getRole()!=UserRole.CUSTOMER).message(user.getRole()==UserRole.CUSTOMER ? "Login successful" : "MFA_REQUIRED").build();
@@ -63,15 +63,15 @@ public class AuthService {
             var owner=tokens.findOwnerByHash(hash).orElseThrow(()->new AuthException("Invalid token"));
             var user=users.lockById(owner).orElseThrow(()->new AuthException("Invalid token"));
             var token=tokens.lockByHash(hash).orElseThrow(()->new AuthException("Invalid token"));
-            if(!user.isEnabled() || token.getRevoked() || !token.getExpiresAt().isAfter(LocalDateTime.now()))
+            if(!user.isAuthenticationAllowed() || token.getRevoked() || !token.getExpiresAt().isAfter(LocalDateTime.now()))
                 throw new AuthException("Invalid token");
             // 동일 갱신 토큰의 동시 사용은 행 잠금 뒤 재검사하여 하나만 성공시킨다.
             token.setRevoked(true); tokens.saveAndFlush(token);
             // 갱신은 최초 보안키 검증 시각을 연장하지 않는다. 미검증 운영 세션은 갱신할 수 없다.
-            if(user.getRole()!=UserRole.CUSTOMER && (token.getMfaVerifiedAt()==null
+            if(user.getRole()!=UserRole.CUSTOMER && (!token.hasVerifiedMfa()
                     || !token.getMfaVerifiedAt().plusHours(12).isAfter(LocalDateTime.now())))
                 throw new AuthException("MFA required");
-            var pair=create(user,token.getMfaVerifiedAt());
+            var pair=create(user,token.getMfaVerifiedAt(),token.getMfaCredentialFingerprint());
             audit.record(user.getId(),"REFRESH","user:"+user.getId(),"SUCCESS","SESSION_ROTATED");
             return RefreshTokenResponse.builder().accessToken(pair.access()).refreshToken(pair.refresh())
                 .message("Token refreshed successfully").build();
@@ -89,14 +89,14 @@ public class AuthService {
         }));
     }
     private record Pair(String access,String refresh) {}
-    private Pair create(User user,LocalDateTime verifiedAt) {
+    private Pair create(User user,LocalDateTime verifiedAt,String fingerprint) {
         long userId=user.getId();
         // 비밀번호만 통과한 운영 계정에는 등록·인증용 5분 세션만 준다.
         LocalDateTime expires=user.getRole()==UserRole.CUSTOMER ? LocalDateTime.now().plusDays(7)
             : verifiedAt==null ? LocalDateTime.now().plusMinutes(5) : verifiedAt.plusHours(12);
         String raw=jwt.generateRefreshToken();
         var token=tokens.save(RefreshToken.builder().userId(userId).tokenHash(jwt.hashRefreshToken(raw))
-            .mfaVerifiedAt(verifiedAt).expiresAt(expires).build());
+            .mfaVerifiedAt(verifiedAt).mfaCredentialFingerprint(fingerprint).expiresAt(expires).build());
         return new Pair(jwt.generateAccessToken(userId,token.getSessionId()),raw);
     }
     private <T> T attempt(Long actor,String action,java.util.function.Supplier<T> operation) {

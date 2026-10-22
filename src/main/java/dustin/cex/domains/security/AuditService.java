@@ -2,7 +2,6 @@ package dustin.cex.domains.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import jakarta.annotation.PostConstruct;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,7 @@ import org.springframework.transaction.annotation.*;
 public class AuditService {
     private final JdbcTemplate jdbc;
     public AuditService(JdbcTemplate jdbc) { this.jdbc=jdbc; }
-    @PostConstruct public void schema() throws Exception {
+    public void schema() throws Exception {
         jdbc.execute(new ClassPathResource("security/schema.sql").getContentAsString(StandardCharsets.UTF_8));
     }
     @Transactional

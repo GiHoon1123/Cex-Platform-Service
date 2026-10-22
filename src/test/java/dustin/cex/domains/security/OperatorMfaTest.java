@@ -51,7 +51,7 @@ class OperatorMfaTest {
     @BeforeAll void password() {hash=passwords.hash("security-test-password");}
     @BeforeEach void setup() throws Exception {
         user=users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@example.test").passwordHash(hash)
-            .role(UserRole.OPERATOR).operatorPersonId(UUID.randomUUID()).build());
+            .role(UserRole.OPERATOR).operatorPersonId(UUID.randomUUID()).operatorAccessExpiresAt(Instant.now().plusSeconds(86400)).build());
         pending=auth.signin(new SigninRequest(user.getEmail(),"security-test-password"));sid=sid(pending.getAccessToken());
         jdbc.update("INSERT INTO operator_enrollment(user_id,token_hash,expires_at) VALUES(?,?,clock_timestamp()+interval '10 minutes')",user.getId(),OperatorMfaService.sha256Hex(enrollment));
         key=new SoftwareAuthenticator();
@@ -213,7 +213,7 @@ class OperatorMfaTest {
     @Test void anotherSessionCannotUseOwnersChallenge() throws Exception {
         register();var options=mfa.authenticationOptions(user.getId(),sid);
         var other=users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@example.test").passwordHash(hash)
-            .role(UserRole.OPERATOR).operatorPersonId(UUID.randomUUID()).build());
+            .role(UserRole.OPERATOR).operatorPersonId(UUID.randomUUID()).operatorAccessExpiresAt(Instant.now().plusSeconds(86400)).build());
         var login=auth.signin(new SigninRequest(other.getEmail(),"security-test-password"));
         assertThrows(ResponseStatusException.class,()->mfa.authenticate(other.getId(),sid(login.getAccessToken()),options.challengeId(),key.assertion(options,"http://localhost:3003",true,1,null)));
         assertFalse(jdbc.queryForObject("SELECT consumed FROM operator_mfa_challenges WHERE id=?",Boolean.class,options.challengeId()));
@@ -298,6 +298,16 @@ class OperatorMfaTest {
         String different=SoftwareAuthenticator.encoded(new byte[32]);credential.put("id",different).put("rawId",different);
         assertThrows(ResponseStatusException.class,()->mfa.register(user.getId(),sid,options.challengeId(),proof));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM user_credentials WHERE credential_id=?",Long.class,different));
+    }
+
+    @Test void timestampWithoutSigningKeyBindingCannotGrantRightsOrAddBackup() throws Exception {
+        var verified=verified();UUID full=sid(verified.accessToken());var session=tokens.findBySessionId(full).orElseThrow();
+        session.setMfaCredentialFingerprint(null);tokens.saveAndFlush(session);
+        mvc.perform(get("/api/admin/audit").header("Authorization","Bearer "+verified.accessToken())).andExpect(status().isForbidden());
+        assertThrows(RuntimeException.class,()->auth.refreshAccessToken(verified.refreshToken()));
+        assertThrows(ResponseStatusException.class,()->mfa.registrationOptions(user.getId(),full,null));
+        var challenge=mfa.authenticationOptions(user.getId(),full);
+        assertNotNull(mfa.authenticate(user.getId(),full,challenge.challengeId(),key.assertion(challenge,"http://localhost:3003",true,2,null)));
     }
 
 }

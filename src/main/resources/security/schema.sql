@@ -62,3 +62,19 @@ CREATE TABLE IF NOT EXISTS operator_mfa_challenges (
  options text NOT NULL, expires_at timestamptz NOT NULL, consumed boolean NOT NULL DEFAULT false
 );
 CREATE INDEX IF NOT EXISTS operator_mfa_challenge_session ON operator_mfa_challenges(session_id);
+
+-- 복구·재검토 자료는 생성 뒤 바꾸지 못한다. 재신청은 새 ID·새 대상 버전으로 남긴다.
+CREATE TABLE IF NOT EXISTS operator_security_requests (
+ id uuid PRIMARY KEY, kind varchar(20) NOT NULL CHECK(kind IN ('RECOVER_MFA','REVIEW_ACCESS')),
+ requester_id bigint NOT NULL, requester_person uuid NOT NULL, target_id bigint NOT NULL, target_person uuid NOT NULL,
+ target_version bigint NOT NULL, access_until timestamptz, reason varchar(200) NOT NULL,
+ identity_evidence varchar(100) NOT NULL, notification_evidence varchar(100) NOT NULL,
+ payload_hash varchar(64) NOT NULL, expires_at timestamptz NOT NULL,
+ status varchar(16) NOT NULL DEFAULT 'PENDING', approver_id bigint, created_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+DROP TRIGGER IF EXISTS operator_security_requests_no_change ON operator_security_requests;
+CREATE TRIGGER operator_security_requests_no_change BEFORE UPDATE OR DELETE ON operator_security_requests
+ FOR EACH ROW EXECUTE FUNCTION operator_request_immutable();
+DROP TRIGGER IF EXISTS operator_security_requests_no_truncate ON operator_security_requests;
+CREATE TRIGGER operator_security_requests_no_truncate BEFORE TRUNCATE ON operator_security_requests
+ FOR EACH STATEMENT EXECUTE FUNCTION security_audit_immutable();

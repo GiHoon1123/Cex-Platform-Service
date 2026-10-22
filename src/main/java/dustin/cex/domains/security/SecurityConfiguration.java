@@ -38,6 +38,12 @@ public class SecurityConfiguration {
                 // 미검증 운영 세션도 보안키 등록·인증은 할 수 있지만 고객·운영 업무 권한은 없다.
                 .requestMatchers(HttpMethod.POST,"/api/auth/operator-mfa/register/options","/api/auth/operator-mfa/register",
                     "/api/auth/operator-mfa/authenticate/options","/api/auth/operator-mfa/authenticate").authenticated()
+                .requestMatchers(HttpMethod.GET,"/api/auth/operator-mfa/credentials").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.DELETE,"/api/auth/operator-mfa/credentials/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/recoveries","/api/admin/operator-security/access-reviews").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/requests/*/approve","/api/admin/operator-security/requests/*/reject").access(audited(audit,sessions,"APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/operator-security/operators/*/revoke").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/operator-security/requests","/api/admin/operator-security/operators/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/trading-restrictions").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/requests/*/approve","/api/admin/requests/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/requests","/api/admin/audit","/api/admin/customers/*",
