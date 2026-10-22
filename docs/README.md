@@ -45,3 +45,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [015. 분실 기기 폐기·계정 복구·권한 만료와 회수](decisions/015-operator-recovery-and-access-lifecycle.md): 독립 인물 승인·기한 재검토·필수 감사, 비웹 관리 JAR과 실제 프로세스 검증.
 
 - [운영 역할 부여·변경 승인과 업무별 보안키 서명](decisions/016-operator-role-approval-and-bound-authentication.md)
+
+- [복구·재검토·거래 제한 승인에 업무별 보안키 서명 적용](decisions/017-bound-approval-for-existing-operations.md)

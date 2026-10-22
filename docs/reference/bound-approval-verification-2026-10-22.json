@@ -1,0 +1,325 @@
+{
+  "checked_date": "2026-10-22",
+  "scope": "역할·복구·권한 기한 재검토·거래 제한의 승인 및 거절 서명",
+  "junit": {
+    "tests": 412,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_bound_tests": 62,
+  "new_bound_test_methods": 17,
+  "process_scenarios": 12,
+  "reports": {
+    "bound": {
+      "container": "cex-bound-approvals-89a63ef99dcb",
+      "groups": [
+        {
+          "name": "bound",
+          "exit": 0,
+          "tests": {
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "roles",
+          "exit": 0,
+          "tests": {
+            "tests": 48,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "lifecycle",
+          "exit": 0,
+          "tests": {
+            "tests": 37,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "security",
+          "exit": 0,
+          "tests": {
+            "tests": 39,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 186,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "mfa": {
+      "container": "cex-operator-mfa-b7403e7db626",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "financial": {
+      "container": "cex-inbox-10096ec12686",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "market": {
+      "postgres": "cex-market-pg-275556cc8d",
+      "kafka": "cex-market-broker-c8e23bcbd9",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    },
+    "admin_process": {
+      "database": "cex_idempotency_6f08096be5dc",
+      "temporary_database_removed": true,
+      "platform_runs": 1,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "dedicated_grant_without_ddl_or_workers",
+          "passed": true
+        },
+        {
+          "test": "reject_financial_customer_and_duplicate_grant",
+          "passed": true
+        }
+      ]
+    },
+    "orders_process": {
+      "database": "cex_idempotency_eff96e5013a7",
+      "temporary_database_removed": true,
+      "platform_runs": 2,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "test_concurrent_same_key",
+          "new": 1,
+          "existing": 11,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_concurrent_same_key_different_content",
+          "new": 1,
+          "existing": 5,
+          "conflicts": 6,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_invalid_balance_and_unrepresentable_split_roll_back_everything",
+          "rollback_cases": 2,
+          "engine_posts": 0
+        },
+        {
+          "test": "test_invalid_header_and_command_have_no_financial_effect",
+          "statuses": [
+            400,
+            400,
+            400
+          ],
+          "engine_posts": 0
+        },
+        {
+          "test": "test_key_is_scoped_to_authenticated_user",
+          "users": 2,
+          "engine_posts": 2
+        },
+        {
+          "test": "test_lost_response_then_same_key",
+          "statuses": [
+            202,
+            200
+          ],
+          "engine_posts": 1
+        },
+        {
+          "test": "test_market_original_budget_survives_order_changes",
+          "quote_amount": "123.250000001",
+          "replay": 200,
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_process_restart_uses_committed_key",
+          "after_restart": 200,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_same_key_different_content",
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_unrepresentable_commands_are_rejected_without_financial_effect",
+          "rejections": 2,
+          "engine_posts": 0
+        }
+      ]
+    },
+    "dependencies": {
+      "checked_at": "2026-10-22T05:54:56.034118+00:00",
+      "status": "NO_KNOWN_FINDINGS",
+      "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+      "package_versions": 222,
+      "findings": []
+    },
+    "integrity": {
+      "check": "gradle_rejects_altered_checksum",
+      "original_cache_modified": false,
+      "gradle_exit": 1,
+      "passed": true,
+      "temporary_copy_removed": true
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_bound_approvals.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_mfa.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 18.23
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_engine_inbox.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 30.5
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.33
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 14.77
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_order_idempotency.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 16.72
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 23.68
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.32
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.12
+    }
+  ],
+  "intermediate_failure": {
+    "initial_tests": 174,
+    "failures": 82,
+    "cause": "여러 Spring 컨텍스트의 사용자 ID 재설정과 같은 DB에 남은 보안 이력의 충돌",
+    "suites": [
+      {
+        "name": "dustin.cex.domains.security.BoundApprovalTest",
+        "tests": 50,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "dustin.cex.domains.security.OperatorLifecycleTest",
+        "tests": 34,
+        "failures": 34,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "dustin.cex.domains.security.PlatformSecurityTest",
+        "tests": 39,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "dustin.cex.domains.security.OperatorRoleTest",
+        "tests": 48,
+        "failures": 48,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "name": "dustin.cex.domains.security.OperatorSessionPolicyTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "fix": "실행 소유 컨테이너 안에서도 테스트 묶음별 별도 DB 생성",
+    "final_bound_suite": 186
+  },
+  "limits": [
+    "선택한 회귀이며 전체 저장소 테스트가 아님",
+    "실물 기기·브라우저·운영 TLS·EC2·성능·인허가/인증은 미검증",
+    "과거 결합 없는 대기 요청은 재신청",
+    "관리 도구/DB/OS 및 외부 신원·통지 증적은 별도 운영 신뢰 경계",
+    "배포하지 않음"
+  ]
+}

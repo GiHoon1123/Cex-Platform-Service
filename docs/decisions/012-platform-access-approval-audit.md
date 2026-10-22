@@ -158,3 +158,6 @@ Spring Security의 경로 인가를 사용하고, 설치된 JJWT 0.12.5와 Argon
 
 - 플랫폼 기능·회귀: [`892b23f`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/892b23f8e99b100fa8504731870ce9f15b27f9f7)
 - 엔진 서비스 경계: [`b84f1dc`](https://github.com/GiHoon1123/Cex-Engine/commit/b84f1dc37985e0f0a57297451a8139274e165420)
+
+
+후속 [업무별 서명 적용](017-bound-approval-for-existing-operations.md)에서 거래 제한 승인·거절의 비밀번호 재인증 필드·검증 경로를 삭제했다. 이 문서의 초기 비밀번호 결정 계약은 역사적 기록이며 현재 요청은 `payloadHash + proof`다. 과거 감사 기록은 유지한다.

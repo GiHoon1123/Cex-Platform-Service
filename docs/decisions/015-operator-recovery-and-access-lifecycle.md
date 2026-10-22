@@ -256,3 +256,6 @@ python3 scripts/verify_dependency_integrity.py
 
 - `842bb42`: 기기 폐기·복구/재검토·권한 회수, 세션의 서명 키 결합과 기한, 비웹 관리 도구 및 자동 검증.
 - 이 문서·근거/목차 갱신·고정 검증 증적은 별도 문서 커밋으로 기록한다.
+
+
+후속 [업무별 서명 적용](017-bound-approval-for-existing-operations.md)에서 복구·권한 기한 재검토 결정에 해당 요청 전용 보안키 서명을 요구한다. 이 문서의 초기 결정 DTO는 당시 계약이며 현재 입력은 `payloadHash + proof`다.
