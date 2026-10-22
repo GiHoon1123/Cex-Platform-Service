@@ -37,6 +37,7 @@ class MarketPathTest {
     @DynamicPropertySource static void endpoints(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",()->System.getenv("CEX_TEST_DATABASE_URL"));
         registry.add("spring.kafka.bootstrap-servers",()->System.getenv("CEX_TEST_KAFKA"));
+        registry.add("engine.audit.token",()->System.getenv("CEX_TEST_AUDIT_TOKEN"));
         registry.add("engine.http.url",()->System.getenv("CEX_TEST_ENGINE_URL"));
     }
     @LocalServerPort int port;
@@ -44,6 +45,9 @@ class MarketPathTest {
     @Autowired BotService bots; @Autowired MarketService market; @Autowired JwtService jwt;
     @Autowired dustin.cex.shared.kafka.KafkaOrderEventConsumer financial;
     @Autowired ObjectMapper mapper; @Autowired JdbcTemplate jdbc;
+    @Autowired org.springframework.kafka.config.KafkaListenerEndpointRegistry listeners;
+    @Autowired dustin.cex.domains.ledger.LedgerService ledger;
+    @Autowired dustin.cex.domains.reconciliation.ReconciliationService reconciliation;
     @Autowired FeeConfigRepository fees; @Autowired FeeConfigService feeService;
     final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
     Process engine;
@@ -52,6 +56,7 @@ class MarketPathTest {
         var env=builder.environment();
         env.put("DATABASE_HOST",System.getenv("CEX_TEST_DATABASE_URL").replace("jdbc:postgresql://","").replace("/cex",""));
         env.put("ENGINE_HTTP_ADDRESS",URI.create(System.getenv("CEX_TEST_ENGINE_URL")).getAuthority());
+        env.put("ENGINE_AUDIT_TOKEN",System.getenv("CEX_TEST_AUDIT_TOKEN"));
         env.put("ENGINE_DATA_DIR",System.getenv("CEX_ENGINE_DATA_DIR"));env.put("KAFKA_BOOTSTRAP_SERVERS",System.getenv("CEX_TEST_KAFKA"));
         var log=new java.io.File(System.getenv("CEX_ENGINE_LOG"));
         builder.redirectErrorStream(true).redirectOutput(append?ProcessBuilder.Redirect.appendTo(log):ProcessBuilder.Redirect.to(log));
@@ -199,6 +204,7 @@ class MarketPathTest {
         balances.saveAndFlush(UserBalance.builder().userId(seller.getId()).mintAddress("BTC").available(new BigDecimal("1")).locked(BigDecimal.ZERO).build());
         balances.saveAndFlush(UserBalance.builder().userId(buyer.getId()).mintAddress("USDT").available(new BigDecimal("1000")).locked(BigDecimal.ZERO).build());
         jdbc.execute(Files.readString(Path.of(System.getenv("CEX_ENGINE_BINARY")).getParent().getParent().getParent().resolve("schema/order_receipts.sql")));
+        ledger.initializeOpening();
         try {
             startEngine(false);
             var sell=bots.createLimitSellOrder(seller.getId(),"BTC",new BigDecimal("60000"),new BigDecimal("0.002"));
@@ -252,6 +258,42 @@ class MarketPathTest {
             String sequence=market.view("BTC","USDT").book().sequence();stopEngine();startEngine(true);
             var reconnected=mapper.readTree(socketSnapshot());assertEquals(sequence,reconnected.path("book").path("sequence").asText());assertTrue(reconnected.path("book").path("asks").isEmpty());assertEquals(3,market.view("BTC","USDT").trades().size());
             verifyMarketIoc(buyer,seller);
+            var report=reconciliation.run(); assertEquals("MATCHED",report.status(),()->jdbc.queryForList("SELECT * FROM reconciliation_issues WHERE run_id=?",report.id()).toString());
+            // 실행 소유 잔고의 조회값만 손상시켜 원본 원장과 독립 비교하는지 확인한다.
+            jdbc.update("UPDATE user_balances SET available=available-1 WHERE user_id=? AND mint_address='USDT'",buyer.getId());
+            var damaged=reconciliation.run(); assertEquals("MISMATCH",damaged.status());
+            assertTrue(jdbc.queryForObject("SELECT count(*) FROM reconciliation_issues WHERE run_id=? AND category='BALANCE_AVAILABLE'",Long.class,damaged.id())>0);
+            // 제품 대사는 잔고를 고치지 않는다. 테스트에서만 주입한 손상을 원복한다.
+            jdbc.update("UPDATE user_balances SET available=available+1 WHERE user_id=? AND mint_address='USDT'",buyer.getId());
+            assertEquals("MATCHED",reconciliation.run().status());
+            var feeId=jdbc.queryForObject("SELECT min(id) FROM trade_fees",Long.class);
+            jdbc.update("UPDATE trade_fees SET fee_amount=fee_amount+1 WHERE id=?",feeId);
+            var wrongFee=reconciliation.run();assertEquals("MISMATCH",wrongFee.status());
+            assertTrue(jdbc.queryForObject("SELECT count(*) FROM reconciliation_issues WHERE run_id=? AND category='FEE_VALUE'",Long.class,wrongFee.id())>0);
+            jdbc.update("UPDATE trade_fees SET fee_amount=fee_amount-1 WHERE id=?",feeId);
+            // 실제 금융 소비만 중지해 전달 지연을 만든다. 원장은 맞더라도 미수신 확정 결과가 있으면 완료가 아니다.
+            var financialContainers=listeners.getAllListenerContainers().stream().filter(container->java.util.Arrays.asList(container.getContainerProperties().getTopics()).contains("order-events")).toList();
+            assertEquals(1,financialContainers.size());financialContainers.forEach(org.springframework.kafka.listener.MessageListenerContainer::stop);
+            long delayed;
+            try {
+                delayed=marketOrder(buyer,true,"1");
+                assertEquals("INCOMPLETE",reconciliation.run().status());
+            } finally {financialContainers.forEach(org.springframework.kafka.listener.MessageListenerContainer::start);}
+            completed(delayed,"expired","0","0");
+            assertEquals("MATCHED",reconciliation.run().status());
+            // 새 JAR의 일회성 운영 진입점까지 실행하고 해당 프로세스만 정상 종료되는지 확인한다.
+            long reportsBefore=jdbc.queryForObject("SELECT count(*) FROM reconciliation_runs",Long.class);
+            var cliLog=Path.of(System.getenv("CEX_ENGINE_LOG")).resolveSibling("ledger-reconciliation-cli.log").toFile();
+            var cli=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-jar","build/libs/cex-0.0.1-SNAPSHOT.jar",
+                "--reconciliation.run=true","--server.port=0","--server.address=127.0.0.1","--bot.bot-count=0","--order.dispatch.enabled=false",
+                "--spring.kafka.listener.auto-startup=false","--spring.kafka.bootstrap-servers="+System.getenv("CEX_TEST_KAFKA"),
+                "--spring.datasource.url="+System.getenv("CEX_TEST_DATABASE_URL"),"--spring.jpa.hibernate.ddl-auto=validate",
+                "--engine.http.url="+System.getenv("CEX_TEST_ENGINE_URL"));
+            cli.environment().put("ENGINE_AUDIT_TOKEN",System.getenv("CEX_TEST_AUDIT_TOKEN"));
+            var checker=cli.redirectErrorStream(true).redirectOutput(cliLog).start();
+            try { assertTrue(checker.waitFor(40,TimeUnit.SECONDS),"대사 명령 종료 시간 초과"); assertEquals(0,checker.exitValue(),()->{try{return Files.readString(cliLog.toPath());}catch(Exception e){return e.toString();}}); }
+            finally {if(checker.isAlive()){checker.destroyForcibly();checker.waitFor();}}
+            assertEquals(reportsBefore+1,jdbc.queryForObject("SELECT count(*) FROM reconciliation_runs",Long.class));
         } finally {stopEngine();}
     }
 }
