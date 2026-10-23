@@ -1,4 +1,4 @@
-"""실행 소유 PostgreSQL에서 EDD 사건·실제 신원 HMAC·업무별 보안키 서명과 거래 정책을 검증한다."""
+"""실행 소유 PostgreSQL에서 EDD 사건·증빙·실제 서명·암호화·거래 정책을 검증한다."""
 import json
 import os
 from pathlib import Path
@@ -24,7 +24,7 @@ try:
             raise RuntimeError("격리 PostgreSQL 시작 시간 초과")
         time.sleep(0.2)
     address=subprocess.check_output([DOCKER,"port",name,"5432/tcp"],text=True).strip()
-    env={key:value for key,value in os.environ.items() if not key.startswith("CDD_")}
+    env={key:value for key,value in os.environ.items() if not key.startswith(("CDD_","EDD_"))}
     env["JWT_SECRET"]="isolated-process-jwt-secret-at-least-32-bytes"
     env["ENGINE_SERVICE_TOKEN"]="isolated-engine-service-token-32-bytes"
     env["SPRING_KAFKA_BOOTSTRAP_SERVERS"]="127.0.0.1:1"
@@ -35,7 +35,7 @@ try:
     env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
     ARTIFACTS.mkdir(exist_ok=True)
     with (ARTIFACTS/"edd.log").open("w") as log:
-        completed=subprocess.run(["./gradlew","test","--tests","*EddIntegrationTest","--rerun-tasks","bootJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+        completed=subprocess.run(["./gradlew","test","--tests","*EddIntegrationTest","--tests","*EddEvidenceIntegrationTest","--tests","*EvidenceImageTest","--tests","*EvidenceCryptoTest","--rerun-tasks","bootJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
     result["exit"]=completed.returncode
     if completed.returncode:
         raise RuntimeError("플랫폼 회귀 실패: .local/edd.log 확인")

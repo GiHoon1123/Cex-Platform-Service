@@ -37,6 +37,11 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/kyc/session","/api/kyc/sessions/*/reconcile","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/kyc/session","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/kyc/customers/*","/api/admin/kyc/customer-profiles/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/kyc/edd-evidence/requests/*").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.GET,"/api/kyc/edd-evidence/requests").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/edd/customers/*/evidence-requests").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*/evidence-requests").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/edd/evidence/*/view").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/customers/*/reports").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/reports/*/approve/options","/api/admin/edd/reports/*/reject/options",
                     "/api/admin/edd/reports/*/approve","/api/admin/edd/reports/*/reject").access(audited(audit,sessions,"APPROVER"))

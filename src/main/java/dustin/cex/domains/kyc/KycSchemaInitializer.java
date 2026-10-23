@@ -11,5 +11,5 @@ import org.springframework.stereotype.Component;
 public class KycSchemaInitializer {
     private final JdbcTemplate jdbc;
     public KycSchemaInitializer(JdbcTemplate jdbc) {this.jdbc=jdbc;}
-    @PostConstruct void initialize() throws Exception {jdbc.execute(new ClassPathResource("kyc/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("cdd/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("edd/schema.sql").getContentAsString(StandardCharsets.UTF_8));}
+    @PostConstruct void initialize() throws Exception {jdbc.execute(new ClassPathResource("kyc/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("cdd/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("edd/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("edd/evidence-schema.sql").getContentAsString(StandardCharsets.UTF_8));}
 }
