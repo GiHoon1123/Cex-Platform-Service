@@ -82,7 +82,7 @@ payload에는 결론/사유 대신 HMAC이 있다. AES-GCM의 문맥은 검토·
 
 ### 역할 이후에 실제 지정 인물 확인
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L130)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L167)
 
 ```java
 private User assigned(long actor,UUID sid,Review r,Map<Long,User> locked) {
@@ -95,7 +95,7 @@ HTTP 필터의 OPERATOR/APPROVER만으로 자료를 내주지 않는다. 계정 
 
 ### 회부 이후 변한 사실 거절
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L147)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L184)
 
 ```java
 if(!"REFERRED".equals(row.get("state"))||revision!=r.revision()+1||!r.assessment().equals(row.get("latest_assessment"))||!r.assessment().equals(row.get("assessment_id")))throw denied(HttpStatus.CONFLICT);
@@ -106,7 +106,7 @@ dossiers.verify(r.dossier(),r.caseId(),r.user());if(!r.dossier().digest().equals
 
 ### 현재 본인의 전체 페이지 제공 확인
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L127)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L164)
 
 ```java
 long viewed=jdbc.queryForObject("SELECT count(DISTINCT page) FROM compliance_review_views WHERE review_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND payload_hash=? AND page>=0 AND page<? AND viewed_at>clock_timestamp()-interval '5 minutes'",Long.class,p.id(),actor,checker.getOperatorPersonId(),checker.getVersion(),sid,hash,p.dossier().pageCount());
@@ -130,7 +130,7 @@ audit.record(actor,"COMPLIANCE_REVIEW_DECIDED","compliance-review:"+id,"SUCCESS"
 
 ### 역사 원문도 무결성 검증 후 제공
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L153)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L190)
 
 ```java
     var value=json.readValue(crypto.decrypt(p.evidenceKeyId(),context(p),cipher),Facts.class).validated();
@@ -249,3 +249,7 @@ audit.record(actor,"COMPLIANCE_REVIEW_DECIDED","compliance-review:"+id,"SUCCESS"
 - [`5580c4b`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/5580c4bea57bb1271736c77318cc85c1e15a533d): 비공개 보고 여부 검토·지정 인물·현재 회부/전체 제공·별도 업무 서명과 신규 테스트 48개.
 
 [028 제한적 오탐 종결](028-aml-false-positive-resolution.md), [027 후보 근거와 조사](027-signed-aml-evidence-and-investigation.md), [026 전체 근거](026-edd-dossier-and-independent-inspection.md), [공통 EDD 진행](../../../docs/roadmap/edd-case-review.md)을 함께 읽는다.
+
+## 후속 제출 대기와 결과 관찰
+
+[030](030-reporting-queue-and-followup.md)에서 지정 인물의 확정 보고 필요를 과거 승인 이력에서 직접 찾고, 원문을 제외한 페이지와 결과 불명/반려/접수 참조 관찰을 제공한다. 새 신고·후속 미보고·고객 비활성화가 앞선 필요를 지우지 않는다. 관찰은 자동 접수 확인이 아니고 계속 후속 확인 대상으로 남는다. 위 029의 수치와 미구현 범위는 당시 기록이며 실제 FIU 전송·법정 기한 계산·전사 감독/재배정은 여전히 별도다.
