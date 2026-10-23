@@ -121,7 +121,7 @@ audit.record(actor,"EDD_EVIDENCE_VIEWED","edd-evidence:"+id,"SUCCESS",reason.nam
 
 ### 관찰 원문 대신 지문을 승인 내용에 넣는다
 
-출처: [AddressReviewService.java](../../src/main/java/dustin/cex/domains/edd/AddressReviewService.java#L75). 메서드 일부이며 독립 실행 예제가 아니다.
+출처: [AddressReviewService.java](../../src/main/java/dustin/cex/domains/edd/AddressReviewService.java#L76). 메서드 일부이며 독립 실행 예제가 아니다.
 
 ```java
     String hash=verifier.digest(json.valueToTree(p));byte[] encrypted=crypto.encrypt(factsContext(p),json.writeValueAsBytes(facts));
@@ -135,7 +135,7 @@ audit.record(actor,"EDD_EVIDENCE_VIEWED","edd-evidence:"+id,"SUCCESS",reason.nam
 
 ### 승인자의 재입력이 달라지면 서명을 소비하지 않는다
 
-출처: [AddressReviewService.java](../../src/main/java/dustin/cex/domains/edd/AddressReviewService.java#L127). 메서드 일부이며 독립 실행 예제가 아니다.
+출처: [AddressReviewService.java](../../src/main/java/dustin/cex/domains/edd/AddressReviewService.java#L128). 메서드 일부이며 독립 실행 예제가 아니다.
 
 ```java
 private void independent(Review r,boolean approve,AddressFacts observed) {
@@ -149,7 +149,7 @@ Java record의 equals는 필드별 값 비교다. 두 관찰을 같은 규칙으
 
 ### 확정은 서명과 감사까지 함께 커밋한다
 
-출처: [AddressReviewService.java](../../src/main/java/dustin/cex/domains/edd/AddressReviewService.java#L98). 메서드 일부이며 독립 실행 예제가 아니다.
+출처: [AddressReviewService.java](../../src/main/java/dustin/cex/domains/edd/AddressReviewService.java#L99). 메서드 일부이며 독립 실행 예제가 아니다.
 
 ```java
 mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.EDD_ADDRESS_REVIEW,id,hash,approve,proof);

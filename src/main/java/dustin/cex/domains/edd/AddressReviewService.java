@@ -37,25 +37,26 @@ public class AddressReviewService {
     }
     public record Confirmation(Review review,boolean approve,OperatorMfaService.Options authentication) {}
     private record Current(UUID caseId,long revision,long userId,UUID assessment,UUID declaration,String name,String address) {}
+    private final ReviewEvidenceAccess access;
     private final JdbcTemplate jdbc;private final UserRepository users;private final OperatorSessionPolicy sessions;
     private final EvidenceCrypto crypto;private final CddCrypto cdd;private final ObjectMapper json;private final DiditWebhookVerifier verifier;
     private final OperatorMfaService mfa;private final AuditService audit;private final TransactionTemplate tx;
     public AddressReviewService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy sessions,EvidenceCrypto crypto,CddCrypto cdd,
-            ObjectMapper json,DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,PlatformTransactionManager manager) {
-        this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;tx=new TransactionTemplate(manager);
+            ObjectMapper json,DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,PlatformTransactionManager manager,ReviewEvidenceAccess access) {
+        this.access=access;this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;tx=new TransactionTemplate(manager);
     }
     /** 이미 제공받은 열람본과 같은 현재 신고의 이름·주소만 반환한다. 생일·직업·신원 번호는 노출하지 않는다. */
     public Context context(long actor,UUID sid,UUID evidence,UUID view) {
         return attempt(actor,"EDD_ADDRESS_CONTEXT",()->tx.execute(s->{
-            long user=owner(evidence);var locked=lock(actor,user);var operator=locked.get(actor);
-            sessions.requireFresh(operator,sid,UserRole.OPERATOR,UserRole.APPROVER);customer(locked.get(user));
+            long user=access.owner(evidence);var locked=access.lock(actor,user);var operator=locked.get(actor);
+            sessions.requireFresh(operator,sid,UserRole.OPERATOR,UserRole.APPROVER);access.customer(locked.get(user));
             var current=current(evidence);view(operator,sid,evidence,view,current);
             audit.record(actor,"EDD_ADDRESS_CONTEXT_READ","edd-evidence:"+evidence,"SUCCESS","NAME_ADDRESS_ONLY");return context(evidence,view,current);
         }));
     }
     public Review propose(long actor,UUID sid,UUID evidence,UUID view,UUID assessment,long revision,UUID key,AddressFacts supplied) {
         return attempt(actor,"EDD_ADDRESS_PROPOSE",()->tx.execute(s->{
-            long user=owner(evidence);var locked=lock(actor,user);var maker=locked.get(actor);sessions.requireFresh(maker,sid,UserRole.OPERATOR);customer(locked.get(user));
+            long user=access.owner(evidence);var locked=access.lock(actor,user);var maker=locked.get(actor);sessions.requireFresh(maker,sid,UserRole.OPERATOR);access.customer(locked.get(user));
             if(supplied==null || key==null || assessment==null || view==null) throw denied(HttpStatus.BAD_REQUEST);
             var facts=supplied.validated();String mac=fingerprint(facts);
             var old=jdbc.queryForList("SELECT id FROM edd_address_reviews WHERE requester_id=? AND request_key=?",actor,key);
@@ -105,15 +106,15 @@ public class AddressReviewService {
     }
     public List<Review> list(long actor,UUID sid,long user,int page) {
         return attempt(actor,"EDD_ADDRESS_LIST",()->tx.execute(s->{
-            var locked=lock(actor,user);sessions.requireFresh(locked.get(actor),sid,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);customer(locked.get(user));
+            var locked=access.lock(actor,user);sessions.requireFresh(locked.get(actor),sid,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);access.customer(locked.get(user));
             if(page<0 || page>10000) throw denied(HttpStatus.BAD_REQUEST);
             audit.record(actor,"EDD_ADDRESS_REVIEWS_LISTED","customer:"+user,"SUCCESS","METADATA_ONLY");
             return jdbc.queryForList("SELECT id FROM edd_address_reviews WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 50 OFFSET ?",user,page*50).stream().map(r->read((UUID)r.get("id"))).toList();
         }));
     }
     private Current check(long actor,UUID sid,Review r,String hash,UUID viewed) {
-        var p=r.payload();var locked=lock(actor,p.requesterId(),p.userId());var checker=locked.get(actor);var maker=locked.get(p.requesterId());
-        sessions.requireFresh(checker,sid,UserRole.APPROVER);customer(locked.get(p.userId()));
+        var p=r.payload();var locked=access.lock(actor,p.requesterId(),p.userId());var checker=locked.get(actor);var maker=locked.get(p.requesterId());
+        sessions.requireFresh(checker,sid,UserRole.APPROVER);access.customer(locked.get(p.userId()));
         if(maker==null || !maker.isAuthenticationAllowed() || maker.getRole()!=UserRole.OPERATOR || maker.getVersion()!=p.requesterVersion() || !p.requesterPerson().equals(maker.getOperatorPersonId())
                 || actor==p.requesterId() || checker.getOperatorPersonId().equals(p.requesterPerson())) throw denied(HttpStatus.FORBIDDEN);
         var current=current(p.evidenceId());view(checker,sid,p.evidenceId(),viewed,current);
@@ -140,39 +141,12 @@ public class AddressReviewService {
         }
     }
     private Current current(UUID evidence) {
-        crypto.requireConfigured();cdd.requireConfigured();
-        var rows=jdbc.queryForList("""
-            SELECT c.id AS case_id,c.revision,c.user_id,a.id AS assessment_id,d.id AS declaration_id,d.ciphertext,
-             a.key_id AS assessment_key,d.key_id AS declaration_key,e.key_id AS evidence_key,a.policy_version
-            FROM edd_evidence e JOIN edd_evidence_requests r ON r.id=e.request_id AND r.user_id=e.user_id
-             JOIN edd_cases c ON c.id=r.case_id AND c.user_id=r.user_id
-             JOIN cdd_profiles p ON p.user_id=c.user_id AND p.assessment_id=c.latest_assessment
-             JOIN cdd_assessments a ON a.id=p.assessment_id AND a.user_id=c.user_id AND a.declaration_id=p.declaration_id AND a.id=r.assessment_id
-             JOIN cdd_declarations d ON d.id=p.declaration_id AND d.user_id=c.user_id
-             JOIN kyc_profiles k ON k.user_id=c.user_id AND k.active_attempt=a.attempt_id AND k.status_digest=a.status_digest
-            WHERE e.id=? AND r.purpose='RESIDENTIAL_ADDRESS' AND c.state IN ('OPEN','REFERRED') FOR UPDATE OF c
-            """,evidence);
-        if(rows.isEmpty()) throw denied(HttpStatus.CONFLICT);var r=rows.getFirst();
-        if(!cdd.keyId().equals(r.get("assessment_key")) || !cdd.keyId().equals(r.get("declaration_key")) || !crypto.keyId().equals(r.get("evidence_key")) || !CddService.POLICY.equals(r.get("policy_version"))) throw denied(HttpStatus.CONFLICT);
-        long user=((Number)r.get("user_id")).longValue();UUID declaration=(UUID)r.get("declaration_id");
-        CustomerDeclaration declared;
-        try {declared=json.readValue(cdd.decrypt(user,declaration,(byte[])r.get("ciphertext")),CustomerDeclaration.class);}
-        catch(RuntimeException e) {throw new IllegalStateException("현재 신고 해독 검증 실패");}
-        return new Current((UUID)r.get("case_id"),((Number)r.get("revision")).longValue(),user,(UUID)r.get("assessment_id"),declaration,declared.fullName(),declared.address());
+        var c=access.current(evidence,EvidenceService.Purpose.RESIDENTIAL_ADDRESS);
+        return new Current(c.caseId(),c.revision(),c.userId(),c.assessment(),c.declaration(),c.name(),c.address());
     }
     private void view(User actor,UUID sid,UUID evidence,UUID view,Current current) {
-        if(view==null) throw denied(HttpStatus.CONFLICT);
-        boolean valid=Boolean.TRUE.equals(jdbc.queryForObject("""
-            SELECT EXISTS(SELECT 1 FROM edd_evidence_views v JOIN edd_evidence e ON e.id=v.evidence_id
-             JOIN edd_evidence_requests r ON r.id=e.request_id
-             WHERE v.id=? AND v.evidence_id=? AND v.actor_id=? AND v.actor_person=? AND v.actor_version=? AND v.session_id=?
-              AND v.assessment_id=? AND v.case_revision=? AND v.key_id=? AND v.viewed_at>clock_timestamp()-interval '5 minutes'
-              AND ((?='OPERATOR' AND r.requester_id=v.actor_id AND r.requester_person=v.actor_person)
-               OR (?='APPROVER' AND r.requester_person<>v.actor_person)))
-            """,Boolean.class,view,evidence,actor.getId(),actor.getOperatorPersonId(),actor.getVersion(),sid,current.assessment(),current.revision(),crypto.keyId(),actor.getRole().name(),actor.getRole().name()));
-        if(!valid) throw denied(HttpStatus.CONFLICT);
+        access.view(actor,sid,evidence,view,current.assessment(),current.revision());
     }
-    private long owner(UUID evidence) {var rows=jdbc.queryForList("SELECT user_id FROM edd_evidence WHERE id=?",evidence);if(rows.isEmpty()) throw denied(HttpStatus.NOT_FOUND);return ((Number)rows.getFirst().get("user_id")).longValue();}
     private Context context(UUID evidence,UUID view,Current c) {return new Context(evidence,view,c.caseId(),c.revision(),c.assessment(),c.declaration(),c.name(),c.address());}
     private Review read(UUID id) {
         var rows=jdbc.queryForList("SELECT r.payload,r.payload_hash,d.approved FROM edd_address_reviews r LEFT JOIN edd_address_decisions d ON d.review_id=r.id WHERE r.id=?",id);
@@ -183,8 +157,6 @@ public class AddressReviewService {
     private String factsContext(Payload p) {return "ADDRESS_REVIEW_V1:"+p.id()+":"+p.userId()+":"+p.evidenceId()+":"+p.assessmentId()+":"+p.caseRevision();}
     private String fingerprint(AddressFacts facts) {return cdd.fingerprint("address-review-v1",json.writeValueAsString(facts));}
     private static LocalDate today() {return LocalDate.now(ZoneId.of("Asia/Seoul"));}
-    private Map<Long,User> lock(long... ids) {var result=new HashMap<Long,User>();Arrays.stream(ids).distinct().sorted().forEach(id->users.lockById(id).ifPresent(u->result.put(id,u)));return result;}
-    private void customer(User user) {if(user==null || user.getRole()!=UserRole.CUSTOMER) throw denied(HttpStatus.CONFLICT);}
     private <T>T attempt(long actor,String action,Supplier<T> work) {try{return work.get();}catch(ResponseStatusException e){audit.denied(actor,action,"edd-address-review","POLICY_DENIED_"+e.getStatusCode().value());throw e;}}
     private static ResponseStatusException denied(HttpStatus status) {return new ResponseStatusException(status,"주소 검토의 현재 자료·평가·열람·독립 인증을 확인하세요");}
 }
