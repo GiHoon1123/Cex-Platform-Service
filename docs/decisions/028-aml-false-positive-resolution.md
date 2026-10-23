@@ -86,7 +86,7 @@ candidates.add(new Candidate(key,index));
 
 ### 과거 해소 대상을 현재 자료와 연결
 
-출처: [AmlResolutionPolicy.java](../../src/main/java/dustin/cex/domains/edd/AmlResolutionPolicy.java#L66)
+출처: [AmlResolutionPolicy.java](../../src/main/java/dustin/cex/domains/edd/AmlResolutionPolicy.java#L67)
 
 ```java
 for(var prior:all) {
@@ -105,7 +105,7 @@ Java `record Key(node, hit)`는 값 기반 equals/hashCode를 가지므로 HashS
 
 ### 최신 조사와 메모 무결성
 
-출처: [AmlResolutionPolicy.java](../../src/main/java/dustin/cex/domains/edd/AmlResolutionPolicy.java#L86)
+출처: [AmlResolutionPolicy.java](../../src/main/java/dustin/cex/domains/edd/AmlResolutionPolicy.java#L87)
 
 ```java
 if(records.isEmpty())return denied("INVESTIGATION_UNRESOLVED");
@@ -287,3 +287,7 @@ macOS·Temurin 21, 실행기가 소유한 별도 PostgreSQL/Kafka와 임시 DB�
 - [`024b533`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/024b533638ec745dacd2fb08d98205b9444bf50e): 제한적 AML 오탐 종결·독립 근거 검증·기한부 주문 정책과 신규 테스트 72개.
 
 선행 [027 서명 근거와 개별 조사](027-signed-aml-evidence-and-investigation.md), [026 전체 근거 묶음](026-edd-dossier-and-independent-inspection.md), [021 사건과 독립 결론](021-edd-case-and-independent-review.md), [공통 EDD 계획](../../../docs/roadmap/edd-case-review.md)을 함께 읽는다.
+
+## 후속 비공개 보고 검토와 우회 차단
+
+[029](029-confidential-reporting-review.md)에서 현재 승인된 준법 회부의 비공개 보고 여부를 지정 두 인물과 독립 업무 서명으로 판단한다. 별도 보고 검토가 생긴 사건은 이 글의 좁은 오탐/신원 정정 종결로 건너뛰지 않는다. 위 테스트 수치와 8종 승인 유지 설명은 028 당시 기준이며, 현재는 STR_REVIEW가 추가된 9종 스키마가 필요하다. 미보고·반려도 위험 해소나 외부 보고 완료가 아니다.
