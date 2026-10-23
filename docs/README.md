@@ -75,3 +75,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [EDD 결정 근거 묶음과 독립 전체 페이지 열람](decisions/026-edd-dossier-and-independent-inspection.md): 당시 자료·내용 검토 목록의 불변 보존, 새 근거의 옛 서명 무효화, 본인 세션의 모든 페이지 제공과 필수 감사. 회부는 거래 허용·외부 사실 검증이 아니다.
 
 - [서명된 AML 후보 근거와 개별 조사](decisions/027-signed-aml-evidence-and-investigation.md): 실제 서명 이벤트의 최소 자료 보존, 후보별 조사 의견·현재 열람·멱등/경합·암호화와 기존 EDD 결정 결합. 실제 인물 판정이나 거래 허용은 아니다.
+
+- [AML 오탐의 독립 종결과 기한부 신규 주문 허용](decisions/028-aml-false-positive-resolution.md): 새 서명 결과·과거 후보 보존·현재 모든 조사·독립 서명으로 제한적 종결한다. 원래 위험 이력은 유지하며 기한 만료·새 근거·다른 위험은 차단한다.

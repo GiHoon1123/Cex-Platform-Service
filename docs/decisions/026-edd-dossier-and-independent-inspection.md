@@ -83,12 +83,12 @@ public Summary capture(UUID caseId,long user) {
 
 ### 2. 목록을 요청 해시에 고정하기
 
-출처: [EddService.java](../../src/main/java/dustin/cex/domains/cdd/EddService.java#L83)
+출처: [EddService.java](../../src/main/java/dustin/cex/domains/cdd/EddService.java#L91)
 
 ```java
 var p=new Payload(UUID.randomUUID(),c.id(),c.revision(),user,expectedAssessment,(UUID)assessment.get("event_id"),(UUID)assessment.get("attempt_id"),
     (String)assessment.get("status_digest"),(String)assessment.get("key_id"),(String)assessment.get("policy_version"),c.reviewReasons(),finding,micros(until),
-    actor,maker.getOperatorPersonId(),maker.getVersion(),expires,REVIEW_POLICY,dossier);
+    actor,maker.getOperatorPersonId(),maker.getVersion(),expires,REVIEW_POLICY,dossier,resolution);
 String hash=verifier.digest(json.valueToTree(p));
 ```
 
@@ -109,21 +109,25 @@ public void requireAllPages(UUID report,Summary summary,User actor,UUID sid) {
 
 ### 4. 마지막에도 현재 전체 근거를 확인하기
 
-출처: [EddService.java](../../src/main/java/dustin/cex/domains/cdd/EddService.java#L140)
+출처: [EddService.java](../../src/main/java/dustin/cex/domains/cdd/EddService.java#L148)
 
 ```java
 if(!REVIEW_POLICY.equals(p.reviewPolicy()))throw deny(HttpStatus.CONFLICT);
 dossiers.verify(p.dossier(),c.id(),p.userId());
 if(!p.dossier().digest().equals(dossiers.liveDigest(c.id(),p.userId())))throw deny(HttpStatus.CONFLICT);
 if(requireInspection)dossiers.requireAllPages(p.id(),p.dossier(),checker,sid);
-validateFinding(c,current,p.finding(),p.validUntil());return c;
+var resolution=validateFinding(c,current,p.finding(),p.validUntil());
+if(!Objects.equals(p.amlResolution(),resolution))throw deny(HttpStatus.CONFLICT);
+// 조사자가 나중에 승인 역할로 이동해도 자기 관찰을 독립 승인하지 못한다.
+if(resolution!=null&&resolution.investigations().stream().anyMatch(x->x.person().equals(checker.getOperatorPersonId())))throw deny(HttpStatus.FORBIDDEN);
+return c;
 ```
 
 현재 사건·평가·누적 사유·작성자/승인자·최근 MFA를 앞에서 검사한 뒤 실행된다. 번호가 같아도 `liveDigest`가 다르면 거절한다. 고객 잠금이 새 자료 요청·관찰 작성과 순서를 정하므로 검사와 결정 사이에 다른 제품 경로가 근거를 바꾸지 못한다. 두 결정의 경합은 기존 사건 잠금 뒤 상태 재확인으로 하나만 확정된다.
 
 ### 5. 제공 영수증과 감사가 함께 확정되기
 
-출처: [EddService.java](../../src/main/java/dustin/cex/domains/cdd/EddService.java#L96)
+출처: [EddService.java](../../src/main/java/dustin/cex/domains/cdd/EddService.java#L104)
 
 ```java
 var r=read(id);check(actor,sid,r,r.payloadHash(),false);var result=dossiers.page(r.payload().dossier(),page);
@@ -216,3 +220,7 @@ return new Inspection(r,result);
 ## 후속 서명 AML 근거와 개별 조사
 
 [027](027-signed-aml-evidence-and-investigation.md)에서 실제 서명 자료의 최소 필드와 후보별 조사 의견을 AML_SOURCE·AML_INVESTIGATION으로 기존 목록에 연결했다. 새 의견은 같은 사건 변경 번호에서도 옛 서명을 무효화하며 역사 목록은 그대로 보존한다. 공급사 주장·담당자 의견을 외부 사실 검증/EDD 해소로 취급하지 않는다. 이 글의 검증 수치는 최초 구현 당시 기록이다.
+
+## 후속 종결 근거 결합
+
+[028](028-aml-false-positive-resolution.md)에서 실제 AML 해소 근거와 조사 기여자를 payload에 더하고 결정 직전 값 일치와 독립성을 재검증한다. 위 현재 코드 발췌에는 이 후속 변경이 반영되어 있으며 026의 실행 수치는 당시 결과다. V1 묶음은 원래 해시의 역사 조회를 보존하고 현재 실행은 V2로만 받는다.

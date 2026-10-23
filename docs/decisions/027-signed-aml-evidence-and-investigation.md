@@ -123,7 +123,7 @@ UUID id=UUID.randomUUID();var p=new Payload(id,source,m.contentMac(),m.caseId(),
 
 ### 5. 대사는 후보가 달라진 사실도 확인한다
 
-출처: [CddService.java](../../src/main/java/dustin/cex/domains/cdd/CddService.java#L142)
+출처: [CddService.java](../../src/main/java/dustin/cex/domains/cdd/CddService.java#L156)
 
 ```java
 // 후보 내용이 달라졌는데 비어 있지 않다는 사실만 같다고 옛 근거로 재확인하지 않는다.
@@ -148,7 +148,7 @@ SELECT 'AML_INVESTIGATION',r.id,jsonb_build_object('kind','AML_INVESTIGATION','i
 
 ### 7. 누락 웹훅은 실제 보관 서명으로 복원한다
 
-출처: [AmlInvestigationIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/AmlInvestigationIntegrationTest.java#L142)
+출처: [AmlInvestigationIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/AmlInvestigationIntegrationTest.java#L145)
 
 ```java
 @Test void missedInReviewWebhookIsRecoveredFromActualArchivedSignature() throws Exception {
@@ -258,3 +258,7 @@ SELECT 'AML_INVESTIGATION',r.id,jsonb_build_object('kind','AML_INVESTIGATION','i
 ## 관련 커밋
 
 - [`9c07897`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/9c07897618df2f4dae769f6ad2c8e07687819413): 서명 AML 최소 근거·후보별 조사·기존 EDD 결합·대사 복원과 신규 테스트 53개.
+
+## 후속 오탐 종결과 거래 재개
+
+[028](028-aml-false-positive-resolution.md)에서 현재와 과거 검토 사유가 AML뿐인 사건에 한해 새 서명 오탐 결과·후보 보존·완전한 생일 차이·현재 조사·독립 승인으로 기한부 신규 주문을 허용한다. 027의 자료 수집과 직원 의견 자체는 계속 해제 권한이 아니며, 위 검증 수치는 027 완료 당시 결과다.

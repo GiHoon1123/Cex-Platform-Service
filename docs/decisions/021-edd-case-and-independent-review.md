@@ -138,7 +138,7 @@ mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.EDD_REVIEW,id,ha
 var checker=users.findById(actor).orElseThrow();
 jdbc.update("INSERT INTO edd_decisions(report_id,approver_id,approver_person,approved) VALUES(?,?,?,?)",id,actor,checker.getOperatorPersonId(),approve);
 if(approve) {
-    String state=switch(r.payload().finding()) {case AWAITING_EVIDENCE->"OPEN";case COMPLIANCE_ESCALATION->"REFERRED";case CORRECTED_SIGNED_IDENTITY->"CLOSED";};
+    String state=switch(r.payload().finding()) {case AWAITING_EVIDENCE->"OPEN";case COMPLIANCE_ESCALATION->"REFERRED";case CORRECTED_SIGNED_IDENTITY,RESOLVED_AML_FALSE_POSITIVES->"CLOSED";};
     jdbc.update("UPDATE edd_cases SET state=?,valid_until=?,revision=revision+1 WHERE id=?",state,
         r.payload().validUntil()==null?null:Timestamp.from(r.payload().validUntil()),c.id());
 }
@@ -248,3 +248,7 @@ EDD 전용 JVM 강제 종료 시나리오는 새로 작성하지 않았다. 별�
 ## 2026-10-23 후속 근거 묶음과 독립 전체 페이지 열람
 
 [026 실제 코드·선택·테스트](026-edd-dossier-and-independent-inspection.md)에서 요청에 자료/내용 검토의 전체 불변 목록을 고정하고 승인자 본인 세션의 모든 페이지 제공을 요구한다. 변경 번호가 같아도 새 자료 요청·미결 내용 검토가 있으면 옛 요청을 실행하지 못한다. 과거 요청 원본은 역사 조회만 유지하고 자동 변환·실행하지 않는다. 이 글의 최초 검증 수치는 당시 기록이며 현재 실행 결과는 026을 따른다. 외부 진위 확인·EDD 해소·STR·관계 종료는 별도다.
+
+## 후속 AML 오탐 종결 정책
+
+[028](028-aml-false-positive-resolution.md)에서 새 서명 오탐 자료·과거 후보 보존·현재 조사·독립 승인으로 제한된 AML 사건만 종결한다. 실행 정책은 EDD_CASE_RESOLUTION_REVIEW_V2이며 과거 요청은 역사 조회만 유지한다. 위 최초 범위의 테스트 수치는 당시 결과다. 원래 위험 이력을 정상으로 수정하거나 다른 위험을 해제하지 않는다.
