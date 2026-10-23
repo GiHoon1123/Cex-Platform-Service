@@ -107,3 +107,26 @@ Kraken·IBKR·OWASP·Spring 공식 자료와 현행 고시 페이지 표기·금
 [EDD 사건·독립 결정](../decisions/021-edd-case-and-independent-review.md)에서 기존 검토 이력을 재신고로 지우지 못하게 하고, 실제 평가/서명 이벤트에 결합한 보고서·별도 인물 보안키 결정·제한적인 정보 불일치 종결을 로컬 검증했다. PEP/AML 등은 종결하지 않으며 자료 대기/준법 회부로 유지한다.
 
 이번에는 [특금법 제5조의2 조문정보](https://law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1022860887)의 표시 시행 2026-10-02·제21857호 본문을 읽었다. 앞선 본문 추출 실패와 구분한다. 고객 확인과 의심 시 목적/원천, 내부 지침·방법, 확인 불가 시 신규 거래 거절/관계 종료, 보고 여부 검토의 범위를 확인했다. 코드의 REFERRED는 법정 보고·관계 종료의 이행이 아니다. 시행령/고시·전체 부칙·사업별 적용·조직/고위 경영진·실제 증빙/감시·보존/파기·신고/인증은 여전히 별도 확인 조건이다. 개인 자격을 사업 인허가나 조직 인증으로 해석하지 않는다.
+
+## 실제 구현과 함께 읽기 · 2026-10-23
+
+이 문서의 관련 동작을 확인할 현재 코드다. 메서드·설정의 일부이며 독립 실행 예제가 아니다. 계획이나 과거 검토 전체가 구현·검증됐다는 뜻은 아니다.
+
+출처: [OperatorSessionPolicy.java](../../src/main/java/dustin/cex/domains/security/OperatorSessionPolicy.java#L19) · [전체 구현 설명·트레이드오프·작성한 테스트](../decisions/015-operator-recovery-and-access-lifecycle.md)
+
+```java
+public RefreshToken requireFresh(User user,UUID sid,UserRole... roles) {
+    if(user==null || !user.isAuthenticationAllowed() || user.getRole()==UserRole.CUSTOMER
+            || Arrays.stream(roles).noneMatch(r->r==user.getRole())) throw denied();
+    var session=tokens.findBySessionId(sid).orElseThrow(OperatorSessionPolicy::denied);
+    LocalDateTime now=LocalDateTime.now();
+    // 두 값 모두 Long 객체다. 참조 비교는 작은 정수 캐시 밖의 정상 사용자까지 거부하므로 값으로 비교한다.
+    if(!session.getUserId().equals(user.getId()) || session.getRevoked() || !session.getExpiresAt().isAfter(now)
+            || !session.hasVerifiedMfa() || !session.getMfaVerifiedAt().plusMinutes(5).isAfter(now)) throw denied();
+    return session;
+}
+```
+
+`Long.equals`는 객체 참조가 아닌 사용자 ID 값을 비교한다. 세션 회수·만료·MFA 시각은 현재 저장값으로 확인하며, JWT에 들어 있던 역할만 믿지 않는다. 호출자는 사용자 행을 먼저 잠가야 한다.
+
+이번 보강은 문서 변경이다. 신규 제품 테스트는 0개이며 제품 테스트는 재실행하지 않았다. 소스와 발췌의 일치를 별도로 검사했다. 과거 실행 결과와 현재 소스의 동작 범위는 연결한 구현 기록에서 구분한다.

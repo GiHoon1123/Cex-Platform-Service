@@ -33,3 +33,24 @@ python3 scripts/verify_market_path.py
 ## 원장·독립 대사
 
 [주문 자산 원장과 독립 대사](docs/decisions/011-asset-ledger-and-reconciliation.md)에서 현재 범위와 실행 조건을 확인한다. 최초 반입·운영 접근·저장 계약은 문서의 조건을 충족해야 한다.
+
+## 실제 구현과 함께 읽기 · 2026-10-23
+
+이 문서의 관련 동작을 확인할 현재 코드다. 메서드·설정의 일부이며 독립 실행 예제가 아니다. 계획이나 과거 검토 전체가 구현·검증됐다는 뜻은 아니다.
+
+출처: [EngineEventInbox.java](src/main/java/dustin/cex/shared/kafka/EngineEventInbox.java#L34) · [전체 구현 설명·트레이드오프·작성한 테스트](docs/decisions/006-engine-event-inbox.md)
+
+```java
+String hash = hash(payload);
+int inserted = jdbc.update("""
+        INSERT INTO engine_event_receipts(event_id,engine_id,payload_hash) VALUES (?,?,?)
+        ON CONFLICT (event_id) DO NOTHING
+        """, eventId, engineId, hash);
+if (inserted == 1) {
+    return true;
+}
+```
+
+`jdbc.update`는 영향받은 행 수를 반환한다. 최초 삽입만 1이며, 중복이면 뒤의 기존 본문 해시 확인으로 진행한다. 수신 키와 금융 반영은 같은 트랜잭션에서 확정해야 한다.
+
+이번 보강은 문서 변경이다. 신규 제품 테스트는 0개이며 제품 테스트는 재실행하지 않았다. 소스와 발췌의 일치를 별도로 검사했다. 과거 실행 결과와 현재 소스의 동작 범위는 연결한 구현 기록에서 구분한다.

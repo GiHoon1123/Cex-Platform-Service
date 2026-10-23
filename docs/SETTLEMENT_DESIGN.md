@@ -109,7 +109,7 @@
 
 ## 실패 시 공통 동작
 
-- **재시도**: `@Retryable`로 최대 3회, 지수 백오프(2초 → 4초 → 8초). 전부 실패하면 `@Recover`로 복구 로직 실행(현재는 로그/알림용).
+- **재시도**: Framework 7의 `@Retryable`로 총 3회 시도한다. 첫 실패 뒤 2초, 두 번째 실패 뒤 4초 대기하며 마지막 실패는 호출자에게 전달한다. 구형 Spring Retry의 `@Recover` 로그 경로는 제거했다. 세부 범위는 [런타임 교체 기록](decisions/013-supported-runtime-and-dependency-audit.md)을 따른다.
 - **런 기록**: 매 일별 정산 시작 시 `trade_settlement_runs`에 1행 생성(status=RUNNING, completed_step=0). 성공 시 `completeRun`으로 SUCCESS, 실패 시 `failRun`으로 FAILED와 에러 메시지·(3단계인 경우) `failed_user_ids_json` 저장.
 - **실패 상세 조회**: `GET /api/settlement/trade/failures?date=yyyy-MM-dd`로 해당 날짜의 `trade_settlement_failures` 목록 조회 가능.
 
@@ -135,3 +135,23 @@
 2026-10-22 접근 통제 사이클에서 승인 없이 정산을 변경하던 `POST /api/settlement/trade/manual/daily`와 `POST /api/settlement/trade/validate/{date}`를 삭제했다. 현재 HTTP 컨트롤러는 역할이 있는 운영자·승인자·감사자에게 조회만 제공한다. 정산 서비스·예약 실행·기존 이력은 유지한다.
 
 승인된 정산 재실행·정정은 후속 업무다. 기존 서비스의 강제 재생성 기능을 운영 API로 다시 노출하기 전에 금융 이력 보존, 불변 승인 내용과 실행 권한을 별도로 검토해야 한다. [현재 접근 통제·승인·감사 계약](decisions/012-platform-access-approval-audit.md)을 따른다.
+
+## 실제 구현과 함께 읽기 · 2026-10-23
+
+이 문서의 관련 동작을 확인할 현재 코드다. 메서드·설정의 일부이며 독립 실행 예제가 아니다. 계획이나 과거 검토 전체가 구현·검증됐다는 뜻은 아니다.
+
+출처: [TradeSettlementScheduler.java](../src/main/java/dustin/cex/domains/settlement/trade/scheduler/TradeSettlementScheduler.java#L78) · [전체 구현 설명·트레이드오프·작성한 테스트](decisions/013-supported-runtime-and-dependency-audit.md)
+
+```java
+@Retryable(
+        includes = RuntimeException.class,
+        // 최초 실행 한 번과 추가 재시도 두 번으로 기존 총 세 번을 유지한다.
+        maxRetries = 2,
+        delay = 2000,
+        multiplier = 2
+)
+```
+
+어노테이션에 재시도 횟수·지연·예외 범위를 고정한다. 재시도는 멱등성이나 금융 원자성을 대신하지 않으며, 스케줄러의 잠금·정산 실행 기록은 본문의 별도 통제를 따른다.
+
+이번 보강은 문서 변경이다. 신규 제품 테스트는 0개이며 제품 테스트는 재실행하지 않았다. 소스와 발췌의 일치를 별도로 검사했다. 과거 실행 결과와 현재 소스의 동작 범위는 연결한 구현 기록에서 구분한다.

@@ -1,5 +1,7 @@
 # 엔진 도메인 벤치마크
 
+> 과거 Java 실험의 실행 방법과 측정 기록이다. 아래 “최적”은 당시 비교 조건에 한정하며 현재 서비스·Rust 엔진 성능을 보장하지 않는다. 이 문서 보강에서 벤치마크를 새로 실행하지 않았다.
+
 ## 실행 방법
 
 프로젝트 루트에서 기본 실행:
@@ -123,3 +125,24 @@ GC 변경(예: ZGC): `-DgcArg=-XX:+UseZGC`
 - JMH 결과: 터미널 출력 + `build/results/jmh/` (플러그인 설정에 따라)
 - GC 로그: `build/results/jmh/gc.log`
 - OOM 시 힙 덤프: `build/results/jmh/`
+
+## 현재 벤치마크 설정 · 2026-10-23
+
+출처: [build.gradle](../build.gradle#L105). 아래는 설정 일부이며 독립 실행 예제가 아니다.
+
+```groovy
+jmh {
+	def gcArg = System.getProperty('gcArg', '-XX:+UseG1GC')
+	def extraJvmArgs = System.getProperty('extraJvmArgs')
+	def extraList = extraJvmArgs?.split(',')?.collect { it.trim() }?.findAll { it }
+	def enableNonHeapLimit = System.getProperty('enableNonHeapLimit', 'true') == 'true'
+
+	// 웜업/측정: -Pjmh.warmupIterations=5 -Pjmh.warmup=3s -Pjmh.iterations=5 -Pjmh.timeOnIteration=3s 로 오버라이드 가능
+	warmupIterations = (findProperty('jmh.warmupIterations') ?: 3) as int
+	warmup = findProperty('jmh.warmup') ?: '2s'
+	iterations = (findProperty('jmh.iterations') ?: 3) as int
+	timeOnIteration = findProperty('jmh.timeOnIteration') ?: '2s'
+
+```
+
+`jmh` 블록은 실제 측정의 반복·예열·출력 조건을 정한다. Gradle 설정은 TypeScript 객체처럼 보이지만 플러그인의 설정 메서드를 호출한다. 이 Java 실험은 실제 Rust 체결 코어와 다른 실행 경로다. [현재 런타임과 검증 범위](decisions/013-supported-runtime-and-dependency-audit.md)에서 컴파일과 실제 측정을 구분한다. 이번 문서 보강에서는 신규 제품 테스트 0개이며 성능 측정·제품 테스트는 실행하지 않았다.
