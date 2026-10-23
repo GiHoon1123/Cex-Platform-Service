@@ -69,7 +69,7 @@ flowchart LR
 
 ### 1. 전체 자료 묶음을 서버에서 동결하기
 
-출처: [EddDossier.java](../../src/main/java/dustin/cex/domains/edd/EddDossier.java#L57)
+출처: [EddDossier.java](../../src/main/java/dustin/cex/domains/edd/EddDossier.java#L68)
 
 ```java
 public Summary capture(UUID caseId,long user) {
@@ -96,7 +96,7 @@ String hash=verifier.digest(json.valueToTree(p));
 
 ### 3. 본인 세션으로 모든 페이지를 제공받았는지 확인하기
 
-출처: [EddDossier.java](../../src/main/java/dustin/cex/domains/edd/EddDossier.java#L79)
+출처: [EddDossier.java](../../src/main/java/dustin/cex/domains/edd/EddDossier.java#L90)
 
 ```java
 public void requireAllPages(UUID report,Summary summary,User actor,UUID sid) {
@@ -212,3 +212,7 @@ return new Inspection(r,result);
 ## 관련 커밋
 
 - [`30a6c45`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/30a6c456d21d9f724f7955df33c28ec43c916466): 불변 근거 묶음·독립 전체 페이지 제공·현재 근거 재확인과 신규 통합 테스트 23개.
+
+## 후속 서명 AML 근거와 개별 조사
+
+[027](027-signed-aml-evidence-and-investigation.md)에서 실제 서명 자료의 최소 필드와 후보별 조사 의견을 AML_SOURCE·AML_INVESTIGATION으로 기존 목록에 연결했다. 새 의견은 같은 사건 변경 번호에서도 옛 서명을 무효화하며 역사 목록은 그대로 보존한다. 공급사 주장·담당자 의견을 외부 사실 검증/EDD 해소로 취급하지 않는다. 이 글의 검증 수치는 최초 구현 당시 기록이다.
