@@ -1,0 +1,427 @@
+{
+  "checked_date": "2026-10-23",
+  "scope": "Java 플랫폼 고객 신고·서명된 신원 대조·초기 위험 평가와 신규 주문 통제",
+  "junit": {
+    "tests": 566,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suite_counts": {
+    "kyc": 150,
+    "bound": 190,
+    "mfa": 42,
+    "financial": 183,
+    "market": 1
+  },
+  "new_junit_cases": 47,
+  "new_cdd_integration_cases": 36,
+  "new_cdd_unit_cases": 8,
+  "new_operator_role_cases": 3,
+  "process_scenarios": 15,
+  "new_process_scenarios": 0,
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc_recovery.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 9.96
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_bound_approvals.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 173.76
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_mfa.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 18.68
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_engine_inbox.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 31.37
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.51
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 15.81
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_order_idempotency.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 18.5
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 25.01
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.5
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.19
+    }
+  ],
+  "final_targeted_commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc_recovery.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 9.33
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.4
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 16.32
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 23.99
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.41
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.1
+    }
+  ],
+  "final_targeted_reason": "누락 필드의 null 근거 표현·불필요한 문서 번호 제외·관리 도구 컬럼 권한을 보완한 뒤 KYC 150개와 복원·관리 JAR·실제 시장 연결·빌드·의존성을 재확인했다. 나머지 금융·승인·주문 프로세스는 직전 전체 회귀 결과다.",
+  "reports": {
+    "kyc": {
+      "container": "cex-kyc-38e8a7cc3237",
+      "exit": 0,
+      "tests": {
+        "tests": 150,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "bound": {
+      "container": "cex-bound-approvals-9f56ffce4fa7",
+      "groups": [
+        {
+          "name": "bound",
+          "exit": 0,
+          "tests": {
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "roles",
+          "exit": 0,
+          "tests": {
+            "tests": 51,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "lifecycle",
+          "exit": 0,
+          "tests": {
+            "tests": 37,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "security",
+          "exit": 0,
+          "tests": {
+            "tests": 40,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 190,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "mfa": {
+      "container": "cex-operator-mfa-a833c9dc2a5a",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "financial": {
+      "container": "cex-inbox-4d4348033b29",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "kyc_process": {
+      "container": "cex-kyc-recovery-f2e96eee28e1",
+      "checks": [
+        {
+          "test": "kill_during_provider_get_preserves_pending_attempt_and_lease",
+          "passed": true
+        },
+        {
+          "test": "fresh_jvm_recovers_expired_lease_and_original_signed_approval",
+          "passed": true
+        },
+        {
+          "test": "subsequent_reconciliation_keeps_one_receipt_and_original_expiry",
+          "passed": true
+        }
+      ],
+      "provider": "loopback",
+      "bots_disabled": true,
+      "killed_exit": -9,
+      "exit": 0,
+      "jvm_runs": 2,
+      "container_removed": true
+    },
+    "operator_admin_process": {
+      "database": "cex_idempotency_ffee0e4b1685",
+      "temporary_database_removed": true,
+      "platform_runs": 1,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "dedicated_grant_without_ddl_or_workers",
+          "passed": true
+        },
+        {
+          "test": "reject_financial_customer_and_duplicate_grant",
+          "passed": true
+        }
+      ]
+    },
+    "order_process": {
+      "database": "cex_idempotency_b93d469310d8",
+      "temporary_database_removed": true,
+      "platform_runs": 2,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "test_concurrent_same_key",
+          "new": 1,
+          "existing": 11,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_concurrent_same_key_different_content",
+          "new": 1,
+          "existing": 5,
+          "conflicts": 6,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_invalid_balance_and_unrepresentable_split_roll_back_everything",
+          "rollback_cases": 2,
+          "engine_posts": 0
+        },
+        {
+          "test": "test_invalid_header_and_command_have_no_financial_effect",
+          "statuses": [
+            400,
+            400,
+            400
+          ],
+          "engine_posts": 0
+        },
+        {
+          "test": "test_key_is_scoped_to_authenticated_user",
+          "users": 2,
+          "engine_posts": 2
+        },
+        {
+          "test": "test_lost_response_then_same_key",
+          "statuses": [
+            202,
+            200
+          ],
+          "engine_posts": 1
+        },
+        {
+          "test": "test_market_original_budget_survives_order_changes",
+          "quote_amount": "123.250000001",
+          "replay": 200,
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_process_restart_uses_committed_key",
+          "after_restart": 200,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_same_key_different_content",
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_unrepresentable_commands_are_rejected_without_financial_effect",
+          "rejections": 2,
+          "engine_posts": 0
+        }
+      ]
+    },
+    "market": {
+      "postgres": "cex-market-pg-f54a3fea1b",
+      "kafka": "cex-market-broker-3520c7a762",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    },
+    "dependency_audit": {
+      "checked_at": "2026-10-23T01:50:51.084641+00:00",
+      "status": "NO_KNOWN_FINDINGS",
+      "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+      "package_versions": 222,
+      "findings": []
+    },
+    "dependency_integrity": {
+      "check": "gradle_rejects_altered_checksum",
+      "original_cache_modified": false,
+      "gradle_exit": 1,
+      "passed": true,
+      "temporary_copy_removed": true
+    }
+  },
+  "implementation_commits": [
+    "a0de0d2b576a93f561958d221d1d59d78b919217",
+    "7b4fcd0363f794ed7f58cd2b61fed06f8b3cb055"
+  ],
+  "dependency_changes": false,
+  "new_packages": 0,
+  "intermediate_failures": [
+    {
+      "kind": "test_fixture",
+      "tests": 143,
+      "failures": 1,
+      "reason": "신규 세션 회수 검증의 JPA 갱신을 트랜잭션 밖에서 호출. 검증 코드를 트랜잭션 안으로 수정"
+    },
+    {
+      "kind": "process",
+      "reason": "동일한 AML 객체의 JSON 필드 순서로 다른 지문 생성. 기존 서명 정규화 재사용·전용 회귀 추가"
+    },
+    {
+      "kind": "market_test_configuration",
+      "reason": "일반 프로필의 CDD 키 미설정으로 주문 거부. 금융 합성 사전 조건의 공개 테스트 키만 명시"
+    },
+    {
+      "kind": "compile",
+      "reason": "Jackson 2의 DeserializationFeature enum 상수 위치 사용. 설치된 Jackson 3 cfg.EnumFeature 확인 후 필드 자료형을 명시적으로 검사"
+    }
+  ],
+  "warnings": [
+    "기존 deprecated/unchecked 컴파일 안내",
+    "Mockito 계측으로 JVM 클래스 공유 제한 안내",
+    "임시 최초 스키마 준비 시 존재하지 않는 테이블 안내",
+    "테스트 프로필 Swagger 활성화 안내"
+  ],
+  "limitations": [
+    "실제 Didit 계정·샌드박스·운영 워크플로·실제 고객 개인정보·배포를 검증하지 않음",
+    "신고·초기 자동 평가이며 전체 CDD/AML·자금 원천/주소/실소유자 증빙·제재/PEP 목록 재검색/지속 감시 완료가 아님",
+    "추가 검토 사건·증빙 열람·독립 EDD 심사·수동 승인·조사/보고는 미구현이며 검토 고객의 신규 주문은 닫힘",
+    "이름·생일·국적 지문은 고유 인물 증명이 아니며 동명이인/표기 차이 가능",
+    "신고 암호화는 개인정보 처리 근거·국외 이전·계약·보유/파기·법정 증적 확보를 대신하지 않음",
+    "법령 본문/부칙의 이번 조회는 완전 추출되지 않아 최신 조항 전체·개업/신고/인증 적합성을 확인했다고 주장하지 않음",
+    "선택한 회귀 수치이며 프로젝트 전체 테스트·새 성능 수치가 아님"
+  ],
+  "engine_core_changed": false,
+  "frontend_changed": false,
+  "bots_disabled": true,
+  "deployed": false
+}

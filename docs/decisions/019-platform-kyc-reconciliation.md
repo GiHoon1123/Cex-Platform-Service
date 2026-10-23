@@ -230,3 +230,7 @@ KYC 만료·최근 확인 만료·수동 제한은 신규 주문을 막는다. �
 - [`9423967`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/94239674368eb12ddf1df7e71230ddaee4c3c448): 제품 빈을 사용한 실제 JVM SIGKILL·복원 실행기와 세 가지 프로세스 시나리오.
 
 문서 커밋과 일반 푸시의 원격 main 일치 확인은 공통 [플랫폼 KYC 대사 사이클](../../../docs/roadmap/platform-kyc-reconciliation.md)에 남긴다.
+
+## 고객 정보 대조 후속 변경
+
+[020 고객 신고·초기 위험 평가](020-customer-declaration-and-initial-risk.md)부터 현재 결정/원래 서명 이력 비교에 추출 신원과 AML 판정 근거의 키 기반 지문을 추가한다. 불필요한 문서 번호·검색 상세 자료는 CDD 지문에 복사하지 않는다. JSON 필드 순서 차이는 동일하게, 실제 근거 변경은 불일치로 처리한다. 위의 최초 사이클 검증 수치와 후속 수치를 합산하지 않는다.

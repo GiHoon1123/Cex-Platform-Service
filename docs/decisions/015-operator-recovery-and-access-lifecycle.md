@@ -131,7 +131,7 @@ java -jar build/libs/cex-0.0.1-SNAPSHOT-operator-admin.jar \
 
 실행 전 승인된 비밀 주입 도구가 프로세스의 `SPRING_APPLICATION_JSON`에 `spring.datasource`와 `operator.bootstrap.enrollment-token`을 공급한다. 원본 등록 비밀/DB 비밀번호를 셸 인수·저장소·공유 로그에 쓰지 않는다. 재등록 비밀은 CSPRNG로 32바이트 이상 생성하고 별도 안전한 경로로 전달해야 한다. 길이 검사는 엔트로피나 신원 확인을 대신하지 않는다.
 
-관리 명령은 스키마가 준비된 DB에서 금융 이력이 없는 활성 CUSTOMER 전용 계정만 최초 운영 계정으로 부여한다. 권한 기한은 30일, 최초 등록 권한은 10분이며 기존 세션은 회수한다. 기존 운영 계정의 역할을 다시 부여하거나 재활성화하지 않는다.
+관리 명령은 스키마가 준비된 DB에서 고객 신원 확인·CDD 신고·금융 이력이 없는 활성 CUSTOMER 전용 계정만 최초 운영 계정으로 부여한다. 권한 기한은 30일, 최초 등록 권한은 10분이며 기존 세션은 회수한다. [고객 위험 평가 후속 계층](020-customer-declaration-and-initial-risk.md)부터 관리 DB 역할에 `kyc_attempts`, `cdd_declarations`의 `user_id` 컬럼 SELECT도 필요하다. 기존 운영 계정의 역할을 다시 부여하거나 재활성화하지 않는다.
 
 `StandardEnvironment`와 비웹 컨텍스트를 명시하고 스키마는 `validate`, SQL 초기화는 `never`로 강제한다. 일반 서버의 컴포넌트 탐색·금융 워커·Kafka 소비자를 불러오지 않는다. 기존 `OperatorBootstrapRunner`와 `operator.bootstrap.enabled` 실행 경로는 삭제했다. 운영체제·JAR·DB 관리 권한을 가진 신뢰된 관리자의 최초 부여 경계이며 OS 관리자 침해까지 막는 수단은 아니다.
 

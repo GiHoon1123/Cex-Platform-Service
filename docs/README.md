@@ -51,3 +51,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [018. Didit 신분 확인·결과 불명 복원과 신규 주문 정책](decisions/018-didit-identity-verification-and-trading-policy.md): 서명·환경/고객 결합·중복/역순/충돌·필수 감사·로컬 대역 검증. 실제 공급사 연동과 전체 CDD/AML은 별도 미완료.
 
 - [019. 플랫폼 KYC 누락 웹훅 복원·확인 기한·재시작](decisions/019-platform-kyc-reconciliation.md): 원래 서명 이력과 현재 결정 대조, 영속 임대·경합·호출 제한·주문 차단과 실제 JVM 강제 종료 검증. 엔진 워커 변경은 아님.
+
+- [020. 고객 신고·서명 신원 대조와 초기 위험 평가](decisions/020-customer-declaration-and-initial-risk.md): 신고 암호화·신원/AML 일치·중복 신호·현재 평가의 신규 주문 조건. 전체 CDD/AML 완료는 아님.
