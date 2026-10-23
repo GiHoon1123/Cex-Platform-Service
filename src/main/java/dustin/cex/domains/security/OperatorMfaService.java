@@ -149,7 +149,7 @@ public class OperatorMfaService {
      * 각 승인 서비스에서만 호출하는 내부 경로다. 요청 잠금 → 사용자 잠금 → 챌린지 잠금 순서를 지킨다.
      * 인증 옵션만 발급하며 세션의 MFA 시각이나 수명은 늘리지 않는다.
      */
-    Options approvalOptions(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve) {
+    public Options approvalOptions(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve) {
         requireBusinessTransaction();
         return operation(actor,()->{
             requireFresh(lock(actor,sid));
@@ -169,7 +169,7 @@ public class OperatorMfaService {
             return new Options(id,json.readTree(encoded));
         });
     }
-    void authorizeApproval(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve,AuthorizationProof proof) {
+    public void authorizeApproval(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve,AuthorizationProof proof) {
         requireBusinessTransaction();
         operation(actor,()->{
             requireFresh(lock(actor,sid));
@@ -188,9 +188,9 @@ public class OperatorMfaService {
             return null;
         });
     }
-    /** 현재 구현된 네 업무만 구분한다. 임의 명령 이름이나 동적 실행기를 받지 않는다. */
-    enum ApprovalKind { ROLE, MFA_RECOVERY, ACCESS_REVIEW, TRADING_RESTRICTION }
-    void bindApproval(ApprovalKind kind,UUID id,long requester,long version,String hash,Instant expires) {
+    /** 현재 구현된 다섯 업무만 구분한다. 임의 명령 이름이나 동적 실행기를 받지 않는다. */
+    public enum ApprovalKind { ROLE, MFA_RECOVERY, ACCESS_REVIEW, TRADING_RESTRICTION, EDD_REVIEW }
+    public void bindApproval(ApprovalKind kind,UUID id,long requester,long version,String hash,Instant expires) {
         requireBusinessTransaction();
         jdbc.update("INSERT INTO operator_approval_bindings(kind,request_id,requester_id,requester_version,payload_hash,expires_at) VALUES(?,?,?,?,?,?)",
             kind.name(),id,requester,version,hash,java.sql.Timestamp.from(expires));

@@ -77,6 +77,7 @@ class BoundApprovalTest {
     record Case(OperatorMfaService.ApprovalKind kind,UUID id,String hash,String path) {}
     Case create(OperatorMfaService.ApprovalKind kind) {
         return switch(kind) {
+            case EDD_REVIEW -> throw new AssertionError("EDD 전용 통합 검증을 사용하세요");
             case ROLE -> {var r=service.request(maker.user().getId(),maker.sid(),candidate.getId(),candidate.getVersion(),UUID.randomUUID(),UserRole.OPERATOR,
                 Instant.now().plusSeconds(86400),"역할 배정","IDENTITY_100","NOTICE_100");yield new Case(kind,r.payload().id(),r.payloadHash(),"/api/admin/operator-security/role-requests/");}
             case MFA_RECOVERY,ACCESS_REVIEW -> {var r=lifecycle.request(maker.user().getId(),maker.sid(),owner.user().getId(),current(owner).getVersion(),
@@ -89,6 +90,7 @@ class BoundApprovalTest {
     }
     OperatorMfaService.Options options(Case c,boolean approve) {
         return switch(c.kind()) {
+            case EDD_REVIEW -> throw new AssertionError("EDD 전용 통합 검증을 사용하세요");
             case ROLE -> service.options(checker.user().getId(),checker.sid(),c.id(),c.hash(),approve).authentication();
             case MFA_RECOVERY,ACCESS_REVIEW -> lifecycle.options(checker.user().getId(),checker.sid(),c.id(),c.hash(),approve).authentication();
             case TRADING_RESTRICTION -> restrictions.options(checker.user().getId(),checker.sid(),c.id(),c.hash(),approve).authentication();
@@ -100,13 +102,14 @@ class BoundApprovalTest {
     Object decide(Case c,boolean approve,OperatorMfaService.AuthorizationProof p) {return decide(c,checker.sid(),c.hash(),approve,p);}
     Object decide(Case c,UUID sid,String hash,boolean approve,OperatorMfaService.AuthorizationProof p) {
         return switch(c.kind()) {
+            case EDD_REVIEW -> throw new AssertionError("EDD 전용 통합 검증을 사용하세요");
             case ROLE -> service.decide(checker.user().getId(),sid,c.id(),hash,approve,p);
             case MFA_RECOVERY,ACCESS_REVIEW -> lifecycle.decide(checker.user().getId(),sid,c.id(),hash,approve,p);
             case TRADING_RESTRICTION -> restrictions.decide(checker.user().getId(),sid,c.id(),hash,approve,p);
         };
     }
-    String table(Case c) {return switch(c.kind()){case ROLE->"operator_role_requests";case MFA_RECOVERY,ACCESS_REVIEW->"operator_security_requests";case TRADING_RESTRICTION->"operator_requests";};}
-    String action(Case c) {return switch(c.kind()){case ROLE->"ROLE_DECIDE";case MFA_RECOVERY,ACCESS_REVIEW->"OPERATOR_SECURITY_DECIDE";case TRADING_RESTRICTION->"RESTRICTION_APPROVE";};}
+    String table(Case c) {return switch(c.kind()){case EDD_REVIEW->throw new AssertionError("EDD 전용 통합 검증을 사용하세요");case ROLE->"operator_role_requests";case MFA_RECOVERY,ACCESS_REVIEW->"operator_security_requests";case TRADING_RESTRICTION->"operator_requests";};}
+    String action(Case c) {return switch(c.kind()){case EDD_REVIEW->throw new AssertionError("EDD 전용 통합 검증을 사용하세요");case ROLE->"ROLE_DECIDE";case MFA_RECOVERY,ACCESS_REVIEW->"OPERATOR_SECURITY_DECIDE";case TRADING_RESTRICTION->"RESTRICTION_APPROVE";};}
     String state(Case c) {return jdbc.queryForObject("SELECT status FROM "+table(c)+" WHERE id=?",String.class,c.id());}
     void unchanged(Case c) {
         assertEquals("PENDING",state(c));assertEquals(UserRole.CUSTOMER,users.findById(candidate.getId()).orElseThrow().getRole());
@@ -114,7 +117,7 @@ class BoundApprovalTest {
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM user_credentials WHERE credential_id=?",Long.class,owner.key().id()));
         if(c.kind()==OperatorMfaService.ApprovalKind.MFA_RECOVERY) assertEquals(c.id(),current(owner).getOperatorRecoveryRequestId());
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void eachWorkflowRequiresItsOwnSignature(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);assertThrows(ResponseStatusException.class,()->decide(c,true,null));unchanged(c);
         var result=decide(c,true,signed(c,true));assertNotNull(result);assertEquals("APPROVED",state(c));
@@ -125,14 +128,14 @@ class BoundApprovalTest {
             case ACCESS_REVIEW -> assertTrue(current(owner).getOperatorAccessExpiresAt().isAfter(Instant.now().plusSeconds(6*86400)));
         }
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void rejectionHasIndependentSignatureAndNoBusinessEffect(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var p=signed(c,true);assertThrows(ResponseStatusException.class,()->decide(c,false,p));unchanged(c);
         var rejected=signed(c,false);assertThrows(ResponseStatusException.class,()->decide(c,true,rejected));
         decide(c,false,rejected);assertEquals("REJECTED",state(c));
         if(kind==OperatorMfaService.ApprovalKind.MFA_RECOVERY) assertNotNull(current(owner).getOperatorRecoveryRequestId());
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void hashExpiryAndSuccessfulReplayAreChecked(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var p=signed(c,true);
         assertThrows(ResponseStatusException.class,()->decide(c,checker.sid(),"0".repeat(64),true,p));
@@ -140,12 +143,12 @@ class BoundApprovalTest {
         assertThrows(ResponseStatusException.class,()->decide(c,true,p));unchanged(c);
         var next=signed(c,true);decide(c,true,next);assertThrows(ResponseStatusException.class,()->decide(c,true,next));
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void signatureCannotMoveToRefreshedSession(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var p=signed(c,true);var refreshed=auth.refreshAccessToken(checker.verified().refreshToken());
         assertThrows(ResponseStatusException.class,()->decide(c,sid(refreshed.getAccessToken()),c.hash(),true,p));unchanged(c);
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void loginSignatureAndMissingUserVerificationCannotExecute(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var login=mfa.authenticationOptions(checker.user().getId(),checker.sid());
         var loginProof=new OperatorMfaService.AuthorizationProof(login.challengeId(),checker.key().assertion(login,"http://localhost:3003",true,2,null));
@@ -153,13 +156,13 @@ class BoundApprovalTest {
         var o=options(c,true);var uvMissing=new OperatorMfaService.AuthorizationProof(o.challengeId(),checker.key().assertion(o,"http://localhost:3003",false,3,null));
         assertThrows(ResponseStatusException.class,()->decide(c,true,uvMissing));unchanged(c);
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void requesterRoleRoundTripInvalidatesExistingProof(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var p=signed(c,true);var makerUser=current(maker);makerUser.setRole(UserRole.AUDITOR);users.saveAndFlush(makerUser);
         makerUser=current(maker);makerUser.setRole(UserRole.OPERATOR);users.saveAndFlush(makerUser);
         assertThrows(ResponseStatusException.class,()->decide(c,true,p));unchanged(c);
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void businessAuditFailureRestoresProofCounterAndBusinessState(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var p=signed(c,true);var deadline=current(owner).getOperatorAccessExpiresAt();
         doThrow(new IllegalStateException("최종 감사 장애 주입")).when(audit).record(eq(checker.user().getId()),eq(action(c)),anyString(),eq("SUCCESS"),anyString());
@@ -170,7 +173,7 @@ class BoundApprovalTest {
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE action='APPROVAL_AUTHORIZATION' AND outcome='SUCCESS' AND target=?",Long.class,"request:"+c.id()));
         reset(audit);decide(c,true,p);assertEquals("APPROVED",state(c));
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void concurrentApprovalsHaveExactlyOneWinner(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var p=signed(c,true);
         try(var pool=Executors.newFixedThreadPool(2)) {
@@ -179,14 +182,14 @@ class BoundApprovalTest {
         }
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE action='APPROVAL_AUTHORIZATION' AND target=? AND outcome='SUCCESS'",Long.class,"request:"+c.id()));
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void fiveInvalidProofsSharePersistentMfaLimit(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var valid=signed(c,true);var wrong=new OperatorMfaService.AuthorizationProof(UUID.randomUUID(),valid.credential());
         for(int i=0;i<5;i++) assertThrows(ResponseStatusException.class,()->decide(c,true,wrong));
         assertEquals(429,assertThrows(ResponseStatusException.class,()->decide(c,true,valid)).getStatusCode().value());
         assertEquals(429,assertThrows(ResponseStatusException.class,()->options(c,true)).getStatusCode().value());unchanged(c);
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void bindingHistoryCannotBeChangedOrDeleted(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);decide(c,true,signed(c,true));
         assertThrows(RuntimeException.class,()->jdbc.update("UPDATE operator_approval_bindings SET requester_version=0 WHERE kind=? AND request_id=?",kind.name(),c.id()));
@@ -194,7 +197,7 @@ class BoundApprovalTest {
         assertThrows(RuntimeException.class,()->jdbc.execute("TRUNCATE operator_approval_bindings CASCADE"));
         assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM operator_approval_bindings WHERE kind=? AND request_id=?",Long.class,kind.name(),c.id()));
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void realHttpRequiresProofReturnsServerContentAndNeverCaches(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);String path=c.path()+c.id()+"/approve";
         var unsigned=http(path,checker.verified().accessToken(),Map.of("payloadHash",c.hash(),"password","security-test-password"));assertEquals(400,unsigned.statusCode());
@@ -207,7 +210,7 @@ class BoundApprovalTest {
         assertEquals("no-store",result.headers().firstValue("Cache-Control").orElseThrow());assertEquals("APPROVED",state(c));
         assertEquals(409,http(path,checker.verified().accessToken(),Map.of("payloadHash",c.hash(),"proof",p)).statusCode());
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void onlyApproverCanObtainWorkflowOptions(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);for(Account actor:List.of(maker,owner)) {
             var result=http(c.path()+c.id()+"/approve/options",actor.verified().accessToken(),Map.of("payloadHash",c.hash()));
@@ -234,23 +237,24 @@ class BoundApprovalTest {
         assertThrows(ResponseStatusException.class,()->restrictions.decide(checker.user().getId(),checker.sid(),id,hash,true,null));
         assertEquals("PENDING",jdbc.queryForObject("SELECT status FROM operator_requests WHERE id=?",String.class,id));
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void proofCannotExecuteAnotherRequestInSameWorkflow(OperatorMfaService.ApprovalKind kind) throws Exception {
         var first=create(kind);var p=signed(first,true);var second=create(kind);
         assertThrows(ResponseStatusException.class,()->decide(second,true,p));unchanged(second);
         decide(second,true,signed(second,true));assertEquals("APPROVED",state(second));assertEquals("PENDING",state(first));
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void newOptionsInAnotherWorkflowInvalidateOldChallenge(OperatorMfaService.ApprovalKind kind) throws Exception {
         var first=create(kind);var old=signed(first,true);
         var second=create(kind==OperatorMfaService.ApprovalKind.ROLE?OperatorMfaService.ApprovalKind.TRADING_RESTRICTION:OperatorMfaService.ApprovalKind.ROLE);
         var next=signed(second,true);assertThrows(ResponseStatusException.class,()->decide(first,true,old));unchanged(first);
         decide(second,true,next);assertEquals("APPROVED",state(second));
     }
-    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(OperatorMfaService.ApprovalKind.class)
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.EnumSource(value=OperatorMfaService.ApprovalKind.class,names={"ROLE","MFA_RECOVERY","ACCESS_REVIEW","TRADING_RESTRICTION"})
     void independentApproverApprovalAndRejectionRaceHasOneFinalDecision(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var approve=signed(c,true);var other=account(UserRole.APPROVER);
         var options=switch(kind) {
+            case EDD_REVIEW -> throw new AssertionError("EDD 전용 통합 검증을 사용하세요");
             case ROLE -> service.options(other.user().getId(),other.sid(),c.id(),c.hash(),false).authentication();
             case MFA_RECOVERY,ACCESS_REVIEW -> lifecycle.options(other.user().getId(),other.sid(),c.id(),c.hash(),false).authentication();
             case TRADING_RESTRICTION -> restrictions.options(other.user().getId(),other.sid(),c.id(),c.hash(),false).authentication();

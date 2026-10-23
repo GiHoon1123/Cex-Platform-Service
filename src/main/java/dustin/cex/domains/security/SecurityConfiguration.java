@@ -37,6 +37,10 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/kyc/session","/api/kyc/sessions/*/reconcile","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/kyc/session","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/kyc/customers/*","/api/admin/kyc/customer-profiles/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/edd/customers/*/reports").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/edd/reports/*/approve/options","/api/admin/edd/reports/*/reject/options",
+                    "/api/admin/edd/reports/*/approve","/api/admin/edd/reports/*/reject").access(audited(audit,sessions,"APPROVER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*","/api/admin/edd/customers/*/reports").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.GET,"/api/auth/me").authenticated()
                 .requestMatchers(HttpMethod.POST,"/api/auth/logout").authenticated()
                 // 미검증 운영 세션도 보안키 등록·인증은 할 수 있지만 고객·운영 업무 권한은 없다.

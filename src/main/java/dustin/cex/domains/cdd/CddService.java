@@ -22,11 +22,12 @@ import tools.jackson.databind.*;
 public class CddService {
     public static final String POLICY="CDD_DOMESTIC_INDIVIDUAL_V1";
     private final dustin.cex.domains.kyc.DiditWebhookVerifier verifier;
+    private final EddService edd;
     private final CddCrypto crypto;private final JdbcTemplate jdbc;private final ObjectMapper json;
     private final UserRepository users;private final RefreshTokenRepository sessions;private final AuditService audit;
     public CddService(CddCrypto crypto,JdbcTemplate jdbc,ObjectMapper json,UserRepository users,
-            RefreshTokenRepository sessions,AuditService audit,dustin.cex.domains.kyc.DiditWebhookVerifier verifier) {
-        this.verifier=verifier;this.crypto=crypto;this.jdbc=jdbc;this.json=json;this.users=users;this.sessions=sessions;this.audit=audit;
+            RefreshTokenRepository sessions,AuditService audit,dustin.cex.domains.kyc.DiditWebhookVerifier verifier,EddService edd) {
+        this.edd=edd;this.verifier=verifier;this.crypto=crypto;this.jdbc=jdbc;this.json=json;this.users=users;this.sessions=sessions;this.audit=audit;
     }
     public record Status(UUID declarationId,UUID assessmentId,String outcome,List<String> reasons,Instant assessedAt) {}
     @Transactional
@@ -113,6 +114,7 @@ public class CddService {
             """,assessment,user,declaration,attempt,event,digest,crypto.keyId(),POLICY,outcome,
             reasons.isEmpty()?"INITIAL_CHECKS_PASSED":String.join(",",reasons),identityMac);
         jdbc.update("UPDATE cdd_profiles SET assessment_id=? WHERE user_id=?",assessment,user);
+        edd.observe(user,assessment);
         audit.record(user,"CDD_ASSESSED","cdd:"+assessment,"SUCCESS",outcome+":"+(reasons.isEmpty()?"INITIAL_CHECKS_PASSED":String.join(",",reasons)));
     }
     /** 신규 주문 예약과 같은 트랜잭션에서 호출한다. 옛 시도·옛 신고·옛 키·옛 판정의 평가는 효력이 없다. */
@@ -123,7 +125,10 @@ public class CddService {
              JOIN kyc_profiles k ON k.user_id=c.user_id JOIN cdd_declarations d ON d.id=c.declaration_id
              JOIN cdd_attempt_bindings b ON b.attempt_id=k.active_attempt AND b.declaration_id=c.declaration_id
              WHERE c.user_id=? AND r.user_id=c.user_id AND d.user_id=c.user_id AND r.declaration_id=c.declaration_id AND r.attempt_id=k.active_attempt
-              AND r.status_digest=k.status_digest AND r.outcome='STANDARD' AND r.key_id=? AND d.key_id=? AND r.policy_version=?)
+              AND r.status_digest=k.status_digest AND r.outcome='STANDARD' AND r.key_id=? AND d.key_id=? AND r.policy_version=?
+              AND (NOT EXISTS(SELECT 1 FROM cdd_assessments old WHERE old.user_id=c.user_id AND old.outcome='REVIEW_REQUIRED')
+               OR EXISTS(SELECT 1 FROM edd_cases e WHERE e.user_id=c.user_id AND e.latest_assessment=r.id
+                AND e.state='CLOSED' AND e.valid_until>clock_timestamp())))
             """,Boolean.class,user,crypto.keyId(),crypto.keyId(),POLICY));
     }
     /** 신원 대조에 사용한 필드만 지문으로 만든다. 대사 실행 기록에 생일·이름의 공개 해시를 남기지 않는다. */
