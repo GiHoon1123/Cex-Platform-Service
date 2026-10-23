@@ -113,6 +113,43 @@ public class ReportingReviewService {
             audit.record(actor,"COMPLIANCE_REVIEWS_LISTED","operator:"+actor,"SUCCESS","ASSIGNED_ONLY");return result;
         }));
     }
+    /** 외부 후속 업무는 현재 사건 상태가 아니라 실제 승인 이력을 따른다. 새 신고·만료로 보고 필요를 지우지 않는다. */
+    record DeliveryOrigin(Payload payload,String payloadHash,Instant decidedAt) {}
+    DeliveryOrigin deliveryOrigin(long actor,UUID sid,UUID id) {
+        if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("보고 후속 업무에는 트랜잭션이 필요합니다");
+        var r=read(id);assigned(actor,sid,r,lock(actor,r.payload().userId()));return approvedDeliveryOrigin(r);
+    }
+    /**
+     * 한 번에 승인 후보 25개만 검사한다. 미보고 후보로 결과가 비어도 마지막 검사 위치를 반환해 다음 페이지로 진행한다.
+     * 이 위치는 운영 화면의 페이지 경계이며 새 승인을 영구 제외하는 소비자 체크포인트가 아니다.
+     */
+    record DeliveryBatch(List<DeliveryOrigin> origins,Instant lastDecision,UUID lastReview,int scanned,boolean more) {
+        DeliveryBatch {origins=List.copyOf(origins);}
+    }
+    DeliveryBatch deliveryBatch(long actor,UUID sid,Instant after,UUID afterId) {
+        if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("제출 대기 조회에는 트랜잭션이 필요합니다");
+        var person=lock(actor).get(actor);sessions.requireFresh(person,sid,UserRole.OPERATOR,UserRole.APPROVER);
+        if((after==null)!=(afterId==null))throw denied(HttpStatus.BAD_REQUEST);
+        String sql="""
+            SELECT r.id,d.decided_at FROM compliance_reviews r JOIN compliance_review_decisions d ON d.review_id=r.id AND d.approved=true
+            WHERE ((r.requester_id=? AND r.payload::jsonb->>'requesterPerson'=?) OR (r.checker_id=? AND r.payload::jsonb->>'checkerPerson'=?))
+            """;
+        var args=new ArrayList<Object>(List.of(actor,person.getOperatorPersonId().toString(),actor,person.getOperatorPersonId().toString()));
+        if(after!=null) {sql+=" AND (d.decided_at,r.id)>(?,?)";args.add(Timestamp.from(after));args.add(afterId);}
+        var rows=jdbc.queryForList(sql+" ORDER BY d.decided_at,r.id LIMIT 25",args.toArray());var result=new ArrayList<DeliveryOrigin>();
+        for(var row:rows) {
+            var r=read((UUID)row.get("id"));assigned(actor,sid,r,Map.of(actor,person));
+            // 개인정보 원문은 반환하지 않는다. 승인된 미보고 판단도 실제 해독·무결성을 검사한 뒤 제외한다.
+            if(!"APPROVED".equals(r.status())||!POLICY.equals(r.payload().policy())||!ASSURANCE.equals(r.payload().assurance()))throw denied(HttpStatus.CONFLICT);
+            if(facts(r).conclusion()==Conclusion.REPORT_REQUIRED)result.add(new DeliveryOrigin(r.payload(),r.payloadHash(),((Timestamp)row.get("decided_at")).toInstant()));
+        }
+        var last=rows.isEmpty()?null:rows.getLast();return new DeliveryBatch(result,last==null?null:((Timestamp)last.get("decided_at")).toInstant(),last==null?null:(UUID)last.get("id"),rows.size(),rows.size()==25);
+    }
+    private DeliveryOrigin approvedDeliveryOrigin(Review r) {
+        if(!"APPROVED".equals(r.status())||!POLICY.equals(r.payload().policy())||!ASSURANCE.equals(r.payload().assurance())||facts(r).conclusion()!=Conclusion.REPORT_REQUIRED)throw denied(HttpStatus.CONFLICT);
+        var row=jdbc.queryForMap("SELECT decided_at FROM compliance_review_decisions WHERE review_id=? AND approved=true",r.payload().id());
+        return new DeliveryOrigin(r.payload(),r.payloadHash(),((Timestamp)row.get("decided_at")).toInstant());
+    }
     private User check(long actor,UUID sid,Review r,String hash) {
         var p=r.payload();var locked=lock(actor,p.requesterId(),p.checkerId(),p.userId());var checker=assigned(actor,sid,r,locked);var maker=locked.get(p.requesterId());
         sessions.requireFresh(checker,sid,UserRole.APPROVER);customer(locked.get(p.userId()));
