@@ -22,11 +22,14 @@ public class OperatorBootstrapService {
         if(role==UserRole.CUSTOMER) throw new IllegalArgumentException("운영 역할을 지정해야 합니다");
         tx.executeWithoutResult(status->{
             var user=users.lockById(userId).orElseThrow();
+            // 고객 이력의 존재만 읽는다. 관리 DB 역할에 신고 암호문·확인 링크 조회 권한은 주지 않는다.
             if(user.getRole()!=UserRole.CUSTOMER || !user.isEnabled()
+                    || jdbc.queryForObject("SELECT count(user_id) FROM cdd_declarations WHERE user_id=?",Long.class,userId)!=0
+                    || jdbc.queryForObject("SELECT count(user_id) FROM kyc_attempts WHERE user_id=?",Long.class,userId)!=0
                     || jdbc.queryForObject("SELECT count(*) FROM orders WHERE user_id=?",Long.class,userId)!=0
                     || jdbc.queryForObject("SELECT count(*) FROM ledger_entries WHERE owner_id=?",Long.class,userId)!=0
                     || jdbc.queryForObject("SELECT count(*) FROM user_balances WHERE user_id=? AND (available<>0 OR locked<>0)",Long.class,userId)!=0)
-                throw new IllegalStateException("금융 이력이 없는 전용 운영 계정만 초기화할 수 있습니다");
+                throw new IllegalStateException("고객 확인·금융 이력이 없는 전용 운영 계정만 초기화할 수 있습니다");
             user.setRole(role);user.setOperatorPersonId(personId);
             user.setOperatorAccessExpiresAt(java.time.Instant.now().plusSeconds(30*86400));
             user.setOperatorLastReviewedAt(java.time.Instant.now());users.saveAndFlush(user);

@@ -52,8 +52,10 @@ class Provider(BaseHTTPRequestHandler):
         state["attempt"] = command["vendor_data"]
         session = state.setdefault("session", str(uuid4()))
         decision = {"session_id": session, "status": "Approved",
-                    "id_verifications": [{"status": "Approved", "verification_method": "document", "assurance": "documentary"}],
-                    "liveness_checks": [{"status": "Approved"}], "face_matches": [{"status": "Approved"}]}
+                    "id_verifications": [{"status": "Approved", "verification_method": "document", "assurance": "documentary", "full_name": "가상 복원 고객", "date_of_birth": "1990-01-01", "nationality": "KOR"}],
+                    "liveness_checks": [{"status": "Approved"}], "face_matches": [{"status": "Approved"}],
+                    "aml_screenings": [{"status": "Approved", "total_hits": 0, "entity_type": "person", "score": 0, "hits": [], "warnings": [],
+                        "screened_data": {"full_name": "가상 복원 고객", "date_of_birth": "1990-01-01", "nationality": "KR"}}]}
         now = int(time.time())
         event = {"event_id": str(uuid4()), "webhook_type": "status.updated", "timestamp": now, "created_at": now - 10,
                  "application_id": APP, "environment": "live", "workflow_id": WORKFLOW, "workflow_version": 4,
@@ -83,7 +85,7 @@ def sql(statement):
 
 
 def start(phase, classpath, address):
-    env = {key: value for key, value in os.environ.items() if not key.startswith("DIDIT_")}
+    env = {key: value for key, value in os.environ.items() if not key.startswith(("DIDIT_","CDD_"))}
     env.update(CEX_KYC_PROBE_PROVIDER=f"http://127.0.0.1:{server.server_port}", CEX_KYC_PROBE_PHASE=phase)
     command = [str(Path(JAVA_HOME) / "bin/java"), "-cp", classpath, "dustin.cex.domains.kyc.KycRecoveryProcessProbe",
                "--server.address=127.0.0.1", "--server.port=0", f"--spring.datasource.url=jdbc:postgresql://{address}/cex_test",

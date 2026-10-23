@@ -28,11 +28,11 @@ import dustin.cex.domains.security.AuditService;
 public class KycService {
     private final DiditSettings settings;private final DiditClient client;private final DiditWebhookVerifier verifier;
     private final JdbcTemplate jdbc;private final UserRepository users;private final RefreshTokenRepository sessions;
-    private final AuditService audit;private final TransactionTemplate tx;
+    private final AuditService audit;private final TransactionTemplate tx;private final dustin.cex.domains.cdd.CddService cdd;
     public KycService(DiditSettings settings,DiditClient client,DiditWebhookVerifier verifier,JdbcTemplate jdbc,
-            UserRepository users,RefreshTokenRepository sessions,AuditService audit,PlatformTransactionManager manager) {
+            UserRepository users,RefreshTokenRepository sessions,AuditService audit,PlatformTransactionManager manager,dustin.cex.domains.cdd.CddService cdd) {
         this.settings=settings;this.client=client;this.verifier=verifier;this.jdbc=jdbc;this.users=users;this.sessions=sessions;
-        this.audit=audit;tx=new TransactionTemplate(manager);
+        this.audit=audit;this.cdd=cdd;tx=new TransactionTemplate(manager);
     }
     public record Status(UUID attemptId,String creationState,String identityStatus,String providerStatus,Instant validUntil,String environment,
             Instant lastConfirmedAt,String reconciliationOutcome) {}
@@ -51,7 +51,7 @@ public class KycService {
             var same=mappings.isEmpty()?null:attempt((UUID)mappings.getFirst().get("id"));
             UUID active=active(actor);
             if(same!=null) {
-                if(!same.id().equals(active)) throw rejected(HttpStatus.CONFLICT);
+                if(!same.id().equals(active) || !cdd.boundToCurrent(actor,same.id())) throw rejected(HttpStatus.CONFLICT);
                 return new Start(same,false);
             }
             if(active!=null) {
@@ -63,7 +63,7 @@ public class KycService {
                     && old.workflow().equals(settings.workflowId) && old.version()==settings.workflowVersion;
                 boolean fresh=Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM kyc_reconciliations WHERE attempt_id=? AND fresh_at>clock_timestamp()-interval '15 minutes')",Boolean.class,active));
                 boolean tracked=Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM kyc_reconciliations WHERE attempt_id=?)",Boolean.class,active));
-                if(sameConfiguration && ((current.equals("PENDING") && tracked) || (current.equals("VERIFIED") && until!=null && until.toInstant().isAfter(Instant.now()) && fresh)))
+                if(sameConfiguration && cdd.boundToCurrent(actor,active) && ((current.equals("PENDING") && tracked) || (current.equals("VERIFIED") && until!=null && until.toInstant().isAfter(Instant.now()) && fresh)))
                     // 새 키에 옛 시도의 성공 응답을 주면 나중 재시도 때 키의 의미가 달라진다.
                     // 진행 중에는 원래 키를 재사용하거나 조회 API로 이어가도록 명시적으로 충돌시킨다.
                     throw rejected(HttpStatus.CONFLICT);
@@ -82,6 +82,7 @@ public class KycService {
                  valid_until=NULL,event_time=-1,status_digest=NULL,conflict_at=NULL
                 """,actor,attemptId);
             jdbc.update("INSERT INTO kyc_reconciliations(attempt_id) VALUES(?)",attemptId);
+            cdd.bind(actor,attemptId);
             audit.record(actor,"KYC_SESSION_REQUESTED","kyc:"+attemptId,"SUCCESS","ATTEMPT_COMMITTED");
             return new Start(Objects.requireNonNull(attempt(attemptId)),true);
         });
@@ -215,6 +216,8 @@ public class KycService {
                 }
             }
             jdbc.update("INSERT INTO kyc_events(event_id,attempt_id,payload_hash,provider_time,provider_status,disposition) VALUES(?,?,?,?,?,?)",eventId,attemptId,hash,time,providerStatus,disposition);
+            // 서명 검증·최신 이벤트 적용·이력 저장이 모두 끝난 뒤 같은 트랜잭션에서 고객 위험을 평가한다.
+            if(disposition.equals("APPLIED") && state.equals("VERIFIED")) cdd.assess(a.user(),attemptId,eventId,statusDigest,body.path("decision"));
             if(attemptId.equals(active(a.user()))) touchReconciliation(attemptId,disposition.equals("APPLIED") && !state.equals("CONFLICT"),
                 disposition.equals("TIME_CONFLICT") || disposition.equals("REVIEW_REQUIRED") || (disposition.equals("APPLIED") && state.equals("CONFLICT")));
             audit.record(a.user(),recovered?"KYC_EVENT_RECOVERED":"KYC_EVENT_RECEIVED","kyc:"+eventId,"SUCCESS",disposition);

@@ -30,6 +30,7 @@ public class KycReconciliationService {
     private final DiditClient client;
     private final DiditWebhookVerifier verifier;
     private final KycService kyc;
+    private final dustin.cex.domains.cdd.CddService cdd;
     private final JdbcTemplate jdbc;
     private final UserRepository users;
     private final AuditService audit;
@@ -40,11 +41,12 @@ public class KycReconciliationService {
 
     public KycReconciliationService(DiditSettings settings, DiditClient client,
             DiditWebhookVerifier verifier, KycService kyc, JdbcTemplate jdbc,
-            UserRepository users, AuditService audit, PlatformTransactionManager manager) {
+            UserRepository users, AuditService audit, PlatformTransactionManager manager,dustin.cex.domains.cdd.CddService cdd) {
         this.settings = settings;
         this.client = client;
         this.verifier = verifier;
         this.kyc = kyc;
+        this.cdd = cdd;
         this.jdbc = jdbc;
         this.users = users;
         this.audit = audit;
@@ -139,6 +141,8 @@ public class KycReconciliationService {
     private JsonNode projection(JsonNode decision) {
         var result = verifier.json.createObjectNode();
         result.put("status", decision.path("status").asText());
+        // 신분증·AML의 근거가 달라지면 옛 서명 이벤트로 확인 기한을 연장하지 않는다.
+        result.put("customer_evidence",cdd.evidenceDigest(decision));
         if (decision.path("status").asText().equals("Approved")) {
             if (decision.hasNonNull("expires_at")) result.put("expires_at",Instant.parse(decision.path("expires_at").asText()).toString());
             else result.putNull("expires_at");

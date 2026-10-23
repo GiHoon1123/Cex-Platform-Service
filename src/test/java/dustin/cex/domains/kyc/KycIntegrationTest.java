@@ -107,6 +107,7 @@ class KycIntegrationTest {
         r.add("didit.workflow-id",WORKFLOW::toString);r.add("didit.workflow-version",()->4);r.add("didit.environment",()->"live");
         r.add("didit.callback",()->"https://exchange.example.test/kyc/return");r.add("didit.encryption-key",()->Base64.getEncoder().encodeToString(new byte[32]));
     }
+    @Autowired dustin.cex.domains.cdd.CddService cdd;
     @Autowired KycReconciliationService reconciliation;
     @Autowired DiditSettings settings;@Autowired DiditClient didit;
     @Autowired KycService service;@Autowired DiditWebhookVerifier verifier;@Autowired JdbcTemplate jdbc;
@@ -127,16 +128,22 @@ class KycIntegrationTest {
         user=users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@test.invalid").passwordHash("격리 검증").build());
         var session=sessions.saveAndFlush(RefreshToken.builder().userId(user.getId()).tokenHash(UUID.randomUUID().toString()).expiresAt(LocalDateTime.now().plusHours(1)).build());
         sid=session.getSessionId();access=jwt.generateAccessToken(user.getId(),sid);
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),declaration());
     }
     @AfterAll void stop() {PROVIDER.stop(0);}
     UUID start() {return service.start(user.getId(),sid,UUID.randomUUID()).status().attemptId();}
+    dustin.cex.domains.cdd.CustomerDeclaration declaration() {return new dustin.cex.domains.cdd.CustomerDeclaration("가상 고객 "+user.getId(),LocalDate.of(1990,1,1),"KOR","KOR","가상 검증 주소",
+        dustin.cex.domains.cdd.CustomerDeclaration.Occupation.EMPLOYED,dustin.cex.domains.cdd.CustomerDeclaration.Purpose.PERSONAL_INVESTMENT,
+        dustin.cex.domains.cdd.CustomerDeclaration.SourceOfFunds.SALARY,new java.math.BigDecimal("1000"),true,dustin.cex.domains.cdd.CustomerDeclaration.Pep.NO);}
     Map<String,Object> event(UUID attempt,String status,long time) {
         var body=new HashMap<String,Object>();body.put("event_id",UUID.randomUUID());body.put("webhook_type","status.updated");
         body.put("timestamp",Math.max(now,time));body.put("created_at",time);body.put("application_id",APP);body.put("environment","live");body.put("sandbox_scenario",null);
         body.put("session_id",CREATED.get(attempt));body.put("workflow_id",WORKFLOW);body.put("workflow_version",4);body.put("vendor_data",attempt.toString());body.put("status",status);
         if(status.equals("Approved")) body.put("decision",Map.of("session_id",CREATED.get(attempt),"status","Approved",
-            "id_verifications",List.of(Map.of("status","Approved","verification_method","document","assurance","documentary")),
-            "liveness_checks",List.of(Map.of("status","Approved")),"face_matches",List.of(Map.of("status","Approved"))));
+            "id_verifications",List.of(Map.of("status","Approved","verification_method","document","assurance","documentary","full_name",declaration().fullName(),"date_of_birth","1990-01-01","nationality","KOR")),
+            "liveness_checks",List.of(Map.of("status","Approved")),"face_matches",List.of(Map.of("status","Approved")),
+            "aml_screenings",List.of(Map.of("status","Approved","total_hits",0,"entity_type","person","score",0,"hits",List.of(),"warnings",List.of(),
+                "screened_data",Map.of("full_name",declaration().fullName(),"date_of_birth","1990-01-01","nationality","KR")))));
         return body;
     }
     byte[] bytes(Map<String,Object> e) {return JSON.writeValueAsBytes(e);}
@@ -453,7 +460,7 @@ class KycIntegrationTest {
         UUID id=start();evidence(id,event(id,"Approved",now-1));
         pollHook=()->jdbc.update("UPDATE kyc_reconciliations SET lease_until=clock_timestamp()-interval '1 second' WHERE attempt_id=?",id);
         due(id);reconciliation.reconcileDue();assertEquals(0,receipts(id));blocked();pollHook=null;
-        var restarted=new KycReconciliationService(settings,didit,verifier,service,jdbc,users,audit,manager);
+        var restarted=new KycReconciliationService(settings,didit,verifier,service,jdbc,users,audit,manager,cdd);
         assertTrue(restarted.reconcileDue());assertEquals(1,receipts(id));allowed();
     }
     @Test void finalAuditFailureRollsBackEntireRecoveredBatchAndLeaseCanBeReclaimed() throws Exception {
@@ -542,4 +549,208 @@ class KycIntegrationTest {
         evidence(id,event(id,"Approved",now));due(id);reconciliation.reconcileDue();allowed();
     }
 
+
+    // 아래 사례는 승인된 DB fixture를 넣지 않고 신고 API·서명된 공급사 사실·실제 주문 정책을 연결한다.
+    Map<String,Object> cddDecision(Map<String,Object> event) {return new HashMap<>((Map<String,Object>)event.get("decision"));}
+    Map<String,Object> cddId(Map<String,Object> decision) {return new HashMap<>(((List<Map<String,Object>>)decision.get("id_verifications")).getFirst());}
+    Map<String,Object> cddAml(Map<String,Object> decision) {return new HashMap<>(((List<Map<String,Object>>)decision.get("aml_screenings")).getFirst());}
+    void changeId(Map<String,Object> e,String field,Object value) {var d=cddDecision(e);var id=cddId(d);id.put(field,value);d.put("id_verifications",List.of(id));e.put("decision",d);}
+    void changeAml(Map<String,Object> e,String field,Object value) {var d=cddDecision(e);var aml=cddAml(d);aml.put(field,value);d.put("aml_screenings",List.of(aml));e.put("decision",d);}
+    void review(String reason) {assertEquals("REVIEW_REQUIRED",cdd.status(user.getId()).outcome());assertTrue(cdd.status(user.getId()).reasons().contains(reason));blocked();}
+    dustin.cex.domains.cdd.CustomerDeclaration changedDeclaration(String field,Object value) {
+        var n=JSON.valueToTree(declaration());((tools.jackson.databind.node.ObjectNode)n).set(field,JSON.valueToTree(value));
+        return JSON.treeToValue(n,dustin.cex.domains.cdd.CustomerDeclaration.class);
+    }
+    @Test void cddCompleteSignedEvidenceProducesVersionedAssessmentWithoutPii() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);send(e);allowed();assertEquals("STANDARD",cdd.status(user.getId()).outcome());
+        var row=jdbc.queryForMap("SELECT * FROM cdd_assessments WHERE user_id=?",user.getId());
+        assertEquals(dustin.cex.domains.cdd.CddService.POLICY,row.get("policy_version"));assertEquals(e.get("event_id"),row.get("event_id"));
+        assertFalse(row.toString().contains(declaration().fullName()));assertFalse(row.toString().contains("1990-01-01"));
+        var ciphertext=jdbc.queryForObject("SELECT ciphertext FROM cdd_declarations WHERE user_id=?",byte[].class,user.getId());
+        assertFalse(new String(ciphertext,StandardCharsets.UTF_8).contains(declaration().fullName()));
+    }
+    @Test void cddIdentityApprovalWithoutCustomerDeclarationCannotTrade() throws Exception {
+        jdbc.update("DELETE FROM cdd_profiles WHERE user_id=?",user.getId());UUID id=start();send(event(id,"Approved",now));blocked();
+        assertEquals("NOT_DECLARED",cdd.status(user.getId()).outcome());
+    }
+    @Test void cddDeclarationAfterSessionCannotReuseItsIdentityEvidence() throws Exception {
+        UUID id=start();cdd.submit(user.getId(),sid,UUID.randomUUID(),declaration());send(event(id,"Approved",now));blocked();
+        assertEquals("PENDING_IDENTITY",cdd.status(user.getId()).outcome());
+    }
+    @Test void cddNameMismatchNeverUsesFuzzyOrTransliteratedMatch() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);changeId(e,"full_name",declaration().fullName()+" 다른 사람");send(e);review("IDENTITY_MISMATCH");
+    }
+    @Test void cddBirthdayMismatchRequiresReview() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);changeId(e,"date_of_birth","1991-01-01");send(e);review("IDENTITY_MISMATCH");
+    }
+    @Test void cddIncompleteExtractedIdentityCannotApproveRisk() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);changeId(e,"date_of_birth",null);send(e);review("IDENTITY_EVIDENCE_INCOMPLETE");
+    }
+    @Test void cddConflictingApprovedDocumentsCannotApproveRisk() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);var d=cddDecision(e);var one=cddId(d);var two=new HashMap<>(one);two.put("full_name","다른 사람");
+        d.put("id_verifications",List.of(one,two));e.put("decision",d);send(e);review("IDENTITY_EVIDENCE_INCOMPLETE");
+    }
+    @Test void cddMissingAmlCannotBeReplacedByIdentityApproval() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);var d=cddDecision(e);d.remove("aml_screenings");e.put("decision",d);send(e);review("AML_REVIEW_REQUIRED");
+    }
+    @Test void cddApprovedAmlWithPositiveHitsStillRequiresReview() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);changeAml(e,"total_hits",1);send(e);review("AML_REVIEW_REQUIRED");
+    }
+    @Test void cddAmlScoreWarningAndHitDetailsCannotBeHiddenByZeroCount() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);changeAml(e,"hits",List.of(Map.of("name","가상 제재 후보")));send(e);review("AML_REVIEW_REQUIRED");
+    }
+    @Test void cddAmlScreenedPersonMustMatchVerifiedPerson() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);changeAml(e,"screened_data",Map.of("full_name","다른 사람","date_of_birth","1990-01-01","nationality","KR"));
+        send(e);review("AML_REVIEW_REQUIRED");
+    }
+    @Test void cddPepDeclarationClosesNewOrdersWithoutManualOverride() throws Exception {
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),changedDeclaration("pep","YES"));UUID id=start();send(event(id,"Approved",now));review("PEP_REVIEW_REQUIRED");
+    }
+    @Test void cddNonSelfBeneficialOwnerRequiresReview() throws Exception {
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),changedDeclaration("beneficialOwnerSelf",false));UUID id=start();send(event(id,"Approved",now));review("BENEFICIAL_OWNER_REVIEW_REQUIRED");
+    }
+    @Test void cddForeignResidenceIsOutsideInitialAutomaticPolicy() throws Exception {
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),changedDeclaration("residenceCountry","USA"));UUID id=start();send(event(id,"Approved",now));review("COUNTRY_POLICY_REVIEW_REQUIRED");
+    }
+    @Test void cddChangedProfileInvalidatesOldApprovalAndRequiresNewAttempt() throws Exception {
+        UUID key=UUID.randomUUID();UUID old=service.start(user.getId(),sid,key).status().attemptId();send(event(old,"Approved",now));allowed();
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),changedDeclaration("address","변경된 가상 주소"));blocked();
+        assertThrows(ResponseStatusException.class,()->service.start(user.getId(),sid,key));UUID next=start();assertNotEquals(old,next);
+        send(event(next,"Approved",now));allowed();assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM cdd_assessments WHERE user_id=?",Long.class,user.getId()));
+    }
+    @Test void cddSubmissionKeyIsBoundToCurrentCanonicalBody() {
+        UUID key=UUID.randomUUID();var one=cdd.submit(user.getId(),sid,key,declaration());assertEquals(one,cdd.submit(user.getId(),sid,key,declaration()));
+        assertThrows(ResponseStatusException.class,()->cdd.submit(user.getId(),sid,key,changedDeclaration("pep","YES")));
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),declaration());assertThrows(ResponseStatusException.class,()->cdd.submit(user.getId(),sid,key,declaration()));
+    }
+    @Test void cddImmutableHistoryRejectsUpdateDeleteAndTruncate() throws Exception {
+        UUID id=start();send(event(id,"Approved",now));
+        for(String table:List.of("cdd_declarations","cdd_assessments","cdd_attempt_bindings","cdd_identity_claims")) {
+            String field=table.equals("cdd_attempt_bindings")?"attempt_id":table.equals("cdd_identity_claims")?"user_id":"id";
+            assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("UPDATE "+table+" SET "+field+"="+field));
+            assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("DELETE FROM "+table));
+            assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.execute("TRUNCATE "+table+" CASCADE"));
+        }
+        allowed();
+    }
+    @Test void cddAuditFailureRollsBackDeclarationAndAssessment() throws Exception {
+        UUID id=start();doThrow(new IllegalStateException("격리 감사 실패")).when(audit).record(any(),eq("CDD_ASSESSED"),anyString(),anyString(),anyString());
+        assertThrows(IllegalStateException.class,()->send(event(id,"Approved",now)));assertEquals(0,receipts(id));blocked();reset(audit);
+        send(event(id,"Approved",now));allowed();
+    }
+    @Test void cddSameSignedEventDoesNotDuplicateAssessment() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now);send(e);send(e);allowed();
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM cdd_assessments WHERE user_id=?",Long.class,user.getId()));
+    }
+    @Test void cddProviderIdentityChangeCannotRefreshOldSignedEvidence() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-10);send(e);allowed();evidence(id,e);
+        var current=new HashMap<>(DECISIONS.get(CREATED.get(id)));var one=cddId(current);one.put("full_name","다른 사람");current.put("id_verifications",List.of(one));DECISIONS.put(CREATED.get(id),current);
+        due(id);reconciliation.reconcileDue();assertEquals("EVIDENCE_MISMATCH",outcome(id));blocked();
+    }
+    @Test void cddProviderAmlChangeCannotRefreshOldSignedEvidence() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-10);send(e);allowed();evidence(id,e);
+        var current=new HashMap<>(DECISIONS.get(CREATED.get(id)));var aml=cddAml(current);aml.put("total_hits",1);current.put("aml_screenings",List.of(aml));DECISIONS.put(CREATED.get(id),current);
+        due(id);reconciliation.reconcileDue();assertEquals("EVIDENCE_MISMATCH",outcome(id));blocked();
+    }
+    @Test void cddCurrentPolicyAndKeyMustMatchAssessment() throws Exception {
+        UUID id=start();send(event(id,"Approved",now));allowed();
+        var wrong=new dustin.cex.domains.cdd.CddService(new dustin.cex.domains.cdd.CddCrypto(
+            Base64.getEncoder().encodeToString(new byte[32]),Base64.getEncoder().encodeToString("12345678901234567890123456789012".getBytes(StandardCharsets.UTF_8)),""),jdbc,JSON,users,sessions,audit,verifier);
+        assertFalse(wrong.permitted(user.getId()));
+    }
+    @Test void cddHttpRequiresCustomerSessionAndNeverReturnsOriginalPii() throws Exception {
+        assertEquals(401,http("GET","/api/kyc/customer-profile",null,null,Map.of()).statusCode());
+        var own=http("GET","/api/kyc/customer-profile",access,null,Map.of());assertEquals(200,own.statusCode());assertFalse(own.body().contains(declaration().fullName()));assertEquals("no-store",own.headers().firstValue("Cache-Control").orElseThrow());
+        assertEquals(403,http("GET","/api/admin/kyc/customer-profiles/"+user.getId(),access,null,Map.of()).statusCode());
+        assertEquals(200,http("POST","/api/kyc/customer-profile",access,JSON.writeValueAsString(declaration()),Map.of("Idempotency-Key",UUID.randomUUID().toString())).statusCode());
+    }
+    @Test void cddHttpRejectsUnknownDuplicateOversizeAndInvalidValuesWithoutEcho() throws Exception {
+        String raw=JSON.writeValueAsString(declaration());
+        for(String body:List.of(raw.substring(0,raw.length()-1)+",\"documentNumber\":\"비밀 번호\"}",raw.substring(0,raw.length()-1)+",\"pep\":\"YES\"}",raw.replace("EMPLOYED","비밀 직업"))) {
+            var response=http("POST","/api/kyc/customer-profile",access,body,Map.of("Idempotency-Key",UUID.randomUUID().toString()));
+            assertEquals(400,response.statusCode());assertFalse(response.body().contains("비밀"));
+        }
+        assertEquals(413,http("POST","/api/kyc/customer-profile",access," ".repeat(8193),Map.of("Idempotency-Key",UUID.randomUUID().toString())).statusCode());
+    }
+
+    @Test void cddConcurrentSameIdentityAllowsOnlyOneCustomerAndDoesNotFreezeFirstClaim() throws Exception {
+        var other=users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@test.invalid").passwordHash("격리 검증").build());
+        var token=sessions.saveAndFlush(RefreshToken.builder().userId(other.getId()).tokenHash(UUID.randomUUID().toString()).expiresAt(LocalDateTime.now().plusHours(1)).build());
+        cdd.submit(other.getId(),token.getSessionId(),UUID.randomUUID(),declaration());
+        UUID one=start(),two=service.start(other.getId(),token.getSessionId(),UUID.randomUUID()).status().attemptId();
+        var first=event(one,"Approved",now);var second=event(two,"Approved",now);
+        try(var pool=Executors.newFixedThreadPool(2)) {
+            var gate=new CountDownLatch(1);
+            var a=pool.submit(()->{gate.await();send(first);return true;});var b=pool.submit(()->{gate.await();send(second);return true;});
+            gate.countDown();assertTrue(a.get(8,TimeUnit.SECONDS));assertTrue(b.get(8,TimeUnit.SECONDS));
+        }
+        var statuses=List.of(cdd.status(user.getId()),cdd.status(other.getId()));
+        assertEquals(1,statuses.stream().filter(x->x.outcome().equals("STANDARD")).count());
+        assertEquals(1,statuses.stream().filter(x->x.reasons().contains("POSSIBLE_DUPLICATE_IDENTITY")).count());
+        assertEquals(1,List.of(user.getId(),other.getId()).stream().filter(cdd::permitted).count());
+    }
+    @Test void cddSubmissionRequiresCurrentOwnedCustomerSession() {
+        assertThrows(ResponseStatusException.class,()->cdd.submit(user.getId(),UUID.randomUUID(),UUID.randomUUID(),declaration()));
+        new TransactionTemplate(manager).executeWithoutResult(status->sessions.revokeAllByUserId(user.getId(),LocalDateTime.now()));
+        assertThrows(ResponseStatusException.class,()->cdd.submit(user.getId(),sid,UUID.randomUUID(),declaration()));
+    }
+    @Test void cddSubmissionHasBoundedDailyChangesAndAtomicAudit() {
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),declaration());cdd.submit(user.getId(),sid,UUID.randomUUID(),declaration());
+        assertEquals(429,assertThrows(ResponseStatusException.class,()->cdd.submit(user.getId(),sid,UUID.randomUUID(),declaration())).getStatusCode().value());
+    }
+    @Test void cddDeclarationAuditFailurePreservesPreviousPointer() {
+        var before=cdd.status(user.getId());
+        doThrow(new IllegalStateException("격리 감사 실패")).when(audit).record(any(),eq("CDD_DECLARED"),anyString(),anyString(),anyString());
+        assertThrows(IllegalStateException.class,()->cdd.submit(user.getId(),sid,UUID.randomUUID(),declaration()));
+        assertEquals(before,cdd.status(user.getId()));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM cdd_declarations WHERE user_id=?",Long.class,user.getId()));
+    }
+    @Test void cddCustomerIdentityHistoryCannotBecomeDedicatedOperatorAccount() {
+        var bootstrap=new OperatorBootstrapService(manager,users,sessions,audit,jdbc);
+        assertThrows(IllegalStateException.class,()->bootstrap.grant(user.getId(),UUID.randomUUID(),UserRole.OPERATOR,"isolated-enrollment-secret-256-bits-at-least-43-characters"));
+        assertEquals(UserRole.CUSTOMER,users.findById(user.getId()).orElseThrow().getRole());
+    }
+
+    @Test void cddReorderedAmlObjectFieldsRemainSameEvidenceDuringRecovery() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-10);send(e);evidence(id,e);
+        var current=new HashMap<>(DECISIONS.get(CREATED.get(id)));var aml=cddAml(current);
+        var reordered=new LinkedHashMap<String,Object>();reordered.put("nationality","KR");reordered.put("date_of_birth","1990-01-01");reordered.put("full_name",declaration().fullName());
+        aml.put("screened_data",reordered);current.put("aml_screenings",List.of(aml));DECISIONS.put(CREATED.get(id),current);
+        due(id);reconciliation.reconcileDue();assertEquals("CONFIRMED",outcome(id));allowed();
+    }
+
+    @Test void cddAmlAmbiguousAndMalformedResultsNeverPassAutomatically() throws Exception {
+        UUID id=start();int time=0;
+        for(var mutation:List.of(Map.entry("score",(Object)1),Map.entry("warnings",(Object)List.of("가상 경고")),
+                Map.entry("total_hits",(Object)0.0),Map.entry("total_hits",(Object)4294967296L),
+                Map.entry("status",(Object)"In Review"),Map.entry("entity_type",(Object)"company"),Map.entry("hits",(Object)"누락된 배열"))) {
+            var e=event(id,"Approved",now-20+time++);changeAml(e,mutation.getKey(),mutation.getValue());send(e);review("AML_REVIEW_REQUIRED");
+        }
+    }
+    @Test void cddUnknownPepIsNotInterpretedAsNoPep() throws Exception {
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),changedDeclaration("pep","UNKNOWN"));UUID id=start();send(event(id,"Approved",now));review("PEP_REVIEW_REQUIRED");
+    }
+    @Test void cddUnexplainedCustomerContextRequiresReview() throws Exception {
+        cdd.submit(user.getId(),sid,UUID.randomUUID(),changedDeclaration("purpose","OTHER"));UUID id=start();send(event(id,"Approved",now));review("CUSTOMER_CONTEXT_REVIEW_REQUIRED");
+    }
+    @Test void cddHttpRejectsScalarCoercionAndDateArrays() throws Exception {
+        var raw=JSON.valueToTree(declaration());
+        for(var mutation:List.of(Map.entry("pep",(Object)0),Map.entry("beneficialOwnerSelf",(Object)"true"),
+                Map.entry("expectedMonthlyQuote",(Object)"1000"),Map.entry("dateOfBirth",(Object)List.of(1990,1,1)))) {
+            var node=raw.deepCopy();((tools.jackson.databind.node.ObjectNode)node).set(mutation.getKey(),JSON.valueToTree(mutation.getValue()));
+            assertEquals(400,http("POST","/api/kyc/customer-profile",access,JSON.writeValueAsString(node),Map.of("Idempotency-Key",UUID.randomUUID().toString())).statusCode());
+        }
+    }
+
+    @Test void cddMissingIdentityFieldCanBeReconciledButRemainsReviewRequired() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-10);var d=cddDecision(e);var document=cddId(d);document.remove("full_name");
+        d.put("id_verifications",List.of(document));e.put("decision",d);send(e);review("IDENTITY_EVIDENCE_INCOMPLETE");
+        evidence(id,e);due(id);reconciliation.reconcileDue();assertEquals("CONFIRMED",outcome(id));review("IDENTITY_EVIDENCE_INCOMPLETE");
+    }
+
+    @Test void cddUnneededDocumentNumberDoesNotEnterRiskEvidence() {
+        UUID id=start();var decision=cddDecision(event(id,"Approved",now));String before=cdd.evidenceDigest(JSON.valueToTree(decision));
+        var aml=cddAml(decision);var screened=new HashMap<String,Object>((Map<String,Object>)aml.get("screened_data"));
+        screened.put("document_number","가상 수집 제외 값");aml.put("screened_data",screened);decision.put("aml_screenings",List.of(aml));
+        assertEquals(before,cdd.evidenceDigest(JSON.valueToTree(decision)));
+    }
 }

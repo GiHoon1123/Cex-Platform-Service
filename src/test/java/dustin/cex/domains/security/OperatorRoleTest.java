@@ -391,4 +391,26 @@ class OperatorRoleTest {
             .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build(),java.net.http.HttpResponse.BodyHandlers.ofString());
     }
 
+
+    // 역할 업무의 이력 조건만 검사하는 합성 자료다. 신원 확인이나 CDD 승인의 증거로 사용하지 않는다.
+    void declaredCustomerHistory() {
+        jdbc.update("INSERT INTO cdd_declarations(id,user_id,request_id,ciphertext,content_mac,key_id) VALUES(?,?,?,?,?,?)",
+            UUID.randomUUID(),candidate.getId(),UUID.randomUUID(),new byte[]{0},"role-fixture","role-fixture");
+    }
+    @Test void customerDeclarationWithoutFinancialHistoryCannotBecomeOperator() {
+        declaredCustomerHistory();assertEquals(409,assertThrows(ResponseStatusException.class,this::request).getStatusCode().value());
+        assertEquals(UserRole.CUSTOMER,candidate().getRole());
+    }
+    @Test void customerIdentityAttemptWithoutFinancialHistoryCannotBecomeOperator() {
+        jdbc.update("INSERT INTO kyc_attempts(id,user_id,request_id,application_id,environment,workflow_id,workflow_version,creation_state) VALUES(?,?,?,?,'live',?,1,'READY')",
+            UUID.randomUUID(),candidate.getId(),UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID());
+        assertEquals(409,assertThrows(ResponseStatusException.class,this::request).getStatusCode().value());
+        assertEquals(UserRole.CUSTOMER,candidate().getRole());
+    }
+    @Test void newCustomerDeclarationAfterRoleRequestPreventsApprovalWithoutVersionChange() throws Exception {
+        var r=request();var authorization=proof(checker,r,true);long version=candidate().getVersion();declaredCustomerHistory();
+        assertEquals(version,candidate().getVersion());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->decide(checker,r,true,authorization)).getStatusCode().value());
+        assertEquals(UserRole.CUSTOMER,candidate().getRole());
+    }
 }

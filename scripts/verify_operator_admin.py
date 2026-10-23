@@ -23,6 +23,7 @@ class OperatorAdminProcessTest(fixtures.OrderIdempotencyProcessTest):
             GRANT USAGE ON SCHEMA public TO isolated_operator_admin;
             GRANT SELECT,UPDATE ON users,refresh_tokens TO isolated_operator_admin;
             GRANT SELECT ON orders,ledger_entries,user_balances TO isolated_operator_admin;
+            GRANT SELECT(user_id) ON cdd_declarations,kyc_attempts TO isolated_operator_admin;
             GRANT SELECT,INSERT ON operator_enrollment,security_audit TO isolated_operator_admin;
         """)
 
@@ -57,6 +58,8 @@ class OperatorAdminProcessTest(fixtures.OrderIdempotencyProcessTest):
         self.assertEqual(self.sql("SELECT role||':'||operator_person_id::text||':'||(operator_access_expires_at>now())::text FROM users WHERE id=103"),"OPERATOR:"+self.person+":true")
         self.assertEqual(self.sql("SELECT token_hash FROM operator_enrollment WHERE user_id=103"),hashlib.sha256(self.secret.encode()).hexdigest())
         self.assertEqual(self.sql("SELECT count(*) FROM security_audit WHERE action='OPERATOR_BOOTSTRAP' AND target='user:103'"),"1")
+        self.assertEqual(self.sql("SELECT has_column_privilege('isolated_operator_admin','cdd_declarations','ciphertext','SELECT')"),"f")
+        self.assertEqual(self.sql("SELECT has_column_privilege('isolated_operator_admin','kyc_attempts','link_cipher','SELECT')"),"f")
         self.assertEqual(self.sql("SELECT has_schema_privilege('isolated_operator_admin','public','CREATE')"),"f")
         self.assertEqual(self.sql("SELECT count(*) FROM security_audit a JOIN users u ON a.target='user:'||u.id WHERE a.action='OPERATOR_BOOTSTRAP' AND u.id=103 AND split_part(a.detail,':until=',2)::timestamptz=u.operator_access_expires_at"),"1")
         self.results.append({"test":"dedicated_grant_without_ddl_or_workers","passed":True})

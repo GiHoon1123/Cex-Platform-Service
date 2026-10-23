@@ -119,8 +119,10 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         # 프로세스 회귀도 실제 공급사 키와 백그라운드 대사 작업을 물려받지 않는다.
         env=os.environ.copy()
         for key in list(env):
-            if key.startswith("DIDIT_"):del env[key]
+            if key.startswith(("DIDIT_","CDD_")):del env[key]
         env["KYC_RECONCILIATION_ENABLED"]="false"
+        env["CDD_ENCRYPTION_KEY"]="AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        env["CDD_FINGERPRINT_KEY"]="AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
         with log_path.open("w") as log:
             cls.process = subprocess.Popen(command, cwd=PROJECT,env=env,stdout=log, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + 35

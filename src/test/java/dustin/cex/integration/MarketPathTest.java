@@ -35,6 +35,9 @@ import java.util.concurrent.*;
 @EnabledIfEnvironmentVariable(named="CEX_MARKET_E2E",matches="1")
 class MarketPathTest {
     @DynamicPropertySource static void endpoints(DynamicPropertyRegistry registry) {
+        // 금융 연결 전용 합성 CDD 사전 조건과 같은 공개 가짜 키만 사용한다. 실제 공급사는 호출하지 않는다.
+        registry.add("cdd.encryption-key",()->"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        registry.add("cdd.fingerprint-key",()->"AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         registry.add("spring.datasource.url",()->System.getenv("CEX_TEST_DATABASE_URL"));
         registry.add("spring.kafka.bootstrap-servers",()->System.getenv("CEX_TEST_KAFKA"));
         registry.add("engine.service.token",()->System.getenv("CEX_TEST_SERVICE_TOKEN"));

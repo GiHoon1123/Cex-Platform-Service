@@ -10,12 +10,14 @@ import org.springframework.web.server.ResponseStatusException;
 /** 고객 확인과 신규 주문 제한은 플랫폼의 예약 트랜잭션에서 결정한다. 엔진은 이 정책을 모른다. */
 @Service
 public class TradingAccessPolicy {
+    private final dustin.cex.domains.cdd.CddService cdd;
     private final UserRepository users;private final AuditService audit;private final org.springframework.jdbc.core.JdbcTemplate jdbc;
-    public TradingAccessPolicy(UserRepository users,AuditService audit,org.springframework.jdbc.core.JdbcTemplate jdbc) {this.users=users;this.audit=audit;this.jdbc=jdbc;}
+    public TradingAccessPolicy(UserRepository users,AuditService audit,org.springframework.jdbc.core.JdbcTemplate jdbc,dustin.cex.domains.cdd.CddService cdd) {this.cdd=cdd;this.users=users;this.audit=audit;this.jdbc=jdbc;}
     @Transactional(propagation=Propagation.MANDATORY)
     public void requireNewOrder(long userId) {
         var user=users.lockById(userId).orElse(null);
         if(user==null || !user.isEnabled() || user.getRole()!=UserRole.CUSTOMER || user.isTradingRestricted()
+                || !cdd.permitted(userId)
                 || !Boolean.TRUE.equals(jdbc.queryForObject("""
                     SELECT EXISTS(SELECT 1 FROM kyc_profiles p JOIN kyc_attempts a ON a.id=p.active_attempt
                      WHERE p.user_id=? AND p.identity_status='VERIFIED' AND p.valid_until>clock_timestamp() AND a.environment='live'

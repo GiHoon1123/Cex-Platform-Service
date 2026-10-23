@@ -97,7 +97,7 @@ public class DiditWebhookVerifier {
         return (value<0?"-":"")+digits.charAt(0)+(digits.length()>1?"."+digits.substring(1):"")
             +"e"+(exponent<0?"-":"+")+String.format(Locale.ROOT,"%02d",Math.abs(exponent));
     }
-    String digest(JsonNode node) {
+    public String digest(JsonNode node) {
         try {return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(canonical(node).getBytes(StandardCharsets.UTF_8)));}
         catch(GeneralSecurityException e) {throw new IllegalStateException(e);}
     }

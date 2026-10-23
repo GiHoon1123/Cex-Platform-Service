@@ -46,6 +46,10 @@ public class KycRecoveryProcessProbe {
                     .email(UUID.randomUUID()+"@process.test.invalid").passwordHash("격리 검증 계정").build());
                 var session=context.getBean(RefreshTokenRepository.class).saveAndFlush(RefreshToken.builder()
                     .userId(user.getId()).tokenHash(UUID.randomUUID().toString()).expiresAt(LocalDateTime.now().plusHours(1)).build());
+                context.getBean(dustin.cex.domains.cdd.CddService.class).submit(user.getId(),session.getSessionId(),UUID.randomUUID(),
+                    new dustin.cex.domains.cdd.CustomerDeclaration("가상 복원 고객",java.time.LocalDate.of(1990,1,1),"KOR","KOR","가상 검증 주소",
+                        dustin.cex.domains.cdd.CustomerDeclaration.Occupation.EMPLOYED,dustin.cex.domains.cdd.CustomerDeclaration.Purpose.PERSONAL_INVESTMENT,
+                        dustin.cex.domains.cdd.CustomerDeclaration.SourceOfFunds.SALARY,java.math.BigDecimal.ONE,true,dustin.cex.domains.cdd.CustomerDeclaration.Pep.NO));
                 var attempt=service.start(user.getId(),session.getSessionId(),UUID.randomUUID()).status().attemptId();
                 jdbc.update("UPDATE kyc_reconciliations SET next_attempt_at=clock_timestamp()-interval '1 second' WHERE attempt_id=?",attempt);
                 reconciliation.reconcileDue();

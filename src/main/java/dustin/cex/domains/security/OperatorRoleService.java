@@ -131,6 +131,8 @@ public class OperatorRoleService {
             // 주문 접수도 같은 사용자 행을 먼저 잠근다. 고객 주문과 역할 전환의 선후가 한 곳에서 정해진다.
             // 거래 이력이 있는 고객을 직원으로 바꾸거나 금융 기록을 지워 전환하는 경로는 제공하지 않는다.
             if(owner.isTradingRestricted() || owner.getOperatorPersonId()!=null || owner.getOperatorAccessExpiresAt()!=null
+                    || jdbc.queryForObject("SELECT count(*) FROM cdd_declarations WHERE user_id=?",Long.class,owner.getId())!=0
+                    || jdbc.queryForObject("SELECT count(*) FROM kyc_attempts WHERE user_id=?",Long.class,owner.getId())!=0
                     || jdbc.queryForObject("SELECT count(*) FROM orders WHERE user_id=?",Long.class,owner.getId())!=0
                     || jdbc.queryForObject("SELECT count(*) FROM ledger_entries WHERE owner_id=?",Long.class,owner.getId())!=0
                     || jdbc.queryForObject("SELECT count(*) FROM user_balances WHERE user_id=? AND (available<>0 OR locked<>0)",Long.class,owner.getId())!=0
