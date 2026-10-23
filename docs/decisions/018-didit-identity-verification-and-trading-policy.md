@@ -271,3 +271,7 @@ HTTP는 `https://verification.didit.me`로 고정한다. 연결 5초, 전체 응
 - [`afcb5ea`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/afcb5ea3aca8ef922a8b42168eabc25be2b4097a): 영속 확인 시도·웹훅 상태·감사·신규 주문 정책과 통합/금융 회귀.
 
 문서 커밋과 일반 푸시의 원격 main 일치 결과는 공통 [KYC 사이클 기록](../../../docs/roadmap/kyc-identity.md)에 남긴다. 엔진·프론트 변경과 배포는 이 사이클에 포함하지 않는다.
+
+## 후속 구현: 2026-10-23
+
+이 문서의 미완료 표기는 최초 사이클 당시의 범위다. 후속 [플랫폼 KYC 대사](019-platform-kyc-reconciliation.md)에서 누락된 웹훅을 원래 서명 이력·현재 결정과 대조하고 영속 임대·재시도·최근 확인 기한·실제 JVM 강제 종료/복원을 검증했다. 생성 응답의 링크 복원과 판정 복원을 계속 구분한다. 실제 Didit 연동·전체 CDD/AML·계약/개인정보·인증/신고 조건은 남아 있다.

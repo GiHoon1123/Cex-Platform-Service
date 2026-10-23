@@ -1,0 +1,363 @@
+{
+  "checked_date": "2026-10-23",
+  "scope": "Java 플랫폼 KYC의 누락 이벤트 복원·영속 임대·조회 대사·최근 확인 기한",
+  "junit": {
+    "tests": 519,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_junit_cases": 46,
+  "kyc_suite": 106,
+  "new_kyc_junit_cases": 45,
+  "new_cancel_expiry_case": 1,
+  "process_scenarios": 15,
+  "new_kyc_process_scenarios": 3,
+  "reports": {
+    "kyc": {
+      "container": "cex-kyc-a6660b7cefa1",
+      "exit": 0,
+      "tests": {
+        "tests": 106,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "kyc_process": {
+      "container": "cex-kyc-recovery-f440a0395324",
+      "checks": [
+        {
+          "test": "kill_during_provider_get_preserves_pending_attempt_and_lease",
+          "passed": true
+        },
+        {
+          "test": "fresh_jvm_recovers_expired_lease_and_original_signed_approval",
+          "passed": true
+        },
+        {
+          "test": "subsequent_reconciliation_keeps_one_receipt_and_original_expiry",
+          "passed": true
+        }
+      ],
+      "provider": "loopback",
+      "bots_disabled": true,
+      "killed_exit": -9,
+      "exit": 0,
+      "jvm_runs": 2,
+      "container_removed": true
+    },
+    "bound": {
+      "container": "cex-bound-approvals-91b26fece089",
+      "groups": [
+        {
+          "name": "bound",
+          "exit": 0,
+          "tests": {
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "roles",
+          "exit": 0,
+          "tests": {
+            "tests": 48,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "lifecycle",
+          "exit": 0,
+          "tests": {
+            "tests": 37,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "security",
+          "exit": 0,
+          "tests": {
+            "tests": 40,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 187,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "mfa": {
+      "container": "cex-operator-mfa-80d0c9dbd2af",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "financial": {
+      "container": "cex-inbox-a96c07396f71",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "market": {
+      "postgres": "cex-market-pg-cdf340b3df",
+      "kafka": "cex-market-broker-b03a95b1bf",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true,
+      "tests": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "admin_process": {
+      "database": "cex_idempotency_8df056686553",
+      "temporary_database_removed": true,
+      "platform_runs": 1,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "dedicated_grant_without_ddl_or_workers",
+          "passed": true
+        },
+        {
+          "test": "reject_financial_customer_and_duplicate_grant",
+          "passed": true
+        }
+      ]
+    },
+    "orders_process": {
+      "database": "cex_idempotency_a3eefdbdbd66",
+      "temporary_database_removed": true,
+      "platform_runs": 2,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "test_concurrent_same_key",
+          "new": 1,
+          "existing": 11,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_concurrent_same_key_different_content",
+          "new": 1,
+          "existing": 5,
+          "conflicts": 6,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_invalid_balance_and_unrepresentable_split_roll_back_everything",
+          "rollback_cases": 2,
+          "engine_posts": 0
+        },
+        {
+          "test": "test_invalid_header_and_command_have_no_financial_effect",
+          "statuses": [
+            400,
+            400,
+            400
+          ],
+          "engine_posts": 0
+        },
+        {
+          "test": "test_key_is_scoped_to_authenticated_user",
+          "users": 2,
+          "engine_posts": 2
+        },
+        {
+          "test": "test_lost_response_then_same_key",
+          "statuses": [
+            202,
+            200
+          ],
+          "engine_posts": 1
+        },
+        {
+          "test": "test_market_original_budget_survives_order_changes",
+          "quote_amount": "123.250000001",
+          "replay": 200,
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_process_restart_uses_committed_key",
+          "after_restart": 200,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_same_key_different_content",
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_unrepresentable_commands_are_rejected_without_financial_effect",
+          "rejections": 2,
+          "engine_posts": 0
+        }
+      ]
+    },
+    "dependencies": {
+      "checked_at": "2026-10-23T00:57:19.120442+00:00",
+      "status": "NO_KNOWN_FINDINGS",
+      "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+      "package_versions": 222,
+      "findings": []
+    },
+    "integrity": {
+      "check": "gradle_rejects_altered_checksum",
+      "original_cache_modified": false,
+      "gradle_exit": 1,
+      "passed": true,
+      "temporary_copy_removed": true
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc_recovery.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 8.97
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_bound_approvals.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 167.44
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_mfa.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 19.4
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_engine_inbox.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 31.16
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.44
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 15.8
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_order_idempotency.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 18.11
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 23.55
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.38
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.22
+    }
+  ],
+  "intermediate_runs": [
+    {
+      "kyc_tests": 94,
+      "failures": 0
+    },
+    {
+      "kyc_tests": 104,
+      "failures": 0
+    },
+    {
+      "kyc_tests": 105,
+      "failures": 0
+    }
+  ],
+  "review_corrections": [
+    "초기화보다 워커가 먼저 실행되지 않도록 KYC 스키마 의존 순서를 명시",
+    "과거 시도 자동 작업 채움을 제거; 명시적 새 시도·유효 이벤트가 작업을 기록",
+    "로컬보다 오래된 공급사 이력이 최근 확인 기한을 연장하지 못하도록 경계 추가",
+    "같은 초의 상반된 서명 근거는 기존 수신 경로에서 충돌 확정·재확인 가능"
+  ],
+  "limits": [
+    "공급사 HTTP는 루프백 대역; 실제 Didit 계정·샌드박스·개인정보 제출 없음",
+    "전송 이력 전체 V2 HMAC 유지; 권한별 가림·옛 서명 비밀·100건/1MiB 초과·이력 부재는 자동 복원 불가",
+    "현재 결정·이력 조회는 원자적 외부 스냅샷이 아니며 최근 확인 15분은 자체 위험 정책",
+    "실제 JVM 두 개의 SIGKILL/복원; 2분 경과는 임대 시각만 과거로 옮겨 재현",
+    "프로세스 검증은 주기를 끄고 실제 서비스 진입점 호출; 전용 스케줄러 수명은 별도 단위 검증",
+    "선택 회귀이며 전체 저장소 테스트·성능·EC2·실제 공급사/운영 TLS·인증/신고 검증은 아님",
+    "전체 CDD/AML·계정 정보 대조·위험 평가·지속 모니터링·보고는 미완료",
+    "봇 0명·테스트 소유 DB/Kafka만 사용·배포 없음"
+  ]
+}
