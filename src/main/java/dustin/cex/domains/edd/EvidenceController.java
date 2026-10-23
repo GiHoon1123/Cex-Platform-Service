@@ -33,7 +33,7 @@ public class EvidenceController {
     public ResponseEntity<byte[]> view(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable UUID id,@Valid @RequestBody Access body) {
         var view=service.view(userId,sessionId,id,body.reason());
         return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).cacheControl(CacheControl.noStore())
-            .header("Pragma","no-cache").header("X-Content-Type-Options","nosniff")
+            .header("X-Evidence-View-Id",view.viewId().toString()).header("Pragma","no-cache").header("X-Content-Type-Options","nosniff")
             .header("Content-Security-Policy","default-src 'none'; sandbox")
             .header("Content-Disposition","attachment; filename=\""+view.id()+".png\"").body(view.bytes());
     }

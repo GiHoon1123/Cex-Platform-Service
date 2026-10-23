@@ -12,6 +12,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**").allowedOrigins(java.util.stream.Stream.of(origin,operatorOrigin).distinct().toArray(String[]::new))
             .allowedMethods("GET","POST","DELETE","OPTIONS")
-            .allowedHeaders("Authorization","Content-Type","Idempotency-Key");
+            .allowedHeaders("Authorization","Content-Type","Idempotency-Key")
+            // 허용한 프론트 출처가 열람 영수증을 읽어 검토 요청에 연결할 수 있게 이 헤더만 공개한다.
+            .exposedHeaders("X-Evidence-View-Id");
     }
 }

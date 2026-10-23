@@ -23,7 +23,7 @@ public class EvidenceService {
     public record Request(UUID id,long userId,UUID assessmentId,Purpose purpose,Instant expiresAt,UUID evidenceId,String status) {}
     public record Receipt(UUID id,UUID requestId,int originalBytes,int viewBytes,String status) {}
     /** 원본 이미지·암호문·개인 이름은 기본 문자열 출력과 메타데이터 응답에 포함하지 않는다. */
-    public record View(UUID id,byte[] bytes) {@Override public String toString() {return "View[자료 생략]";}}
+    public record View(UUID id,UUID viewId,byte[] bytes) {@Override public String toString() {return "View[자료 생략]";}}
     private final JdbcTemplate jdbc;private final UserRepository users;private final RefreshTokenRepository sessions;
     private final OperatorSessionPolicy policy;private final EvidenceCrypto crypto;private final EvidenceImage images;
     private final AuditService audit;private final TransactionTemplate tx;
@@ -88,7 +88,11 @@ public class EvidenceService {
             // 같은 운영자의 무제한 자료 반출을 막는 실행 한도다. 최근 인증은 현재 저장된 상태로 다시 확인한다.
             if(jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE actor_id=? AND action='EDD_EVIDENCE_VIEWED' AND outcome='SUCCESS' AND occurred_at>clock_timestamp()-interval '5 minutes'",Long.class,actor)>=20) throw denied(HttpStatus.TOO_MANY_REQUESTS);
             byte[] view=crypto.decrypt((String)e.get("key_id"),context(id,r)+":VIEW",(byte[])e.get("view_cipher"));
-            audit.record(actor,"EDD_EVIDENCE_VIEWED","edd-evidence:"+id,"SUCCESS",reason.name());return new View(id,view);
+            // 실제 반환 시점의 평가·사건·운영 인물·세션을 묶는다. 옛 열람을 새 심사의 근거로 재사용하지 않는다.
+            var c=jdbc.queryForMap("SELECT latest_assessment,revision FROM edd_cases WHERE id=?",r.get("case_id"));UUID receipt=UUID.randomUUID();
+            jdbc.update("INSERT INTO edd_evidence_views(id,evidence_id,actor_id,actor_person,actor_version,session_id,assessment_id,case_revision,key_id) VALUES(?,?,?,?,?,?,?,?,?)",
+                receipt,id,actor,operator.getOperatorPersonId(),operator.getVersion(),sid,c.get("latest_assessment"),c.get("revision"),crypto.keyId());
+            audit.record(actor,"EDD_EVIDENCE_VIEWED","edd-evidence:"+id,"SUCCESS",reason.name());return new View(id,receipt,view);
         }));
     }
     private UUID currentCase(long user,UUID assessment) {

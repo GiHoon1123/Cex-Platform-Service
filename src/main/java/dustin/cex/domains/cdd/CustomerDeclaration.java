@@ -22,10 +22,12 @@ public record CustomerDeclaration(String fullName,LocalDate dateOfBirth,String n
                 || expectedMonthlyQuote==null || expectedMonthlyQuote.signum()<=0 || expectedMonthlyQuote.scale()>9
                 || expectedMonthlyQuote.precision()-(long)expectedMonthlyQuote.scale()>21) throw invalid();
         return new CustomerDeclaration(name(fullName),dateOfBirth,country(nationality),country(residenceCountry),
-            plain(address,300),occupation,purpose,sourceOfFunds,expectedMonthlyQuote.stripTrailingZeros(),beneficialOwnerSelf,pep);
+            address(address),occupation,purpose,sourceOfFunds,expectedMonthlyQuote.stripTrailingZeros(),beneficialOwnerSelf,pep);
     }
     /** 문장 부호·발음·로마자 표기를 바꾸지 않는다. 느슨한 유사도 판정으로 다른 사람을 연결하지 않는다. */
     public static String name(String value) {return plain(value,150).toUpperCase(Locale.ROOT);}
+    /** 주소의 문장 부호·번역·도로명 별칭은 추측하지 않고 공백과 유니코드 표현만 정리한다. */
+    public static String address(String value) {return plain(value,300);}
     public static String country(String value) {if(value==null || !COUNTRIES.contains(value)) throw invalid();return value;}
     private static String plain(String value,int max) {
         if(value==null || value.length()>max) throw invalid();
