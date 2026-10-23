@@ -160,6 +160,8 @@ public class EddService {
         if(finding!=Finding.CORRECTED_SIGNED_IDENTITY) {if(until!=null) throw deny(HttpStatus.BAD_REQUEST);return null;}
         // 추가 자료는 아직 사실 검증을 마치지 않았다. 단순 신원 정정 종결로 자료 검토를 건너뛰지 않는다.
         if(jdbc.queryForObject("SELECT count(*) FROM edd_evidence_requests WHERE case_id=?",Long.class,c.id())>0) throw deny(HttpStatus.CONFLICT);
+        // 보고 여부 판단은 위험 해소가 아니다. 단순 신원 정정으로 별도 준법 검토를 건너뛰지 않는다.
+        if(jdbc.queryForObject("SELECT count(*) FROM compliance_reviews WHERE case_id=?",Long.class,c.id())>0)throw deny(HttpStatus.CONFLICT);
         // PEP·제재 의심·실소유자·국가·목적·중복 신원은 신원 재제출만으로 해소되지 않는다.
         if(c.reviewReasons().isEmpty() || !c.reviewReasons().stream().allMatch("IDENTITY_MISMATCH"::equals)
                 || !a.get("outcome").equals("STANDARD") || !CddService.POLICY.equals(a.get("policy_version")) || !crypto.keyId().equals(a.get("key_id"))) throw deny(HttpStatus.CONFLICT);

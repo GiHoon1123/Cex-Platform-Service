@@ -45,6 +45,7 @@ public class AmlResolutionPolicy {
         long other=jdbc.queryForObject("SELECT count(*) FROM cdd_assessments WHERE user_id=? AND outcome='REVIEW_REQUIRED' AND reasons<>'AML_REVIEW_REQUIRED'",Long.class,user);
         if(other>0||!"AML_REVIEW_REQUIRED".equals(row.get("reasons"))||!"REVIEW_REQUIRED".equals(row.get("outcome")))return denied("OTHER_RISK_REQUIRES_REVIEW");
         if(jdbc.queryForObject("SELECT count(*) FROM edd_evidence_requests WHERE case_id=?",Long.class,row.get("id"))>0)return denied("ADDITIONAL_EVIDENCE_UNRESOLVED");
+        if(jdbc.queryForObject("SELECT count(*) FROM compliance_reviews WHERE case_id=?",Long.class,row.get("id"))>0)return denied("COMPLIANCE_REVIEW_UNRESOLVED");
         Instant now=Instant.now();
         if(!crypto.keyId().equals(row.get("key_id"))||!CddService.POLICY.equals(row.get("policy_version"))||!"VERIFIED".equals(row.get("identity_status"))
             ||row.get("valid_until")==null||!((Timestamp)row.get("valid_until")).toInstant().isAfter(now)

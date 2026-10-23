@@ -60,6 +60,12 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*/aml-sources","/api/admin/edd/customers/*/aml-investigations").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/aml-sources/*/inspect","/api/admin/edd/aml-investigations/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/aml-sources/*/investigations").access(audited(audit,sessions,"OPERATOR"))
+                // 비공개 보고 검토는 일반 EDD·감사 역할에 포괄적으로 열지 않는다. 실제 배정은 서비스가 검사한다.
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/reviews").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews/*/approve/options","/api/admin/compliance/reviews/*/reject/options",
+                    "/api/admin/compliance/reviews/*/approve","/api/admin/compliance/reviews/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*/aml-resolution").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/customers/*/reports").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/reports/*/inspect").access(audited(audit,sessions,"APPROVER"))

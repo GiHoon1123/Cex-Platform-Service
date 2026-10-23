@@ -26,7 +26,7 @@ import tools.jackson.databind.node.*;
 /** 실제 공급사 서명·후보 조사·독립 보안키와 금융 정책으로 제한적 종결 및 주문 재개를 검증한다. */
 @EnabledIfEnvironmentVariable(named="CEX_TEST_DATABASE_URL",matches=".+")
 class AmlResolutionIntegrationTest extends EddTestSupport {
-    @Autowired AmlInvestigationService investigations;@Autowired EvidenceService evidence;@Autowired AmlResolutionPolicy resolutionPolicy;
+    @Autowired ReportingReviewService reporting;@Autowired AmlInvestigationService investigations;@Autowired EvidenceService evidence;@Autowired AmlResolutionPolicy resolutionPolicy;
     UUID attempt;Map<String,Object> event;ObjectNode decision;ArrayNode nodes;long time;
     void startRisk(int hits) throws Exception {
         attempt=kyc.start(customer.getId(),sid,UUID.randomUUID()).status().attemptId();time=Instant.now().getEpochSecond()-20;
@@ -119,6 +119,12 @@ class AmlResolutionIntegrationTest extends EddTestSupport {
     }
     @Test void sameProviderTimeWithNewEventIdCannotReplaceNewResolutionEvidence() throws Exception {
         ready(1);time--;send("Approved");investigateAll();assertEquals("NEW_SIGNED_RESOLUTION_REQUIRED",eligibility().unmetCondition());assertThrows(ResponseStatusException.class,this::resolution);
+    }
+
+    @Test void confidentialReportingReviewCannotBeBypassedByNarrowFalsePositiveClosure() throws Exception {
+        ready(1);var referral=propose(EddService.Finding.COMPLIANCE_ESCALATION);decide(referral,true,proof(checker,referral,true));
+        reporting.propose(maker.user().getId(),maker.sid(),referral.payload().id(),checker.user().getId(),UUID.randomUUID(),new ReportingReviewService.Facts(ReportingReviewService.Conclusion.REPORT_REQUIRED,"현재 후보의 별도 보고 검토 사유"));
+        assertEquals("COMPLIANCE_REVIEW_UNRESOLVED",eligibility().unmetCondition());assertThrows(ResponseStatusException.class,this::resolution);blocked();
     }
 
 }
