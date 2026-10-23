@@ -109,6 +109,7 @@ class KycIntegrationTest {
     }
     @Autowired dustin.cex.domains.cdd.CddService cdd;
     @Autowired dustin.cex.domains.cdd.EddService edd;
+    @Autowired dustin.cex.domains.edd.AmlSource amlSources;
     @Autowired KycReconciliationService reconciliation;
     @Autowired DiditSettings settings;@Autowired DiditClient didit;
     @Autowired KycService service;@Autowired DiditWebhookVerifier verifier;@Autowired JdbcTemplate jdbc;
@@ -656,7 +657,7 @@ class KycIntegrationTest {
     @Test void cddCurrentPolicyAndKeyMustMatchAssessment() throws Exception {
         UUID id=start();send(event(id,"Approved",now));allowed();
         var wrong=new dustin.cex.domains.cdd.CddService(new dustin.cex.domains.cdd.CddCrypto(
-            Base64.getEncoder().encodeToString(new byte[32]),Base64.getEncoder().encodeToString("12345678901234567890123456789012".getBytes(StandardCharsets.UTF_8)),""),jdbc,JSON,users,sessions,audit,verifier,edd);
+            Base64.getEncoder().encodeToString(new byte[32]),Base64.getEncoder().encodeToString("12345678901234567890123456789012".getBytes(StandardCharsets.UTF_8)),""),jdbc,JSON,users,sessions,audit,verifier,edd,amlSources);
         assertFalse(wrong.permitted(user.getId()));
     }
     @Test void cddHttpRequiresCustomerSessionAndNeverReturnsOriginalPii() throws Exception {

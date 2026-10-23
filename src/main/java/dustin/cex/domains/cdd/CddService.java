@@ -23,11 +23,12 @@ public class CddService {
     public static final String POLICY="CDD_DOMESTIC_INDIVIDUAL_V1";
     private final dustin.cex.domains.kyc.DiditWebhookVerifier verifier;
     private final EddService edd;
+    private final dustin.cex.domains.edd.AmlSource aml;
     private final CddCrypto crypto;private final JdbcTemplate jdbc;private final ObjectMapper json;
     private final UserRepository users;private final RefreshTokenRepository sessions;private final AuditService audit;
     public CddService(CddCrypto crypto,JdbcTemplate jdbc,ObjectMapper json,UserRepository users,
-            RefreshTokenRepository sessions,AuditService audit,dustin.cex.domains.kyc.DiditWebhookVerifier verifier,EddService edd) {
-        this.edd=edd;this.verifier=verifier;this.crypto=crypto;this.jdbc=jdbc;this.json=json;this.users=users;this.sessions=sessions;this.audit=audit;
+            RefreshTokenRepository sessions,AuditService audit,dustin.cex.domains.kyc.DiditWebhookVerifier verifier,EddService edd,dustin.cex.domains.edd.AmlSource aml) {
+        this.aml=aml;this.edd=edd;this.verifier=verifier;this.crypto=crypto;this.jdbc=jdbc;this.json=json;this.users=users;this.sessions=sessions;this.audit=audit;
     }
     public record Status(UUID declarationId,UUID assessmentId,String outcome,List<String> reasons,Instant assessedAt) {}
     @Transactional
@@ -115,6 +116,8 @@ public class CddService {
             reasons.isEmpty()?"INITIAL_CHECKS_PASSED":String.join(",",reasons),identityMac);
         jdbc.update("UPDATE cdd_profiles SET assessment_id=? WHERE user_id=?",assessment,user);
         edd.observe(user,assessment);
+        // 서명 검증된 같은 판정의 후보만 보존한다. 새 자료 저장·감사 실패도 전체 평가와 함께 롤백한다.
+        aml.capture(user,assessment,event,digest,decision);
         audit.record(user,"CDD_ASSESSED","cdd:"+assessment,"SUCCESS",outcome+":"+(reasons.isEmpty()?"INITIAL_CHECKS_PASSED":String.join(",",reasons)));
     }
     /** 신규 주문 예약과 같은 트랜잭션에서 호출한다. 옛 시도·옛 신고·옛 키·옛 판정의 평가는 효력이 없다. */
@@ -136,6 +139,8 @@ public class CddService {
         if(crypto.keyId().equals("UNCONFIGURED")) return "UNCONFIGURED";
         // 누락 노드는 유효 JSON 값이 아니다. 누락을 null로 명시하되 통과 판정은 별도 필수 필드 검사에서 거부한다.
         var evidence=json.createObjectNode();var ids=evidence.putArray("identity");
+        // 후보 내용이 달라졌는데 비어 있지 않다는 사실만 같다고 옛 근거로 재확인하지 않는다.
+        evidence.set("aml_investigation",aml.project(decision).path("screenings"));
         for(var id:decision.path("id_verifications")) {
             var n=ids.addObject();for(String field:List.of("full_name","date_of_birth","nationality")) {if(id.has(field)) n.set(field,id.get(field));else n.putNull(field);}
         }

@@ -190,12 +190,19 @@ public class KycReconciliationService {
         });
     }
 
+    /** 검토/거절 자료도 같은 세션·전체 상태에 결합된 결정이면 후보 대조에 포함한다. */
+    private JsonNode signedDecision(JsonNode event) {
+        var d=event.path("decision");String status=event.path("status").asText();
+        if(status.equals("Approved"))return d;
+        if(Set.of("In Review","Declined").contains(status)&&event.path("session_id").equals(d.path("session_id"))&&event.path("status").equals(d.path("status")))return d;
+        return event;
+    }
     private boolean matchesLatest(Evidence evidence) {
         var events = evidence.events();
         long latest = events.getLast().path("created_at").longValue();
         for (var event : events) {
             if (event.path("created_at").longValue() != latest) continue;
-            var source = event.path("status").asText().equals("Approved") ? event.path("decision") : event;
+            var source = signedDecision(event);
             if (!verifier.digest(projection(source)).equals(evidence.hash())) return false;
         }
         return true;
@@ -207,7 +214,7 @@ public class KycReconciliationService {
         String first=null;
         for(var event:evidence.events()) {
             if(event.path("created_at").longValue()!=latest) continue;
-            var source=event.path("status").asText().equals("Approved")?event.path("decision"):event;
+            var source=signedDecision(event);
             String hash=verifier.digest(projection(source));
             if(first!=null && !first.equals(hash)) return true;
             first=hash;

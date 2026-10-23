@@ -217,11 +217,26 @@ public class KycService {
             }
             jdbc.update("INSERT INTO kyc_events(event_id,attempt_id,payload_hash,provider_time,provider_status,disposition) VALUES(?,?,?,?,?,?)",eventId,attemptId,hash,time,providerStatus,disposition);
             // 서명 검증·최신 이벤트 적용·이력 저장이 모두 끝난 뒤 같은 트랜잭션에서 고객 위험을 평가한다.
-            if(disposition.equals("APPLIED") && state.equals("VERIFIED")) cdd.assess(a.user(),attemptId,eventId,statusDigest,body.path("decision"));
+            if(disposition.equals("APPLIED") && (state.equals("VERIFIED") || reviewableAml(body,sessionId)))
+                cdd.assess(a.user(),attemptId,eventId,statusDigest,body.path("decision"));
             if(attemptId.equals(active(a.user()))) touchReconciliation(attemptId,disposition.equals("APPLIED") && !state.equals("CONFLICT"),
                 disposition.equals("TIME_CONFLICT") || disposition.equals("REVIEW_REQUIRED") || (disposition.equals("APPLIED") && state.equals("CONFLICT")));
             audit.record(a.user(),recovered?"KYC_EVENT_RECOVERED":"KYC_EVENT_RECEIVED","kyc:"+eventId,"SUCCESS",disposition);
         });
+    }
+    /**
+     * AML 후보 때문에 전체 상태가 검토/거절이어도 조사 근거는 필요하다.
+     * 신원 통과로 바꾸지 않고, 같은 세션·상태에 결합된 실제 위험 자료만 CDD 검토로 넘긴다.
+     */
+    private boolean reviewableAml(JsonNode body,UUID session) {
+        if(!Set.of("In Review","Declined").contains(body.path("status").asText()))return false;
+        var d=body.path("decision");if(!session.toString().equals(d.path("session_id").asText())||!body.path("status").equals(d.path("status")))return false;
+        var checks=d.path("aml_screenings");if(!checks.isArray())return false;
+        for(var check:checks)if(Set.of("In Review","Declined").contains(check.path("status").asText())
+                || (check.path("total_hits").isNumber()&&check.path("total_hits").decimalValue().signum()>0)
+                || (check.path("hits").isArray()&&!check.path("hits").isEmpty())
+                || (check.path("warnings").isArray()&&!check.path("warnings").isEmpty()))return true;
+        return false;
     }
     private void touchReconciliation(UUID id,boolean fresh,boolean clear) {
         // 중복 이벤트에서는 이 메서드에 도달하지 않는다. 재전송만으로 확인 기한을 연장하지 않는다.

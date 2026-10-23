@@ -52,6 +52,17 @@ SELECT 'WEALTH',r.id,jsonb_build_object('kind','WEALTH','id',r.id,'assessmentId'
  'evidenceIds',jsonb_build_array(r.payload::jsonb->'openingEvidence',r.payload::jsonb->'changesEvidence',r.payload::jsonb->'closingEvidence'),'payloadHash',r.payload_hash,'reasons',r.payload::jsonb->'reasons',
  'evidenceKeyId',r.payload::jsonb->'evidenceKeyId','cddKeyId',r.payload::jsonb->'cddKeyId','assurance',r.payload::jsonb->>'assurance')
  FROM edd_wealth_reviews r JOIN scope s ON s.case_id=r.case_id AND s.user_id=r.user_id LEFT JOIN edd_wealth_decisions d ON d.review_id=r.id
+ UNION ALL
+SELECT 'AML_SOURCE',r.id,jsonb_build_object('kind','AML_SOURCE','id',r.id,'assessmentId',r.assessment_id,'eventId',r.event_id,
+ 'statusDigest',r.status_digest,'contentMac',r.content_mac,'cddKeyId',r.key_id,'policy','EDD_SIGNED_AML_SOURCE_V1',
+ 'status','PROVIDER_ASSERTIONS_RETAINED','assurance','PROVIDER_ASSERTIONS_ONLY_NOT_ADJUDICATED')
+ FROM edd_aml_sources r JOIN scope s ON s.case_id=r.case_id AND s.user_id=r.user_id
+ UNION ALL
+SELECT 'AML_INVESTIGATION',r.id,jsonb_build_object('kind','AML_INVESTIGATION','id',r.id,'assessmentId',r.payload::jsonb->'assessmentId',
+ 'caseRevision',r.payload::jsonb->'caseRevision','sourceId',r.source_id,'sourceMac',r.payload::jsonb->'sourceMac',
+ 'policy',r.payload::jsonb->'policy','finding',r.payload::jsonb->'finding','payloadHash',r.payload_hash,'notesMac',r.payload::jsonb->'notesMac',
+ 'evidenceKeyId',r.payload::jsonb->'evidenceKeyId','status','RECORDED','assurance',r.payload::jsonb->>'assurance')
+ FROM edd_aml_investigations r JOIN scope s ON s.case_id=r.case_id AND s.user_id=r.user_id
 ), bundle AS (SELECT coalesce(jsonb_agg(item ORDER BY kind,id),'[]'::jsonb)::text AS items FROM records)         """;
     /** 호출 서비스가 고객·사건을 잠근 같은 트랜잭션에서만 만든다. 요청·서명 결합·감사 실패 시 함께 취소된다. */
     public Summary capture(UUID caseId,long user) {
