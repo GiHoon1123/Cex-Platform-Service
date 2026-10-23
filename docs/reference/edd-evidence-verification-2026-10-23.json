@@ -1,0 +1,420 @@
+{
+  "checked_date": "2026-10-23",
+  "scope": "요청한 EDD 실제 PNG의 원본/열람본 분리 암호화·권한/사유/최근 인증·필수 감사 열람·미검증 사건 차단",
+  "implementation_commit": "efd8a08bceb9b11652f60fad2cded436d0e5cf5d",
+  "junit": {
+    "tests": 650,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suite_counts": {
+    "edd_and_evidence": 84,
+    "kyc": 150,
+    "bound": 190,
+    "mfa": 42,
+    "financial": 183,
+    "market": 1
+  },
+  "new_junit_cases": 49,
+  "evidence_tests": {
+    "integration": 26,
+    "crypto": 9,
+    "image": 14
+  },
+  "previous_edd_cases": 35,
+  "process_scenarios": 15,
+  "new_process_scenarios": 0,
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_edd.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 23.54
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc_recovery.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 9.01
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_bound_approvals.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 170.66
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_mfa.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 19.23
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_engine_inbox.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 31.19
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.45
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 15.8
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_order_idempotency.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 17.59
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 23.48
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.27
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.16
+    },
+    {
+      "command": [
+        "./gradlew",
+        "compileTestJava",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "purpose": "사용하지 않는 테스트 import 정리 후 최종 컴파일"
+    }
+  ],
+  "reports": {
+    "edd_and_evidence": {
+      "container": "cex-edd-7ff160b1aae8",
+      "exit": 0,
+      "tests": {
+        "tests": 84,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "kyc": {
+      "container": "cex-kyc-8513c0283fb4",
+      "exit": 0,
+      "tests": {
+        "tests": 150,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "bound": {
+      "container": "cex-bound-approvals-b6c0025ba991",
+      "groups": [
+        {
+          "name": "bound",
+          "exit": 0,
+          "tests": {
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "roles",
+          "exit": 0,
+          "tests": {
+            "tests": 51,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "lifecycle",
+          "exit": 0,
+          "tests": {
+            "tests": 37,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "security",
+          "exit": 0,
+          "tests": {
+            "tests": 40,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 190,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "mfa": {
+      "container": "cex-operator-mfa-068d29ad1a93",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "financial": {
+      "container": "cex-inbox-290ee78a5da1",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "kyc_process": {
+      "container": "cex-kyc-recovery-b0e542664c3e",
+      "checks": [
+        {
+          "test": "kill_during_provider_get_preserves_pending_attempt_and_lease",
+          "passed": true
+        },
+        {
+          "test": "fresh_jvm_recovers_expired_lease_and_original_signed_approval",
+          "passed": true
+        },
+        {
+          "test": "subsequent_reconciliation_keeps_one_receipt_and_original_expiry",
+          "passed": true
+        }
+      ],
+      "provider": "loopback",
+      "bots_disabled": true,
+      "killed_exit": -9,
+      "exit": 0,
+      "jvm_runs": 2,
+      "container_removed": true
+    },
+    "operator_admin_process": {
+      "database": "cex_idempotency_247763ba74ce",
+      "temporary_database_removed": true,
+      "platform_runs": 1,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "dedicated_grant_without_ddl_or_workers",
+          "passed": true
+        },
+        {
+          "test": "reject_financial_customer_and_duplicate_grant",
+          "passed": true
+        }
+      ]
+    },
+    "order_process": {
+      "database": "cex_idempotency_1b2eb4ccc7da",
+      "temporary_database_removed": true,
+      "platform_runs": 2,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "test_concurrent_same_key",
+          "new": 1,
+          "existing": 11,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_concurrent_same_key_different_content",
+          "new": 1,
+          "existing": 5,
+          "conflicts": 6,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_invalid_balance_and_unrepresentable_split_roll_back_everything",
+          "rollback_cases": 2,
+          "engine_posts": 0
+        },
+        {
+          "test": "test_invalid_header_and_command_have_no_financial_effect",
+          "statuses": [
+            400,
+            400,
+            400
+          ],
+          "engine_posts": 0
+        },
+        {
+          "test": "test_key_is_scoped_to_authenticated_user",
+          "users": 2,
+          "engine_posts": 2
+        },
+        {
+          "test": "test_lost_response_then_same_key",
+          "statuses": [
+            202,
+            200
+          ],
+          "engine_posts": 1
+        },
+        {
+          "test": "test_market_original_budget_survives_order_changes",
+          "quote_amount": "123.250000001",
+          "replay": 200,
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_process_restart_uses_committed_key",
+          "after_restart": 200,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_same_key_different_content",
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_unrepresentable_commands_are_rejected_without_financial_effect",
+          "rejections": 2,
+          "engine_posts": 0
+        }
+      ]
+    },
+    "market": {
+      "postgres": "cex-market-pg-cd996ef1ae",
+      "kafka": "cex-market-broker-702f189f41",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    },
+    "dependency_audit": {
+      "checked_at": "2026-10-23T03:08:56.774262+00:00",
+      "status": "NO_KNOWN_FINDINGS",
+      "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+      "package_versions": 222,
+      "findings": []
+    },
+    "dependency_integrity": {
+      "check": "gradle_rejects_altered_checksum",
+      "original_cache_modified": false,
+      "gradle_exit": 1,
+      "passed": true,
+      "temporary_copy_removed": true
+    }
+  },
+  "source_excerpts": [
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/EvidenceImage.java",
+      "first_line": 35,
+      "lines": 4,
+      "sha256": "1f7c5c7fd73d4b25b785382f7ed75b1ad5376c34592979c7b1541ade0ba73379"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/EvidenceService.java",
+      "first_line": 73,
+      "lines": 4,
+      "sha256": "7d82a4405eb2a8d5dfadefd396577869086c1996f8b6dee0e9d6c743bea70592"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/EvidenceCrypto.java",
+      "first_line": 45,
+      "lines": 4,
+      "sha256": "a5cfa9b1b7fd33ae51e9f381848bfe1435bdcaebdc6b2024a42d86a1974db937"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/EvidenceService.java",
+      "first_line": 90,
+      "lines": 3,
+      "sha256": "c54f37186ce53e6daa8e6320419781d78aefb432b4d20b6d30ccbc402028dbe2"
+    }
+  ],
+  "all_previous_excerpts_rechecked": 70,
+  "intermediate_failures": [
+    "Java var의 복수 선언은 허용되지 않아 선언을 각각 분리함",
+    "서로 다른 Spring 컨텍스트의 create-drop이 실행 소유 DB 사용자 ID를 재생성해 기존 보안 테이블과 충돌함. 공통 실제 준비 클래스와 동일 속성으로 컨텍스트를 공유하고 기존 35개와 신규 49개를 다시 검증함"
+  ],
+  "warnings": [
+    "deprecated API 컴파일 안내",
+    "기존 unchecked 컴파일 안내",
+    "JVM/Mockito 클래스 공유 제한 안내",
+    "테스트 Swagger 안내"
+  ],
+  "limitations": [
+    "실제 고객 자료·유료 Didit·실물 보안키·운영 배포 없음",
+    "최대 1 MiB PNG·400만 픽셀·4 MiB 열람본만 지원. PDF·JPEG·OCR·파일 진위·악성 코드 검사·완전한 파서 프로세스 격리는 미구현",
+    "자료는 RECEIVED_UNVERIFIED로만 기록. 독립 사실 검증·위험 해소·종결 승인 경로는 후속",
+    "증빙 요청이 있는 사건은 옛 단순 신원 정정 종결을 거부. PEP/AML/기타 위험과 기존 금융 게이트는 유지",
+    "새 증빙 전용 JVM 종료/디스크 손실 테스트는 없음. 15개는 기존 KYC 복원/관리 도구/주문 프로세스 시나리오",
+    "키 보관/교체/복구·최소 수집/고지·정확한 보유/법정 보존/분리/파기·DLP/반출 승인·TLS/전역 자원 제한·외부 심사/신고는 운영 전 별도 과제",
+    "현재 목록은 최근 50개. 고객 저장 상한은 최악 열람본 크기로 보수적으로 계산",
+    "선택 회귀이며 전체 테스트·새 성능 측정이 아님"
+  ],
+  "dependency_changes": false,
+  "engine_core_changed": false,
+  "frontend_code_changed": false,
+  "bots_disabled": true,
+  "deployed": false,
+  "existing_development_database_changed": false
+}
