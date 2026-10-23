@@ -186,6 +186,7 @@ class EddIntegrationTest extends EddTestSupport {
     }
     @Test void invalidOriginOrMissingUserVerificationNeverConsumesBusinessDecision() throws Exception {
         var r=closure();
+        service.inspect(checker.user().getId(),checker.sid(),r.payload().id(),0);
         for(boolean userVerified:new boolean[]{false,true}) {
             var o=service.options(checker.user().getId(),checker.sid(),r.payload().id(),r.payloadHash(),true).authentication();
             var p=new OperatorMfaService.AuthorizationProof(o.challengeId(),checker.key().assertion(o,userVerified?"https://wrong.test":"http://localhost:3003",userVerified,counter.incrementAndGet(),null));
@@ -205,6 +206,7 @@ class EddIntegrationTest extends EddTestSupport {
     }
     @Test void completeApprovalHttpUsesStoredPayloadAndActualSignature() throws Exception {
         var r=closure();String prefix="/api/admin/edd/reports/"+r.payload().id();
+        mvc.perform(post(prefix+"/inspect").header("Authorization","Bearer "+checker.access())).andExpect(status().isOk());
         var response=mvc.perform(post(prefix+"/approve/options").header("Authorization","Bearer "+checker.access()).contentType(MediaType.APPLICATION_JSON)
             .content(json.writeValueAsString(Map.of("payloadHash",r.payloadHash())))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         var node=json.readTree(response).path("authentication");var options=new OperatorMfaService.Options(UUID.fromString(node.path("challengeId").asText()),node.path("publicKey"));

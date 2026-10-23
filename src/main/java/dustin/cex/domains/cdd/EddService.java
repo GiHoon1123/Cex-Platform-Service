@@ -3,6 +3,7 @@ package dustin.cex.domains.cdd;
 import dustin.cex.domains.auth.model.entity.*;
 import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.security.*;
+import dustin.cex.domains.edd.EddDossier;
 import dustin.cex.domains.kyc.DiditWebhookVerifier;
 import java.sql.Timestamp;
 import java.time.*;
@@ -24,20 +25,23 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Service
 public class EddService {
+    public static final String REVIEW_POLICY="EDD_CASE_DOSSIER_REVIEW_V1";
     public enum Finding { AWAITING_EVIDENCE, COMPLIANCE_ESCALATION, CORRECTED_SIGNED_IDENTITY }
     public record Case(UUID id,long userId,long revision,UUID firstAssessment,UUID latestAssessment,String state,Instant validUntil,List<String> reviewReasons) {}
     /** 승인자가 볼 근거와 해시 입력이 같은 값이다. 개인정보 대신 실제 불변 평가와 서명 이벤트 식별자를 고정한다. */
     public record Payload(UUID id,UUID caseId,long caseRevision,long userId,UUID assessmentId,UUID eventId,UUID attemptId,
         String statusDigest,String keyId,String policyVersion,List<String> historicalReasons,Finding finding,Instant validUntil,
-        long requesterId,UUID requesterPerson,long requesterVersion,Instant expiresAt) {}
+        long requesterId,UUID requesterPerson,long requesterVersion,Instant expiresAt,String reviewPolicy,EddDossier.Summary dossier) {}
     public record Report(Payload payload,String payloadHash,String status) {}
     public record Confirmation(Report report,boolean approve,OperatorMfaService.Options authentication) {}
+    public record Inspection(Report report,EddDossier.Page dossier) {}
+    private final EddDossier dossiers;
     private final JdbcTemplate jdbc;private final UserRepository users;private final OperatorSessionPolicy policy;
     private final OperatorMfaService mfa;private final AuditService audit;private final ObjectMapper json;
     private final DiditWebhookVerifier verifier;private final CddCrypto crypto;private final TransactionTemplate tx;
     public EddService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy policy,OperatorMfaService mfa,
-            AuditService audit,ObjectMapper json,DiditWebhookVerifier verifier,CddCrypto crypto,PlatformTransactionManager manager) {
-        this.jdbc=jdbc;this.users=users;this.policy=policy;this.mfa=mfa;this.audit=audit;this.json=json;
+            AuditService audit,ObjectMapper json,DiditWebhookVerifier verifier,CddCrypto crypto,PlatformTransactionManager manager,EddDossier dossiers) {
+        this.dossiers=dossiers;this.jdbc=jdbc;this.users=users;this.policy=policy;this.mfa=mfa;this.audit=audit;this.json=json;
         this.verifier=verifier;this.crypto=crypto;tx=new TransactionTemplate(manager);
     }
     /** 호출한 CDD 서비스가 고객 행을 잠그고 평가·현재 포인터를 먼저 저장한 같은 트랜잭션에서 실행한다. */
@@ -71,12 +75,14 @@ public class EddService {
             if(c==null) {observe(user,expectedAssessment);c=cases(user,true);}
             if(c==null || !c.latestAssessment().equals(expectedAssessment)) throw deny(HttpStatus.CONFLICT);
             validateFinding(c,assessment,finding,until);
-            if(jdbc.queryForObject("SELECT count(*) FROM edd_reports WHERE case_id=? AND payload::jsonb->>'caseRevision'=? AND payload::jsonb->>'assessmentId'=? AND expires_at>clock_timestamp() AND NOT EXISTS(SELECT 1 FROM edd_decisions d WHERE d.report_id=edd_reports.id)",Long.class,c.id(),Long.toString(c.revision()),expectedAssessment.toString())>0)
+            var dossier=dossiers.capture(c.id(),user);
+            // 변경 번호가 같아도 새 자료 요청·미결 관찰이 있으면 새 근거로 요청할 수 있다.
+            if(jdbc.queryForObject("SELECT count(*) FROM edd_reports WHERE case_id=? AND payload::jsonb->>'caseRevision'=? AND payload::jsonb->>'assessmentId'=? AND payload::jsonb->>'reviewPolicy'=? AND payload::jsonb->'dossier'->>'digest'=? AND expires_at>clock_timestamp() AND NOT EXISTS(SELECT 1 FROM edd_decisions d WHERE d.report_id=edd_reports.id)",Long.class,c.id(),Long.toString(c.revision()),expectedAssessment.toString(),REVIEW_POLICY,dossier.digest())>0)
                 throw deny(HttpStatus.CONFLICT);
             Instant expires=micros(Instant.now().plusSeconds(600));
             var p=new Payload(UUID.randomUUID(),c.id(),c.revision(),user,expectedAssessment,(UUID)assessment.get("event_id"),(UUID)assessment.get("attempt_id"),
                 (String)assessment.get("status_digest"),(String)assessment.get("key_id"),(String)assessment.get("policy_version"),c.reviewReasons(),finding,micros(until),
-                actor,maker.getOperatorPersonId(),maker.getVersion(),expires);
+                actor,maker.getOperatorPersonId(),maker.getVersion(),expires,REVIEW_POLICY,dossier);
             String hash=verifier.digest(json.valueToTree(p));
             jdbc.update("INSERT INTO edd_reports(id,case_id,user_id,requester_id,request_key,payload,payload_hash,expires_at) VALUES(?,?,?,?,?,?,?,?)",
                 p.id(),c.id(),user,actor,request,json.writeValueAsString(p),hash,Timestamp.from(expires));
@@ -84,15 +90,33 @@ public class EddService {
             audit.record(actor,"EDD_PROPOSED","edd-report:"+p.id(),"SUCCESS",finding+":"+hash);return read(p.id());
         }));
     }
+    /** 승인자가 현재 요청에 고정된 모든 페이지를 직접 제공받아야 옵션·결정을 진행할 수 있다. */
+    public Inspection inspect(long actor,UUID sid,UUID id,int page) {
+        return attempt(actor,"EDD_DOSSIER_INSPECT",()->tx.execute(s->{
+            var r=read(id);check(actor,sid,r,r.payloadHash(),false);var result=dossiers.page(r.payload().dossier(),page);
+            var checker=users.findById(actor).orElseThrow();dossiers.viewed(id,r.payload().dossier(),page,checker,sid);
+            audit.record(actor,"EDD_DOSSIER_INSPECTED","edd-report:"+id,"SUCCESS",r.payload().dossier().digest()+":page="+page);
+            return new Inspection(r,result);
+        }));
+    }
+    /** 과거 불변 목록은 감사자가 조회할 수 있다. 이 조회를 승인자의 현재 열람 영수증으로 세지 않는다. */
+    public Inspection dossier(long actor,UUID sid,UUID id,int page) {
+        return attempt(actor,"EDD_DOSSIER_READ",()->tx.execute(s->{
+            var r=read(id);var locked=lock(actor,r.payload().userId());policy.requireFresh(locked.get(actor),sid,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);
+            customer(locked.get(r.payload().userId()));if(!REVIEW_POLICY.equals(r.payload().reviewPolicy()))throw deny(HttpStatus.CONFLICT);
+            dossiers.verify(r.payload().dossier(),r.payload().caseId(),r.payload().userId());var result=dossiers.page(r.payload().dossier(),page);
+            audit.record(actor,"EDD_DOSSIER_READ","edd-report:"+id,"SUCCESS","HISTORICAL_METADATA_ONLY");return new Inspection(r,result);
+        }));
+    }
     public Confirmation options(long actor,UUID sid,UUID id,String hash,boolean approve) {
         return attempt(actor,"EDD_OPTIONS",()->tx.execute(status->{
-            var r=read(id);check(actor,sid,r,hash);
+            var r=read(id);check(actor,sid,r,hash,true);
             return new Confirmation(r,approve,mfa.approvalOptions(actor,sid,OperatorMfaService.ApprovalKind.EDD_REVIEW,id,hash,approve));
         }));
     }
     public Report decide(long actor,UUID sid,UUID id,String hash,boolean approve,OperatorMfaService.AuthorizationProof proof) {
         return attempt(actor,"EDD_DECIDE",()->tx.execute(status->{
-            var r=read(id);var c=check(actor,sid,r,hash);
+            var r=read(id);var c=check(actor,sid,r,hash,true);
             mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.EDD_REVIEW,id,hash,approve,proof);
             var checker=users.findById(actor).orElseThrow();
             jdbc.update("INSERT INTO edd_decisions(report_id,approver_id,approver_person,approved) VALUES(?,?,?,?)",id,actor,checker.getOperatorPersonId(),approve);
@@ -104,7 +128,7 @@ public class EddService {
             audit.record(actor,"EDD_DECIDED","edd-report:"+id,"SUCCESS",(approve?"APPROVED:":"REJECTED:")+hash);return read(id);
         }));
     }
-    private Case check(long actor,UUID sid,Report r,String hash) {
+    private Case check(long actor,UUID sid,Report r,String hash,boolean requireInspection) {
         var p=r.payload();var locked=lock(actor,p.requesterId(),p.userId());var checker=locked.get(actor);var maker=locked.get(p.requesterId());
         policy.requireFresh(checker,sid,UserRole.APPROVER);customer(locked.get(p.userId()));
         if(maker==null || !maker.isAuthenticationAllowed() || maker.getRole()!=UserRole.OPERATOR || maker.getVersion()!=p.requesterVersion()
@@ -113,6 +137,10 @@ public class EddService {
         if(!read(p.id()).status().equals("PENDING") || !r.payloadHash().equals(hash) || !verifier.digest(json.valueToTree(p)).equals(hash)
                 || c==null || c.revision()!=p.caseRevision() || !c.id().equals(p.caseId()) || !p.assessmentId().equals(current.get("id"))
                 || !p.assessmentId().equals(c.latestAssessment()) || !c.reviewReasons().equals(p.historicalReasons())) throw deny(HttpStatus.CONFLICT);
+        if(!REVIEW_POLICY.equals(p.reviewPolicy()))throw deny(HttpStatus.CONFLICT);
+        dossiers.verify(p.dossier(),c.id(),p.userId());
+        if(!p.dossier().digest().equals(dossiers.liveDigest(c.id(),p.userId())))throw deny(HttpStatus.CONFLICT);
+        if(requireInspection)dossiers.requireAllPages(p.id(),p.dossier(),checker,sid);
         validateFinding(c,current,p.finding(),p.validUntil());return c;
     }
     private void validateFinding(Case c,Map<String,Object> a,Finding finding,Instant until) {
@@ -152,6 +180,7 @@ public class EddService {
         var rows=jdbc.queryForList("SELECT r.*,d.approved FROM edd_reports r LEFT JOIN edd_decisions d ON d.report_id=r.id WHERE r.id=?",id);
         if(rows.isEmpty()) throw deny(HttpStatus.NOT_FOUND);var row=rows.getFirst();
         var p=json.readValue((String)row.get("payload"),Payload.class);
+        if(!verifier.digest(json.readTree((String)row.get("payload"))).equals(row.get("payload_hash"))||!p.id().equals(id))throw new IllegalStateException("검토 요청 해시 검증 실패");
         String status=row.get("approved")==null?(p.expiresAt().isAfter(Instant.now())?"PENDING":"EXPIRED"):(Boolean.TRUE.equals(row.get("approved"))?"APPROVED":"REJECTED");
         return new Report(p,(String)row.get("payload_hash"),status);
     }

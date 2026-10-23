@@ -106,6 +106,7 @@ abstract class EddTestSupport {
         finding==EddService.Finding.CORRECTED_SIGNED_IDENTITY?Instant.now().plusSeconds(3600):null);}
     EddService.Report closure() throws Exception {reviewed();corrected();return propose(EddService.Finding.CORRECTED_SIGNED_IDENTITY);}
     OperatorMfaService.AuthorizationProof proof(Account a,EddService.Report r,boolean approve) throws Exception {
+        for(int page=0;page<r.payload().dossier().pageCount();page++)service.inspect(a.user().getId(),a.sid(),r.payload().id(),page);
         var o=service.options(a.user().getId(),a.sid(),r.payload().id(),r.payloadHash(),approve).authentication();
         return new OperatorMfaService.AuthorizationProof(o.challengeId(),a.key().assertion(o,"http://localhost:3003",true,counter.incrementAndGet(),null));
     }

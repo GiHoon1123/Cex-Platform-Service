@@ -58,6 +58,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*/evidence-requests").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/evidence/*/view").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/customers/*/reports").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/edd/reports/*/inspect").access(audited(audit,sessions,"APPROVER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/edd/reports/*/dossier").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/reports/*/approve/options","/api/admin/edd/reports/*/reject/options",
                     "/api/admin/edd/reports/*/approve","/api/admin/edd/reports/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*","/api/admin/edd/customers/*/reports").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))

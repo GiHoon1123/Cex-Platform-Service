@@ -22,6 +22,10 @@ public class EddController {
             @PathVariable long user,@RequestHeader("Idempotency-Key") UUID key,@Valid @RequestBody Proposal b) {
         return service.propose(userId,sessionId,user,b.assessmentId(),key,b.finding(),b.validUntil());
     }
+    @PostMapping("/reports/{id}/inspect") public EddService.Inspection inspect(@RequestAttribute long userId,@RequestAttribute UUID sessionId,
+            @PathVariable UUID id,@RequestParam(defaultValue="0") int page) {return service.inspect(userId,sessionId,id,page);}
+    @GetMapping("/reports/{id}/dossier") public EddService.Inspection dossier(@RequestAttribute long userId,@RequestAttribute UUID sessionId,
+            @PathVariable UUID id,@RequestParam(defaultValue="0") int page) {return service.dossier(userId,sessionId,id,page);}
     @PostMapping("/reports/{id}/approve/options") public EddService.Confirmation approveOptions(@RequestAttribute long userId,@RequestAttribute UUID sessionId,
             @PathVariable UUID id,@Valid @RequestBody Confirmation b) {return service.options(userId,sessionId,id,b.payloadHash(),true);}
     @PostMapping("/reports/{id}/reject/options") public EddService.Confirmation rejectOptions(@RequestAttribute long userId,@RequestAttribute UUID sessionId,
