@@ -5,3 +5,7 @@ INSERT INTO kyc_attempts(id,user_id,request_id,application_id,environment,workfl
 INSERT INTO kyc_profiles(user_id,active_attempt,identity_status,provider_status,valid_until)
  SELECT a.user_id,a.id,'VERIFIED','Approved',clock_timestamp()+interval '1 day' FROM kyc_attempts a
  WHERE a.user_id IN (101,102) ON CONFLICT(user_id) DO NOTHING;
+
+INSERT INTO kyc_reconciliations(attempt_id,fresh_at)
+ SELECT p.active_attempt,clock_timestamp() FROM kyc_profiles p WHERE p.user_id IN (101,102)
+ ON CONFLICT(attempt_id) DO NOTHING;

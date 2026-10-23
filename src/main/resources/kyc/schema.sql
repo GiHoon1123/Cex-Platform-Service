@@ -26,3 +26,28 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS kyc_event_no_change ON kyc_events;
 CREATE TRIGGER kyc_event_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON kyc_events
  FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 시도별 대사 작업을 영속 보관한다. 임대 소유권과 로컬 변경 번호로 늦은 HTTP 응답을 배제한다.
+-- 기존 고객의 확인 상태를 추측해 채우지 않는다. 새 표의 확인 기한이 없으면 주문은 닫힌다.
+CREATE TABLE IF NOT EXISTS kyc_reconciliations (
+ attempt_id uuid PRIMARY KEY REFERENCES kyc_attempts(id),
+ revision bigint NOT NULL DEFAULT 0, fresh_at timestamptz,
+ next_attempt_at timestamptz NOT NULL DEFAULT clock_timestamp()+interval '1 minute',
+ lease_id uuid, lease_until timestamptz, failures integer NOT NULL DEFAULT 0,
+ outcome varchar(32)
+);
+CREATE INDEX IF NOT EXISTS kyc_reconciliation_due ON kyc_reconciliations(next_attempt_at);
+-- 조회 원문·신분증·서명·확인 링크 대신 최소 해시와 실행 결과만 남긴다.
+CREATE TABLE IF NOT EXISTS kyc_reconciliation_runs (
+ id uuid PRIMARY KEY, attempt_id uuid NOT NULL REFERENCES kyc_attempts(id),
+ outcome varchar(32) NOT NULL, decision_hash varchar(64), delivery_count integer NOT NULL,
+ completed_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+DROP TRIGGER IF EXISTS kyc_reconciliation_run_no_change ON kyc_reconciliation_runs;
+CREATE TRIGGER kyc_reconciliation_run_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON kyc_reconciliation_runs
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 한 고객의 429 응답 뒤 다른 고객을 즉시 조회해 같은 공급사 제한을 더 악화시키지 않는다.
+CREATE TABLE IF NOT EXISTS kyc_provider_cooldowns (
+ application_id uuid PRIMARY KEY, not_before timestamptz NOT NULL
+);

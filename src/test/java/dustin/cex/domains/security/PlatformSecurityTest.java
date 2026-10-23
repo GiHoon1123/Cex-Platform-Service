@@ -302,9 +302,13 @@ class PlatformSecurityTest {
         var lift=approvals.request(operator.getId(),session(operator),customer.getId(),current.getVersion(),false,"심사 완료");decide(lift);
         assertFalse(users.findById(customer.getId()).orElseThrow().isTradingRestricted());
     }
-    @Test void restrictionStillAllowsOwnCancellationButNeverAnotherCustomersOrder() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={true,false})
+    void restrictionStillAllowsOwnCancellationButNeverAnotherCustomersOrder(boolean identityExpired) throws Exception {
         fund();var result=orders.createOrder(customer.getId(),UUID.randomUUID(),order());decide(request());
-        jdbc.update("UPDATE kyc_profiles SET valid_until=clock_timestamp()-interval '1 second' WHERE user_id=?",customer.getId());
+        // 신분 유효기간과 최근 대사 확인 기한을 각각 만료시켜도 자기 주문 취소는 유지한다.
+        if(identityExpired) jdbc.update("UPDATE kyc_profiles SET valid_until=clock_timestamp()-interval '1 second' WHERE user_id=?",customer.getId());
+        else jdbc.update("UPDATE kyc_reconciliations SET fresh_at=clock_timestamp()-interval '16 minutes' WHERE attempt_id=(SELECT active_attempt FROM kyc_profiles WHERE user_id=?)",customer.getId());
         when(engine.cancelOrder(anyLong(),anyLong(),anyString())).thenReturn(true);
         String path="/api/cex/orders/"+result.response().getOrder().getId();
         mvc.perform(delete(path).header("Authorization","Bearer "+token(customer))).andExpect(status().isAccepted());

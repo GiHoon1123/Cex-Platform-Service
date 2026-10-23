@@ -13,6 +13,7 @@ public final class KycFixtures {
             INSERT INTO kyc_attempts(id,user_id,request_id,application_id,environment,workflow_id,workflow_version,creation_state)
             VALUES(?,?,?,?,'live',?,1,'READY')
             """,id,user,UUID.randomUUID(),UUID.randomUUID(),UUID.randomUUID());
+        jdbc.update("INSERT INTO kyc_reconciliations(attempt_id,fresh_at) VALUES(?,clock_timestamp())",id);
         jdbc.update("INSERT INTO kyc_profiles(user_id,active_attempt,identity_status,provider_status,valid_until) VALUES(?,?,'VERIFIED','Approved',clock_timestamp()+interval '1 day')",user,id);
     }
 }

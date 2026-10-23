@@ -34,7 +34,8 @@ public class KycService {
         this.settings=settings;this.client=client;this.verifier=verifier;this.jdbc=jdbc;this.users=users;this.sessions=sessions;
         this.audit=audit;tx=new TransactionTemplate(manager);
     }
-    public record Status(UUID attemptId,String creationState,String identityStatus,String providerStatus,Instant validUntil,String environment) {}
+    public record Status(UUID attemptId,String creationState,String identityStatus,String providerStatus,Instant validUntil,String environment,
+            Instant lastConfirmedAt,String reconciliationOutcome) {}
     public record Session(Status status,String verificationUrl) {
         @Override public String toString() {return "Session[확인 링크 생략]";}
     }
@@ -57,7 +58,12 @@ public class KycService {
                 var profile=profile(actor);
                 String current=(String)profile.get("identity_status");
                 Timestamp until=(Timestamp)profile.get("valid_until");
-                if(current.equals("PENDING") || (current.equals("VERIFIED") && until!=null && until.toInstant().isAfter(Instant.now())))
+                var old=Objects.requireNonNull(attempt(active));
+                boolean sameConfiguration=old.app().equals(settings.applicationId) && old.environment().equals(settings.environment)
+                    && old.workflow().equals(settings.workflowId) && old.version()==settings.workflowVersion;
+                boolean fresh=Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM kyc_reconciliations WHERE attempt_id=? AND fresh_at>clock_timestamp()-interval '15 minutes')",Boolean.class,active));
+                boolean tracked=Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM kyc_reconciliations WHERE attempt_id=?)",Boolean.class,active));
+                if(sameConfiguration && ((current.equals("PENDING") && tracked) || (current.equals("VERIFIED") && until!=null && until.toInstant().isAfter(Instant.now()) && fresh)))
                     // 새 키에 옛 시도의 성공 응답을 주면 나중 재시도 때 키의 의미가 달라진다.
                     // 진행 중에는 원래 키를 재사용하거나 조회 API로 이어가도록 명시적으로 충돌시킨다.
                     throw rejected(HttpStatus.CONFLICT);
@@ -75,6 +81,7 @@ public class KycService {
                 ON CONFLICT(user_id) DO UPDATE SET active_attempt=EXCLUDED.active_attempt,identity_status='PENDING',provider_status=NULL,
                  valid_until=NULL,event_time=-1,status_digest=NULL,conflict_at=NULL
                 """,actor,attemptId);
+            jdbc.update("INSERT INTO kyc_reconciliations(attempt_id) VALUES(?)",attemptId);
             audit.record(actor,"KYC_SESSION_REQUESTED","kyc:"+attemptId,"SUCCESS","ATTEMPT_COMMITTED");
             return new Start(Objects.requireNonNull(attempt(attemptId)),true);
         });
@@ -99,32 +106,53 @@ public class KycService {
         complete(actor,sid,id,client.find(id),true);return ownSession(actor,sid);
     }
     private void complete(long actor,UUID sid,UUID id,JsonNode result,boolean reconciled) {
+        var binding=validateSessionResult(id,result,reconciled);
+        UUID session=binding.session();String url=binding.url();
+        tx.executeWithoutResult(status->{
+            customer(actor,sid);bindSession(actor,id,session,url,reconciled);
+        });
+    }
+    private record Binding(UUID session,String url) {}
+    private Binding validateSessionResult(UUID id,JsonNode result,boolean reconciled) {
         UUID session=uuid(result,"session_id");
         String url=text(result,reconciled?"session_url":"url");validateLink(url);
         if(!id.toString().equals(text(result,"vendor_data")) || (result.has("session_kind") && !result.path("session_kind").asText().equals("user"))) throw rejected(HttpStatus.BAD_GATEWAY);
         if(!reconciled && (!settings.workflowId.equals(uuid(result,"workflow_id")) || (!result.path("workflow_version").isIntegralNumber() || !result.path("workflow_version").canConvertToInt() || result.path("workflow_version").intValue()!=settings.workflowVersion))) throw rejected(HttpStatus.BAD_GATEWAY);
+        return new Binding(session,url);
+    }
+    // 내부 워커는 고객 세션을 꾸며 내지 않는다. 공급사 조회와 현재 시도의 결합만 복원한다.
+    @Transactional(propagation=Propagation.NEVER)
+    UUID recoverMissingSession(long actor,UUID id,JsonNode result) {
+        var binding=validateSessionResult(id,result,true);
         tx.executeWithoutResult(status->{
-            customer(actor,sid);var a=attempt(id);
+            users.lockById(actor).orElseThrow(()->rejected(HttpStatus.NOT_FOUND));
+            bindSession(actor,id,binding.session(),binding.url(),true);
+        });
+        return binding.session();
+    }
+    private void bindSession(long actor,UUID id,UUID session,String url,boolean reconciled) {
+            var a=attempt(id);
             if(a==null || a.user()!=actor || !id.equals(active(actor)) || (a.session()!=null && !a.session().equals(session))) throw rejected(HttpStatus.CONFLICT);
             jdbc.update("UPDATE kyc_attempts SET session_id=?,link_cipher=?,creation_state='READY' WHERE id=?",session,encrypt(id,url),id);
             // 웹훅이 HTTP 응답보다 먼저 도착해도 판정·유효기한을 덮어쓰지 않는다.
             audit.record(actor,reconciled?"KYC_SESSION_RECONCILED":"KYC_SESSION_CREATED","kyc:"+id,"SUCCESS","SESSION_BOUND");
-        });
     }
     public Session ownSession(long actor,UUID sid) {
         configured();
         return tx.execute(status->{customer(actor,sid);var id=active(actor);
-            if(id==null) return new Session(new Status(null,"NOT_STARTED","PENDING",null,null,null),null);
+            if(id==null) return new Session(new Status(null,"NOT_STARTED","PENDING",null,null,null,null,null),null);
             var a=Objects.requireNonNull(attempt(id));return new Session(status(actor),a.link()==null?null:decrypt(id,a.link()));});
     }
     public Status status(long actor) {
         var rows=jdbc.queryForList("""
-            SELECT p.*,a.creation_state,a.environment FROM kyc_profiles p JOIN kyc_attempts a ON a.id=p.active_attempt WHERE p.user_id=?
+            SELECT p.*,a.creation_state,a.environment,r.fresh_at,r.outcome FROM kyc_profiles p JOIN kyc_attempts a ON a.id=p.active_attempt
+             LEFT JOIN kyc_reconciliations r ON r.attempt_id=a.id WHERE p.user_id=?
             """,actor);
-        if(rows.isEmpty()) return new Status(null,"NOT_STARTED","PENDING",null,null,null);
+        if(rows.isEmpty()) return new Status(null,"NOT_STARTED","PENDING",null,null,null,null,null);
         var p=rows.getFirst();var until=(Timestamp)p.get("valid_until");
         return new Status((UUID)p.get("active_attempt"),(String)p.get("creation_state"),(String)p.get("identity_status"),
-            (String)p.get("provider_status"),until==null?null:until.toInstant(),(String)p.get("environment"));
+            (String)p.get("provider_status"),until==null?null:until.toInstant(),(String)p.get("environment"),
+            p.get("fresh_at")==null?null:((Timestamp)p.get("fresh_at")).toInstant(),(String)p.get("outcome"));
     }
     public void webhook(byte[] raw,String signature,String timestamp) {
         JsonNode body;
@@ -133,6 +161,12 @@ public class KycService {
             if(e.getStatusCode().value()==401) audit.denied(null,"KYC_WEBHOOK","didit","SIGNATURE_DENIED");
             throw e;
         }
+        acceptEvent(body,false);
+    }
+    // 호출자는 사용자 잠금·대사 임대·로컬 변경 번호를 검사한 트랜잭션 안에 있어야 한다.
+    @Transactional(propagation=Propagation.MANDATORY)
+    void recoverEvent(JsonNode body) {acceptEvent(body,true);}
+    private void acceptEvent(JsonNode body,boolean recovered) {
         UUID eventId=uuid(body,"event_id"),attemptId=uuid(body,"vendor_data"),sessionId=uuid(body,"session_id");
         var a=attempt(attemptId);if(a==null) throw rejected(HttpStatus.NOT_FOUND);
         String type=text(body,"webhook_type"),providerStatus=text(body,"status");
@@ -153,7 +187,10 @@ public class KycService {
             var previous=jdbc.queryForList("SELECT * FROM kyc_events WHERE event_id=?",eventId);
             if(!previous.isEmpty()) {
                 if(!hash.equals(previous.getFirst().get("payload_hash")) || !attemptId.equals(previous.getFirst().get("attempt_id"))) {
-                    if(attemptId.equals(active(a.user()))) jdbc.update("UPDATE kyc_profiles SET identity_status='CONFLICT',valid_until=NULL WHERE user_id=?",a.user());
+                    if(attemptId.equals(active(a.user()))) {
+                        jdbc.update("UPDATE kyc_profiles SET identity_status='CONFLICT',valid_until=NULL WHERE user_id=?",a.user());
+                        touchReconciliation(attemptId,false,true);
+                    }
                     audit.record(a.user(),"KYC_EVENT_CONFLICT","kyc:"+eventId,"DENIED","EVENT_ID_CONTENT_CHANGED");
                 }
                 return;
@@ -168,18 +205,37 @@ public class KycService {
                 } else if(profile.get("identity_status").equals("CONFLICT")) disposition="REVIEW_REQUIRED";
                 else {
                     Instant until=state.equals("VERIFIED")?Instant.ofEpochSecond(time).plusSeconds(30*86400):null;
+                    // 공급사가 더 짧은 만료를 정했다면 로컬 30일 정책으로 그것을 늘리지 않는다.
+                    if(until!=null && body.path("decision").hasNonNull("expires_at")) {
+                        var providerExpiry=Instant.parse(body.path("decision").path("expires_at").asText());
+                        if(providerExpiry.isBefore(until)) until=providerExpiry;
+                    }
                     jdbc.update("UPDATE kyc_profiles SET identity_status=?,provider_status=?,valid_until=?,event_time=?,status_digest=? WHERE user_id=?",
                         state,providerStatus,until==null?null:Timestamp.from(until),time,statusDigest,a.user());disposition="APPLIED";
                 }
             }
             jdbc.update("INSERT INTO kyc_events(event_id,attempt_id,payload_hash,provider_time,provider_status,disposition) VALUES(?,?,?,?,?,?)",eventId,attemptId,hash,time,providerStatus,disposition);
-            audit.record(a.user(),"KYC_EVENT_RECEIVED","kyc:"+eventId,"SUCCESS",disposition);
+            if(attemptId.equals(active(a.user()))) touchReconciliation(attemptId,disposition.equals("APPLIED") && !state.equals("CONFLICT"),
+                disposition.equals("TIME_CONFLICT") || disposition.equals("REVIEW_REQUIRED") || (disposition.equals("APPLIED") && state.equals("CONFLICT")));
+            audit.record(a.user(),recovered?"KYC_EVENT_RECOVERED":"KYC_EVENT_RECEIVED","kyc:"+eventId,"SUCCESS",disposition);
         });
+    }
+    private void touchReconciliation(UUID id,boolean fresh,boolean clear) {
+        // 중복 이벤트에서는 이 메서드에 도달하지 않는다. 재전송만으로 확인 기한을 연장하지 않는다.
+        jdbc.update("""
+            INSERT INTO kyc_reconciliations(attempt_id,revision,fresh_at) VALUES(?,1,CASE WHEN ? THEN clock_timestamp() ELSE NULL END)
+            ON CONFLICT(attempt_id) DO UPDATE SET revision=kyc_reconciliations.revision+1,
+             fresh_at=CASE WHEN ? THEN clock_timestamp() WHEN ? THEN NULL ELSE kyc_reconciliations.fresh_at END
+            """,id,fresh,fresh,clear);
     }
     private String identity(JsonNode body,UUID session) {
         String status=text(body,"status");
         if(status.equals("Approved")) {
             var decision=body.path("decision");
+            if(decision.hasNonNull("expires_at")) {
+                try {if(!decision.path("expires_at").isString()) return "CONFLICT";Instant.parse(decision.path("expires_at").asText());}
+                catch(java.time.format.DateTimeParseException e) {return "CONFLICT";}
+            }
             if(!session.toString().equals(decision.path("session_id").asText()) || !status.equals(decision.path("status").asText())) return "CONFLICT";
             for(String field:List.of("id_verifications","liveness_checks","face_matches")) {
                 var list=decision.path(field);if(!list.isArray() || list.isEmpty()) return "CONFLICT";

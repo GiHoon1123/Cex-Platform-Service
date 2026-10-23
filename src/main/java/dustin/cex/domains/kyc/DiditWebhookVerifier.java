@@ -27,12 +27,23 @@ public class DiditWebhookVerifier {
         .enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS).build();
     public DiditWebhookVerifier(DiditSettings settings) {this.settings=settings;}
     JsonNode verify(byte[] body,String signature,String timestamp) {
+        return verify(body,signature,timestamp,true);
+    }
+    /**
+     * 공식 인증 API에서 직접 읽은 보관 기록에만 사용한다. 외부 HTTP 웹훅은 이 메서드를 호출하지 않는다.
+     * 과거 전송 시각은 허용하지만 본문 전체 HMAC·본문/헤더 시각 일치·미래 시각 검사는 유지한다.
+     * 공급사의 권한별 원문 가림이나 비밀 교체로 서명이 달라지면 우회하지 않고 대사를 실패시킨다.
+     */
+    JsonNode verifyArchived(byte[] body,String signature,String timestamp) {
+        return verify(body,signature,timestamp,false);
+    }
+    private JsonNode verify(byte[] body,String signature,String timestamp,boolean fresh) {
         if(!settings.configured()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"KYC 연동 설정이 필요합니다");
         try {
             if(body==null || body.length==0 || body.length>1048576 || signature==null || !signature.matches("[0-9a-f]{64}")
                     || timestamp==null || !timestamp.matches("[0-9]{1,12}")) throw rejected();
             long sent=Long.parseLong(timestamp),now=Instant.now().getEpochSecond();
-            if(sent<now-300 || sent>now+300) throw rejected();
+            if((fresh && sent<now-300) || sent>now+300) throw rejected();
             var parsed=json.readTree(body);
             // 헤더만 새 시각으로 바꾼 과거 본문의 재전송도 막는다. 본문 시각 자체가 HMAC에 들어 있다.
             if(!parsed.isObject() || !parsed.path("timestamp").isIntegralNumber() || !parsed.path("timestamp").canConvertToLong() || parsed.path("timestamp").longValue()!=sent) throw rejected();

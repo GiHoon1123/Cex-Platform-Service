@@ -35,6 +35,14 @@ public class DiditClient {
                 || page.path("results").size()!=1 || !page.path("next").isNull()) throw unavailable();
         return page.path("results").get(0);
     }
+    // 결정은 현재 상태 비교에만 사용한다. 생성 시각을 상태 변경 시각으로 바꾸지 않는다.
+    JsonNode decision(UUID session) {
+        return call("/v3/session/"+session+"/decision/",null,200);
+    }
+    // 외부 URL을 따라가지 않고 서버가 결합한 세션의 공식 전송 이력만 읽는다.
+    JsonNode deliveries(UUID session) {
+        return call("/v3/session/"+session+"/webhooks/",null,200);
+    }
     private JsonNode call(String path,String payload,int expected) {
         if(!settings.configured()) throw unavailable();
         try {
@@ -44,11 +52,28 @@ public class DiditClient {
             try {
                 // 입력 스트림의 반환은 본문 수신 완료가 아니다. 본문 전체를 포함해 절대 시간을 제한한다.
                 var result=pending.get(10,TimeUnit.SECONDS);
+                if(result.statusCode()==429) throw new RateLimited(retryAfter(result));
                 if(result.statusCode()!=expected) throw unavailable();
                 return json.readTree(result.body());
             } finally {if(!pending.isDone()) pending.cancel(true);}
         } catch(InterruptedException e) {Thread.currentThread().interrupt();throw unavailable();}
+        catch(ResponseStatusException e) {throw e;}
         catch(ExecutionException | TimeoutException | RuntimeException e) {throw unavailable();}
+    }
+    /** 공급사 호출 제한은 다른 고객의 대사에도 적용되므로 대기 시간을 별도로 전달한다. */
+    static final class RateLimited extends ResponseStatusException {
+        final int seconds;
+        RateLimited(int seconds) {
+            super(HttpStatus.SERVICE_UNAVAILABLE,"고객 확인 공급사 호출 제한");
+            this.seconds=seconds;
+        }
+    }
+    private int retryAfter(HttpResponse<?> response) {
+        // 공식 명세의 정수 초를 받는다. 잘못된 헤더는 60초, 비정상적으로 긴 값은 최대 하루로 제한한다.
+        try {
+            long seconds=Long.parseLong(response.headers().firstValue("Retry-After").orElse("60"));
+            return (int)Math.max(60,Math.min(86400,seconds));
+        } catch(NumberFormatException e) {return 60;}
     }
     /** JDK 수신기에 크기 제한만 추가한다. JSON·HTTP 전송·연결 풀 자체를 재구현하지 않는다. */
     private static final class LimitedBody implements HttpResponse.BodySubscriber<byte[]> {

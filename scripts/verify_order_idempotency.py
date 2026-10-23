@@ -116,8 +116,13 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
                    "--bot.bot-count=0", "--order.dispatch.enabled=false", "--bot.binance-ws-url=ws://127.0.0.1:1",
                    "--server.address=127.0.0.1", f"--server.port={cls.port}", f"--jwt.secret={cls.secret}", f"--engine.service.token={cls.service_token}",
                    "--spring.jpa.hibernate.ddl-auto=" + ("update" if cls.platform_runs == 1 else "validate")]
+        # 프로세스 회귀도 실제 공급사 키와 백그라운드 대사 작업을 물려받지 않는다.
+        env=os.environ.copy()
+        for key in list(env):
+            if key.startswith("DIDIT_"):del env[key]
+        env["KYC_RECONCILIATION_ENABLED"]="false"
         with log_path.open("w") as log:
-            cls.process = subprocess.Popen(command, cwd=PROJECT, stdout=log, stderr=subprocess.STDOUT)
+            cls.process = subprocess.Popen(command, cwd=PROJECT,env=env,stdout=log, stderr=subprocess.STDOUT)
         deadline = time.monotonic() + 35
         while time.monotonic() < deadline:
             if cls.process.poll() is not None:

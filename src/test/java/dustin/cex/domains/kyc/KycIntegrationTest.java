@@ -44,6 +44,11 @@ class KycIntegrationTest {
     static final HttpServer PROVIDER;
     static final Map<UUID,UUID> CREATED=new ConcurrentHashMap<>();
     static final AtomicInteger POSTS=new AtomicInteger(),GETS=new AtomicInteger();
+    static final Map<UUID,List<Map<String,Object>>> HISTORY=new ConcurrentHashMap<>();
+    static final Map<UUID,Map<String,Object>> DECISIONS=new ConcurrentHashMap<>();
+    static final AtomicInteger POLLS=new AtomicInteger();
+    static volatile Runnable pollHook;
+    static volatile String retryHeader="180";
     static volatile String mode="NORMAL";
     static volatile CountDownLatch arrived,release;
     static volatile java.util.function.Consumer<UUID> early;
@@ -69,6 +74,15 @@ class KycIntegrationTest {
                         byte[] raw=JSON.writeValueAsBytes(body);exchange.getResponseHeaders().set("Content-Type","application/json");
                         if(status==302) exchange.getResponseHeaders().set("Location","http://127.0.0.1:1/steal");
                         exchange.sendResponseHeaders(status,raw.length);exchange.getResponseBody().write(raw);
+                    } else if(exchange.getRequestURI().getPath().endsWith("/webhooks/") || exchange.getRequestURI().getPath().endsWith("/decision/")) {
+                        POLLS.incrementAndGet();UUID session=UUID.fromString(exchange.getRequestURI().getPath().split("/")[3]);
+                        Object value=exchange.getRequestURI().getPath().endsWith("/webhooks/")?HISTORY.getOrDefault(session,List.of()):DECISIONS.get(session);
+                        byte[] raw=JSON.writeValueAsBytes(value);
+                        if(exchange.getRequestURI().getPath().endsWith("/decision/") && pollHook!=null) pollHook.run();
+                        int code=mode.equals("POLL_FAIL")?503:mode.equals("POLL_RATE")?429:200;
+                        if(code==429) exchange.getResponseHeaders().set("Retry-After",retryHeader);
+                        if(mode.equals("POLL_BIG")) raw=new byte[1048577];
+                        exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(code,raw.length);exchange.getResponseBody().write(raw);
                     } else {
                         GETS.incrementAndGet();assertEquals("/v3/sessions/",exchange.getRequestURI().getPath());
                         var params=new HashMap<String,String>();for(String pair:exchange.getRequestURI().getRawQuery().split("&")) {var kv=pair.split("=",2);params.put(kv[0],URLDecoder.decode(kv[1],StandardCharsets.UTF_8));}
@@ -93,6 +107,8 @@ class KycIntegrationTest {
         r.add("didit.workflow-id",WORKFLOW::toString);r.add("didit.workflow-version",()->4);r.add("didit.environment",()->"live");
         r.add("didit.callback",()->"https://exchange.example.test/kyc/return");r.add("didit.encryption-key",()->Base64.getEncoder().encodeToString(new byte[32]));
     }
+    @Autowired KycReconciliationService reconciliation;
+    @Autowired DiditSettings settings;@Autowired DiditClient didit;
     @Autowired KycService service;@Autowired DiditWebhookVerifier verifier;@Autowired JdbcTemplate jdbc;
     @Autowired UserRepository users;@Autowired RefreshTokenRepository sessions;@Autowired JwtService jwt;
     @Autowired PlatformTransactionManager manager;@Autowired TradingAccessPolicy trading;
@@ -104,6 +120,10 @@ class KycIntegrationTest {
     User user;UUID sid;String access;long now;
     @BeforeEach void setup() {
         POSTS.set(0);GETS.set(0);CREATED.clear();mode="NORMAL";early=null;now=Instant.now().getEpochSecond();
+        HISTORY.clear();DECISIONS.clear();POLLS.set(0);pollHook=null;retryHeader="180";
+        jdbc.update("UPDATE kyc_provider_cooldowns SET not_before=clock_timestamp()-interval '1 second'");
+        // 테스트 DB의 앞선 사례를 지우지 않고 대기 시각만 분리한다. 대상 시도만 명시적으로 실행한다.
+        jdbc.update("UPDATE kyc_reconciliations SET next_attempt_at=clock_timestamp()+interval '1 day'");
         user=users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@test.invalid").passwordHash("격리 검증").build());
         var session=sessions.saveAndFlush(RefreshToken.builder().userId(user.getId()).tokenHash(UUID.randomUUID().toString()).expiresAt(LocalDateTime.now().plusHours(1)).build());
         sid=session.getSessionId();access=jwt.generateAccessToken(user.getId(),sid);
@@ -319,4 +339,207 @@ class KycIntegrationTest {
         request.header("Content-Type","application/json").method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(body));
         return HttpClient.newHttpClient().send(request.build(),HttpResponse.BodyHandlers.ofString());
     }
+    // 보관 API는 원래 본문과 헤더를 문자열로 반환한다. 실제 서명을 만들고 네트워크로 다시 읽는다.
+    Map<String,Object> archived(Map<String,Object> event) throws Exception {
+        byte[] raw=bytes(event);
+        return Map.of("uuid",UUID.randomUUID(),"session_id",event.get("session_id"),"webhook_type",event.get("webhook_type"),
+            "request_body",new String(raw,StandardCharsets.UTF_8),"request_header",JSON.writeValueAsString(Map.of(
+                "X-Signature-V2",signature(raw),"X-Timestamp",event.get("timestamp").toString())));
+    }
+    @SuppressWarnings("unchecked")
+    void evidence(UUID id,Map<String,Object> event) throws Exception {
+        UUID session=CREATED.get(id);HISTORY.put(session,List.of(archived(event)));
+        var decision=new HashMap<String,Object>();
+        if(event.get("decision") instanceof Map<?,?> nested) decision.putAll((Map<String,Object>)nested);
+        decision.putAll(Map.of("session_id",session,"session_kind","user","status",event.get("status"),
+            "vendor_data",id.toString(),"workflow_id",WORKFLOW,"environment","live"));
+        DECISIONS.put(session,decision);
+    }
+    void due(UUID id) {jdbc.update("UPDATE kyc_reconciliations SET next_attempt_at=clock_timestamp()-interval '1 second' WHERE attempt_id=?",id);}
+    String outcome(UUID id) {return jdbc.queryForObject("SELECT outcome FROM kyc_reconciliations WHERE attempt_id=?",String.class,id);}
+    long receipts(UUID id) {return jdbc.queryForObject("SELECT count(*) FROM kyc_events WHERE attempt_id=?",Long.class,id);}
+    java.sql.Timestamp freshness(UUID id) {return jdbc.queryForObject("SELECT fresh_at FROM kyc_reconciliations WHERE attempt_id=?",java.sql.Timestamp.class,id);}
+
+    @Test void missedOldWebhookRecoversFromOriginalSignedEventAndKeepsOriginalExpiry() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-1000);e.put("timestamp",now-900);evidence(id,e);
+        assertThrows(ResponseStatusException.class,()->send(e));blocked();due(id);assertTrue(reconciliation.reconcileDue());
+        assertEquals("CONFIRMED",outcome(id));assertEquals(1,receipts(id));allowed();assertEquals(2,POLLS.get());
+        assertEquals(Instant.ofEpochSecond(now-1000).plusSeconds(30*86400),service.status(user.getId()).validUntil());
+    }
+    @Test void missedDeclineClosesPreviouslyAllowedAccountAtomically() throws Exception {
+        UUID id=start();var approved=event(id,"Approved",now-10);send(approved);allowed();var declined=event(id,"Declined",now-1);evidence(id,declined);
+        HISTORY.put(CREATED.get(id),List.of(archived(declined),archived(approved)));due(id);reconciliation.reconcileDue();
+        blocked();assertEquals("NOT_VERIFIED",service.status(user.getId()).identityStatus());assertEquals(2,receipts(id));
+    }
+    @Test void currentDecisionDisagreementSuspendsUntilMatchingEvidenceArrives() throws Exception {
+        UUID id=start();var approved=event(id,"Approved",now-10);send(approved);evidence(id,approved);allowed();
+        DECISIONS.get(CREATED.get(id)).put("status","Declined");due(id);reconciliation.reconcileDue();
+        assertEquals("EVIDENCE_MISMATCH",outcome(id));assertNull(freshness(id));blocked();
+        evidence(id,event(id,"Declined",now-1));due(id);reconciliation.reconcileDue();
+        assertEquals("CONFIRMED",outcome(id));assertEquals("NOT_VERIFIED",service.status(user.getId()).identityStatus());blocked();
+    }
+    @Test void repeatedIndependentReadsDoNotExtendIdentityExpiryOrDuplicateEvents() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-10);evidence(id,e);due(id);reconciliation.reconcileDue();var until=service.status(user.getId()).validUntil();
+        due(id);reconciliation.reconcileDue();assertEquals(until,service.status(user.getId()).validUntil());assertEquals(1,receipts(id));
+        assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM kyc_reconciliation_runs WHERE attempt_id=?",Long.class,id));allowed();
+    }
+    @Test void archivedRetriesWithChangedDispatchTimeShareOneReceipt() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-10);evidence(id,e);var original=archived(e);e.put("timestamp",now+1);
+        HISTORY.put(CREATED.get(id),List.of(archived(e),original));due(id);reconciliation.reconcileDue();assertEquals(1,receipts(id));allowed();
+    }
+    @Test void missingOrConflictingLatestEventNeverUsesDecisionAsInventedWebhook() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-1);evidence(id,e);HISTORY.put(CREATED.get(id),List.of());due(id);reconciliation.reconcileDue();
+        assertEquals("EVIDENCE_MISMATCH",outcome(id));assertEquals(0,receipts(id));blocked();
+        HISTORY.put(CREATED.get(id),List.of(archived(e),archived(event(id,"Declined",now-1))));due(id);reconciliation.reconcileDue();
+        assertEquals("CONFLICT",outcome(id));assertEquals(2,receipts(id));blocked();
+        assertNotEquals(id,start());blocked();
+    }
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"application_id","environment","workflow_id","workflow_version","session_id","vendor_data","session_kind","sandbox_scenario"})
+    void archivedBindingsAreValidatedAgainBeforeAnyEffect(String field) throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-1);evidence(id,e);
+        e.put(field,switch(field){case "workflow_version"->5;case "environment"->"sandbox";case "session_kind"->"business";case "sandbox_scenario"->"approved";default->UUID.randomUUID();});
+        HISTORY.put(CREATED.get(id),List.of(archived(e)));due(id);reconciliation.reconcileDue();
+        assertEquals("FAILED",outcome(id));assertEquals(0,receipts(id));blocked();
+    }
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"session_id","session_kind","vendor_data","workflow_id","environment"})
+    void decisionBindingsCannotBeBorrowedFromAnotherSession(String field) throws Exception {
+        UUID id=start();evidence(id,event(id,"Approved",now-1));DECISIONS.get(CREATED.get(id)).put(field,"another");due(id);reconciliation.reconcileDue();
+        assertEquals("FAILED",outcome(id));assertEquals(0,receipts(id));blocked();
+    }
+    @Test void redactedOrTamperedArchiveNeverFallsBackToApiTrustAlone() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-1);evidence(id,e);var old=archived(e);var altered=new HashMap<>(old);
+        e.put("metadata",Map.of("redacted",true));altered.put("request_body",new String(bytes(e),StandardCharsets.UTF_8));
+        HISTORY.put(CREATED.get(id),List.of(altered));due(id);reconciliation.reconcileDue();assertEquals("FAILED",outcome(id));blocked();
+    }
+    @Test void providerFailureUsesPersistentBackoffAndDoesNotRenewFreshness() throws Exception {
+        UUID id=start();send(event(id,"Approved",now-1));var before=freshness(id);mode="POLL_FAIL";
+        due(id);reconciliation.reconcileDue();assertEquals(before,freshness(id));assertEquals("FAILED",outcome(id));
+        assertFalse(reconciliation.reconcileDue());assertEquals(1,jdbc.queryForObject("SELECT failures FROM kyc_reconciliations WHERE attempt_id=?",Integer.class,id));
+        due(id);reconciliation.reconcileDue();assertEquals(2,jdbc.queryForObject("SELECT failures FROM kyc_reconciliations WHERE attempt_id=?",Integer.class,id));
+        assertTrue(jdbc.queryForObject("SELECT next_attempt_at>clock_timestamp()+interval '100 seconds' FROM kyc_reconciliations WHERE attempt_id=?",Boolean.class,id));
+        jdbc.update("UPDATE kyc_reconciliations SET fresh_at=clock_timestamp()-interval '16 minutes' WHERE attempt_id=?",id);blocked();
+        assertTrue(service.status(user.getId()).validUntil().isAfter(Instant.now()));
+    }
+    @Test void duplicateLiveWebhookCannotRenewExpiredReconciliationFreshness() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-1);send(e);
+        jdbc.update("UPDATE kyc_reconciliations SET fresh_at=clock_timestamp()-interval '16 minutes' WHERE attempt_id=?",id);send(e);blocked();
+        evidence(id,e);due(id);reconciliation.reconcileDue();allowed();
+    }
+    @Test void staleLiveEventDoesNotInvalidateNewerFreshApproval() throws Exception {
+        UUID id=start();send(event(id,"Approved",now-1));var before=freshness(id);send(event(id,"Declined",now-10));
+        assertEquals(before,freshness(id));allowed();
+    }
+    @Test void inFlightLiveWebhookInvalidatesOlderPollWithoutHoldingUserLock() throws Exception {
+        UUID id=start();evidence(id,event(id,"Approved",now-10));
+        pollHook=()->{try {send(event(id,"Declined",now-1));} catch(Exception e){throw new RuntimeException(e);}};
+        due(id);reconciliation.reconcileDue();assertEquals("STALE_READ",outcome(id));assertEquals("NOT_VERIFIED",service.status(user.getId()).identityStatus());blocked();
+    }
+    @Test void newAttemptWhileReadingCannotBeApprovedBySupersededSnapshot() throws Exception {
+        UUID id=start();send(event(id,"Declined",now-10));evidence(id,event(id,"Approved",now-1));var next=new AtomicReference<UUID>();
+        pollHook=()->next.set(start());due(id);reconciliation.reconcileDue();
+        assertNotEquals(id,next.get());assertEquals(next.get(),service.status(user.getId()).attemptId());assertEquals("PENDING",service.status(user.getId()).identityStatus());blocked();
+    }
+    @Test void twoWorkersCannotClaimSameAttemptAndHttpDoesNotKeepUserLock() throws Exception {
+        UUID id=start();evidence(id,event(id,"Approved",now-1));var entered=new CountDownLatch(1);var finish=new CountDownLatch(1);
+        pollHook=()->{entered.countDown();try{assertTrue(finish.await(8,TimeUnit.SECONDS));}catch(InterruptedException e){Thread.currentThread().interrupt();}};
+        due(id);try(var pool=Executors.newFixedThreadPool(2)) {
+            var first=pool.submit(reconciliation::reconcileDue);assertTrue(entered.await(5,TimeUnit.SECONDS));
+            assertFalse(reconciliation.reconcileDue());pool.submit(()->new TransactionTemplate(manager).execute(status->users.lockById(user.getId()))).get(2,TimeUnit.SECONDS);
+            finish.countDown();assertTrue(first.get(5,TimeUnit.SECONDS));
+        } finally {finish.countDown();}
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM kyc_reconciliation_runs WHERE attempt_id=?",Long.class,id));allowed();
+    }
+    @Test void expiredLeaseDiscardsZombieAndFreshWorkerRecoversPersistedAttempt() throws Exception {
+        UUID id=start();evidence(id,event(id,"Approved",now-1));
+        pollHook=()->jdbc.update("UPDATE kyc_reconciliations SET lease_until=clock_timestamp()-interval '1 second' WHERE attempt_id=?",id);
+        due(id);reconciliation.reconcileDue();assertEquals(0,receipts(id));blocked();pollHook=null;
+        var restarted=new KycReconciliationService(settings,didit,verifier,service,jdbc,users,audit,manager);
+        assertTrue(restarted.reconcileDue());assertEquals(1,receipts(id));allowed();
+    }
+    @Test void finalAuditFailureRollsBackEntireRecoveredBatchAndLeaseCanBeReclaimed() throws Exception {
+        UUID id=start();var a=event(id,"Approved",now-10);var b=event(id,"Declined",now-1);evidence(id,b);
+        HISTORY.put(CREATED.get(id),List.of(archived(b),archived(a)));due(id);
+        doThrow(new IllegalStateException("격리 감사 실패")).when(audit).record(any(),eq("KYC_RECONCILIATION"),anyString(),anyString(),anyString());
+        assertThrows(IllegalStateException.class,reconciliation::reconcileDue);assertEquals(0,receipts(id));assertEquals("PENDING",service.status(user.getId()).identityStatus());
+        assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM kyc_reconciliation_runs WHERE attempt_id=?",Long.class,id));blocked();reset(audit);
+        jdbc.update("UPDATE kyc_reconciliations SET lease_until=clock_timestamp()-interval '1 second' WHERE attempt_id=?",id);
+        reconciliation.reconcileDue();assertEquals(2,receipts(id));assertEquals("NOT_VERIFIED",service.status(user.getId()).identityStatus());
+    }
+    @Test void recoveredIdentityNeverRemovesManualRestriction() throws Exception {
+        UUID id=start();var u=users.findById(user.getId()).orElseThrow();u.setTradingRestricted(true);users.saveAndFlush(u);
+        evidence(id,event(id,"Approved",now-1));due(id);reconciliation.reconcileDue();assertEquals("VERIFIED",service.status(user.getId()).identityStatus());blocked();
+    }
+    @Test void reconciliationHistoryCannotBeChangedDeletedOrTruncated() throws Exception {
+        UUID id=start();evidence(id,event(id,"Approved",now-1));due(id);reconciliation.reconcileDue();
+        for(String statement:List.of("UPDATE kyc_reconciliation_runs SET outcome='FAILED'","DELETE FROM kyc_reconciliation_runs","TRUNCATE kyc_reconciliation_runs"))
+            assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.execute(statement));
+    }
+    @Test void schedulerEntryCannotJoinAnOuterTransaction() {
+        assertThrows(org.springframework.transaction.IllegalTransactionStateException.class,()->new TransactionTemplate(manager).execute(status->reconciliation.reconcileDue()));
+        assertThrows(org.springframework.transaction.IllegalTransactionStateException.class,()->service.recoverEvent(JSON.createObjectNode()));assertEquals(0,POLLS.get());
+    }
+    @Test void unknownCreationIsRecoveredWithReadsWithoutCustomerSessionOrSecondPost() throws Exception {
+        mode="LOST_RESPONSE";assertThrows(ResponseStatusException.class,()->service.start(user.getId(),sid,UUID.randomUUID()));UUID id=service.status(user.getId()).attemptId();
+        var token=sessions.findBySessionId(sid).orElseThrow();token.setRevoked(true);sessions.saveAndFlush(token);
+        mode="NORMAL";evidence(id,event(id,"Approved",now-1));due(id);reconciliation.reconcileDue();
+        assertEquals("CONFIRMED",outcome(id));assertEquals("READY",service.status(user.getId()).creationState());assertEquals(1,POSTS.get());assertEquals(1,GETS.get());allowed();
+    }
+    @Test void oversizedReconciliationResponseIsRejectedBySharedHttpBoundary() throws Exception {
+        UUID id=start();evidence(id,event(id,"Approved",now-1));mode="POLL_BIG";due(id);reconciliation.reconcileDue();assertEquals("FAILED",outcome(id));blocked();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(strings={"180","invalid","-1","999999999"})
+    void rateLimitIsPersistedAcrossCustomersWithBoundedRetryAfter(String header) throws Exception {
+        UUID id=start();evidence(id,event(id,"Approved",now-1));mode="POLL_RATE";retryHeader=header;due(id);reconciliation.reconcileDue();
+        assertEquals("RATE_LIMITED",outcome(id));int requests=POLLS.get();
+        int expected=header.equals("180")?180:header.equals("999999999")?86400:60;
+        assertTrue(jdbc.queryForObject("SELECT not_before>clock_timestamp()+(? * interval '1 second') FROM kyc_provider_cooldowns WHERE application_id=?",Boolean.class,expected-5,APP));
+        var other=users.saveAndFlush(User.builder().email(UUID.randomUUID()+"@test.invalid").passwordHash("격리").build());
+        var token=sessions.saveAndFlush(RefreshToken.builder().userId(other.getId()).tokenHash(UUID.randomUUID().toString()).expiresAt(LocalDateTime.now().plusHours(1)).build());
+        UUID another=service.start(other.getId(),token.getSessionId(),UUID.randomUUID()).status().attemptId();
+        evidence(another,event(another,"Approved",now-1));due(another);assertFalse(reconciliation.reconcileDue());assertEquals(requests,POLLS.get());
+        mode="NORMAL";jdbc.update("UPDATE kyc_provider_cooldowns SET not_before=clock_timestamp()-interval '1 second' WHERE application_id=?",APP);
+        assertTrue(reconciliation.reconcileDue());assertTrue(POLLS.get()>requests);blocked();
+    }
+    @Test void expiredFreshnessAllowsExplicitNewVerificationButDoesNotReuseOldRequestKey() throws Exception {
+        UUID key=UUID.randomUUID();UUID old=service.start(user.getId(),sid,key).status().attemptId();send(event(old,"Approved",now-10));
+        jdbc.update("UPDATE kyc_reconciliations SET fresh_at=clock_timestamp()-interval '16 minutes' WHERE attempt_id=?",old);blocked();
+        UUID next=start();assertNotEquals(old,next);assertThrows(ResponseStatusException.class,()->service.start(user.getId(),sid,key));
+        send(event(old,"Approved",now-1));assertEquals("PENDING",service.status(user.getId()).identityStatus());blocked();
+    }
+    @Test void statusExposesLastConfirmationAndReconciliationFailureWithoutRawEvidence() throws Exception {
+        UUID id=start();send(event(id,"Approved",now-1));mode="POLL_FAIL";due(id);reconciliation.reconcileDue();
+        var result=http("GET","/api/kyc/session",access,null,Map.of());assertEquals(200,result.statusCode());var status=JSON.readTree(result.body()).path("status");
+        assertEquals("FAILED",status.path("reconciliationOutcome").asText());assertTrue(status.path("lastConfirmedAt").isString());
+        assertFalse(result.body().contains(SECRET));assertFalse(result.body().contains("request_body"));
+    }
+    @SuppressWarnings("unchecked")
+    @Test void providerExpiryCapsLocalThirtyDayWindowForLiveAndRecoveredApproval() throws Exception {
+        UUID id=start();var e=event(id,"Approved",now-1);var decision=new HashMap<>((Map<String,Object>)e.get("decision"));
+        Instant expiry=Instant.ofEpochSecond(now+60);decision.put("expires_at",expiry.toString());e.put("decision",decision);send(e);
+        assertEquals(expiry,service.status(user.getId()).validUntil());allowed();evidence(id,e);due(id);reconciliation.reconcileDue();assertEquals(expiry,service.status(user.getId()).validUntil());
+        decision.put("expires_at",Instant.ofEpochSecond(now-10).toString());e.put("event_id",UUID.randomUUID());e.put("created_at",now);e.put("decision",decision);evidence(id,e);
+        due(id);reconciliation.reconcileDue();blocked();assertEquals(Instant.ofEpochSecond(now-10),service.status(user.getId()).validUntil());
+    }
+    @Test void failedRecoveryAuditDoesNotOverwriteLeaseOrExtendConfirmation() throws Exception {
+        UUID id=start();evidence(id,event(id,"Approved",now-1));due(id);
+        doThrow(new IllegalStateException("격리 복구 감사 실패")).when(audit).record(any(),eq("KYC_EVENT_RECOVERED"),anyString(),anyString(),anyString());
+        reconciliation.reconcileDue();assertEquals("FAILED",outcome(id));assertEquals(0,receipts(id));assertNull(freshness(id));blocked();
+    }
+
+    @Test void pastAttemptWithoutNewWorkRecordIsNeverBackfilledOrSilentlyReposted() {
+        UUID key=UUID.randomUUID();UUID old=service.start(user.getId(),sid,key).status().attemptId();
+        jdbc.update("DELETE FROM kyc_reconciliations WHERE attempt_id=?",old);
+        assertFalse(reconciliation.reconcileDue());assertEquals(1,POSTS.get());
+        assertEquals(old,service.start(user.getId(),sid,key).status().attemptId());assertEquals(1,POSTS.get());
+        UUID next=start();assertNotEquals(old,next);assertEquals(2,POSTS.get());assertEquals("PENDING",service.status(user.getId()).identityStatus());blocked();
+    }
+
+    @Test void staleProviderReadCannotRenewNewerLocalApproval() throws Exception {
+        UUID id=start();send(event(id,"Approved",now-1));allowed();
+        evidence(id,event(id,"Approved",now-100));due(id);reconciliation.reconcileDue();
+        assertEquals("EVIDENCE_MISMATCH",outcome(id));assertNull(freshness(id));assertEquals("VERIFIED",service.status(user.getId()).identityStatus());blocked();
+        evidence(id,event(id,"Approved",now));due(id);reconciliation.reconcileDue();allowed();
+    }
+
 }

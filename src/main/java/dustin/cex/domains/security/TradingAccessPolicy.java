@@ -18,7 +18,9 @@ public class TradingAccessPolicy {
         if(user==null || !user.isEnabled() || user.getRole()!=UserRole.CUSTOMER || user.isTradingRestricted()
                 || !Boolean.TRUE.equals(jdbc.queryForObject("""
                     SELECT EXISTS(SELECT 1 FROM kyc_profiles p JOIN kyc_attempts a ON a.id=p.active_attempt
-                     WHERE p.user_id=? AND p.identity_status='VERIFIED' AND p.valid_until>clock_timestamp() AND a.environment='live')
+                     WHERE p.user_id=? AND p.identity_status='VERIFIED' AND p.valid_until>clock_timestamp() AND a.environment='live'
+                      AND EXISTS(SELECT 1 FROM kyc_reconciliations r WHERE r.attempt_id=a.id
+                       AND r.fresh_at>clock_timestamp()-interval '15 minutes'))
                     """,Boolean.class,userId))) {
             audit.denied(userId,"NEW_ORDER","user:"+userId,"TRADING_NOT_PERMITTED");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"신규 주문이 제한되어 있습니다");
