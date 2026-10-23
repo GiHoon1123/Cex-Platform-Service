@@ -57,6 +57,22 @@
 
 `volatile Map`과 불변 사본은 플랫폼 설정을 한 번에 교체하는 방식이다. 엔진 코어 상태의 공유 락과는 무관하다. 원본 적용률은 디비에 보존하므로 캐시 갱신이 진행 중인 주문을 바꾸지 않는다.
 
+### 현재 코드로 연결해 읽기
+
+수수료 설정도 주문에 포함하기 전에 십진 범위를 검사한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/fee/service/FeeConfigService.java#L51)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+public static BigDecimal requireRate(BigDecimal value) {
+    if (value == null || value.signum() < 0 || value.compareTo(BigDecimal.ONE) >= 0
+            || value.stripTrailingZeros().scale() > 6) {
+        throw new IllegalArgumentException("수수료율은 소수 여섯 자리 이내의 0 이상 1 미만이어야 합니다");
+    }
+    return value.stripTrailingZeros();
+}
+```
+
+수수료율은 금액과 다른 계약이다. `BigDecimal` 비교와 소수점 길이 제한은 정책 검증이고, 최종 체결 수수료의 권위·잔액 변화는 본문의 엔진/이벤트 경계와 함께 확인한다.
+
 ## 작성·수정한 테스트
 
 | 파일 | 함수 | 시나리오·기대 결과 |

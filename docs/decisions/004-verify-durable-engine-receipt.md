@@ -55,3 +55,25 @@ Jackson `path`는 없는 필드에 MissingNode를 반환한다. `isTextual`과 �
 영속 접수는 체결 확정·예약 해제 근거가 아니다. 접수 뒤 전달·실행 중 종료된 주문의 재생과 처리 결과 확정은 후속 구현이 필요하다. 현재 플랫폼은 같은 고객 요청 키로 기존 주문을 조회하며 엔진에 자동 재전송하지 않는다.
 
 실행 로그: 공통 루트 `.local/platform-receipt-suite.log`, `.local/platform-receipt-process.log`. 실제 엔진 연결 결과: `.local/durable-acceptance-process.json`.
+
+### 현재 코드로 연결해 읽기
+
+HTTP 성공 코드와 영속 접수 증명을 함께 검사하는 부분이다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/http/EngineHttpClient.java#L137)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+int status = response.getStatusCode().value();
+JsonNode receipt = objectMapper.readTree(response.getBody());
+if ((status != 200 && status != 202) || receipt == null || !receipt.isObject()
+        || !receipt.path("order_id").isTextual()
+        || !orderId.toString().equals(receipt.path("order_id").textValue())
+        || !receipt.path("user_id").isTextual()
+        || !userId.toString().equals(receipt.path("user_id").textValue())
+        || !"accepted".equals(receipt.path("receipt_status").textValue())
+        || !receipt.path("accepted_at").isTextual()) {
+    throw new IllegalStateException("엔진의 영속 접수 응답을 확인하지 못했습니다");
+}
+OffsetDateTime.parse(receipt.path("accepted_at").textValue());
+return true;
+```
+
+`||`로 하나라도 불일치하면 거부한다. JSON의 요청 ID·고객 ID·상태·시각을 검사하므로 단순 2xx를 체결 완료로 취급하지 않는다. 접수와 체결은 별도 결과다.

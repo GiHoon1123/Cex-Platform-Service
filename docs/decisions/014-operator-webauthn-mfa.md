@@ -85,6 +85,23 @@
 - WebAuthn 개인키로 `authenticatorData + SHA256(clientDataJSON)`에 서명한다. 서버는 등록된 공개키로 검증한다. 테스트는 이 서명을 실제로 생성한다. 해시된 등록 비밀은 이 공개키 인증을 대신하는 수단이 아니다.
 - 서버 안의 역할 확인과 인증 수준은 별개다. 역할이 APPROVER여도 MFA 전에는 승인할 수 없고 MFA를 통과해도 OPERATOR가 APPROVER가 되지는 않는다.
 
+### 현재 코드로 연결해 읽기
+
+공식 검증 모듈의 서명 검증 뒤 서명 카운터도 검사한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/OperatorMfaService.java#L136)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+    var authenticated=relyingParty.authenticate(new RelyingPartyAuthenticationRequest(options,key));
+    if(!authenticated.getName().equals(Long.toString(actor))) throw denied();
+    // 일부 동기화 패스키는 카운터 0을 쓴다. 카운터를 쓰는 기기는 마지막 성공 값보다 증가해야 한다.
+    // 인증 데이터의 앞 32바이트는 RP 해시, 다음 1바이트는 플래그, 이어지는 4바이트는 부호 없는 카운터다.
+    long current=Integer.toUnsignedLong(ByteBuffer.wrap(key.getResponse().getAuthenticatorData().getBytes(),33,4).getInt());
+    if((existing.getSignatureCount()!=0 || current!=0) && current<=existing.getSignatureCount()) throw denied();
+    return key;
+}
+```
+
+라이브러리 인증 결과의 사용자 이름을 현재 계정과 대조한다. `Integer.toUnsignedLong`은 4바이트 카운터를 부호 없는 값으로 읽는다. 동기화 패스키의 0 카운터와 증가 카운터 정책을 구분한 이유는 본문에 설명했다.
+
 ## 작성한 테스트
 
 [OperatorMfaTest](../../src/test/java/dustin/cex/domains/security/OperatorMfaTest.java)는 실제 PostgreSQL과 검증기를 사용한다. [SoftwareAuthenticator](../../src/test/java/dustin/cex/domains/security/SoftwareAuthenticator.java)는 테스트마다 P-256 키를 생성하고 ECDSA 서명과 표준 CBOR/COSE 등록 데이터를 만든다. 검증기 성공을 모킹하지 않는다.

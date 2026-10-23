@@ -61,6 +61,36 @@ TigerBeetle은 금융 거래의 중복 생성을 막기 위해 고유 ID를 재�
 - `BigDecimal`은 문자열에서 생성해 십진수 금액을 유지한다. `negate()`는 원본을 변경하지 않고 부호를 바꾼 값을 반환한다.
 - Mockito의 `verify(..., never())`로 금액 증감 요청이 없었음을 확인한다. 명시적 요청 테스트는 한 번만 전달되고 추가 호출이 없는지도 검사한다.
 
+### 현재 코드로 연결해 읽기
+
+현재 남은 잔액 동기화 진입점은 명시적으로 전달한 변화량을 처리한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/services/BalanceSyncService.java#L45)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+public void syncBalance(Long userId, String mint, BigDecimal availableDelta) {
+    try {
+        log.info("[BalanceSyncService] 잔고 동기화 시작: userId={}, mint={}, delta={}",
+                userId, mint, availableDelta);
+
+        boolean success = engineHttpClient.syncBalance(userId, mint, availableDelta);
+
+        if (success) {
+            log.info("[BalanceSyncService] 잔고 동기화 성공: userId={}, mint={}, delta={}",
+                    userId, mint, availableDelta);
+        } else {
+            log.error("[BalanceSyncService] 잔고 동기화 실패: userId={}, mint={}, delta={}",
+                    userId, mint, availableDelta);
+            throw new RuntimeException("잔고 동기화 실패");
+        }
+    } catch (Exception e) {
+        log.error("[BalanceSyncService] 잔고 동기화 중 예외 발생: userId={}, mint={}, delta={}, error={}",
+                userId, mint, availableDelta, e.getMessage(), e);
+        throw new RuntimeException("잔고 동기화 실패: " + e.getMessage(), e);
+    }
+}
+```
+
+`BigDecimal`은 십진 변화량을 나타낸다. 이 메서드 호출과 서버 시작 시 전체 잔액을 다시 더하는 동작은 다르다. 자동 시작 경로 제거는 본문의 호출 관계와 함께 읽는다.
+
 ## 작성한 테스트
 
 다음 두 파일에 신규 테스트 7개를 작성했다. H2는 테스트마다 고유 이름으로 생성·종료하며 실제 PostgreSQL·Kafka·Rust 엔진에 접근하지 않는다.

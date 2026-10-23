@@ -8,6 +8,23 @@
 
 엔진이 자체 저널로 복원하고 미전달 결과를 재발행하므로 수신 멱등성은 해당 복구 계약의 일부다. [엔진의 WAL·복구 설계](../../../Cex-Engine/docs/decisions/009-durable-journal-recovery.md)와 함께 읽는다.
 
+### 현재 코드로 연결해 읽기
+
+사전 조회 대신 고유 키 삽입 결과로 같은 이벤트의 처리자를 정한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/kafka/EngineEventInbox.java#L34)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+String hash = hash(payload);
+int inserted = jdbc.update("""
+        INSERT INTO engine_event_receipts(event_id,engine_id,payload_hash) VALUES (?,?,?)
+        ON CONFLICT (event_id) DO NOTHING
+        """, eventId, engineId, hash);
+if (inserted == 1) {
+    return true;
+}
+```
+
+`jdbc.update`는 영향받은 행 수를 반환한다. 최초 삽입만 1이며, 중복이면 뒤의 기존 본문 해시 확인으로 진행한다. 수신 키와 금융 반영은 같은 트랜잭션에서 확정해야 한다.
+
 ## 검증된 접근과 선택
 
 [Kafka 공식 설계](https://kafka.apache.org/34/design/design/)는 외부 저장소까지 정확히 한 번 반영하려면 대상 시스템의 협력이 필요하다고 설명한다. 생산자 멱등성이나 Kafka 오프셋만으로 PostgreSQL 반영의 중복을 해결하지 않는다.

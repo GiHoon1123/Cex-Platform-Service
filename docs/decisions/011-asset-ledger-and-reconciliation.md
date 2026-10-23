@@ -144,6 +144,28 @@ FROM reconciliation_issues WHERE run_id = '<보고서 UUID>' ORDER BY id;
 
 PostgreSQL의 지연 제약은 트랜잭션 종료 때 전체 항목을 검사한다. 중간에 고객 감소 항목만 잠깐 존재할 수 있지만, 최종적으로 대응 증가가 없으면 커밋하지 못한다. 반복 읽기 스냅샷은 검사 중 새 금융 거래가 커밋돼도 검사 기준이 섞이지 않게 한다. 이 DB 트랜잭션과 락은 Rust 체결 코어의 공유 락 제거 원칙과 별개다.
 
+### 현재 코드로 연결해 읽기
+
+원장 항목을 같은 계정끼리 모으고 자산별 합계가 0인지 검사한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/ledger/LedgerService.java#L64)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+    record Account(long owner,String bucket,String asset) {}
+    var accounts=new LinkedHashMap<Account,BigDecimal>(); var totals=new HashMap<String,BigDecimal>();
+    for(var entry:postings) {
+        accounts.merge(new Account(entry.owner(),entry.bucket(),entry.asset()),entry.delta(),BigDecimal::add);
+        totals.merge(entry.asset(),entry.delta(),BigDecimal::add);
+    }
+    if(totals.values().stream().anyMatch(value->value.signum()!=0)) throw new IllegalArgumentException("자산별 원장 합계 불일치");
+    jdbc.update("INSERT INTO ledger_transactions(operation_key,kind) VALUES(?,?)",key,kind);
+    accounts.forEach((account,delta)->{
+        if(delta.signum()!=0) jdbc.update("INSERT INTO ledger_entries(operation_key,owner_id,bucket,asset,delta) VALUES(?,?,?,?,?)",
+            key,account.owner(),account.bucket(),account.asset(),delta);
+    });
+}
+```
+
+메서드 안의 `record`도 값 동등성을 갖는 키로 사용할 수 있다. `merge`와 `BigDecimal::add`로 같은 자산의 변화를 합치며, 서로 다른 자산의 금액을 환율 없이 더해 균형을 맞추지 않는다.
+
 ## 작성한 테스트
 
 [OrderLedgerTest](../../src/test/java/dustin/cex/domains/ledger/OrderLedgerTest.java)는 실행 소유 PostgreSQL의 테스트별 스키마에서 다음 15개를 실행한다.

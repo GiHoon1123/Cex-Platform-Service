@@ -50,6 +50,29 @@
 
 Spring이 주입한 소비 서비스의 `@Transactional` 안에서 수신 키와 금융 변경을 함께 처리한다. 종료 반영에 실패하면 키도 롤백되므로 원인을 해결한 다음 같은 원본을 다시 처리할 수 있다. 이미 커밋한 개별 체결을 되돌리는 보상 처리는 하지 않는다.
 
+### 현재 코드로 연결해 읽기
+
+시장가 종료 이벤트를 받아 원래 주문과 연결하는 현재 처리 경로다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/kafka/KafkaOrderEventConsumer.java#L164)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+private void completeMarketOrder(JsonNode event) {
+    Order order = order(event.path("order_id").asLong());
+    verifyOrder(order, event.path("user_id").asLong(), event.path("order_type").asText(),
+            event.path("base_mint").asText(), event.path("quote_mint").asText());
+    var original = submissions.findByOrderId(order.getId()).orElseThrow().command();
+    if (!"market".equals(original.orderSide()) || !"market".equals(order.getOrderSide())) {
+        throw new IllegalArgumentException("시장가 이외 주문의 종료 결과입니다");
+    }
+    BigDecimal quantity = number(event, "filled_amount"), spent = number(event, "filled_quote_amount");
+    BigDecimal reserved = number(event, "reserved_amount"), refund = number(event, "refund_amount");
+    boolean buy = original.orderType().equals("buy");
+    BigDecimal used = buy ? spent : quantity;
+    BigDecimal expectedRefund = ExactAmount.requireNonNegative(original.reservationAmount().subtract(used), "시장가 미사용 예약");
+    long actualTrades = buy ? tradeRepository.countByBuyOrderId(order.getId()) : tradeRepository.countBySellOrderId(order.getId());
+```
+
+여러 체결 이벤트와 최종 종료 이벤트를 구분한다. 이 발췌 뒤의 검증·상태 확정·잔여 예약 반환까지 같은 수신 트랜잭션에서 처리되며, HTTP 성공만으로 예약을 풀지 않는다.
+
 ## 작성한 테스트
 
 | 파일 | 함수 | 검증 시나리오·기대 결과 |

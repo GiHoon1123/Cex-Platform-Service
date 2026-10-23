@@ -89,6 +89,33 @@ sequenceDiagram
 
 `Math.incrementExact`는 시도 번호 오버플로를 숨기지 않는다. `Instant`는 시점을 나타내며 저장된 청구 기한·지연 응답 비교에 사용한다. 호스트 간 시계가 크게 어긋나면 중복 청구가 늘 수 있으므로 운영에서는 시간 동기화가 필요하다. 금융 안전성은 시계의 정확성보다 엔진 중복 방지에 의존한다.
 
+### 현재 코드로 연결해 읽기
+
+전송 시도 소유권을 짧은 DB 트랜잭션에서 확정한 뒤 외부 HTTP를 호출한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/order/service/OrderDispatchService.java#L35)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+Claim claim=transaction.execute(status->{
+    var row=dispatches.findForUpdate(id).orElseThrow();
+    if(!row.claim(Instant.now(),immediate)) return null;
+    var original=submissions.findByOrderId(id).orElseThrow();
+    return new Claim(id,original.getUserId(),original.command(),row.getAttempts());
+});
+if(claim==null) return dispatches.findById(id).orElseThrow().getConfirmedAt()!=null;
+boolean acknowledged=false;
+RuntimeException transportFailure=null;
+try {
+    var c=claim.command();
+    acknowledged=engine.submitOrder(id,claim.userId(),c.orderType(),c.orderSide(),c.baseMint(),c.quoteMint(),
+            text(c.price()),text(c.amount()),text(c.quoteAmount()));
+} catch(RuntimeException failure) {
+    transportFailure=failure;
+    // HTTP 오류·시간 초과는 미실행의 증거가 아니다. 원본 예약을 보존하고 다음 시도를 기록한다.
+    log.warn("엔진 제출 재확인 대기: orderId={}, attempt={}",id,claim.attempt(),failure);
+}
+```
+
+`TransactionTemplate.execute`의 반환 이후에는 위 DB 락을 유지하지 않는다. `Claim`은 원본 명령과 시도 번호를 담는 값이며, 늦은 응답은 후속 시도 번호 검사로 판별한다. 현재 전송 경로와 과거 첫 접수 구현은 문서의 시점을 구분해 읽는다.
+
 ## 작성한 테스트
 
 | 파일·함수 | 검증 |

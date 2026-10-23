@@ -98,6 +98,22 @@ Content-Type: application/json
 - 응답의 `record`는 불변 데이터 전달 객체다. Jackson이 구성 요소를 JSON 필드로 직렬화한다. `Long` 주문 ID를 문자열로 전달해 JavaScript `number`의 정밀도 손실을 피한다.
 - 이 변경은 DB와 HTTP 사이에 분산 트랜잭션을 만들지 않는다. 확실한 로컬 커밋과 불명인 원격 결과를 구분하는 변경이다.
 
+### 현재 코드로 연결해 읽기
+
+응답을 기다리다가 실패해도 주문과 예약을 추측으로 되돌리지 않는 현재 코드다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/order/service/OrderService.java#L173)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+} catch (RuntimeException e) {
+    // 여기서는 DB 상태를 쓰지 않는다. 응답을 기다리는 동안 다른 처리자가
+    // 주문을 filled/partial로 갱신했을 수 있으므로 pending으로도 덮어쓰지 않는다.
+    // 예외 원인은 내부 진단에만 보존하고 HTTP 응답에 노출하지 않는다.
+    log.warn("[Order] 엔진 제출 결과 불명: orderId={}, userId={}", orderId, userId, e);
+    throw new OrderSubmissionUncertainException(orderId, e);
+}
+```
+
+`catch`는 전송/응답 실패를 결과 불명으로 전달한다. 이미 다른 소비자가 상태를 바꿨을 수 있으므로 이 블록은 DB 상태를 덮어쓰지 않는다. 오류 문자열만으로 금융 결과를 확정하지 않는 이유다.
+
 ## 작성한 테스트
 
 ### 실제 JPA 저장·커밋: 신규 15건

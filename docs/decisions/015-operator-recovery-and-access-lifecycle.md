@@ -145,6 +145,25 @@ java -jar build/libs/cex-0.0.1-SNAPSHOT-operator-admin.jar \
 - Java의 패키지와 Spring의 컴포넌트 탐색 범위는 별개다. 관리 클래스는 일반 앱의 `dustin.cex` 범위 밖에 두고 `@Import`로 저장소·부여 업무·감사만 구성한다.
 - 하나의 소스에서 `BootJar`의 `mainClass`와 classifier를 달리해 관리 실행 파일을 만든다. HTTP 앱과 관리 명령을 별도 프로세스로 실행하면서 의존성을 중복 설계하지 않는다.
 
+### 현재 코드로 연결해 읽기
+
+중요 업무 직전 현재 역할과 운영 세션의 최근 MFA를 다시 확인한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/OperatorSessionPolicy.java#L19)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+public RefreshToken requireFresh(User user,UUID sid,UserRole... roles) {
+    if(user==null || !user.isAuthenticationAllowed() || user.getRole()==UserRole.CUSTOMER
+            || Arrays.stream(roles).noneMatch(r->r==user.getRole())) throw denied();
+    var session=tokens.findBySessionId(sid).orElseThrow(OperatorSessionPolicy::denied);
+    LocalDateTime now=LocalDateTime.now();
+    // 두 값 모두 Long 객체다. 참조 비교는 작은 정수 캐시 밖의 정상 사용자까지 거부하므로 값으로 비교한다.
+    if(!session.getUserId().equals(user.getId()) || session.getRevoked() || !session.getExpiresAt().isAfter(now)
+            || !session.hasVerifiedMfa() || !session.getMfaVerifiedAt().plusMinutes(5).isAfter(now)) throw denied();
+    return session;
+}
+```
+
+`Long.equals`는 객체 참조가 아닌 사용자 ID 값을 비교한다. 세션 회수·만료·MFA 시각은 현재 저장값으로 확인하며, JWT에 들어 있던 역할만 믿지 않는다. 호출자는 사용자 행을 먼저 잠가야 한다.
+
 ## 작성한 테스트
 
 [OperatorLifecycleTest](../../src/test/java/dustin/cex/domains/security/OperatorLifecycleTest.java)는 실제 PostgreSQL과 [SoftwareAuthenticator](../../src/test/java/dustin/cex/domains/security/SoftwareAuthenticator.java)의 P-256 서명으로 서로 다른 세 계정을 준비한다. MFA 검증기의 성공을 모킹하지 않는다.

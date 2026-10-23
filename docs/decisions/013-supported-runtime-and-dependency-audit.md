@@ -79,6 +79,22 @@ Boot 4는 모듈별 스타터·Jackson 3·Hibernate 7·새 테스트 패키지�
 
 `@MockitoBean`은 테스트 컨텍스트의 빈을 모킹하고 `@MockitoSpyBean`은 실제 빈을 감싸 관찰한다. JSON·트랜잭션·서비스 동작의 실제 통합 검증과 외부 송신 모킹을 구분해야 한다. `@TestConfiguration`은 재시도 시험용 모킹 설정이 전체 앱의 탐색에 섞이지 않게 한다.
 
+### 현재 코드로 연결해 읽기
+
+지원 런타임의 내장 재시도 어노테이션을 사용하는 현재 설정이다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/settlement/trade/scheduler/TradeSettlementScheduler.java#L78)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+@Retryable(
+        includes = RuntimeException.class,
+        // 최초 실행 한 번과 추가 재시도 두 번으로 기존 총 세 번을 유지한다.
+        maxRetries = 2,
+        delay = 2000,
+        multiplier = 2
+)
+```
+
+어노테이션에 재시도 횟수·지연·예외 범위를 고정한다. 재시도는 멱등성이나 금융 원자성을 대신하지 않으며, 스케줄러의 잠금·정산 실행 기록은 본문의 별도 통제를 따른다.
+
 ## 작성·수정한 테스트
 
 [FrameworkContractTest](../../src/test/java/dustin/cex/domains/runtime/FrameworkContractTest.java)의 신규 7개:

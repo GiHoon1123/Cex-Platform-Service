@@ -83,6 +83,24 @@ flowchart TD
 
 [OrderSubmission](../../src/main/java/dustin/cex/domains/order/model/entity/OrderSubmission.java)의 필드는 제품 경로에서 수정하지 않는다. `updatable=false`와 setter 부재를 사용한다. 이는 DB 관리자·직접 SQL의 수정을 막는 통제나 변조 방지 감사 로그는 아니다. 주문 ID도 유일하지만 현재 스칼라 매핑은 DB 외래키까지 생성하지 않는다. 정합성 대사·권한·감사 강화는 남아 있다.
 
+### 현재 코드로 연결해 읽기
+
+같은 요청 키의 재조회는 원래 명령과 비교한 뒤 저장된 주문을 반환한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/order/service/OrderService.java#L210)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+private OrderCreationResult replay(OrderSubmission submission, OrderCommand command) {
+    if (!submission.command().equals(command)) {
+        throw new OrderRequestConflictException();
+    }
+    Order order = orderRepository.findByUserIdAndId(submission.getUserId(), submission.getOrderId())
+            .orElseThrow(() -> new IllegalStateException("접수 기록에 연결된 주문을 찾을 수 없습니다"));
+    return new OrderCreationResult(OrderResponse.builder().order(convertToDto(order))
+            .message("Existing platform order; engine submission is not repeated").build(), false);
+}
+```
+
+Java의 `equals`로 정규화 명령의 값을 비교한다. 같은 키에 다른 내용이면 충돌이고, 같은 내용이면 기존 주문 ID를 사용한다. 이 메서드는 엔진 재전송을 하지 않으며 최초 HTTP 본문을 그대로 보관해 재생하는 기능도 아니다.
+
 ## 고객 API 계약
 
 ```http

@@ -73,6 +73,33 @@ flowchart LR
 
 잔액·주문·포지션·체결 DTO의 `BigDecimal`을 문자열로 직렬화한다. 주문·체결 ID도 브라우저 숫자로 바뀌지 않는다. 자바의 `record`는 불변 전달 타입, `@Transactional`은 수신 키와 저장 변경을 묶는 경계다. TypeScript의 타입 표기만으로 런타임 JSON이나 트랜잭션이 보장되는 것과는 구분해서 이해해야 한다.
 
+### 현재 코드로 연결해 읽기
+
+플랫폼은 엔진의 시장 이벤트를 검증하고 영속 수신 키와 순번을 확인한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/market/MarketService.java#L25)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+public void consume(String payload) throws Exception {
+    MarketSnapshot event=mapper.readValue(payload,MarketSnapshot.class);
+    validate(event);
+    // 동일 식별자의 다른 본문은 건너뛰지 않는다. 영속 수신 검사와 시세 반영이
+    // 함께 롤백되므로 디비 오류 뒤 다시 수신해도 체결 이력을 잃지 않는다.
+    if (!inbox.claim(event.eventId(),event.engineId(),payload)) return;
+    String pair=pair(event.baseMint(),event.quoteMint());
+    MarketState old=states.findById(pair).orElse(null);
+    long sequence=Long.parseLong(event.sequence());
+    if (old!=null) {
+        if (!old.getEngineId().equals(event.engineId())) throw new IllegalStateException("Market engine identity changed");
+        // WAL 출력 워커가 시작 기준점을 다시 발행할 수 있다. 과거 스냅샷이
+        // 최신 호가를 덮어쓰지 않도록 영속 순번을 비교한다.
+        if (sequence==old.getSequence()) throw new IllegalStateException("Market state is missing its receipt");
+        if (sequence>old.getSequence() && Long.parseLong(event.previousSequence())!=old.getSequence()) {
+            throw new IllegalStateException("Market sequence gap; restore Kafka history before continuing");
+        }
+    }
+```
+
+Kafka 소비 메서드의 `@Transactional`은 본문 위에서 확인할 수 있다. 이벤트가 중복이면 반환하고 엔진 ID가 달라지면 실패한다. 후속 순번/저장 검사까지 거쳐야 공개 화면에 사용할 상태가 된다.
+
 ## 작성·수정한 테스트
 
 - [MarketSafetyTest](../../src/test/java/dustin/cex/domains/market/MarketSafetyTest.java), 6개: 정렬·음수·깊이·순번·중복 체결 ID·개인정보 제외·중복 수신·큰 금액과 ID 직렬화·계정 상한보다 큰 호가 합.

@@ -129,6 +129,28 @@ sequenceDiagram
 - `json.writeValueAsString(payload)` 후 SHA-256: 필드 순서가 고정된 DTO를 서버 매퍼로 직렬화한다. 사유에 `|`가 있어도 문자열 연결 구분자가 모호해지지 않는다. 클라이언트가 임의로 직렬화한 값을 권위로 삼지 않는다.
 - `Long` 객체끼리는 `.equals`로 비교한다. 사용자 ID와 primitive `long`의 `==`는 자동 언박싱으로 값 비교다. 이 테스트도 ID 1000부터 시작해 작은 정수 캐시 때문에 오류가 가려지지 않게 한다.
 
+### 현재 코드로 연결해 읽기
+
+역할 승인은 요청자·승인자·대상과 원래 요청 버전을 다시 확인한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/OperatorRoleService.java#L113)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+private User checkDecision(long actor,UUID sid,Request request,String hash) {
+    var p=request.payload();var locked=lockUsers(actor,p.requesterId(),p.targetId());
+    var checker=locked.get(actor);policy.requireFresh(checker,sid,UserRole.APPROVER);
+    var maker=locked.get(p.requesterId());
+    if(maker==null || !maker.isAuthenticationAllowed() || maker.getRole()!=UserRole.OPERATOR
+            || !p.requesterPerson().equals(maker.getOperatorPersonId()) || maker.getVersion()!=p.requesterVersion()) throw denied(HttpStatus.FORBIDDEN);
+    different(checker,p.requesterId(),p.requesterPerson());
+    different(checker,p.targetId(),p.targetPerson());different(maker,p.targetId(),p.targetPerson());
+    if(!request.status().equals("PENDING") || !p.expiresAt().isAfter(Instant.now()) || !request.payloadHash().equals(hash))
+        throw denied(HttpStatus.CONFLICT);
+    var owner=eligibleTarget(locked.get(p.targetId()),p.targetVersion(),p.targetPerson(),p.requestedRole());
+    if(owner.getRole()!=p.previousRole()) throw denied(HttpStatus.CONFLICT);
+    return owner;
+```
+
+정렬된 사용자 잠금 뒤 현재 인물/역할/버전을 비교한다. 요청을 만든 뒤 역할을 바꿨다가 되돌린 경우도 버전이 달라 거부할 수 있다. 후속 대상 적격성 검사와 업무별 서명 소비까지 거쳐야 역할이 바뀐다.
+
 ## 작성한 테스트
 
 신규 파일은 [OperatorRoleTest](../../src/test/java/dustin/cex/domains/security/OperatorRoleTest.java), 실행기는 [verify_operator_roles.py](../../scripts/verify_operator_roles.py)다. 실행 소유 임시 PostgreSQL 16을 임의 포트에 만들고 마지막에 제거한다. 서비스의 서명 성공을 모킹하지 않고 기존 [SoftwareAuthenticator](../../src/test/java/dustin/cex/domains/security/SoftwareAuthenticator.java)의 실제 P-256/ECDSA 서명을 사용한다. 역할별 API·실패 주입에는 MockMvc를 사용하고 별도 테스트는 임의 포트의 실제 Tomcat/HTTP도 통과한다. 테스트용 키는 실물 기기나 브라우저 검증 증적이 아니다.

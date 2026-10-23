@@ -81,6 +81,19 @@ Spring Security의 경로 인가를 사용하고, 설치된 JJWT 0.12.5와 Argon
 - `REQUIRES_NEW`는 별도 트랜잭션으로 거부 감사를 보존한다. `MANDATORY`는 예약·원장·감사 같은 변경이 기존 업무 트랜잭션 밖에서 실행되지 못하게 한다. 프록시를 거치지 않는 자기 호출에는 새 트랜잭션이 자동 적용되지 않으므로 호출 위치를 함께 읽어야 한다.
 - 여러 사용자 행을 잠글 때 ID 순서를 고정해 승인끼리의 교착 위험을 줄인다. 사용자 상태 잠금은 플랫폼 정책·금융 정합성을 위한 것이며 Rust 매칭 상태는 공유하지 않는다.
 
+### 현재 코드로 연결해 읽기
+
+자동 로그인 화면을 끄고 Bearer API의 인증/인가 경계를 설정하는 실제 코드다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/SecurityConfiguration.java#L20)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+http.csrf(c->c.disable()).cors(c->{})
+    .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+    .formLogin(f->f.disable()).httpBasic(b->b.disable()).logout(l->l.disable())
+    .requestCache(c->c.disable())
+```
+
+람다는 각 보안 설정을 구성하는 함수다. 이 CSRF 설정은 쿠키 자동 인증을 쓰지 않는 현재 전제에서 읽어야 한다. 뒤의 메서드별 권한과 기본 거부 정책까지 함께 적용된다.
+
 ## 작성·수정한 테스트
 
 [PlatformSecurityTest](../../src/test/java/dustin/cex/domains/security/PlatformSecurityTest.java)는 실행 소유 PostgreSQL에서 실제 Spring Security·JPA·JDBC·감사 트리거를 사용한다. 엔진·Kafka 전송만 모킹하고, 별도 실제 프로세스 회귀로 외부 연결을 확인했다.

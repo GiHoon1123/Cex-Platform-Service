@@ -142,6 +142,33 @@ KYC 만료·최근 확인 만료·수동 제한은 신규 주문을 막는다. �
 - `instanceof DiditClient.RateLimited limited`: 공급사 호출 제한에서 안전하게 추출한 대기 시간만 처리한다. 예외 원문을 로그나 감사 근거에 복사하지 않는다.
 - 최근 확인 기한과 신분 유효기간: 하나는 외부 상태를 최근에 확인했는지, 다른 하나는 확인 자체가 언제까지 유효한지다. 하나의 `approved` 값으로 합치지 않는다.
 
+### 현재 코드로 연결해 읽기
+
+작업 임대만 짧게 확보하고 공급사 조회는 열린 DB 트랜잭션 밖에서 수행한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/kyc/KycReconciliationService.java#L58)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+public boolean reconcileDue() {
+    if (!settings.configured()) return false;
+    Work work = tx.execute(status -> claim());
+    if (work == null) return false;
+    try {
+        UUID session = work.session();
+        if (session == null) {
+            // 생성 응답도 누락된 경우 정확 검색으로 연결만 되찾는다. POST를 재실행하지 않는다.
+            session = kyc.recoverMissingSession(work.user(), work.attempt(), client.find(work.attempt()));
+        }
+        Evidence evidence = readEvidence(work, session);
+        finish(work, evidence);
+    } catch (RuntimeException failure) {
+        // 예외 원문에는 공급사 응답·개인정보가 들어갈 수 있다. 고정된 실패 코드만 저장한다.
+        fail(work,failure);
+    }
+    return true;
+}
+```
+
+`Work`는 임대와 원래 상태 번호를 들고 있는 값이다. 외부 조회가 끝나도 바로 반영하지 않고 후속 `finish`에서 임대·현재 시도·변경 번호를 다시 확인한다. 오래된 읽기가 새 결과를 덮어쓰지 못하는 근거다.
+
 ## 작성·수정한 테스트
 
 [KycIntegrationTest](../../src/test/java/dustin/cex/domains/kyc/KycIntegrationTest.java)에 아래 사례를 추가했다. 실제 임시 PostgreSQL·루프백 HTTP·HMAC·AES-GCM·사용자 잠금으로 검증하고, 감사 실패만 spy로 주입한다. 이전 61개 사례와 독립 Python 정규화 입력 300건도 유지한다.

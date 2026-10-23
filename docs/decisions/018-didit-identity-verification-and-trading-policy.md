@@ -172,6 +172,25 @@ HTTP는 `https://verification.didit.me`로 고정한다. 연결 5초, 전체 응
 - `AES/GCM/NoPadding`, 12바이트 nonce와 AAD: 매 암호화마다 새 nonce를 만들고 시도 ID를 추가 인증 데이터로 결합한다. 다른 시도에 암호문을 옮기면 인증 태그 검증이 실패한다.
 - `BigInteger`, `BigDecimal`, Unicode 코드 포인트: JavaScript `number`·문자열 정렬과 같다고 가정하면 큰 정수·소수·비BMP 문자에서 서명이 달라진다. 공급사의 Python 정규화 계약에 맞춘 경계 어댑터다.
 
+### 현재 코드로 연결해 읽기
+
+웹훅은 헤더 시각뿐 아니라 본문 시각과 전체 정규화 HMAC을 확인한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/kyc/DiditWebhookVerifier.java#L45)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+    long sent=Long.parseLong(timestamp),now=Instant.now().getEpochSecond();
+    if((fresh && sent<now-300) || sent>now+300) throw rejected();
+    var parsed=json.readTree(body);
+    // 헤더만 새 시각으로 바꾼 과거 본문의 재전송도 막는다. 본문 시각 자체가 HMAC에 들어 있다.
+    if(!parsed.isObject() || !parsed.path("timestamp").isIntegralNumber() || !parsed.path("timestamp").canConvertToLong() || parsed.path("timestamp").longValue()!=sent) throw rejected();
+    var mac=Mac.getInstance("HmacSHA256");mac.init(new SecretKeySpec(settings.webhookSecret.getBytes(StandardCharsets.UTF_8),"HmacSHA256"));
+    if(!MessageDigest.isEqual(mac.doFinal(canonical(parsed).getBytes(StandardCharsets.UTF_8)),HexFormat.of().parseHex(signature))) throw rejected();
+    return parsed;
+} catch(ResponseStatusException e) {throw e;}
+catch(RuntimeException | GeneralSecurityException e) {throw rejected();}
+```
+
+`MessageDigest.isEqual`로 계산한 서명과 받은 서명을 비교한다. 시각 검사는 재전송 허용 범위이고, 서명은 본문 전체의 인증이다. 서명 성공 뒤 고객/시도·앱·환경·워크플로 연결과 이벤트 순서를 별도로 검사한다.
+
 ## 작성·수정한 테스트
 
 [DiditWebhookVerifierTest](../../src/test/java/dustin/cex/domains/kyc/DiditWebhookVerifierTest.java)는 아래 4개 JUnit 사례다. [독립 Python 기대값](../../src/test/resources/didit-v2-canonical-fixtures.json) 300건은 첫 테스트 내부의 입력 사례이며 300개 JUnit으로 중복 집계하지 않는다. 정수화되는 큰 소수, 지수 표현, 가장 작은 비정규 수, 음수 0, 임의 유한 IEEE 754 값, 한글·이모지·키 정렬·빈 객체·제어 문자를 포함한다.

@@ -1,0 +1,155 @@
+{
+  "checked_date": "2026-10-23",
+  "scope": "기존 결정 문서의 실제 코드 발췌와 설명 보강",
+  "documents": 20,
+  "source_and_excerpt_match": true,
+  "source_link_positions_verified": true,
+  "normalization": "코드 내용은 그대로 유지하고 공통 들여쓰기와 행 끝 공백만 정리함",
+  "product_code_changed": false,
+  "new_product_tests": 0,
+  "product_tests_rerun": false,
+  "verification": "현재 소스 연속 행과 정규화한 발췌 전체 문자열·출처 위치 대조 및 git diff --check",
+  "baseline_commit": "4e058fa41bfa51736a6b8e35f3b48cf27fcdb41e",
+  "entries": [
+    {
+      "document": "docs/decisions/001-remove-startup-balance-replay.md",
+      "source": "src/main/java/dustin/cex/shared/services/BalanceSyncService.java",
+      "first_line": 45,
+      "lines": 21,
+      "excerpt_sha256": "92a72375c99bb7ed30fce9fb4b11138eb1a534fbf37347a030dfaa62cc119a49"
+    },
+    {
+      "document": "docs/decisions/002-preserve-uncertain-order-submission.md",
+      "source": "src/main/java/dustin/cex/domains/order/service/OrderService.java",
+      "first_line": 173,
+      "lines": 7,
+      "excerpt_sha256": "df0ff96b751d25daa46f3451c55e28fe7155161b51b9c07c6baeda9d716a8eef"
+    },
+    {
+      "document": "docs/decisions/003-idempotent-order-submission.md",
+      "source": "src/main/java/dustin/cex/domains/order/service/OrderService.java",
+      "first_line": 210,
+      "lines": 10,
+      "excerpt_sha256": "10c1305744bc551218191cd6b7bde15683c600c44e0eddd198d6aa380204990f"
+    },
+    {
+      "document": "docs/decisions/004-verify-durable-engine-receipt.md",
+      "source": "src/main/java/dustin/cex/shared/http/EngineHttpClient.java",
+      "first_line": 137,
+      "lines": 13,
+      "excerpt_sha256": "e2bbdd043c46f5b7af3e8046ef524b01b3779077b3582363e17de2e0bdb183be"
+    },
+    {
+      "document": "docs/decisions/005-common-exact-amount-contract.md",
+      "source": "src/main/java/dustin/cex/shared/model/ExactAmount.java",
+      "first_line": 17,
+      "lines": 7,
+      "excerpt_sha256": "b1e12bc802208cc1c9e0c91256c4e8f18523c33887da9408c42f5da1826af6ee"
+    },
+    {
+      "document": "docs/decisions/006-engine-event-inbox.md",
+      "source": "src/main/java/dustin/cex/shared/kafka/EngineEventInbox.java",
+      "first_line": 34,
+      "lines": 8,
+      "excerpt_sha256": "80cc8dfb3e1bbc11d8c5ba9d65cff4b493cfb19625943a74ccc3d01455d8406f"
+    },
+    {
+      "document": "docs/decisions/007-platform-market-gateway.md",
+      "source": "src/main/java/dustin/cex/domains/market/MarketService.java",
+      "first_line": 25,
+      "lines": 18,
+      "excerpt_sha256": "402e4a5d47f7edc5717e371548214da046a9d55117779f96dc708681a1fac23c"
+    },
+    {
+      "document": "docs/decisions/008-fee-authority-and-balance-deltas.md",
+      "source": "src/main/java/dustin/cex/domains/fee/service/FeeConfigService.java",
+      "first_line": 51,
+      "lines": 7,
+      "excerpt_sha256": "e9224df7d3df185634bef2449aa33c6de0aaf351ae4b77d330f543cba3b73866"
+    },
+    {
+      "document": "docs/decisions/009-market-ioc-settlement.md",
+      "source": "src/main/java/dustin/cex/shared/kafka/KafkaOrderEventConsumer.java",
+      "first_line": 164,
+      "lines": 14,
+      "excerpt_sha256": "2d9424429a03ec7bc7d39c79c3561d30292ff06a7e98d1b2423eeafe69f73b48"
+    },
+    {
+      "document": "docs/decisions/010-durable-order-resolution.md",
+      "source": "src/main/java/dustin/cex/domains/order/service/OrderDispatchService.java",
+      "first_line": 35,
+      "lines": 18,
+      "excerpt_sha256": "8594e5740508124ba7b26faf47fbbd0af7af71a4c48753801cbeff96a35e47ae"
+    },
+    {
+      "document": "docs/decisions/011-asset-ledger-and-reconciliation.md",
+      "source": "src/main/java/dustin/cex/domains/ledger/LedgerService.java",
+      "first_line": 64,
+      "lines": 13,
+      "excerpt_sha256": "7221d66c7bcd93bc298d46e986620974a8db6bb732d5bd567cd0307cb115ad95"
+    },
+    {
+      "document": "docs/decisions/012-platform-access-approval-audit.md",
+      "source": "src/main/java/dustin/cex/domains/security/SecurityConfiguration.java",
+      "first_line": 20,
+      "lines": 4,
+      "excerpt_sha256": "54723fe011b09f816f7aa4030a05a2f57618ca709be20b3245d6d4572ece890a"
+    },
+    {
+      "document": "docs/decisions/013-supported-runtime-and-dependency-audit.md",
+      "source": "src/main/java/dustin/cex/domains/settlement/trade/scheduler/TradeSettlementScheduler.java",
+      "first_line": 78,
+      "lines": 7,
+      "excerpt_sha256": "64b4ab5514d2bc79c2f395638b71f1624869a108ce3f82a276036e60d9f1f92a"
+    },
+    {
+      "document": "docs/decisions/014-operator-webauthn-mfa.md",
+      "source": "src/main/java/dustin/cex/domains/security/OperatorMfaService.java",
+      "first_line": 136,
+      "lines": 8,
+      "excerpt_sha256": "30b4c35a66bba297db88f3e8bff5cb341bf640b25133d2dd97bb316d0bed589f"
+    },
+    {
+      "document": "docs/decisions/015-operator-recovery-and-access-lifecycle.md",
+      "source": "src/main/java/dustin/cex/domains/security/OperatorSessionPolicy.java",
+      "first_line": 19,
+      "lines": 10,
+      "excerpt_sha256": "aeb02ff28ddb6fe3c3dc3dcf157b0779f79424895a9fd3f701a674af38fcfe55"
+    },
+    {
+      "document": "docs/decisions/016-operator-role-approval-and-bound-authentication.md",
+      "source": "src/main/java/dustin/cex/domains/security/OperatorRoleService.java",
+      "first_line": 113,
+      "lines": 13,
+      "excerpt_sha256": "b9f6a0182b565464b316a9e3c751ed19729741f0dec032fae6de796c45d4e2cd"
+    },
+    {
+      "document": "docs/decisions/017-bound-approval-for-existing-operations.md",
+      "source": "src/main/java/dustin/cex/domains/security/OperatorMfaService.java",
+      "first_line": 172,
+      "lines": 19,
+      "excerpt_sha256": "13420d4eb761da89c65fc8b1e11124a97e52110875fcd17536851c56a72cf80c"
+    },
+    {
+      "document": "docs/decisions/018-didit-identity-verification-and-trading-policy.md",
+      "source": "src/main/java/dustin/cex/domains/kyc/DiditWebhookVerifier.java",
+      "first_line": 45,
+      "lines": 10,
+      "excerpt_sha256": "98002f6c01f76d120bf2c3d2e68f3e15e745c69e7fcdd40c7ed4bc696b5c3178"
+    },
+    {
+      "document": "docs/decisions/019-platform-kyc-reconciliation.md",
+      "source": "src/main/java/dustin/cex/domains/kyc/KycReconciliationService.java",
+      "first_line": 58,
+      "lines": 18,
+      "excerpt_sha256": "ec276edf375911bec9bc52fbad1d2c2813c34210f8139797093f6119e78a2199"
+    },
+    {
+      "document": "docs/decisions/020-customer-declaration-and-initial-risk.md",
+      "source": "src/main/java/dustin/cex/domains/cdd/CddCrypto.java",
+      "first_line": 50,
+      "lines": 7,
+      "excerpt_sha256": "e052fe236c6adf160f0763de76e1c0a76c6188e88689926ca3b3885a17a5043f"
+    }
+  ]
+}

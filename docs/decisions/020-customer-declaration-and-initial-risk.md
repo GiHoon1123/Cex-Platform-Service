@@ -135,6 +135,22 @@ sequenceDiagram
 - `ON CONFLICT DO NOTHING`은 중복 신원 경합에서 DB가 한 삽입만 확정하게 한다. 사용자별 락만으로 서로 다른 고객의 동일 신원을 직렬화할 수 없다는 점이 핵심이다.
 - HMAC은 키가 필요한 지문이고 SHA-256은 공개 해시다. 암호화와 지문은 목적이 다르다. nonce는 암호화마다 새로 만들지만 같은 값 대조용 HMAC은 같은 키에서 안정적이다.
 
+### 현재 코드로 연결해 읽기
+
+고객 신고 암호화의 인증 문맥을 사용자와 신고 ID에 묶는다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/cdd/CddCrypto.java#L50)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+private byte[] crypt(int mode,long user,UUID id,byte[] nonce,byte[] bytes) {
+    try {var cipher=Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(mode,new SecretKeySpec(encryption,"AES"),new GCMParameterSpec(128,nonce));
+        // 다른 사용자나 다른 신고 행에 암호문을 옮기면 인증 태그 검증부터 실패한다.
+        cipher.updateAAD((user+":"+id).getBytes(StandardCharsets.UTF_8));return cipher.doFinal(bytes);
+    } catch(GeneralSecurityException e) {throw new IllegalStateException("고객 정보 암호화 검증 실패");}
+}
+```
+
+AES-GCM의 AAD에는 암호화하지 않아도 바뀌면 안 되는 문맥이 들어간다. 같은 암호문을 다른 사용자/신고에 옮기면 태그 검증에 실패한다. 이 코드는 표준 JCE를 사용하며 독립 지문 키·nonce 생성은 같은 파일의 호출부를 함께 읽는다.
+
 ## 작성한 테스트
 
 신규 CDD 통합 사례는 [KycIntegrationTest](../../src/test/java/dustin/cex/domains/kyc/KycIntegrationTest.java)에 추가했다. 기존 KYC 사례도 실제 신고와 완전한 서명 필드를 사용한다. 승인된 CDD 행을 끼워 넣어 이 통합 검증을 통과시키지 않는다.

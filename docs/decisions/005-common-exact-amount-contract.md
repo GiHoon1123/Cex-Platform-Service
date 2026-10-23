@@ -34,6 +34,22 @@ Java BigDecimal은 임의 정밀도 십진수를 표현하고 DB는 NUMERIC(30,9
 
 BigDecimal은 불변이므로 subtract/add로 새 값을 계산한 것만으로 엔티티가 바뀌지 않는다. 두 결과 모두 검사한 다음 setter를 호출한다. DB 커밋 뒤 엔진 HTTP를 호출하는 기존 접수 순서는 유지한다.
 
+### 현재 코드로 연결해 읽기
+
+금액이 양수인지 확인하면서 공통 표현 범위 검증을 먼저 재사용한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/model/ExactAmount.java#L17)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+
+```java
+public static BigDecimal requirePositive(BigDecimal value, String field) {
+    BigDecimal normalized = requireNonNegative(value, field);
+    if (normalized.signum() == 0) {
+        throw new IllegalArgumentException(field + "는 양수여야 합니다");
+    }
+    return normalized;
+}
+```
+
+`BigDecimal`의 `signum()`은 값의 부호를 반환한다. 실제 소수점/정수 자릿수와 Rust 96비트 계수 검증은 호출한 `requireNonNegative`까지 읽어야 한다. 이 짧은 메서드만으로 전체 금액 범위를 보장하는 것은 아니다.
+
 ## 작성한 테스트
 
 [OrderCommandTest.java](../../src/test/java/dustin/cex/domains/order/model/OrderCommandTest.java):
