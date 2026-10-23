@@ -21,7 +21,10 @@ public class FundsTradeLink {
             if(scope==Scope.RECORDED_TRADE)try {UUID.fromString(eventId.split(":")[0]);}catch(IllegalArgumentException e){throw denied();}return this;
         }
     }
-    public record Link(String eventId,String operationKey,String spentAsset,BigDecimal spentAmount,Instant recordedAt,String inboxHash,String ledgerDigest) {}
+    public record Link(String eventId,String operationKey,String spentAsset,BigDecimal spentAmount,Instant recordedAt,String inboxHash,String ledgerDigest) {
+        // JSON의 일반/지수 표기가 달라도 같은 지출액은 같은 근거다. 재생성 시에도 동일하게 정규화한다.
+        public Link {spentAmount=spentAmount.stripTrailingZeros();}
+    }
     private final JdbcTemplate jdbc;private final DiditWebhookVerifier verifier;private final ObjectMapper json;
     public FundsTradeLink(JdbcTemplate jdbc,DiditWebhookVerifier verifier,ObjectMapper json) {this.jdbc=jdbc;this.verifier=verifier;this.json=json;}
     public Link read(long user,Target target) {

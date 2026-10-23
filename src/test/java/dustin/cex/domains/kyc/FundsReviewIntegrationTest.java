@@ -163,4 +163,11 @@ class FundsReviewIntegrationTest extends EddTestSupport {
         reviewed();corrected();var p=pair(ONBOARDING);var r=propose(p);assertEquals("APPROVED",decide(r,authorization(r,true,p.facts()),true,p.facts()).status());assertEquals("STANDARD",cdd.status(customer.getId()).outcome());assertThrows(ResponseStatusException.class,()->propose(EddService.Finding.CORRECTED_SIGNED_IDENTITY));blocked();
     }
 
+    @ParameterizedTest @ValueSource(strings={"1000.000000000","0.000000001","10000.000000001"})
+    void tradeLinkSerializationPreservesNumericIdentity(String amount) {
+        var link=new FundsTradeLink.Link(UUID.randomUUID()+":1:0","engine:test","USDT",new BigDecimal(amount),Instant.now(),"0".repeat(64),"1".repeat(64));
+        var restored=json.readValue(json.writeValueAsString(link),FundsTradeLink.Link.class);
+        assertEquals(link,restored);assertEquals(link.spentAmount().stripTrailingZeros(),restored.spentAmount());
+    }
+
 }
