@@ -37,6 +37,11 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/kyc/session","/api/kyc/sessions/*/reconcile","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/kyc/session","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/kyc/customers/*","/api/admin/kyc/customer-profiles/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/edd/funds-reviews/context").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/edd/funds-reviews").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/edd/funds-reviews/*/inspect","/api/admin/edd/funds-reviews/*/approve/options",
+                    "/api/admin/edd/funds-reviews/*/reject/options","/api/admin/edd/funds-reviews/*/approve","/api/admin/edd/funds-reviews/*/reject").access(audited(audit,sessions,"APPROVER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*/funds-reviews").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/evidence/*/address-review/context").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/evidence/*/address-reviews").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/address-reviews/*/inspect","/api/admin/edd/address-reviews/*/approve/options",
