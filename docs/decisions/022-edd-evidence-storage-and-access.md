@@ -111,9 +111,12 @@ AES-GCM은 암호문과 AAD를 함께 인증한다. AAD에는 비밀이 아니�
 출처: [EvidenceService.java](../../src/main/java/dustin/cex/domains/edd/EvidenceService.java#L90). 메서드 일부이며 독립 실행 예제가 아니다.
 
 ```java
-    byte[] view=crypto.decrypt((String)e.get("key_id"),context(id,r)+":VIEW",(byte[])e.get("view_cipher"));
-    audit.record(actor,"EDD_EVIDENCE_VIEWED","edd-evidence:"+id,"SUCCESS",reason.name());return new View(id,view);
-}));
+byte[] view=crypto.decrypt((String)e.get("key_id"),context(id,r)+":VIEW",(byte[])e.get("view_cipher"));
+// 실제 반환 시점의 평가·사건·운영 인물·세션을 묶는다. 옛 열람을 새 심사의 근거로 재사용하지 않는다.
+var c=jdbc.queryForMap("SELECT latest_assessment,revision FROM edd_cases WHERE id=?",r.get("case_id"));UUID receipt=UUID.randomUUID();
+jdbc.update("INSERT INTO edd_evidence_views(id,evidence_id,actor_id,actor_person,actor_version,session_id,assessment_id,case_revision,key_id) VALUES(?,?,?,?,?,?,?,?,?)",
+    receipt,id,actor,operator.getOperatorPersonId(),operator.getVersion(),sid,c.get("latest_assessment"),c.get("revision"),crypto.keyId());
+audit.record(actor,"EDD_EVIDENCE_VIEWED","edd-evidence:"+id,"SUCCESS",reason.name());return new View(id,receipt,view);
 ```
 
 `tx.execute`가 성공적으로 커밋된 다음 서비스의 반환값이 컨트롤러로 간다. 위 return이 감사보다 먼저 실행되지 않는다. HTTP 송신 뒤 고객 단말이 실제 열었는지는 알 수 없으므로 이 기록은 열람본 제공 허가·반환 시도 증적이다. 다운로드 성공·사실 검증 완료라고 기록하지 않는다.
@@ -197,7 +200,7 @@ Temurin 21·macOS·실행 소유 동적 루프백 PostgreSQL 16·필요한 격�
 
 ## 남은 범위와 운영 조건
 
-다음은 **받은 실제 자료의 내용·발급기관·시점·고객/신고/거래와의 일치에 대한 사실 검증과 독립 승인**이다. 현재 열람은 사실 확인 결론이 아니고, 모든 자료 상태는 RECEIVED_UNVERIFIED다. 자금 원천·전체 재산·주소를 파일 하나로 동일하게 검증하지 않는다. PEP/제재 해소·고위 경영진 승인·지속 감시·법정 보고도 별도 업무다.
+후속 [023 주소 증빙 독립 검토](023-address-document-independent-review.md)에서 이름·주소·발급기관·발급일의 사람 관찰과 독립 서명 검토를 구현한다. 자금 원천/재산·발급기관 진위·거래와의 일치 및 전체 위험 결론은 다음 범위다. 현재 열람은 사실 확인 결론이 아니고, 모든 자료 상태는 RECEIVED_UNVERIFIED다. 자금 원천·전체 재산·주소를 파일 하나로 동일하게 검증하지 않는다. PEP/제재 해소·고위 경영진 승인·지속 감시·법정 보고도 별도 업무다.
 
 실제 개인정보를 받기 전 수집 근거/최소 필드·동의/고지·마스킹 기준·정확한 법정 보존/보유기간·분리보존·파기/법적 보류·권리 행사와 반출 통제를 확정해야 한다. 현재 불변 트리거와 미구현 파기를 영구 보존 정책으로 사용하지 않는다. 증빙용 DB가 물리적으로 분리된 개인정보 저장소라는 뜻도 아니다.
 
@@ -212,3 +215,8 @@ Temurin 21·macOS·실행 소유 동적 루프백 PostgreSQL 16·필요한 격�
 선택 JUnit **650개**, 실패·오류·제외 0개다. 전용 84개(신규 증빙 49+기존 EDD 35), KYC/CDD 150, 승인/접근 190, MFA 42, 금융 183, 실제 엔진 연결 1개다. 기존 별도 프로세스 **15개**도 통과했다. 두 JAR·JMH 컴파일 성공, 222개 의존성 버전의 알려진 OSV 검출 0·체크섬 변조 차단을 확인했고 실행 소유 자원을 정리했다. 신규 증빙 전용 프로세스 강제 종료 테스트는 0개다.
 
 구현/테스트는 [`efd8a08`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/efd8a08)에 담았다. 문서/검증 증적은 별도 커밋으로 같은 작업 단위에서 일반 푸시한다. 작성자·커미터는 Gihoon이다. 이전 전체 문서 보강은 별도 문서 작업으로 먼저 완료했으며 관련 범위는 [전체 적용 목록](../reference/all-document-examples-verification-2026-10-23.json)에서 확인한다.
+
+
+## 023 이후 열람 영수증
+
+실제 코드 발췌도 현재 소스에 맞춰 갱신했다. 열람본 제공과 같은 트랜잭션에서 세션·운영 인물/버전·평가·사건 변경 번호·키를 불변 영수증으로 남긴다. 응답의 X-Evidence-View-Id로 023의 현재 주소 검토를 시작한다. 영수증은 자료 제공 시도이며 사람이 읽었다는 자동 증명이 아니다. 이전의 문서·테스트 수치는 당시 확정 결과로 유지한다.

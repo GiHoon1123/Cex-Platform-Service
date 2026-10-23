@@ -1,0 +1,511 @@
+{
+  "checked_date": "2026-10-23",
+  "scope": "주소 증빙의 세션/평가 결합 제공 기록·최소 신고 열람·암호화 사람 관찰·독립 재입력과 업무별 서명 검토",
+  "implementation_commit": "9c8ba2df16bd05d87b518d5cd659d3beda0bb5ed",
+  "junit": {
+    "tests": 704,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suite_counts": {
+    "edd_and_address": 138,
+    "kyc": 150,
+    "bound": 190,
+    "mfa": 42,
+    "financial": 183,
+    "market": 1
+  },
+  "new_junit_cases": 54,
+  "new_address_tests": {
+    "integration": 42,
+    "facts": 12
+  },
+  "previous_edd_and_evidence_cases": 84,
+  "new_process_scenarios": 0,
+  "process_scenarios": 15,
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_edd.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 24.69
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc_recovery.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 9.38
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_bound_approvals.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 176.13
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_mfa.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 20.23
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_engine_inbox.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 31.96
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.47
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 16.31
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_order_idempotency.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 18.41
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 24.66
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.51
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.18
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "purpose": "최종 코드·주석까지 두 JAR/JMH·의존성 목록 재빌드"
+    }
+  ],
+  "reports": {
+    "edd_and_address": {
+      "container": "cex-edd-e93470f1a29c",
+      "exit": 0,
+      "tests": {
+        "tests": 138,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "kyc": {
+      "container": "cex-kyc-da7c5c9acf70",
+      "exit": 0,
+      "tests": {
+        "tests": 150,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "bound": {
+      "container": "cex-bound-approvals-08266d61ec3c",
+      "groups": [
+        {
+          "name": "bound",
+          "exit": 0,
+          "tests": {
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "roles",
+          "exit": 0,
+          "tests": {
+            "tests": 51,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "lifecycle",
+          "exit": 0,
+          "tests": {
+            "tests": 37,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "security",
+          "exit": 0,
+          "tests": {
+            "tests": 40,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 190,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "mfa": {
+      "container": "cex-operator-mfa-389baa0a9b0c",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "financial": {
+      "container": "cex-inbox-1725d1cc63d5",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "kyc_process": {
+      "container": "cex-kyc-recovery-4f68595c1950",
+      "checks": [
+        {
+          "test": "kill_during_provider_get_preserves_pending_attempt_and_lease",
+          "passed": true
+        },
+        {
+          "test": "fresh_jvm_recovers_expired_lease_and_original_signed_approval",
+          "passed": true
+        },
+        {
+          "test": "subsequent_reconciliation_keeps_one_receipt_and_original_expiry",
+          "passed": true
+        }
+      ],
+      "provider": "loopback",
+      "bots_disabled": true,
+      "killed_exit": -9,
+      "exit": 0,
+      "jvm_runs": 2,
+      "container_removed": true
+    },
+    "operator_admin_process": {
+      "database": "cex_idempotency_1994cd0646e9",
+      "temporary_database_removed": true,
+      "platform_runs": 1,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "dedicated_grant_without_ddl_or_workers",
+          "passed": true
+        },
+        {
+          "test": "reject_financial_customer_and_duplicate_grant",
+          "passed": true
+        }
+      ]
+    },
+    "order_process": {
+      "database": "cex_idempotency_1b043eae6c94",
+      "temporary_database_removed": true,
+      "platform_runs": 2,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "test_concurrent_same_key",
+          "new": 1,
+          "existing": 11,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_concurrent_same_key_different_content",
+          "new": 1,
+          "existing": 5,
+          "conflicts": 6,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_invalid_balance_and_unrepresentable_split_roll_back_everything",
+          "rollback_cases": 2,
+          "engine_posts": 0
+        },
+        {
+          "test": "test_invalid_header_and_command_have_no_financial_effect",
+          "statuses": [
+            400,
+            400,
+            400
+          ],
+          "engine_posts": 0
+        },
+        {
+          "test": "test_key_is_scoped_to_authenticated_user",
+          "users": 2,
+          "engine_posts": 2
+        },
+        {
+          "test": "test_lost_response_then_same_key",
+          "statuses": [
+            202,
+            200
+          ],
+          "engine_posts": 1
+        },
+        {
+          "test": "test_market_original_budget_survives_order_changes",
+          "quote_amount": "123.250000001",
+          "replay": 200,
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_process_restart_uses_committed_key",
+          "after_restart": 200,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_same_key_different_content",
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_unrepresentable_commands_are_rejected_without_financial_effect",
+          "rejections": 2,
+          "engine_posts": 0
+        }
+      ]
+    },
+    "market": {
+      "postgres": "cex-market-pg-a61f82c181",
+      "kafka": "cex-market-broker-03503bfc03",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    },
+    "dependency_audit": {
+      "checked_at": "2026-10-23T03:49:01.245964+00:00",
+      "status": "NO_KNOWN_FINDINGS",
+      "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+      "package_versions": 222,
+      "findings": []
+    },
+    "dependency_integrity": {
+      "check": "gradle_rejects_altered_checksum",
+      "original_cache_modified": false,
+      "gradle_exit": 1,
+      "passed": true,
+      "temporary_copy_removed": true
+    }
+  },
+  "market_junit": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_test_cases": {
+    "dustin.cex.domains.edd.AddressFactsTest": {
+      "counts": {
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        "[1] address = \"\"",
+        "[2] address = \"가상\\n주소\"",
+        "[3] address = \"가상‮주소\"",
+        "[1] days = 0",
+        "[2] days = 1",
+        "[3] days = 89",
+        "[4] days = 90",
+        "recordsEveryMismatchAndOldDateInsteadOfPretendingToVerify()",
+        "differentAddressPunctuationIsNotSilentlyMerged()",
+        "normalizesUnicodeSpacesAndNameCaseButKeepsAddressPunctuation()",
+        "futureDateHasIndependentReason()",
+        "requiresDocumentTypeIssuerNameAndBoundedDate()"
+      ]
+    },
+    "dustin.cex.domains.kyc.AddressReviewIntegrationTest": {
+      "counts": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        "differentHashCannotConsumeValidSignature()",
+        "expiredViewIsRejectedEvenWithFreshMfa()",
+        "alteredObservationAfterOptionsDoesNotConsumeProof()",
+        "approvedAddressReviewCannotBypassEvidenceHoldOnStandardCustomer()",
+        "anotherEvidenceReceiptCannotSubstituteForReviewedImage()",
+        "expiredImmutableReviewCannotIssueOptions()",
+        "completeHttpReviewUsesStoredPayloadAndOwnObservation()",
+        "sameRequestKeyCannotBeReboundToAnotherView()",
+        "allowedFrontendCanReadReceiptHeaderAndForeignOriginCannot()",
+        "newDeclarationInvalidatesOptionsAndOldReceipt()",
+        "factsAreEncryptedAndOnlyIndependentInspectionReturnsThem()",
+        "auditorSeesMetadataButCannotReadFactsAndCustomerHasNoAdminAccess()",
+        "negativeObservationCanBeIndependentlyConfirmedWithoutOpeningTrading()",
+        "newSignedAssessmentCannotReuseOldDocumentReview()",
+        "viewAuditFailureRollsBackNewReceipt()",
+        "customerKycChangeCannotLeaveOldReviewExecutable()",
+        "rejectionRequiresNoInventedObservationAndPreservesHold()",
+        "contextAuditFailureDoesNotReturnDeclaredPersonalData()",
+        "requesterVersionChangeInvalidatesPendingReview()",
+        "independentTypedObservationAndSignatureApproveOnlyContentReview()",
+        "missingReceiptAndAnotherPersonsReceiptCannotAuthorizeReview()",
+        "existingEddSignatureCannotApproveAddressReviewOrBeConsumedThere()",
+        "immutableViewsReportsAndDecisionsRejectMutation()",
+        "proposalAuditFailureRollsBackCipherBindingAndReview()",
+        "previousFiveKindSchemaFailsWithoutRewritingAnyHistory()",
+        "newEvidenceInvalidatesPendingReviewAndRequiresFreshView()",
+        "approverMustSubmitIndependentMatchingFields()",
+        "requestKeyBindsExactObservationAndCurrentFacts()",
+        "[1] badOrigin = true",
+        "[2] badOrigin = false",
+        "contextExposesOnlyNameAndAddressAfterOwnedFreshView()",
+        "concurrentApprovalAndRejectionCommitOneConclusion()",
+        "inspectionAuditFailureNeverReturnsPrivateFacts()",
+        "oldSessionCannotReadCustomerContextOrApprove()",
+        "sourceOfFundsEvidenceIsNotProcessedAsAddress()",
+        "otherEddNamespaceCannotConsumeAddressSignature()",
+        "decisionAuditFailureRollsBackChallengeCounterDecisionAndRevision()",
+        "samePersonDifferentAccountCannotIndependentlyInspect()",
+        "approvalProofCannotAuthorizeRejectionOrReplay()",
+        "httpViewReceiptEnablesOnlyMinimalAuditedContextAndInspection()",
+        "[1] same = true",
+        "[2] same = false"
+      ]
+    }
+  },
+  "source_excerpts": [
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/AddressFacts.java",
+      "first_line": 20,
+      "lines": 7,
+      "sha256": "334a16308c74794ab6ff2efeb139f96e92726de97fc47bbeac210a5bc0d81e60"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/EvidenceService.java",
+      "first_line": 91,
+      "lines": 5,
+      "sha256": "8f4864b16326e47857781b8f7ad171a695e8d3e4829a6e2aadfc7463c77c5234"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/AddressReviewService.java",
+      "first_line": 75,
+      "lines": 5,
+      "sha256": "f6e511dc6b7f2f084c9fe1c6df13561b412a574627ffd504c08da5d11cf7e7a9"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/AddressReviewService.java",
+      "first_line": 127,
+      "lines": 5,
+      "sha256": "9832728fe9b5199d2313caa52af0c489e37ea0958a5a763575d9643d16f0f6ae"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/AddressReviewService.java",
+      "first_line": 98,
+      "lines": 6,
+      "sha256": "41d118a47cf85ec845aea6971b227285fdfa5a3a2020463519ea4467f664dce8"
+    }
+  ],
+  "all_current_excerpts_matched": 79,
+  "existing_022_excerpt_updated": true,
+  "verification_notes": [
+    "중간 128/135/137개 실행을 최종 138개에 가산하지 않음",
+    "기존 KYC/금융/접근 등 선택 회귀와 새 전용 검증을 분리해 합계에 한 번씩만 가산",
+    "최종 점검에서 양방향 업무 서명 분리·CORS 영수증 헤더·신고 STANDARD여도 주소 승인으로 금융 종결 불가를 보강해 최종 전용 검증을 다시 실행"
+  ],
+  "warnings": [
+    "deprecated API 컴파일 안내",
+    "기존 unchecked 컴파일 안내",
+    "Mockito/JVM 클래스 공유 제한 안내",
+    "테스트 Swagger 안내"
+  ],
+  "limitations": [
+    "관찰값은 사람이 입력하는 합성 테스트이며 OCR·발급기관 조회·문서 위변조·실제 거주를 확인한 결과가 아님",
+    "주소 문서 검토만 추가. 자금 원천/재산·전체 위험 사유 해소·EDD 종결·거래 허용을 추가하지 않음",
+    "서명은 고정 보고서와 방향/세션에 결합하고 승인자 영수증은 최종 조건으로 검사·보존함. 특정 승인자 영수증 UUID를 별도 서명 payload에 넣는 요청 계층은 없음",
+    "기존 5종 승인 CHECK는 지원하지 않으면 기동 거부. 자동 ALTER·호환·열람/관찰 이력 반입·개발 DB 재기동 없음",
+    "별도 15개 프로세스 시나리오는 기존 KYC 복원/관리 도구/주문 검증. 주소 검토 전용 강제 종료·디스크 손실은 새로 검증하지 않음",
+    "실제 고객/공급사/실물 장치·운영 심사·수집/고지/보존/분리/파기·키 수명/반출/인프라 정책은 별도 조건",
+    "선택 회귀이며 전체 테스트·새 성능 측정은 아님"
+  ],
+  "dependency_changes": false,
+  "engine_core_changed": false,
+  "frontend_code_changed": false,
+  "bots_disabled": true,
+  "deployed": false,
+  "existing_development_database_changed": false
+}
