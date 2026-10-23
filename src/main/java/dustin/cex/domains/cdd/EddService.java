@@ -4,6 +4,7 @@ import dustin.cex.domains.auth.model.entity.*;
 import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.security.*;
 import dustin.cex.domains.edd.EddDossier;
+import dustin.cex.domains.edd.AmlResolutionPolicy;
 import dustin.cex.domains.kyc.DiditWebhookVerifier;
 import java.sql.Timestamp;
 import java.time.*;
@@ -25,23 +26,23 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Service
 public class EddService {
-    public static final String REVIEW_POLICY="EDD_CASE_DOSSIER_REVIEW_V1";
-    public enum Finding { AWAITING_EVIDENCE, COMPLIANCE_ESCALATION, CORRECTED_SIGNED_IDENTITY }
+    public static final String REVIEW_POLICY="EDD_CASE_RESOLUTION_REVIEW_V2";
+    public enum Finding { AWAITING_EVIDENCE, COMPLIANCE_ESCALATION, CORRECTED_SIGNED_IDENTITY, RESOLVED_AML_FALSE_POSITIVES }
     public record Case(UUID id,long userId,long revision,UUID firstAssessment,UUID latestAssessment,String state,Instant validUntil,List<String> reviewReasons) {}
     /** 승인자가 볼 근거와 해시 입력이 같은 값이다. 개인정보 대신 실제 불변 평가와 서명 이벤트 식별자를 고정한다. */
     public record Payload(UUID id,UUID caseId,long caseRevision,long userId,UUID assessmentId,UUID eventId,UUID attemptId,
         String statusDigest,String keyId,String policyVersion,List<String> historicalReasons,Finding finding,Instant validUntil,
-        long requesterId,UUID requesterPerson,long requesterVersion,Instant expiresAt,String reviewPolicy,EddDossier.Summary dossier) {}
+        long requesterId,UUID requesterPerson,long requesterVersion,Instant expiresAt,String reviewPolicy,EddDossier.Summary dossier,AmlResolutionPolicy.Basis amlResolution) {}
     public record Report(Payload payload,String payloadHash,String status) {}
     public record Confirmation(Report report,boolean approve,OperatorMfaService.Options authentication) {}
     public record Inspection(Report report,EddDossier.Page dossier) {}
-    private final EddDossier dossiers;
+    private final EddDossier dossiers;private final AmlResolutionPolicy resolutions;
     private final JdbcTemplate jdbc;private final UserRepository users;private final OperatorSessionPolicy policy;
     private final OperatorMfaService mfa;private final AuditService audit;private final ObjectMapper json;
     private final DiditWebhookVerifier verifier;private final CddCrypto crypto;private final TransactionTemplate tx;
     public EddService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy policy,OperatorMfaService mfa,
-            AuditService audit,ObjectMapper json,DiditWebhookVerifier verifier,CddCrypto crypto,PlatformTransactionManager manager,EddDossier dossiers) {
-        this.dossiers=dossiers;this.jdbc=jdbc;this.users=users;this.policy=policy;this.mfa=mfa;this.audit=audit;this.json=json;
+            AuditService audit,ObjectMapper json,DiditWebhookVerifier verifier,CddCrypto crypto,PlatformTransactionManager manager,EddDossier dossiers,AmlResolutionPolicy resolutions) {
+        this.resolutions=resolutions;this.dossiers=dossiers;this.jdbc=jdbc;this.users=users;this.policy=policy;this.mfa=mfa;this.audit=audit;this.json=json;
         this.verifier=verifier;this.crypto=crypto;tx=new TransactionTemplate(manager);
     }
     /** 호출한 CDD 서비스가 고객 행을 잠그고 평가·현재 포인터를 먼저 저장한 같은 트랜잭션에서 실행한다. */
@@ -59,6 +60,13 @@ public class EddService {
             audit.record(user,"EDD_CASE_UPDATED","edd:"+prior.id(),"SUCCESS","NEW_ASSESSMENT");
         }
     }
+    /** 운영 화면은 원문 대신 미충족 조건과 기한을 읽는다. 선택 가능하다는 응답 자체가 승인 권한은 아니다. */
+    public AmlResolutionPolicy.Eligibility amlResolution(long actor,UUID sid,long user) {
+        return attempt(actor,"EDD_AML_RESOLUTION_CHECK",()->tx.execute(t->{
+            var locked=lock(actor,user);policy.requireFresh(locked.get(actor),sid,UserRole.OPERATOR,UserRole.APPROVER);customer(locked.get(user));
+            cases(user,true);var result=resolutions.assess(user);audit.record(actor,"EDD_AML_RESOLUTION_CHECKED","customer:"+user,"SUCCESS",result.eligible()?"ELIGIBLE":result.unmetCondition());return result;
+        }));
+    }
     public Report propose(long actor,UUID sid,long user,UUID expectedAssessment,UUID request,Finding finding,Instant until) {
         return attempt(actor,"EDD_PROPOSE",()->tx.execute(status->{
             var locked=lock(actor,user);var maker=locked.get(actor);policy.requireFresh(maker,sid,UserRole.OPERATOR);
@@ -74,7 +82,7 @@ public class EddService {
             // 기존 실제 검토 이력이 있는 고객만 명시적으로 사건을 시작한다. 과거 고객의 승인 근거는 채워 넣지 않는다.
             if(c==null) {observe(user,expectedAssessment);c=cases(user,true);}
             if(c==null || !c.latestAssessment().equals(expectedAssessment)) throw deny(HttpStatus.CONFLICT);
-            validateFinding(c,assessment,finding,until);
+            var resolution=validateFinding(c,assessment,finding,until);
             var dossier=dossiers.capture(c.id(),user);
             // 변경 번호가 같아도 새 자료 요청·미결 관찰이 있으면 새 근거로 요청할 수 있다.
             if(jdbc.queryForObject("SELECT count(*) FROM edd_reports WHERE case_id=? AND payload::jsonb->>'caseRevision'=? AND payload::jsonb->>'assessmentId'=? AND payload::jsonb->>'reviewPolicy'=? AND payload::jsonb->'dossier'->>'digest'=? AND expires_at>clock_timestamp() AND NOT EXISTS(SELECT 1 FROM edd_decisions d WHERE d.report_id=edd_reports.id)",Long.class,c.id(),Long.toString(c.revision()),expectedAssessment.toString(),REVIEW_POLICY,dossier.digest())>0)
@@ -82,7 +90,7 @@ public class EddService {
             Instant expires=micros(Instant.now().plusSeconds(600));
             var p=new Payload(UUID.randomUUID(),c.id(),c.revision(),user,expectedAssessment,(UUID)assessment.get("event_id"),(UUID)assessment.get("attempt_id"),
                 (String)assessment.get("status_digest"),(String)assessment.get("key_id"),(String)assessment.get("policy_version"),c.reviewReasons(),finding,micros(until),
-                actor,maker.getOperatorPersonId(),maker.getVersion(),expires,REVIEW_POLICY,dossier);
+                actor,maker.getOperatorPersonId(),maker.getVersion(),expires,REVIEW_POLICY,dossier,resolution);
             String hash=verifier.digest(json.valueToTree(p));
             jdbc.update("INSERT INTO edd_reports(id,case_id,user_id,requester_id,request_key,payload,payload_hash,expires_at) VALUES(?,?,?,?,?,?,?,?)",
                 p.id(),c.id(),user,actor,request,json.writeValueAsString(p),hash,Timestamp.from(expires));
@@ -103,7 +111,7 @@ public class EddService {
     public Inspection dossier(long actor,UUID sid,UUID id,int page) {
         return attempt(actor,"EDD_DOSSIER_READ",()->tx.execute(s->{
             var r=read(id);var locked=lock(actor,r.payload().userId());policy.requireFresh(locked.get(actor),sid,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);
-            customer(locked.get(r.payload().userId()));if(!REVIEW_POLICY.equals(r.payload().reviewPolicy()))throw deny(HttpStatus.CONFLICT);
+            customer(locked.get(r.payload().userId()));
             dossiers.verify(r.payload().dossier(),r.payload().caseId(),r.payload().userId());var result=dossiers.page(r.payload().dossier(),page);
             audit.record(actor,"EDD_DOSSIER_READ","edd-report:"+id,"SUCCESS","HISTORICAL_METADATA_ONLY");return new Inspection(r,result);
         }));
@@ -121,7 +129,7 @@ public class EddService {
             var checker=users.findById(actor).orElseThrow();
             jdbc.update("INSERT INTO edd_decisions(report_id,approver_id,approver_person,approved) VALUES(?,?,?,?)",id,actor,checker.getOperatorPersonId(),approve);
             if(approve) {
-                String state=switch(r.payload().finding()) {case AWAITING_EVIDENCE->"OPEN";case COMPLIANCE_ESCALATION->"REFERRED";case CORRECTED_SIGNED_IDENTITY->"CLOSED";};
+                String state=switch(r.payload().finding()) {case AWAITING_EVIDENCE->"OPEN";case COMPLIANCE_ESCALATION->"REFERRED";case CORRECTED_SIGNED_IDENTITY,RESOLVED_AML_FALSE_POSITIVES->"CLOSED";};
                 jdbc.update("UPDATE edd_cases SET state=?,valid_until=?,revision=revision+1 WHERE id=?",state,
                     r.payload().validUntil()==null?null:Timestamp.from(r.payload().validUntil()),c.id());
             }
@@ -141,10 +149,15 @@ public class EddService {
         dossiers.verify(p.dossier(),c.id(),p.userId());
         if(!p.dossier().digest().equals(dossiers.liveDigest(c.id(),p.userId())))throw deny(HttpStatus.CONFLICT);
         if(requireInspection)dossiers.requireAllPages(p.id(),p.dossier(),checker,sid);
-        validateFinding(c,current,p.finding(),p.validUntil());return c;
+        var resolution=validateFinding(c,current,p.finding(),p.validUntil());
+        if(!Objects.equals(p.amlResolution(),resolution))throw deny(HttpStatus.CONFLICT);
+        // 조사자가 나중에 승인 역할로 이동해도 자기 관찰을 독립 승인하지 못한다.
+        if(resolution!=null&&resolution.investigations().stream().anyMatch(x->x.person().equals(checker.getOperatorPersonId())))throw deny(HttpStatus.FORBIDDEN);
+        return c;
     }
-    private void validateFinding(Case c,Map<String,Object> a,Finding finding,Instant until) {
-        if(finding!=Finding.CORRECTED_SIGNED_IDENTITY) {if(until!=null) throw deny(HttpStatus.BAD_REQUEST);return;}
+    private AmlResolutionPolicy.Basis validateFinding(Case c,Map<String,Object> a,Finding finding,Instant until) {
+        if(finding==Finding.RESOLVED_AML_FALSE_POSITIVES)return resolutions.require(c.userId(),until);
+        if(finding!=Finding.CORRECTED_SIGNED_IDENTITY) {if(until!=null) throw deny(HttpStatus.BAD_REQUEST);return null;}
         // 추가 자료는 아직 사실 검증을 마치지 않았다. 단순 신원 정정 종결로 자료 검토를 건너뛰지 않는다.
         if(jdbc.queryForObject("SELECT count(*) FROM edd_evidence_requests WHERE case_id=?",Long.class,c.id())>0) throw deny(HttpStatus.CONFLICT);
         // PEP·제재 의심·실소유자·국가·목적·중복 신원은 신원 재제출만으로 해소되지 않는다.
@@ -159,7 +172,7 @@ public class EddService {
               AND q.fresh_at>clock_timestamp()-interval '15 minutes'
               AND NOT EXISTS(SELECT 1 FROM cdd_assessments old WHERE old.user_id=k.user_id AND old.outcome='REVIEW_REQUIRED' AND old.attempt_id=t.id))
             """,Boolean.class,c.userId(),a.get("id"),a.get("declaration_id"),a.get("attempt_id"),a.get("status_digest"),Timestamp.from(until)));
-        if(!verified) throw deny(HttpStatus.CONFLICT);
+        if(!verified) throw deny(HttpStatus.CONFLICT);return null;
     }
     /** 현재 신고의 현재 평가만 사용한다. 과거 평가나 다른 고객의 행을 승인 근거로 받지 않는다. */
     private Map<String,Object> current(long user) {

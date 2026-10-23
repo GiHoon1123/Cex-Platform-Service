@@ -18,6 +18,8 @@ public class EddController {
     public record Decision(@NotBlank @Pattern(regexp="[0-9a-f]{64}") String payloadHash,@NotNull OperatorMfaService.AuthorizationProof proof) {
         @Override public String toString() {return "Decision[서명 생략]";}
     }
+    @GetMapping("/customers/{user}/aml-resolution") public dustin.cex.domains.edd.AmlResolutionPolicy.Eligibility amlResolution(
+            @RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable long user) {return service.amlResolution(userId,sessionId,user);}
     @PostMapping("/customers/{user}/reports") public EddService.Report propose(@RequestAttribute long userId,@RequestAttribute UUID sessionId,
             @PathVariable long user,@RequestHeader("Idempotency-Key") UUID key,@Valid @RequestBody Proposal b) {
         return service.propose(userId,sessionId,user,b.assessmentId(),key,b.finding(),b.validUntil());

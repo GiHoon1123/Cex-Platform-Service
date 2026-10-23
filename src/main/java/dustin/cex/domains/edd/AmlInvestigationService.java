@@ -89,12 +89,7 @@ public class AmlInvestigationService {
     public Detail inspectInvestigation(long actor,UUID sid,UUID id) {
         return attempt(actor,"EDD_AML_INVESTIGATION_READ",()->tx.execute(s->{
             var result=read(id);var p=result.payload();var locked=lock(actor,p.userId());sessions.requireFresh(locked.get(actor),sid,UserRole.OPERATOR,UserRole.APPROVER);customer(locked.get(p.userId()));
-            String notes;
-            try {
-                byte[] cipher=jdbc.queryForObject("SELECT notes_cipher FROM edd_aml_investigations WHERE id=?",byte[].class,id);
-                notes=new String(crypto.decrypt(p.evidenceKeyId(),context(p),cipher),StandardCharsets.UTF_8);
-                if(!p.notesMac().equals(cdd.fingerprint("aml-investigation-notes",notes)))throw new IllegalStateException();
-            } catch(RuntimeException e) {throw new IllegalStateException("AML 조사 메모의 해독·무결성 검증 실패");}
+            String notes=verifiedNotes(result);
             audit.record(actor,"EDD_AML_INVESTIGATION_VIEWED","aml-investigation:"+id,"SUCCESS",result.payloadHash());return new Detail(result,notes);
         }));
     }
@@ -104,6 +99,18 @@ public class AmlInvestigationService {
             var result=jdbc.queryForList("SELECT id FROM edd_aml_investigations WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 25 OFFSET ?",user,page*25).stream().map(x->read((UUID)x.get("id"))).toList();
             audit.record(actor,"EDD_AML_INVESTIGATIONS_LISTED","customer:"+user,"SUCCESS","METADATA_ONLY");return result;
         }));
+    }
+    /** 내부 종결 판단은 이미 권한을 확인한 업무 트랜잭션에서 메모의 무결성만 확인하고 원문은 반환하지 않는다. */
+    Investigation verifiedForResolution(UUID id) {
+        if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("조사 검증에는 업무 트랜잭션이 필요합니다");
+        var result=read(id);verifiedNotes(result);return result;
+    }
+    private String verifiedNotes(Investigation result) {
+        var p=result.payload();try {
+            byte[] cipher=jdbc.queryForObject("SELECT notes_cipher FROM edd_aml_investigations WHERE id=?",byte[].class,p.id());
+            String notes=new String(crypto.decrypt(p.evidenceKeyId(),context(p),cipher),StandardCharsets.UTF_8);
+            if(!p.notesMac().equals(cdd.fingerprint("aml-investigation-notes",notes)))throw new IllegalStateException();return notes;
+        } catch(RuntimeException e) {throw new IllegalStateException("AML 조사 메모의 해독·무결성 검증 실패");}
     }
     private void current(AmlSource.Metadata m,UUID assessment,long revision) {
         boolean valid=Boolean.TRUE.equals(jdbc.queryForObject("""

@@ -120,7 +120,11 @@ public class CddService {
         aml.capture(user,assessment,event,digest,decision);
         audit.record(user,"CDD_ASSESSED","cdd:"+assessment,"SUCCESS",outcome+":"+(reasons.isEmpty()?"INITIAL_CHECKS_PASSED":String.join(",",reasons)));
     }
-    /** 신규 주문 예약과 같은 트랜잭션에서 호출한다. 옛 시도·옛 신고·옛 키·옛 판정의 평가는 효력이 없다. */
+    /**
+     * 신규 주문 예약과 같은 트랜잭션에서 호출한다. 옛 시도·옛 신고·옛 키·옛 판정의 평가는 효력이 없다.
+     * AML 오탐 종결은 원래 위험 평가를 정상으로 고치지 않고 별도 승인으로만 제한적으로 허용한다.
+     * 파생 사건의 종료 표시만 믿지 않고 불변 승인 내용의 평가·변경 번호·기한까지 일치해야 한다.
+     */
     public boolean permitted(long user) {
         if(crypto.keyId().equals("UNCONFIGURED")) return false;
         return Boolean.TRUE.equals(jdbc.queryForObject("""
@@ -128,11 +132,21 @@ public class CddService {
              JOIN kyc_profiles k ON k.user_id=c.user_id JOIN cdd_declarations d ON d.id=c.declaration_id
              JOIN cdd_attempt_bindings b ON b.attempt_id=k.active_attempt AND b.declaration_id=c.declaration_id
              WHERE c.user_id=? AND r.user_id=c.user_id AND d.user_id=c.user_id AND r.declaration_id=c.declaration_id AND r.attempt_id=k.active_attempt
-              AND r.status_digest=k.status_digest AND r.outcome='STANDARD' AND r.key_id=? AND d.key_id=? AND r.policy_version=?
+              AND r.status_digest=k.status_digest AND r.key_id=? AND d.key_id=? AND r.policy_version=?
+              AND (r.outcome='STANDARD' OR (r.outcome='REVIEW_REQUIRED' AND r.reasons='AML_REVIEW_REQUIRED'
+               AND EXISTS(SELECT 1 FROM edd_cases closed JOIN edd_reports report ON report.case_id=closed.id
+                JOIN edd_decisions decision ON decision.report_id=report.id AND decision.approved=true
+                WHERE closed.user_id=c.user_id AND closed.latest_assessment=r.id AND closed.state='CLOSED'
+                 AND closed.valid_until>clock_timestamp() AND report.payload::jsonb->>'assessmentId'=r.id::text
+                 AND report.payload::jsonb->>'statusDigest'=r.status_digest
+                 AND report.payload::jsonb->>'finding'='RESOLVED_AML_FALSE_POSITIVES'
+                 AND report.payload::jsonb->>'reviewPolicy'=? AND report.payload::jsonb->'amlResolution'->>'policy'=?
+                 AND (report.payload::jsonb->>'caseRevision')::bigint=closed.revision-1
+                 AND (report.payload::jsonb->>'validUntil')::timestamptz=closed.valid_until)))
               AND (NOT EXISTS(SELECT 1 FROM cdd_assessments old WHERE old.user_id=c.user_id AND old.outcome='REVIEW_REQUIRED')
                OR EXISTS(SELECT 1 FROM edd_cases e WHERE e.user_id=c.user_id AND e.latest_assessment=r.id
                 AND e.state='CLOSED' AND e.valid_until>clock_timestamp())))
-            """,Boolean.class,user,crypto.keyId(),crypto.keyId(),POLICY));
+            """,Boolean.class,user,crypto.keyId(),crypto.keyId(),POLICY,EddService.REVIEW_POLICY,dustin.cex.domains.edd.AmlResolutionPolicy.POLICY));
     }
     /** 신원 대조에 사용한 필드만 지문으로 만든다. 대사 실행 기록에 생일·이름의 공개 해시를 남기지 않는다. */
     public String evidenceDigest(JsonNode decision) {

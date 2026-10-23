@@ -60,6 +60,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*/aml-sources","/api/admin/edd/customers/*/aml-investigations").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/aml-sources/*/inspect","/api/admin/edd/aml-investigations/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/aml-sources/*/investigations").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/edd/customers/*/aml-resolution").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/customers/*/reports").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/reports/*/inspect").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/edd/reports/*/dossier").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))

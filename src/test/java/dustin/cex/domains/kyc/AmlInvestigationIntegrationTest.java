@@ -138,7 +138,10 @@ class AmlInvestigationIntegrationTest extends EddTestSupport {
         var d=((JsonNode)event.get("decision")).deepCopy();var o=(ObjectNode)d;o.put("session_kind","user").put("vendor_data",attempt.toString()).put("workflow_id",WORKFLOW.toString()).put("environment","live");if(nodes!=null)o.set("aml_screenings",nodes);
         when(client.decision(created.get(attempt))).thenReturn(d);
     }
-    void reconcile() {jdbc.update("UPDATE kyc_reconciliations SET next_attempt_at=clock_timestamp()-interval '1 second' WHERE attempt_id=?",attempt);reconciliation.reconcileDue();}
+    void reconcile() {
+        // 같은 격리 DB의 다른 사건이 이 HTTP 대역을 소비하지 않도록 가변 작업 일정만 분리한다. 금융·수신 이력은 유지한다.
+        jdbc.update("UPDATE kyc_reconciliations SET next_attempt_at=clock_timestamp()+interval '1 day' WHERE attempt_id<>?",attempt);
+        jdbc.update("UPDATE kyc_reconciliations SET next_attempt_at=clock_timestamp()-interval '1 second' WHERE attempt_id=?",attempt);reconciliation.reconcileDue();}
     @Test void missedInReviewWebhookIsRecoveredFromActualArchivedSignature() throws Exception {
         prepare("In Review",candidates());var original=delivery(event);currentDecision(null);when(client.deliveries(created.get(attempt))).thenReturn(json.createArrayNode().add(original));reconcile();
         assertEquals("CONFIRMED",jdbc.queryForObject("SELECT outcome FROM kyc_reconciliations WHERE attempt_id=?",String.class,attempt));assertEquals(1,count("edd_aml_sources"));memo(metadata(),view(metadata()));blocked();
