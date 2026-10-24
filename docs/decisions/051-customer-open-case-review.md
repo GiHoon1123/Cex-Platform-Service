@@ -90,3 +90,6 @@ public boolean requiresAttention(){return updateTarget.state()==CustomerReviewUp
 - [`56c1964`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/56c1964bb86d8436e6123f3130d38c0e538b8119): 구현과 관련 회귀.
 
 [확정 증적](../reference/customer-open-case-review-verification-2026-10-24.json), [049 앞선 알림 범위](049-customer-final-notices.md).
+
+
+공개 진행 회신과 최종 결과의 실제 본인 알림 연결은 [052 통합 알림](052-customer-review-notices.md)을 따른다. 당시 회귀/증적은 보존한다.

@@ -123,3 +123,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [050. 고객 후속 운영 점검 customer-periodic-updates](decisions/050-customer-periodic-updates.md): 실제 코드·판단·테스트·실행 한계.
 
 - [051. 고객 후속 운영 점검 customer-open-case-review](decisions/051-customer-open-case-review.md): 실제 코드·판단·테스트·실행 한계.
+
+- [052. 고객 후속 운영 점검 customer-review-notices](decisions/052-customer-review-notices.md): 실제 코드·판단·테스트·실행 한계.

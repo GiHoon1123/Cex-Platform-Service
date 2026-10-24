@@ -53,7 +53,7 @@ if(!state.contains(person))continue;
 
 ### 논리 기록과 실제 회신 근거 비교
 
-[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L47)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L50)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 var progress=jdbc.queryForMap("""
@@ -68,7 +68,7 @@ long note=((Number)progress.get("note_sequence")).longValue(),reply=((Number)pro
 if(reply>note)throw new IllegalStateException("회신의 내부 기록 근거가 존재하지 않습니다");
 UUID finalId=(UUID)progress.get("final_id");
 // 최종 답변은 과거 관측 회신과 다른 지표다. 과거 상태 회신과 승인/고객 확인을 따로 제공한다.
-items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply_at")),instant(progress.get("decided_at")),Instant.now()),updates.assess(id,((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()),CustomerReviewCompletionTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now())));
+items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply_at")),instant(progress.get("decided_at")),Instant.now()),updates.assess(id,((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at"))),CustomerReviewCompletionTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now())));
 ```
 
 max(sequence)와 max(note_sequence)를 하나의 SQL 관측에서 읽는다. 회신 건수나 기록 시각 대신 040이 실제 서명/보존한 내부 기록 순번을 비교한다. 새 내부 기록이 회신보다 앞서면 hasUnreflectedNote가 true다. note=reply=0은 아직 내부 기록과 회신이 없다는 뜻이며 업무 완료를 뜻하지 않는다.

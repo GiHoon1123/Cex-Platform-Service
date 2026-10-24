@@ -54,8 +54,9 @@ var row=jdbc.queryForMap("""
         coalesce(bool_or(elapsed<interval '0 seconds'),false) AS reversed
     FROM gaps
     """,Timestamp.from(received),review,finalized==null?null:Timestamp.from(finalized),finalized==null?null:Timestamp.from(finalized));
+// 같은 조회 도중 확정된 새 회신을 미래 데이터로 오인하지 않도록 DB 결과를 받은 뒤 관측한다.
 var latest=(Timestamp)row.get("latest_public");
-return CustomerReviewUpdateTarget.assess(received,latest==null?null:latest.toInstant(),finalized,((Number)row.get("breached")).longValue(),Boolean.TRUE.equals(row.get("reversed")),observed);
+return CustomerReviewUpdateTarget.assess(received,latest==null?null:latest.toInstant(),finalized,((Number)row.get("breached")).longValue(),Boolean.TRUE.equals(row.get("reversed")),Instant.now());
 ```
 
 lag는 논리 순서의 바로 앞 시각을 읽는다. 종류0접수·1상태 회신·2최종 승인으로 정렬하므로 시각 정렬로 역행을 숨기지 않는다. FILTER로 전체 문구/이력을 JVM으로 복사하지 않고 집계 값만 받는다. SQL bigint는 Number.longValue로 읽으며 JS number와 정밀도 범위가 다르다.
@@ -94,6 +95,8 @@ lag는 논리 순서의 바로 앞 시각을 읽는다. 종류0접수·1상태 �
 
 ## 한계
 
+집계는 조회에 보이는 커밋된 행을 사용하지만 observedAt/decided_at 자체는 각 업무 트랜잭션 안에서 기록한 시각이다. 이를 정확한 물리 커밋 시각·HTTP 제공 완료·외부 전달 시각으로 해석하지 않는다. 이 정책은 보존된 기록 시각에 따른 내부 점검이며 실제 종단 간 통지 지연이나 법정 통지 완료의 증거가 아니다.
+
 자체 점검은 법정 기산점/영업일·최종 해결·기관 제출·외부 이메일/SMS의 전달/수신을 의미하지 않는다. 대량 알림·보존/파기·운영 시간 동기화·인력/실물 키·신고/인증 심사는 별도다. 본인 목록·문구 조회와 최종 결과의 명시적 확인을 구분하며 알림 GET으로 확인 이력을 만들지 않는다. 외부 메시지를 발송하지 않았다.
 
 ## 관련 커밋과 증적
@@ -101,3 +104,13 @@ lag는 논리 순서의 바로 앞 시각을 읽는다. 종류0접수·1상태 �
 - [`fd7b9b8`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/fd7b9b88b20ef7028738929995581b4761f78d6c): 구현과 관련 회귀.
 
 [확정 증적](../reference/customer-periodic-updates-verification-2026-10-24.json), [049 앞선 알림 범위](049-customer-final-notices.md).
+
+
+공개 진행 회신과 최종 결과의 실제 본인 알림 연결은 [052 통합 알림](052-customer-review-notices.md)을 따른다. 당시 회귀/증적은 보존한다.
+
+
+## 집계 중 새 회신의 관측 시각 보완
+
+052 마무리 검토에서 DB 집계 전에 관측 시각을 잡으면 그 사이 공개된 실제 회신을 미래 데이터로 오인할 수 있음을 확인했다. 현재 CustomerReviewUpdateTimeline은 집계 결과를 받은 뒤 Instant.now()로 평가한다. 위 실제 SQL 발췌의 마지막 호출과 한국어 주석도 현재 동작이다. 고정 시각의 순수 모델은 그대로 유지한다.
+
+[CustomerUpdateTimelineIntegrationTest.responsePublishedDuringQueryIsNotMistakenForFutureClockData](../../src/test/java/dustin/cex/domains/kyc/CustomerUpdateTimelineIntegrationTest.java)에서 집계 호출 중 실제 새 메모/공개 회신을 확정한 다음 같은 PostgreSQL 집계를 읽도록 제어한다. 기대 결과는 TIME_REVIEW_REQUIRED가 아닌 WAITING이다. 기존33개 실행 뒤 추가한 회귀이며 현재53개/bootJar와 전체/광역의 실행 시점은 [052 확정 증적](../reference/customer-review-notices-verification-2026-10-24.json)에서 구분한다. 기존 금융 기록·시간을 덮어쓰거나 테스트를 위해 기다리지 않는다.

@@ -33,7 +33,7 @@ var candidates=after==null?jdbc.queryForList("SELECT id,user_id,exit_id,created_
 
 ### 제공 기록과 현재 담당자만 표시
 
-[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L47)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
+[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L55)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
 
 ```java
 Timestamp viewed=jdbc.queryForObject("SELECT max(occurred_at) FROM security_audit WHERE action='CUSTOMER_EXIT_REVIEW_VIEWED' AND outcome='SUCCESS' AND target=?",Timestamp.class,"customer-review:"+id);
@@ -44,7 +44,7 @@ var progress=jdbc.queryForMap("""
     LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id
     """,id,id);
 var assessment=CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply")),instant(progress.get("decided_at")),Instant.now());
-var item=new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available),assessment,(UUID)progress.get("request_id"),instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),updates.assess(id,((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()),CustomerReviewCompletionTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()));
+var item=new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available),assessment,(UUID)progress.get("request_id"),instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),updates.assess(id,((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at"))),CustomerReviewCompletionTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()));
 if(!attentionOnly||item.requiresAttention())items.add(item);
 ```
 
@@ -52,7 +52,7 @@ if(!attentionOnly||item.requiresAttention())items.add(item);
 
 ### 감사 실패 시 목록 반환 차단
 
-[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L51)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
+[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L67)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
 
 ```java
 audit.record(actor,attentionOnly?"CUSTOMER_REVIEW_ATTENTION_READ":"CUSTOMER_REVIEW_SUPERVISION_READ","operator:"+actor,"SUCCESS","METADATA_ONLY");
