@@ -25,7 +25,7 @@
 
 ## 실제 코드와 이해에 필요한 원리
 
-출처: [CustomerRecoveryHistory.java](../../src/main/java/dustin/cex/domains/security/CustomerRecoveryHistory.java#L32), 현재 소스의 부분 발췌.
+출처: [CustomerRecoveryHistory.java](../../src/main/java/dustin/cex/domains/security/CustomerRecoveryHistory.java#L33), 현재 소스의 부분 발췌.
 
 ```java
             String sql="""
@@ -97,3 +97,5 @@ JDK21·실행 소유 PostgreSQL16·GreenMail 로컬 SMTPS에서 기존 복구23�
 
 - [구현 6db28a1](https://github.com/GiHoon1123/Cex-Platform-Service/commit/6db28a13d5bb6cf7ce1e6e4b9520d73d0e62bf98)
 - [격리 실행 증적](../reference/070-customer-recovery-history-verification-2026-10-25.json)
+
+[072 커서 경계 검증](072-customer-email-change-history.md)에서 보안 이력 커서의 자체 범위를 UTC1970년~현재로 제한하고 JDBC 변환 전 범위 오류를400으로 거부했다. 기존 기록의 시각/내용은 보존한다.

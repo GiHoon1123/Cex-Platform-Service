@@ -1,0 +1,436 @@
+{
+  "cycle": 72,
+  "implementation_commit": "0b6a98ee9178ea84e0ea8f270c72f9893fc84ff1",
+  "verification": {
+    "selected": {
+      "groups": [
+        {
+          "group": "email-change",
+          "container": "cex-account-e7300482db86",
+          "selection": [
+            "*CustomerEmailChangeIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 26,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "currentAddressConfirmationApiCannotApplyPendingNewAddress()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "loginChallengeCannotAuthorizeEmailChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "signedRequestLeavesCurrentAddressAndStoresOnlyBoundFingerprints()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "wrongTokenForeignSessionAndUnrelatedChallengeCannotConfirm()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "passwordFreshnessAndExistingMfaAreRequired()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "newAddressAlreadyOwnedIsRejectedOnlyAfterItsTokenIsProved()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "exactAddressConfirmationChangesLoginRevokesSessionsAndNotifiesBothAddresses()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "serverKeyFailureDoesNotConsumeCustomerFailureBudget()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "duplicateAndConcurrentRequestReturnOneReceiptAndTwoMails()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "pendingIntentAndCompletionFactsAreImmutable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "changedDestinationCannotReuseSignatureAndOriginalCanRetry()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "revokedOriginalSigningKeyInvalidatesPendingChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "fiveInvalidTokensThenRateLimitPreserveOriginalAddress()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "passwordOnlyCustomerCannotRequestEmailChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "expiredPendingTokenCannotChangeAddressOrReadMailPayload()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "actualHttpChangesOnlyWithScopedSignatureAndToken()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "requestReservationFailureRestoresSignatureNonceAndNoMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "simultaneousConfirmationHasOneChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "actualSmtpDeliversNewConfirmationAndOldPendingWarning()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "wrongOriginMissingUserVerificationAndExpiredOptionsAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "signupAndChangeCannotOwnTheSameAddress()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "accountVersionChangeInvalidatesSignedIntent()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "finalAuditFailureRestoresAddressConfirmationSessionsAndNotices()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "recentCurrentAddressVerificationSharesChangeMailRateLimit()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "disabledCustomerSuppressesNewAddressTokenButStillWarnsOldAddress()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "malformedSameAndHeaderInjectionAddressesAreRejected()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "email-change-history",
+          "container": "cex-account-06d575997125",
+          "selection": [
+            "*CustomerEmailChangeHistoryIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 11,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "auditFailureDoesNotReturnHistory()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "partialAndFutureCursorAreRejectedAndAudited()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "exactPageDoesNotProduceEmptyNextPage()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "mailKeyFailureDoesNotHideSignedRequestFacts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "actualCompletionIsLinkedAfterNewLoginAndOldSessionCannotRead()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "anotherCustomersActualRequestIsNeverIncluded()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "signedRequestIsNotReportedAsCompleted()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "httpExposesOnlyMetadataWithoutFreshSigningPrompt()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "sameTimestampRequestsHaveNoPaginationLoss()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "emptyHistoryCreatesNoRequestOrCompletion()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "foreignOperatorAndPendingSessionsCannotRead()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "security-cursors",
+          "container": "cex-account-a0a429ce0a9f",
+          "selection": [
+            "*CustomerSecurityCursorIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSecurityCursorIntegrationTest",
+              "name": "cursorBoundsAreCheckedBeforeJdbcConversion()"
+            }
+          ],
+          "container_removed": true
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 38,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "cursor_fix_commit": "d107c964c38fc6f8cd3f4317fb9200c294b7dd04",
+    "cursor_red": {
+      "groups": [
+        {
+          "group": "security-cursors",
+          "container": "cex-account-430843b10080",
+          "selection": [
+            "*CustomerSecurityCursorIntegrationTest"
+          ],
+          "exit": 1,
+          "tests": {
+            "tests": 1,
+            "failures": 1,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSecurityCursorIntegrationTest",
+              "name": "cursorBoundsAreCheckedBeforeJdbcConversion()"
+            }
+          ],
+          "container_removed": true
+        }
+      ],
+      "exit": null
+    },
+    "initial_fixture_failure": {
+      "groups": [
+        {
+          "group": "email-change",
+          "container": "cex-account-44e1ec9e85d0",
+          "selection": [
+            "*CustomerEmailChangeIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 26,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "currentAddressConfirmationApiCannotApplyPendingNewAddress()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "loginChallengeCannotAuthorizeEmailChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "signedRequestLeavesCurrentAddressAndStoresOnlyBoundFingerprints()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "wrongTokenForeignSessionAndUnrelatedChallengeCannotConfirm()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "passwordFreshnessAndExistingMfaAreRequired()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "newAddressAlreadyOwnedIsRejectedOnlyAfterItsTokenIsProved()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "exactAddressConfirmationChangesLoginRevokesSessionsAndNotifiesBothAddresses()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "serverKeyFailureDoesNotConsumeCustomerFailureBudget()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "duplicateAndConcurrentRequestReturnOneReceiptAndTwoMails()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "pendingIntentAndCompletionFactsAreImmutable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "changedDestinationCannotReuseSignatureAndOriginalCanRetry()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "revokedOriginalSigningKeyInvalidatesPendingChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "fiveInvalidTokensThenRateLimitPreserveOriginalAddress()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "passwordOnlyCustomerCannotRequestEmailChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "expiredPendingTokenCannotChangeAddressOrReadMailPayload()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "actualHttpChangesOnlyWithScopedSignatureAndToken()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "requestReservationFailureRestoresSignatureNonceAndNoMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "simultaneousConfirmationHasOneChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "actualSmtpDeliversNewConfirmationAndOldPendingWarning()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "wrongOriginMissingUserVerificationAndExpiredOptionsAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "signupAndChangeCannotOwnTheSameAddress()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "accountVersionChangeInvalidatesSignedIntent()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "finalAuditFailureRestoresAddressConfirmationSessionsAndNotices()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "recentCurrentAddressVerificationSharesChangeMailRateLimit()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "disabledCustomerSuppressesNewAddressTokenButStillWarnsOldAddress()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeIntegrationTest",
+              "name": "malformedSameAndHeaderInjectionAddressesAreRejected()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "email-change-history",
+          "container": "cex-account-960122c3e2ef",
+          "selection": [
+            "*CustomerEmailChangeHistoryIntegrationTest"
+          ],
+          "exit": 1,
+          "tests": {
+            "tests": 11,
+            "failures": 1,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "auditFailureDoesNotReturnHistory()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "partialAndFutureCursorAreRejectedAndAudited()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "exactPageDoesNotProduceEmptyNextPage()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "actualCompletionIsLinkedAfterNewLoginAndOldSessionCannotRead()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "anotherCustomersActualRequestIsNeverIncluded()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "missingMailPayloadAndKeyFailureDoNotHideConfirmedRequestFacts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "signedRequestIsNotReportedAsCompleted()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "httpExposesOnlyMetadataWithoutFreshSigningPrompt()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "sameTimestampRequestsHaveNoPaginationLoss()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "emptyHistoryCreatesNoRequestOrCompletion()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailChangeHistoryIntegrationTest",
+              "name": "foreignOperatorAndPendingSessionsCannotRead()"
+            }
+          ],
+          "container_removed": true
+        }
+      ],
+      "exit": null
+    },
+    "jdk_probe": "-1000000000-01-01T00:00:00Z: converted=+169108098-07-04T04:51:43Z\n1969-12-31T23:59:59.999999999Z: converted=1969-12-31T23:59:59.999999999Z\n1970-01-01T00:00:00Z: converted=1970-01-01T00:00:00Z\n",
+    "product_build": "passed"
+  }
+}

@@ -161,3 +161,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [070. 고객 본인의 확정 복구 이력을 안전하게 조회](decisions/070-customer-recovery-history.md)
 
 - [071. 정확한 새 주소에 결합한 서명과 이메일 확인으로 연락처 변경](decisions/071-customer-email-change.md)
+
+- [072. 서명된 이메일 변경 요청과 실제 완료를 구분해 조회](decisions/072-customer-email-change-history.md)

@@ -53,7 +53,7 @@
 
 065 이후 키 변경, 069 이후 계정 복구 보안 통지에도 같은 현재 주소/계정 중지 정책을 적용한 현재 발췌다. PASSWORD_CHANGED 분기는 본인 실제 변경·현재 검증 주소를 재확인한다. 계정 활성 검사는 그 아래에 있어 중지 계정의 보안 경고를 숨기지 않는다. 기존 일반 알림은 다음 활성/수신 선택 검사를 계속 통과해야 한다. 071의 이전 주소 경고는 이 구간 앞에서 변경 당시의 검증 주소와 실제 원본을 따로 확인한다. 모든 보안 통지를 임의의 옛 주소로 보내는 것은 아니다.
 
-출처: [CustomerPasswordHistory.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordHistory.java#L23), 현재 소스의 부분 발췌.
+출처: [CustomerPasswordHistory.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordHistory.java#L24), 현재 소스의 부분 발췌.
 
 ```java
         String sql="SELECT id,changed_at FROM customer_password_changes WHERE user_id=? ";var rows=after==null?jdbc.queryForList(sql+"ORDER BY changed_at DESC,id DESC LIMIT 25",actor):jdbc.queryForList(sql+"AND (changed_at,id)<(?,?) ORDER BY changed_at DESC,id DESC LIMIT 25",actor,Timestamp.from(after.changedAt()),after.id());
@@ -98,3 +98,5 @@ Java21·실행 소유 PostgreSQL16·격리 Kafka·로컬 SMTP로 실행했다. `
 - [격리 실행 증적](../reference/061-customer-password-notice-verification-2026-10-25.json)
 
 063의 [고객 패스키 로그인](063-customer-passkey-login.md)을 등록한 고객은 비밀번호 단계의 대기 세션으로 이 고객 보안 업무를 수행할 수 없다. 실제 서명 후 새 세션이 필요하며, 당시 검증 수치는 각 기록의 실행 시점으로 구분한다.
+
+[072 커서 경계 검증](072-customer-email-change-history.md)에서 보안 이력 커서의 자체 범위를 UTC1970년~현재로 제한하고 JDBC 변환 전 범위 오류를400으로 거부했다. 기존 기록의 시각/내용은 보존한다.

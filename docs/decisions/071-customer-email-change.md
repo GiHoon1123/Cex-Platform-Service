@@ -201,3 +201,5 @@ JDK21·실행 소유 PostgreSQL16·GreenMail 로컬 SMTPS에서 계정167개(신
 [PlatformSecurityTest.java](../../src/test/java/dustin/cex/domains/security/PlatformSecurityTest.java)의 신규 `concurrentSignupAllocatesOneEmailAddress`는 같은 이메일의 동시 가입2건에서1건 성공·1건 통제된 AuthException 거부·DB 사용자1건을 검증한다. 기존 보안40개도 재실행해41개다.
 
 선행 주소 할당 수정: [5def282](https://github.com/GiHoon1123/Cex-Platform-Service/commit/5def2827d56aa14e13a3a6d77dbf680c4593f002). 구현·테스트와 별도로 설명 가능한 가입 경쟁 수정으로 나눴다.
+
+[072 요청/완료 이력](072-customer-email-change-history.md)을 추가했다. 실제 등록/서명 fixture는 [CustomerEmailChangeTestSupport.java](../../src/test/java/dustin/cex/domains/kyc/CustomerEmailChangeTestSupport.java)로 분리해 이력 회귀와 공유한다. 071의303개 검증은 당시 결과로 보존한다.

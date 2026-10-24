@@ -56,7 +56,7 @@
 
 클라이언트가 준 변경 종류/시각/주소를 그대로 믿지 않는다. 실제 원본에서 시각을 얻고 현재 검증 주소를 확인한다. 주소 확인 이력이 없으면 불필요한 키 요구를 만들지 않지만 확인 주소의 무결성 장애를 폴백으로 숨기지 않는다.
 
-출처: [CustomerMfaHistory.java](../../src/main/java/dustin/cex/domains/security/CustomerMfaHistory.java#L23), 현재 소스의 부분 발췌.
+출처: [CustomerMfaHistory.java](../../src/main/java/dustin/cex/domains/security/CustomerMfaHistory.java#L24), 현재 소스의 부분 발췌.
 
 ```java
         String sql="SELECT id,created_at,kind,credential_fingerprint FROM customer_mfa_key_changes WHERE user_id=? ";
@@ -103,3 +103,5 @@
 069 이후 분실 복구로 여러 키를 교체할 때는 별도 복구 원본과 각 변경을 연결하고 보안 통지 한 건으로 모은다. 일반 추가/폐기의 위 `append` 계약은 유지한다.
 
 [069 사전 코드 복구](069-customer-saved-code-recovery.md)는 현재 비밀번호와 사전에 보관한 코드가 있는 고객의 모든 패스키 분실을 처리한다. 비밀번호까지 분실하거나 사전 코드를 만들지 않은 경우의 복구는 아직 후속이다. 이 문서의 과거 실행 수치는 당시 검증으로 보존한다.
+
+[072 커서 경계 검증](072-customer-email-change-history.md)에서 보안 이력 커서의 자체 범위를 UTC1970년~현재로 제한하고 JDBC 변환 전 범위 오류를400으로 거부했다. 기존 기록의 시각/내용은 보존한다.
