@@ -175,3 +175,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [078. 동시 조회가 역전되지 않는 불변 BTC 관찰 이력](decisions/078-durable-bitcoin-observations.md)
 
 - [079. 실제 블록 활동에서 BTC 입금 출력을 발견](decisions/079-bitcoin-block-deposit-discovery.md)
+
+- [080. 블록 조회의 전체 완료만 진행 위치로 확정하기](decisions/080-durable-bitcoin-block-checkpoint.md)
