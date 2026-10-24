@@ -266,3 +266,8 @@ Didit 공식 보고서/개요, 업비트 공개 고객확인 안내, 국내 제5
 ## 고객 최종 답변 044 · 2026-10-24
 
 [구현·근거·트레이드오프·코드·테스트](../decisions/044-customer-final-draft.md)와 [선택 회귀 61개 증적](customer-final-draft-verification-2026-10-24.json)을 따른다. 고객 재검토의 업무 확정과 금융 효과·외부 통지/법정 기한·기관/운영 확인을 구분한다.
+
+
+## 고객 최종 답변 045 · 2026-10-24
+
+[구현·근거·트레이드오프·코드·테스트](../decisions/045-customer-final-approval.md)와 [선택 회귀 77개 증적](customer-final-approval-verification-2026-10-24.json)을 따른다. 고객 재검토의 업무 확정과 금융 효과·외부 통지/법정 기한·기관/운영 확인을 구분한다.

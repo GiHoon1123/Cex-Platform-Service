@@ -38,7 +38,7 @@
 
 ### 본인 제공과 실제 최신 내부 근거
 
-[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L33)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L35)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 requests.requirePersonalView(actor,sid,request);var note=notes.currentBasis(request,latestNote);
@@ -48,7 +48,7 @@ requests.requirePersonalView(actor,sid,request);var note=notes.currentBasis(requ
 
 ### 직원이 입력하지 않은 상태를 서버가 계산
 
-[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L36)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L38)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_active_exits WHERE review_id=? AND user_id=?)",Boolean.class,exit,user))){status=Status.EXIT_INITIATION_ACTIVE;basis=exit;}
@@ -62,7 +62,7 @@ else {
 
 ### 당시 상태·근거를 보존하고 감사와 확정
 
-[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L43)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L45)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 var payload=new Payload(id,request,user,actor,sequence,note.id(),note.sequence(),status,basis,message(status),Instant.now().truncatedTo(ChronoUnit.MICROS));String raw=json.writeValueAsString(payload);
@@ -74,7 +74,7 @@ Java record인 Payload는 런타임 값이다. 요청·고객·행위자·논리
 
 ### 공개 회신의 허용 목록
 
-[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L51)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L53)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 // 조회 때 최신 문구로 바꾸지 않는다. 실제 회신 당시 서명한 문구를 그대로 제공한다.

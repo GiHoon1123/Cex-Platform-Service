@@ -109,3 +109,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [043. 현재 담당 업무 발견과 내부 기록 대비 회신 점검](decisions/043-customer-work-queue.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
 
 - [044. 고객 최종 답변 customer-final-draft](decisions/044-customer-final-draft.md): 실제 코드·판단·테스트·실행 한계.
+
+- [045. 고객 최종 답변 customer-final-approval](decisions/045-customer-final-approval.md): 실제 코드·판단·테스트·실행 한계.

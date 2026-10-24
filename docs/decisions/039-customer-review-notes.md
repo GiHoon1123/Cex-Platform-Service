@@ -24,7 +24,7 @@ POST /api/admin/compliance/customer-review-requests/{id}/notes는 Idempotency-Ke
 
 ### 본인 제공과 논리 순번
 
-[CustomerReviewNoteService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewNoteService.java#L36)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewNoteService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewNoteService.java#L38)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 requests.requirePersonalView(actor,sid,request);
@@ -37,7 +37,7 @@ long sequence=jdbc.queryForObject("SELECT coalesce(max(sequence),0)+1 FROM custo
 
 ### 내부 메모의 암호화·감사 원자성
 
-[CustomerReviewNoteService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewNoteService.java#L40)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewNoteService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewNoteService.java#L42)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 byte[] cipher=crypto.encrypt(context(id,request,actor,sequence,mac),json.writeValueAsBytes(f));
