@@ -70,7 +70,7 @@ Java record는 값과 equals를 제공하지만 유효성을 자동 검사하지
 
 ### 암호화와 다른 업무용 승인 결합
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L79)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L80)
 
 ```java
 String hash=verifier.digest(json.valueToTree(p));byte[] cipher=crypto.encrypt(context(p),json.writeValueAsBytes(facts));
@@ -82,7 +82,7 @@ payload에는 결론/사유 대신 HMAC이 있다. AES-GCM의 문맥은 검토·
 
 ### 역할 이후에 실제 지정 인물 확인
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L167)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L181)
 
 ```java
 private User assigned(long actor,UUID sid,Review r,Map<Long,User> locked) {
@@ -95,7 +95,7 @@ HTTP 필터의 OPERATOR/APPROVER만으로 자료를 내주지 않는다. 계정 
 
 ### 회부 이후 변한 사실 거절
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L184)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L198)
 
 ```java
 if(!"REFERRED".equals(row.get("state"))||revision!=r.revision()+1||!r.assessment().equals(row.get("latest_assessment"))||!r.assessment().equals(row.get("assessment_id")))throw denied(HttpStatus.CONFLICT);
@@ -106,7 +106,7 @@ dossiers.verify(r.dossier(),r.caseId(),r.user());if(!r.dossier().digest().equals
 
 ### 현재 본인의 전체 페이지 제공 확인
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L164)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L178)
 
 ```java
 long viewed=jdbc.queryForObject("SELECT count(DISTINCT page) FROM compliance_review_views WHERE review_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND payload_hash=? AND page>=0 AND page<? AND viewed_at>clock_timestamp()-interval '5 minutes'",Long.class,p.id(),actor,checker.getOperatorPersonId(),checker.getVersion(),sid,hash,p.dossier().pageCount());
@@ -117,7 +117,7 @@ if(viewed!=p.dossier().pageCount())throw denied(HttpStatus.CONFLICT);return chec
 
 ### 내부 결정과 감사의 원자성
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L101)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L102)
 
 ```java
 mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.STR_REVIEW,id,hash,approve,proof);
@@ -130,7 +130,7 @@ audit.record(actor,"COMPLIANCE_REVIEW_DECIDED","compliance-review:"+id,"SUCCESS"
 
 ### 역사 원문도 무결성 검증 후 제공
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L190)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L204)
 
 ```java
     var value=json.readValue(crypto.decrypt(p.evidenceKeyId(),context(p),cipher),Facts.class).validated();
@@ -253,3 +253,7 @@ audit.record(actor,"COMPLIANCE_REVIEW_DECIDED","compliance-review:"+id,"SUCCESS"
 ## 후속 제출 대기와 결과 관찰
 
 [030](030-reporting-queue-and-followup.md)에서 지정 인물의 확정 보고 필요를 과거 승인 이력에서 직접 찾고, 원문을 제외한 페이지와 결과 불명/반려/접수 참조 관찰을 제공한다. 새 신고·후속 미보고·고객 비활성화가 앞선 필요를 지우지 않는다. 관찰은 자동 접수 확인이 아니고 계속 후속 확인 대상으로 남는다. 위 029의 수치와 미구현 범위는 당시 기록이며 실제 FIU 전송·법정 기한 계산·전사 감독/재배정은 여전히 별도다.
+
+## 2026-10-24 보고 후속 업무 인계
+
+[031](031-reporting-custody-and-orphan-recovery.md)에서 원래 보고 판단의 작성자/결정 이력은 유지하고 후속 업무 권한만 독립 인계한다. 기존 내부 보고 역사 API는 이 글의 원래 참여자 규칙을 유지한다. 새 현재 담당자는 별도의 감사된 custody-context 경로로 원래 근거를 읽으며 원래 보고를 재승인하지 못한다. 9종 스키마와 실행 수치는 당시 기록이고 현재는 STR_CUSTODY를 포함한 10종 스키마가 필요하다.

@@ -56,14 +56,14 @@
 
 ### 후보 페이지의 권한과 순서
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L133)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L135)
 
 ```java
 String sql="""
     SELECT r.id,d.decided_at FROM compliance_reviews r JOIN compliance_review_decisions d ON d.review_id=r.id AND d.approved=true
-    WHERE ((r.requester_id=? AND r.payload::jsonb->>'requesterPerson'=?) OR (r.checker_id=? AND r.payload::jsonb->>'checkerPerson'=?))
+    WHERE EXISTS(SELECT 1 FROM reporting_current_custody c WHERE c.review_id=r.id AND c.member_id=? AND c.member_person=?)
     """;
-var args=new ArrayList<Object>(List.of(actor,person.getOperatorPersonId().toString(),actor,person.getOperatorPersonId().toString()));
+var args=new ArrayList<Object>(List.of(actor,person.getOperatorPersonId()));
 if(after!=null) {sql+=" AND (d.decided_at,r.id)>(?,?)";args.add(Timestamp.from(after));args.add(afterId);}
 var rows=jdbc.queryForList(sql+" ORDER BY d.decided_at,r.id LIMIT 25",args.toArray());var result=new ArrayList<DeliveryOrigin>();
 ```
@@ -72,11 +72,11 @@ var rows=jdbc.queryForList(sql+" ORDER BY d.decided_at,r.id LIMIT 25",args.toArr
 
 ### 빈 페이지를 끝으로 오인하지 않기
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L140)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L142)
 
 ```java
 for(var row:rows) {
-    var r=read((UUID)row.get("id"));assigned(actor,sid,r,Map.of(actor,person));
+    var r=read((UUID)row.get("id"));if(!custody.current(r.payload().id()).contains(person))throw denied(HttpStatus.CONFLICT);
     // 개인정보 원문은 반환하지 않는다. 승인된 미보고 판단도 실제 해독·무결성을 검사한 뒤 제외한다.
     if(!"APPROVED".equals(r.status())||!POLICY.equals(r.payload().policy())||!ASSURANCE.equals(r.payload().assurance()))throw denied(HttpStatus.CONFLICT);
     if(facts(r).conclusion()==Conclusion.REPORT_REQUIRED)result.add(new DeliveryOrigin(r.payload(),r.payloadHash(),((Timestamp)row.get("decided_at")).toInstant()));
@@ -88,7 +88,7 @@ var last=rows.isEmpty()?null:rows.getLast();return new DeliveryBatch(result,last
 
 ### 현재 사건이 아니라 확정된 원래 판단
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L148)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L162)
 
 ```java
 private DeliveryOrigin approvedDeliveryOrigin(Review r) {
@@ -253,3 +253,7 @@ macOS·Temurin 21·실행기 소유 PostgreSQL/Kafka와 임시 DB를 사용한�
 - [`0257131`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/0257131b6560b6e18c36e66ca371568a5c6a679a): 확정 보고 필요의 제출 대기·빈 후보 페이지·고정 내부 점검 목표·암호화 관찰과 신규 테스트 43개.
 
 [029 비공개 내부 판단](029-confidential-reporting-review.md), [028 제한적 오탐 종결](028-aml-false-positive-resolution.md), [공통 EDD 진행 기록](../../../docs/roadmap/edd-case-review.md)을 함께 읽는다.
+
+## 2026-10-24 후속 배정 인계
+
+[031](031-reporting-custody-and-orphan-recovery.md)에서 최초 두 인물의 배정과 승인된 후속 인계를 하나의 현재 권한으로 계산한다. 위 최초 030의 원래 두 계정 설명·9종 승인 유지·검증 수치는 당시 기준이다. 현재 코드 발췌의 목록 SQL과 상세 검사는 현재 후속 담당자를 사용하며 새 열 번째 STR_CUSTODY 스키마가 필요하다. 인계가 원래 보고 필요·시각·24시간 목표·법정 의무를 바꾸지 않는다. 기존 내부 보고 역사 API와 새 담당자의 별도 원래 근거 제공 경로도 구분한다.
