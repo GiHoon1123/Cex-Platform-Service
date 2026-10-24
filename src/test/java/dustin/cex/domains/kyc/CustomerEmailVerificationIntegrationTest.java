@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** 실제 세션·해시·로컬 SMTP·HTTP 경계로 이메일 소유만 검증하고 금융 권한은 변경하지 않는다. */
+@org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
 class CustomerEmailVerificationIntegrationTest extends CustomerMailTestSupport {
     @Autowired CustomerEmailVerification email;
     @Autowired dustin.cex.domains.cdd.CddCrypto mailCrypto;
@@ -42,5 +43,14 @@ class CustomerEmailVerificationIntegrationTest extends CustomerMailTestSupport {
         assertEquals(429,assertThrows(ResponseStatusException.class,this::request).getStatusCode().value());
     }
     @Test void concurrentNewRequestsReserveOnlyOneMail() throws Exception {var pool=Executors.newFixedThreadPool(2);try{java.util.concurrent.Callable<Boolean> send=()->{try{request();return true;}catch(ResponseStatusException e){assertEquals(429,e.getStatusCode().value());return false;}};var a=pool.submit(send);var b=pool.submit(send);assertNotEquals(a.get(10,TimeUnit.SECONDS),b.get(10,TimeUnit.SECONDS));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM customer_mail_jobs WHERE user_id=?",Long.class,customer.getId()));}finally{pool.shutdownNow();}}
+
+    @Test void malformedTokenIsRejectedWithoutAppearingInLogs(org.springframework.boot.test.system.CapturedOutput output) throws Exception {
+        var r=request();String malformed=secret(r)+"!";
+        // 유효 토큰을 일부 포함한 잘못된 입력도 비밀이다. 기본 바인딩 오류의 rejected value에 남기지 않는다.
+        mvc.perform(post("/api/customer/email/confirmations").header("Authorization","Bearer "+customerAccess).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("challengeId",r.challengeId(),"token",malformed)))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/customer/email/confirmations").header("Authorization","Bearer "+customerAccess).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("challengeId",r.challengeId(),"token",List.of(secret(r)))))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/customer/email/confirmations").header("Authorization","Bearer "+customerAccess).contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of("token",secret(r))))).andExpect(status().isBadRequest());
+        assertFalse(email.status(customer.getId(),sid).verified());assertFalse(output.getAll().contains(secret(r)),"입력 토큰은 검증 오류 로그에 남으면 안 됩니다");
+    }
 
 }
