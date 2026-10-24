@@ -41,7 +41,7 @@
 ## 구현과 관련 코드
 
 - [OperatorMfaService](../../src/main/java/dustin/cex/domains/security/OperatorMfaService.java): 사용자 행 잠금, 일회성 등록 권한/챌린지, 검증, 세션 교체, 성공·거부 감사. 사용한 공개키 ID의 SHA-256 지문으로 기기를 추적하고 원본 인증 자료는 기록하지 않는다.
-- [OperatorCredentialRepository](../../src/main/java/dustin/cex/domains/security/OperatorCredentialRepository.java): 공개키·원본 attestation·카운터 보관. 개인키는 받지 않는다. 사용자 실명 대신 내부 ID와 무작위 WebAuthn user handle을 사용한다.
+- [WebAuthnCredentialRepository](../../src/main/java/dustin/cex/domains/security/WebAuthnCredentialRepository.java): 공개키·원본 attestation·카운터 보관. 개인키는 받지 않는다. 사용자 실명 대신 내부 ID와 무작위 WebAuthn user handle을 사용한다.
 - [OperatorMfaController](../../src/main/java/dustin/cex/domains/security/OperatorMfaController.java): JSON API. 요청의 사용자 ID를 신뢰하지 않고 필터가 확인한 사용자/세션을 사용한다. 인증 본문·토큰의 자동 문자열 표현을 숨긴다.
 - [AuthService](../../src/main/java/dustin/cex/domains/auth/service/AuthService.java), [RefreshToken](../../src/main/java/dustin/cex/domains/auth/model/entity/RefreshToken.java): 운영 비밀번호 세션 5분, `mfaRequired=true`, 미검증 갱신 거부, 검증 시각을 보존하는 갱신.
 - [필터](../../src/main/java/dustin/cex/domains/auth/middleware/JwtAuthenticationFilter.java), [인가](../../src/main/java/dustin/cex/domains/security/SecurityConfiguration.java), [세션](../../src/main/java/dustin/cex/domains/security/SessionService.java): 미검증 운영자는 `ROLE_MFA_PENDING`. 모든 기존 운영 HTTP 업무는 MFA를 통과해야 한다. 인증 응답은 `Cache-Control: no-store`.
@@ -87,7 +87,7 @@
 
 ### 현재 코드로 연결해 읽기
 
-공식 검증 모듈의 서명 검증 뒤 서명 카운터도 검사한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/OperatorMfaService.java#L136)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+공식 검증 모듈의 서명 검증 뒤 서명 카운터도 검사한다. 아래는 2026-10-25 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/WebAuthnVerifier.java#L88)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
 
 ```java
     var authenticated=relyingParty.authenticate(new RelyingPartyAuthenticationRequest(options,key));
@@ -197,3 +197,5 @@ JUnit 실행은 선택한 264개, 별도 실제 프로세스 시나리오는 10�
 - `b421aa4` — WebAuthn 모듈·전이 의존성 잠금·체크섬.
 - `b12bf28` — 운영자 등록/인증·세션·최근 MFA·자동화 검증.
 - 이 문서·근거 대조표·고정 의존성 증적은 별도 문서 커밋으로 기록한다.
+
+062에서 표준 등록·서명 검증은 [WebAuthnVerifier](../../src/main/java/dustin/cex/domains/security/WebAuthnVerifier.java)로 옮겼다. 현재 발췌의 위치를 갱신하며014의 당시 테스트 결과는 그대로 구분한다. 운영자 등록 권한·세션/승인 정책은 OperatorMfaService에 남는다.

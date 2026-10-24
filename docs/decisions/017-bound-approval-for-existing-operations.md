@@ -123,7 +123,7 @@ sequenceDiagram
 
 ### 현재 코드로 연결해 읽기
 
-업무 종류·요청·해시·결정 방향·세션에 묶인 일회용 옵션만 조회한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/OperatorMfaService.java#L172)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+업무 종류·요청·해시·결정 방향·세션에 묶인 일회용 옵션만 조회한다. 아래는 2026-10-25 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/OperatorMfaService.java#L119)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
 
 ```java
 public void authorizeApproval(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve,AuthorizationProof proof) {
@@ -137,7 +137,7 @@ public void authorizeApproval(long actor,UUID sid,ApprovalKind kind,UUID request
              AND kind=? AND request_id=? AND payload_hash=? AND approve=? AND NOT consumed AND expires_at>clock_timestamp() FOR UPDATE
             """,proof.challengeId(),actor,sid,kind.name(),requestId,payloadHash,approve);
         if(rows.isEmpty()) throw denied();
-        var key=verifyAssertion(actor,(String)rows.getFirst().get("options"),proof.credential());
+        var key=verifier.verifyAssertion(actor,(String)rows.getFirst().get("options"),proof.credential());
         jdbc.update("UPDATE operator_authorization_challenges SET consumed=true WHERE id=?",proof.challengeId());
         // 서명 소비·공개키 카운터·업무 변경·감사는 같은 업무 트랜잭션에서 확정된다.
         audit.record(actor,"APPROVAL_AUTHORIZATION","request:"+requestId,"SUCCESS",
