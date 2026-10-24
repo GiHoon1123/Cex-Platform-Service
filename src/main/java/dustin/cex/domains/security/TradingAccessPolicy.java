@@ -1,6 +1,5 @@
 package dustin.cex.domains.security;
 
-import dustin.cex.domains.auth.model.entity.UserRole;
 import dustin.cex.domains.auth.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -10,22 +9,12 @@ import org.springframework.web.server.ResponseStatusException;
 /** 고객 확인과 신규 주문 제한은 플랫폼의 예약 트랜잭션에서 결정한다. 엔진은 이 정책을 모른다. */
 @Service
 public class TradingAccessPolicy {
-    private final dustin.cex.domains.cdd.CddService cdd;
-    private final UserRepository users;private final AuditService audit;private final org.springframework.jdbc.core.JdbcTemplate jdbc;
-    public TradingAccessPolicy(UserRepository users,AuditService audit,org.springframework.jdbc.core.JdbcTemplate jdbc,dustin.cex.domains.cdd.CddService cdd) {this.cdd=cdd;this.users=users;this.audit=audit;this.jdbc=jdbc;}
+    private final UserRepository users;private final AuditService audit;private final CustomerFinancialEligibility eligibility;
+    public TradingAccessPolicy(UserRepository users,AuditService audit,CustomerFinancialEligibility eligibility) {this.users=users;this.audit=audit;this.eligibility=eligibility;}
     @Transactional(propagation=Propagation.MANDATORY)
     public void requireNewOrder(long userId) {
         var user=users.lockById(userId).orElse(null);
-        if(user==null || !user.isEnabled() || user.getRole()!=UserRole.CUSTOMER || user.isTradingRestricted()
-                // 관계 종료 개시 결정은 일반 거래 제한 해제나 고객의 새 신고와 독립된 차단 근거다.
-                || Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_active_exits WHERE user_id=?)",Boolean.class,userId))
-                || !cdd.permitted(userId)
-                || !Boolean.TRUE.equals(jdbc.queryForObject("""
-                    SELECT EXISTS(SELECT 1 FROM kyc_profiles p JOIN kyc_attempts a ON a.id=p.active_attempt
-                     WHERE p.user_id=? AND p.identity_status='VERIFIED' AND p.valid_until>clock_timestamp() AND a.environment='live'
-                      AND EXISTS(SELECT 1 FROM kyc_reconciliations r WHERE r.attempt_id=a.id
-                       AND r.fresh_at>clock_timestamp()-interval '15 minutes'))
-                    """,Boolean.class,userId))) {
+        if(!eligibility.permitted(user)) {
             audit.denied(userId,"NEW_ORDER","user:"+userId,"TRADING_NOT_PERMITTED");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"신규 주문이 제한되어 있습니다");
         }
