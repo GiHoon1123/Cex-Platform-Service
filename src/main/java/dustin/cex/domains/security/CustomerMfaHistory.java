@@ -19,7 +19,8 @@ public class CustomerMfaHistory {
     private final CustomerSessionPolicy sessions;private final JdbcTemplate jdbc;private final AuditService audit;private final TransactionTemplate tx;
     public CustomerMfaHistory(CustomerSessionPolicy sessions,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager){this.sessions=sessions;this.jdbc=jdbc;this.audit=audit;tx=new TransactionTemplate(manager);}
     public Page own(long actor,UUID sid,Cursor after){try{return tx.execute(t->{
-        sessions.require(actor,sid);if(after!=null&&(after.id()==null||after.createdAt()==null||after.createdAt().isAfter(Instant.now())))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"조회 위치를 확인하세요");
+        // 보안 이력 커서는 UTC의1970년부터 현재까지다. JDBC 변환의 범위 초과를 먼저 막는다.
+        sessions.require(actor,sid);if(after!=null&&(after.id()==null||after.createdAt()==null||after.createdAt().isBefore(Instant.EPOCH)||after.createdAt().isAfter(Instant.now())))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"조회 위치를 확인하세요");
         String sql="SELECT id,created_at,kind,credential_fingerprint FROM customer_mfa_key_changes WHERE user_id=? ";
         var rows=after==null?jdbc.queryForList(sql+"ORDER BY created_at DESC,id DESC LIMIT 25",actor):jdbc.queryForList(sql+"AND (created_at,id)<(?,?) ORDER BY created_at DESC,id DESC LIMIT 25",actor,Timestamp.from(after.createdAt()),after.id());
         var items=rows.stream().map(r->new Change((UUID)r.get("id"),((Timestamp)r.get("created_at")).toInstant(),CustomerMfaKeyChanges.Kind.valueOf((String)r.get("kind")),(String)r.get("credential_fingerprint"))).toList();var last=items.isEmpty()?null:items.getLast();

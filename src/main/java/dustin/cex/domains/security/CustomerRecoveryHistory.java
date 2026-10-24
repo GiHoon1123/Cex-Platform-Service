@@ -27,7 +27,8 @@ public class CustomerRecoveryHistory {
         try{return tx.execute(t->{
             // 실제 고객/본인 세션의 현재 자격을 검사한다. 단순 이력 조회에 새 업무 서명은 요구하지 않는다.
             sessions.require(actor,sid);
-            if(after!=null&&(after.id()==null||after.createdAt()==null||after.createdAt().isAfter(Instant.now())))
+            // 보안 이력 커서는 UTC의1970년부터 현재까지다. JDBC 변환의 범위 초과를 먼저 막는다.
+            if(after!=null&&(after.id()==null||after.createdAt()==null||after.createdAt().isBefore(Instant.EPOCH)||after.createdAt().isAfter(Instant.now())))
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"조회 위치를 확인하세요");
             String sql="""
                 SELECT e.id,e.created_at,e.kind,
