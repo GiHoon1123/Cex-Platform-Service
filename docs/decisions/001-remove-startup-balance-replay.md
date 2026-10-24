@@ -47,60 +47,48 @@ TigerBeetle은 금융 거래의 중복 생성을 막기 위해 고유 ID를 재�
 ## 구현과 관련 코드
 
 - `BalanceInitializationService.java`와 이벤트 리스너를 삭제했다.
-- [BalanceSyncService](../../src/main/java/dustin/cex/shared/services/BalanceSyncService.java)의 사용하지 않는 `syncAllBalances()` 호환 메서드를 삭제했다.
+- [당시 BalanceSyncService](https://github.com/GiHoon1123/Cex-Platform-Service/blob/42c86c3/src/main/java/dustin/cex/shared/services/BalanceSyncService.java)의 사용하지 않는 `syncAllBalances()` 호환 메서드를 삭제했다.
 - 남아 있는 서비스에 시작 복원과 명시적 증감을 구분하는 한국어 주석을 추가했다.
-- `BalanceSyncService`는 [봇 관리자](../../src/main/java/dustin/cex/domains/bot/service/BotManagerService.java)에서 참조하므로 클래스 전체를 삭제하지 않았다. 봇은 계속 `--bot.bot-count=0`으로 비활성화한다.
+- 당시 동기화 도우미는 남겼다. 봇이 참조한다는 기존 설명은 현재 코드와 맞지 않아 정정한다. 076에서 운영 호출자가 없는 것을 다시 확인해 도우미/HTTP 증감 경로를 삭제했다. 봇은 계속0명이다.
 - 패키지·라이브러리·엔진 코드를 변경하지 않았다. 기존 Spring Test, Mockito, AssertJ, H2로 검증했다.
 
 ## 이해에 필요한 문법과 원리
 
 - `@EventListener`는 이벤트 발생 시 메서드를 실행한다. 시작 이벤트를 금융 거래의 발생 근거로 사용하면 재시작도 새 입금처럼 처리될 수 있다.
-- `@PostConstruct`는 Spring이 빈을 초기화하면서 호출한다. 테스트용 엔진 클라이언트에도 이 메서드가 호출되므로 객체 전체 상호작용과 실제 `syncBalance()` 호출을 구분해 검사한다.
+- `@PostConstruct`는 Spring이 빈을 초기화하면서 호출한다. 테스트용 엔진 클라이언트에도 이 메서드가 호출되므로 초기화 호출과 실제 금융 명령 호출을 구분해 검사한다. 076의 현재 시험은 init 이외의 모든 클라이언트 호출을 거부한다.
 - `AnnotationConfigApplicationContext`는 Spring 빈 등록·의존성 주입·이벤트 전달을 실제로 실행한다. 전체 Boot 앱 대신 잔액 서비스 패키지를 스캔해 봇·Kafka·스케줄러 실행을 피했다.
 - `try (var context = ...)`는 블록이 끝날 때 컨텍스트를 닫는 Java의 자원 정리 구문이다. 같은 DB를 유지하고 컨텍스트만 새로 만들며 재시작 경계를 검사한다.
 - `BigDecimal`은 문자열에서 생성해 십진수 금액을 유지한다. `negate()`는 원본을 변경하지 않고 부호를 바꾼 값을 반환한다.
-- Mockito의 `verify(..., never())`로 금액 증감 요청이 없었음을 확인한다. 명시적 요청 테스트는 한 번만 전달되고 추가 호출이 없는지도 검사한다.
+- 현재 시험은 Mockito의 호출 이력을 읽어 init 이외의 금융 명령이 없는지 확인한다. 삭제한 메서드 이름을 검사에 보관하지 않는다.
 
 ### 현재 코드로 연결해 읽기
 
-현재 남은 잔액 동기화 진입점은 명시적으로 전달한 변화량을 처리한다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/services/BalanceSyncService.java#L45)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+076에서 운영 참조가 없는 증감 경로와 도우미를 제거했다. 현재는 시작 훅이 어떤 엔진 금융 명령도 보내지 않는지 검사한다. 아래는 현재 소스의 부분 발췌다.
+
+출처: [PlatformBalanceStartupTest.java](../../src/test/java/dustin/cex/shared/services/PlatformBalanceStartupTest.java#L126)
 
 ```java
-public void syncBalance(Long userId, String mint, BigDecimal availableDelta) {
-    try {
-        log.info("[BalanceSyncService] 잔고 동기화 시작: userId={}, mint={}, delta={}",
-                userId, mint, availableDelta);
-
-        boolean success = engineHttpClient.syncBalance(userId, mint, availableDelta);
-
-        if (success) {
-            log.info("[BalanceSyncService] 잔고 동기화 성공: userId={}, mint={}, delta={}",
-                    userId, mint, availableDelta);
-        } else {
-            log.error("[BalanceSyncService] 잔고 동기화 실패: userId={}, mint={}, delta={}",
-                    userId, mint, availableDelta);
-            throw new RuntimeException("잔고 동기화 실패");
-        }
-    } catch (Exception e) {
-        log.error("[BalanceSyncService] 잔고 동기화 중 예외 발생: userId={}, mint={}, delta={}, error={}",
-                userId, mint, availableDelta, e.getMessage(), e);
-        throw new RuntimeException("잔고 동기화 실패: " + e.getMessage(), e);
-    }
+private void assertNoFinancialCommandSent() {
+    // Spring의 생성 후 초기화만 허용한다. 현재/미래의 금융 명령 호출은 모두 거부한다.
+    // 삭제한 메서드 이름에 의존하지 않아도 시작 훅이 어떤 명령을 추가하는지 검출한다.
+    assertThat(org.mockito.Mockito.mockingDetails(engineHttpClient).getInvocations())
+            .allSatisfy(call -> assertThat(call.getMethod().getName()).isEqualTo("init"));
 }
+
 ```
 
-`BigDecimal`은 십진 변화량을 나타낸다. 이 메서드 호출과 서버 시작 시 전체 잔액을 다시 더하는 동작은 다르다. 자동 시작 경로 제거는 본문의 호출 관계와 함께 읽는다.
+호출 이력에서 생성 후 초기화인 init만 허용한다. 삭제한 메서드를 직접 참조하지 않으므로 이후 다른 금융 명령을 시작 훅에 넣어도 탐지한다. 준비 이벤트와 컨텍스트 재시작 시험이 이 검증을 사용한다.
 
 ## 작성한 테스트
 
-다음 두 파일에 신규 테스트 7개를 작성했다. H2는 테스트마다 고유 이름으로 생성·종료하며 실제 PostgreSQL·Kafka·Rust 엔진에 접근하지 않는다.
+당시 다음 두 파일에 신규 테스트7개를 작성했다. 076에서 도우미 전용4개는 제품과 함께 삭제하고 준비 이벤트/재시작3개는 유지·보강했다. 아래 결과는 최초 사이클의 이력이다. H2는 테스트마다 고유 이름으로 생성·종료하며 실제 PostgreSQL·Kafka·Rust 엔진에 접근하지 않는다.
 
 | 파일·함수 | 시나리오와 기대 결과 | 결과 |
 |---|---|---|
 | [PlatformBalanceStartupTest](../../src/test/java/dustin/cex/shared/services/PlatformBalanceStartupTest.java) · `readyEventDoesNotSendExistingBalancesAsDeposits` | 양수 available·locked와 locked만 있는 잔액을 두고 준비 이벤트 발행. 엔진 증감 요청 0회, DB 잔액 유지 | 통과 |
 | 같은 파일 · `repeatedReadyEventsDoNotReplayDeposits` | 준비 이벤트 3회 발행. 증감 요청 0회, DB 유지 | 통과 |
 | 같은 파일 · `restartingPlatformContextDoesNotReplayDeposits` | 같은 DB·엔진 대역을 유지하고 Spring 컨텍스트를 3회 생성·종료. 증감 요청 0회, DB 유지 | 통과 |
-| [BalanceSyncServiceTest](../../src/test/java/dustin/cex/shared/services/BalanceSyncServiceTest.java) · `explicitDepositSendsOnePositiveDelta` | 명시적 입금 호출은 같은 양수 금액을 한 번 전달 | 통과 |
+| [당시 BalanceSyncServiceTest](https://github.com/GiHoon1123/Cex-Platform-Service/blob/42c86c3/src/test/java/dustin/cex/shared/services/BalanceSyncServiceTest.java) · `explicitDepositSendsOnePositiveDelta` | 명시적 입금 호출은 같은 양수 금액을 한 번 전달 | 통과 |
 | 같은 파일 · `explicitWithdrawalSendsOneNegativeDelta` | 명시적 출금 호출은 부호를 바꾼 금액을 한 번 전달 | 통과 |
 | 같은 파일 · `rejectedDeltaPropagatesFailureWithoutRetry` | 엔진 실패 응답을 예외로 전달하고 자동 재시도하지 않음 | 통과 |
 | 같은 파일 · `transportFailurePropagatesCauseWithoutRetry` | 통신 예외 원인을 보존하고 자동 재시도하지 않음 | 통과 |
@@ -109,7 +97,7 @@ public void syncBalance(Long userId, String mint, BigDecimal availableDelta) {
 
 ## 실행 명령과 결과
 
-플랫폼 프로젝트 루트에서 Java 21과 프로젝트 Gradle wrapper를 사용했다.
+아래는 최초 사이클 당시 Java21/Gradle 실행 기록이다. 삭제한 시험을 포함하므로 현재 재실행 명령은076의 검증 기록을 따른다.
 
 ```sh
 JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home \

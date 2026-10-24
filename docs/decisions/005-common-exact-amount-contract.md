@@ -100,3 +100,5 @@ PATH=/usr/local/bin:$PATH python3 scripts/verify_order_idempotency.py
 - `46b5fd6`: 공통 정확한 금액 계약·명령 검증과 테스트.
 - `5a0441e`: 예약 원본·결과 검증과 실제 JPA 롤백 테스트.
 - `fde9210`: 실제 HTTP·PostgreSQL 신규 2건.
+
+076 현행 기준: 과거 실행 명령에 포함된 BalanceSyncServiceTest는 사용하지 않는 도우미와 함께 삭제했다. 위 명령/수치는 당시 실행 이력이며 현재 실행 범위는 [076 정리 기록](076-remove-retired-balance-sync.md)을 따른다.

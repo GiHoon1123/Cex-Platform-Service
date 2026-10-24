@@ -234,3 +234,5 @@ PATH=/usr/local/bin:$PATH python3 scripts/verify_order_idempotency.py
 문서 커밋까지 완료한 작업 단위로 푸시한다. 공통 루트의 규칙·로드맵은 로컬 공통 문서이며 별도 Git 저장소를 만들지 않는다.
 
 후속 검토: [금액 타입 경계 오류 수정](005-common-exact-amount-contract.md). 이 글의 당시 검증 결과와 후속 변경을 구분한다.
+
+076 현행 기준: 과거 실행 명령에 포함된 BalanceSyncServiceTest는 사용하지 않는 도우미와 함께 삭제했다. 위 명령/수치는 당시 실행 이력이며 현재 실행 범위는 [076 정리 기록](076-remove-retired-balance-sync.md)을 따른다.

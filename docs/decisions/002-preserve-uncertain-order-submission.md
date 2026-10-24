@@ -210,3 +210,5 @@ PATH=/usr/local/bin:$PATH python3 .local/order_submission_smoke.py
 8. 기존에 실행 중이던 플랫폼·엔진·프론트는 교체하지 않았다. 새 JAR는 격리 검증에만 실행했다. 봇 비활성 상태를 유지한다.
 
 다음 구현은 정확한 원본 주문 명령·고객 요청 식별자와 엔진의 영속 접수·중복 방지 경계를 연결해야 한다. 예약 해제는 주문 ID와 연결된 확정 거부·취소·체결 결과를 근거로 한다.
+
+076 현행 기준: 과거 실행 명령에 포함된 BalanceSyncServiceTest는 사용하지 않는 도우미와 함께 삭제했다. 위 명령/수치는 당시 실행 이력이며 현재 실행 범위는 [076 정리 기록](076-remove-retired-balance-sync.md)을 따른다.

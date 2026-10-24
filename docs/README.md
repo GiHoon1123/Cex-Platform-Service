@@ -167,3 +167,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [073. 관찰 전용 Bitcoin Core에서 BTC 주소 파생 검증](decisions/073-bitcoin-watch-only-rpc.md)
 
 - [074. 현재 고객 자격을 재검증하는 BTC 입금 주소 영속 발급](decisions/074-customer-bitcoin-deposit-address.md)
+
+- [076. 미사용 잔액 증감 경로 제거와 정산 시험 의존성 수정](decisions/076-remove-retired-balance-sync.md)
