@@ -59,8 +59,8 @@ public class BitcoinDepositReader {
             String address=text(detail,"address");var script=original.path("scriptPubKey");
             String hex=text(script,"hex");
             if(address.isEmpty()||!text(script,"address").equals(address)||hex.isEmpty()||hex.length()>20000||!hex.matches("[0-9a-f]+")||(hex.length()%2)!=0)throw unavailable();
-            BigDecimal amount=money(detail.path("amount"));
-            if(amount.compareTo(money(original.path("value")))!=0)throw unavailable();
+            BigDecimal amount=BitcoinAmounts.fromNode(detail.path("amount"));
+            if(amount.compareTo(BitcoinAmounts.fromNode(original.path("value")))!=0)throw unavailable();
             // 내부 거스름돈이나 임의의 외부 출력은 지갑의 수신 상세 원본에 없으면 선택하지 않는다.
             received.add(new Output((int)index,address,hex,amount));
         }
@@ -76,14 +76,5 @@ public class BitcoinDepositReader {
     private static String hash(tools.jackson.databind.JsonNode node,String field){
         String value=text(node,field);if(!value.matches("[0-9a-f]{64}"))throw unavailable();return value;
     }
-    private static BigDecimal money(tools.jackson.databind.JsonNode node){
-        // 실수 토큰은 전용 ObjectReader가 BigDecimal로 만든다. DoubleNode로 바뀌면 잘못된 정밀도를 추측하지 않는다.
-        if(!node.isNumber()||(!node.isIntegralNumber()&&!node.isBigDecimal()))throw unavailable();
-        try{
-            BigDecimal value=node.decimalValue();
-            // 거대한 지수/소수 자릿수를 먼저 거부한다. 범위 검사 전에 setScale로 큰 정수를 만들지 않는다.
-            if(value.signum()<0||value.compareTo(new BigDecimal("21000000"))>0||value.stripTrailingZeros().scale()>8)throw unavailable();
-            return value.setScale(8,RoundingMode.UNNECESSARY);
-        }catch(ArithmeticException e){throw unavailable();}
-    }
+
 }
