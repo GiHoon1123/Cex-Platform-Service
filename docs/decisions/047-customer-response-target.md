@@ -90,3 +90,6 @@ Duration은 경과 시간이고 영업일 달력이 아니다. Java Instant의 �
 - [`4b1d005`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/4b1d005a6aa956d4a123409513f8f974396de9a8): 구현과 관련 회귀.
 
 [확정 증적](../reference/customer-response-target-verification-2026-10-24.json), [046 최종 답변](046-customer-final-receipt.md).
+
+
+고객의 본인 확정 결과 발견과 명시적 확인 의미는 [049 알림 목록](049-customer-final-notices.md)을 따른다. 당시 회귀/증적은 보존한다.

@@ -77,6 +77,8 @@ GET `/api/admin/compliance/customer-review-attention`은 현재 APPROVER만 사�
 
 ## 한계
 
+적기 첫 답변이 있고 현재 담당자가 정상이며 아직 최종 승인이 없는 접수는 현재 attention 목록에서 제외된다. 전체/개인 목록에서는 계속 보인다. 첫 답변 이후 장기 미종결·주기적 후속 회신/최종 해결의 기한은 이24시간 지표로 감시하지 않는다. 형식적 상태 회신만으로 실제 업무가 진행됐다고 주장하지 않으며 운영 점검과 별도 최종 처리 기준이 필요하다.
+
 24시간은 최종 해결 기한이나 법적 약속이 아니다. 업무 목록의 관측 시각과 실제 제공/고객 확인/외부 전송을 구분한다. 법정 기산점·공휴일·개별 공개 문구의 적정성·외부 이메일/SMS 발송/수신·신원 확인 지원 채널·기관/운영/인증 심사는 별도다. 고객에게 실제 메시지를 발송하거나 외부 서비스를 등록하지 않았다.
 
 ## 관련 커밋과 증적
@@ -84,3 +86,6 @@ GET `/api/admin/compliance/customer-review-attention`은 현재 APPROVER만 사�
 - [`9dbcbe4`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/9dbcbe402b72bf38c7b92edcdbd0d8d435102854): 구현과 관련 회귀.
 
 [확정 증적](../reference/customer-review-attention-verification-2026-10-24.json), [046 최종 답변](046-customer-final-receipt.md).
+
+
+고객의 본인 확정 결과 발견과 명시적 확인 의미는 [049 알림 목록](049-customer-final-notices.md)을 따른다. 당시 회귀/증적은 보존한다.
