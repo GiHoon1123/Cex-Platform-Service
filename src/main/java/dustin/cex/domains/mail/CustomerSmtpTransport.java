@@ -26,6 +26,9 @@ public class CustomerSmtpTransport {
         requireReady();try{var sender=provider.getObject();var address=new InternetAddress(p.email(),true);address.validate();if(!address.getAddress().equals(p.email())||p.email().codePoints().anyMatch(Character::isISOControl))throw new IllegalArgumentException();
             var m=sender.createMimeMessage();var helper=new MimeMessageHelper(m,"UTF-8");helper.setFrom(from);helper.setTo(address);
             if(p.kind()==CustomerMailOutbox.Kind.EMAIL_VERIFICATION){helper.setSubject("이메일 주소 확인");helper.setText("직접 요청한 이메일 확인을 계속하려면 로그인한 상태에서 아래 주소를 여세요. 요청하지 않았다면 무시하세요.\n"+base.resolve("/account/verify-email")+"?challenge="+p.reference()+"&token="+p.token(),false);}
+            else if(p.kind()==CustomerMailOutbox.Kind.PASSWORD_CHANGED){
+                helper.setSubject("비밀번호 변경 안내");helper.setText("계정 비밀번호가 변경되었습니다. 본인이 변경하지 않았다면 계정 보안 안내를 확인하세요.\n"+base.resolve("/account/security"),false);
+            }
             else{
                 // 내부 메모/보고 여부/승인 사유/금액/고객 입력은 메일에 복사하지 않는다.
                 helper.setSubject("새 서비스 알림");helper.setText("로그인 후 서비스 알림에서 새 안내를 확인하세요.\n"+base.resolve("/account/notices"),false);

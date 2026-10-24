@@ -20,9 +20,10 @@ public class CustomerPasswordChange {
     public record Input(String currentPassword,String newPassword){@Override public String toString(){return "Input[비밀번호 생략]";}}
     public record Receipt(UUID id,Instant changedAt,boolean requiresLogin) {}
     private record Outcome(Receipt receipt,HttpStatus denial) {}
+    private final CustomerPasswordNotice notice;
     private final CustomerSessionPolicy sessions;private final UserRepository users;private final RefreshTokenRepository tokens;
     private final PasswordService passwords;private final CustomerPasswordPolicy policy;private final JdbcTemplate jdbc;private final AuditService audit;private final TransactionTemplate tx;
-    public CustomerPasswordChange(CustomerSessionPolicy sessions,UserRepository users,RefreshTokenRepository tokens,PasswordService passwords,CustomerPasswordPolicy policy,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager){this.sessions=sessions;this.users=users;this.tokens=tokens;this.passwords=passwords;this.policy=policy;this.jdbc=jdbc;this.audit=audit;tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);}
+    public CustomerPasswordChange(CustomerSessionPolicy sessions,UserRepository users,RefreshTokenRepository tokens,PasswordService passwords,CustomerPasswordPolicy policy,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager,CustomerPasswordNotice notice){this.notice=notice;this.sessions=sessions;this.users=users;this.tokens=tokens;this.passwords=passwords;this.policy=policy;this.jdbc=jdbc;this.audit=audit;tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);}
     @Transactional(propagation=Propagation.NEVER)
     public Receipt change(long actor,UUID sid,Input input){
         try{
@@ -40,6 +41,7 @@ public class CustomerPasswordChange {
                 tokens.revokeAllByUserId(actor,LocalDateTime.now());UUID id=UUID.randomUUID();
                 jdbc.update("INSERT INTO customer_password_changes(id,user_id,session_id) VALUES(?,?,?)",id,actor,sid);
                 Instant at=jdbc.queryForObject("SELECT changed_at FROM customer_password_changes WHERE id=?",Timestamp.class,id).toInstant();
+                notice.reserve(actor,id,at);
                 audit.record(actor,"CUSTOMER_PASSWORD_CHANGED","password-change:"+id,"SUCCESS","ALL_SESSIONS_REVOKED");
                 return new Outcome(new Receipt(id,at,true),null);
             });
