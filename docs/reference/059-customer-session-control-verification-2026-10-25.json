@@ -1,0 +1,88 @@
+{
+  "cycle": 59,
+  "implementation_commit": "cc3a0c8ebeea45f42b6ea4f603e50ee4319d3cc0",
+  "verification": {
+    "groups": [
+      {
+        "group": "account",
+        "container": "cex-account-c912f18a6d97",
+        "selection": [
+          "*CustomerSessionControlIntegrationTest"
+        ],
+        "exit": 0,
+        "tests": {
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "concurrentRevocationHasOneEffect()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "httpOwnReadRevokeAndRoleBoundary()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "listContainsOnlyOwnMetadataAndMarksCurrent()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "foreignAndAbsentTargetAreEquallyNotFound()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "listAuditFailurePreventsResponse()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "revocationAuditFailureRollsBackFlag()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "invalidCursorAndAmbientMutationAreRejected()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "otherSessionRevocationCanBeReplayed()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "operatorForeignAndDisabledSessionsCannotUseCustomerFlow()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "revokedRefreshTokenCannotRotate()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "revokedAndExpiredAreDistinguished()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "currentRevocationImmediatelyBlocksOldAccessJwt()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "refreshRaceCannotRestoreRevokedSession()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+            "name": "pagesPreserveAllSameTimestampRows()"
+          }
+        ],
+        "container_removed": true
+      }
+    ],
+    "exit": 0,
+    "tests": {
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  }
+}

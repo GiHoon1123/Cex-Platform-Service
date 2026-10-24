@@ -137,3 +137,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [057. 소진된 서비스 알림의 한 번뿐인 독립 재시도 승인](decisions/057-customer-mail-retry-approval.md)
 
 - [058. 메일 워커 격리와 실제 프로세스 종료·복원](decisions/058-customer-mail-worker-recovery.md)
+
+- [059. 본인 세션 기록 조회·회수와 갱신 경쟁 제어](decisions/059-customer-session-control.md)
