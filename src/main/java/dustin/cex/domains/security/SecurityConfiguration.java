@@ -69,6 +69,12 @@ public class SecurityConfiguration {
                     "/api/admin/compliance/custody-requests/*/reject/options","/api/admin/compliance/custody-requests/*/approve","/api/admin/compliance/custody-requests/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/reporting-queue","/api/admin/compliance/reviews/*/followups").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews/*/followups","/api/admin/compliance/followups/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                // 철회는 원래 판단의 삭제가 아니라 별도 독립 승인이다. 원문은 지정 인물이 서비스에서 다시 검사한다.
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/exit-rescissions").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/exit-rescissions","/api/admin/compliance/exit-rescissions/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/exit-rescissions/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/exit-rescissions/*/approve/options","/api/admin/compliance/exit-rescissions/*/reject/options",
+                    "/api/admin/compliance/exit-rescissions/*/approve","/api/admin/compliance/exit-rescissions/*/reject").access(audited(audit,sessions,"APPROVER"))
                 // 관계 종료 개시도 별도 목적의 독립 승인이다. 보고 원문 권한과 합치지 않는다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/relationship-exits").access(audited(audit,sessions,"OPERATOR","APPROVER"))

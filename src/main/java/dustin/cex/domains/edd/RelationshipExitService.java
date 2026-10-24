@@ -57,6 +57,8 @@ public class RelationshipExitService {
     public RelationshipExitService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy sessions,EvidenceCrypto crypto,CddCrypto cdd,
             ObjectMapper json,DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,EddDossier dossiers,PlatformTransactionManager manager,ComplianceReferralBasis referrals) {
         this.referrals=referrals;this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;this.dossiers=dossiers;tx=new TransactionTemplate(manager);
+        // 고객 잠금을 기다린 다음 조회는 새 확정 상태를 읽어야 한다. 지원하는 격리 수준을 명시한다.
+        tx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
     /** 요청자는 현재 회부를 선택하고 별도 승인자를 지정한다. 역할만 있으면 모든 사건을 읽는 경로는 제공하지 않는다. */
     public Review propose(long actor,UUID sid,UUID referral,long checker,UUID key,Facts supplied) {
@@ -77,8 +79,10 @@ public class RelationshipExitService {
             }
             long revision=referrals.current(reference);
             if(exitInitiated(reference.user()))throw denied(HttpStatus.CONFLICT);
+            // 철회한 근거를 그대로 되살리지 않는다. 다시 개시하려면 새로운 현재 준법 회부가 필요하다.
+            if(jdbc.queryForObject("SELECT count(*) FROM relationship_exit_requests e JOIN relationship_exit_decisions d ON d.review_id=e.id AND d.approved JOIN relationship_exit_rescission_decisions w ON w.exit_id=e.id AND w.approved WHERE e.referral_id=?",Long.class,referral)>0)throw denied(HttpStatus.CONFLICT);
             // 한 고객의 미결 또는 승인된 종료 개시를 중복 생성하지 않는다. 반려·만료 후에는 새 요청을 남길 수 있다.
-            if(jdbc.queryForObject("SELECT count(*) FROM relationship_exit_requests r LEFT JOIN relationship_exit_decisions d ON d.review_id=r.id WHERE r.user_id=? AND (d.approved=true OR (d.review_id IS NULL AND r.expires_at>clock_timestamp()))",Long.class,reference.user())>0)throw denied(HttpStatus.CONFLICT);
+            if(jdbc.queryForObject("SELECT count(*) FROM relationship_exit_requests r WHERE r.user_id=? AND r.expires_at>clock_timestamp() AND NOT EXISTS(SELECT 1 FROM relationship_exit_decisions d WHERE d.review_id=r.id)",Long.class,reference.user())>0)throw denied(HttpStatus.CONFLICT);
             if(jdbc.queryForObject("SELECT count(*) FROM relationship_exit_requests WHERE user_id=? AND created_at>clock_timestamp()-interval '1 day'",Long.class,reference.user())>=10)throw denied(HttpStatus.TOO_MANY_REQUESTS);
             UUID id=UUID.randomUUID();Instant expires=Instant.now().plusSeconds(600).truncatedTo(ChronoUnit.MICROS);
             var p=new Payload(id,reference.user(),locked.get(reference.user()).getVersion(),reference.caseId(),revision,reference.assessment(),referral,reference.hash(),reference.dossier(),POLICY,ASSURANCE,mac,crypto.keyId(),cdd.keyId(),
@@ -127,12 +131,14 @@ public class RelationshipExitService {
             var person=users.lockById(actor).orElse(null);
             if(person==null||person.getRole()!=UserRole.CUSTOMER||!person.isAuthenticationAllowed())throw denied(HttpStatus.FORBIDDEN);
             audit.record(actor,"RELATIONSHIP_STATUS_READ","customer:"+actor,"SUCCESS","CUSTOMER_SAFE_STATUS");
-            return new CustomerStatus(exitInitiated(actor)?"EXIT_PENDING":"NO_EXIT_DECISION");
+            if(exitInitiated(actor))return new CustomerStatus("EXIT_PENDING");
+            boolean history=Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_exit_decisions WHERE user_id=? AND approved)",Boolean.class,actor));
+            return new CustomerStatus(history?"EXIT_RESCINDED":"NO_EXIT_DECISION");
         });
     }
     /** 요청의 10분 기한은 승인 기회만 제한한다. 이미 확정된 개시 효과의 자동 해제 기한이 아니다. */
     private boolean exitInitiated(long user) {
-        return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_exit_decisions WHERE user_id=? AND approved)",Boolean.class,user));
+        return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_active_exits WHERE user_id=?)",Boolean.class,user));
     }
     /**
      * 사용자 행 잠금 뒤 역할·인물·버전과 현재 회부를 다시 읽는다. 서명을 얻은 뒤 상태가
@@ -167,6 +173,14 @@ public class RelationshipExitService {
     }
     private String fingerprint(long user,UUID referral,Facts facts) {return cdd.fingerprint("relationship-exit",json.writeValueAsString(List.of(user,referral,facts)));}
     private String context(Payload p) {return "RELATIONSHIP_EXIT:"+p.id()+":"+p.userId()+":"+p.caseId()+":"+p.referralId()+":"+p.factsMac();}
+    /** 철회 업무 전용의 불변 원래 결정이다. 호출 서비스가 목적·지정 인물·현재 자격을 별도로 검사한다. */
+    Review approvedOrigin(UUID id) {
+        transaction();var result=read(id);
+        if(!"APPROVED".equals(result.status())||!POLICY.equals(result.payload().policy())||!ASSURANCE.equals(result.payload().assurance()))throw denied(HttpStatus.CONFLICT);
+        return result;
+    }
+    Facts correctionFacts(UUID id) {transaction();return facts(approvedOrigin(id));}
+    private void transaction() {if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("종료 근거 조회에는 트랜잭션이 필요합니다");}
     private Review read(UUID id) {
         var rows=jdbc.queryForList("SELECT r.payload,r.payload_hash,d.approved FROM relationship_exit_requests r LEFT JOIN relationship_exit_decisions d ON d.review_id=r.id WHERE r.id=?",id);
         if(rows.isEmpty())throw denied(HttpStatus.NOT_FOUND);var row=rows.getFirst();String raw=(String)row.get("payload");var p=json.readValue(raw,Payload.class);

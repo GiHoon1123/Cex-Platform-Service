@@ -18,7 +18,7 @@ public class TradingAccessPolicy {
         var user=users.lockById(userId).orElse(null);
         if(user==null || !user.isEnabled() || user.getRole()!=UserRole.CUSTOMER || user.isTradingRestricted()
                 // 관계 종료 개시 결정은 일반 거래 제한 해제나 고객의 새 신고와 독립된 차단 근거다.
-                || Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_exit_decisions WHERE user_id=? AND approved)",Boolean.class,userId))
+                || Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_active_exits WHERE user_id=?)",Boolean.class,userId))
                 || !cdd.permitted(userId)
                 || !Boolean.TRUE.equals(jdbc.queryForObject("""
                     SELECT EXISTS(SELECT 1 FROM kyc_profiles p JOIN kyc_attempts a ON a.id=p.active_attempt

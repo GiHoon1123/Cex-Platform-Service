@@ -20,8 +20,14 @@ CREATE TABLE IF NOT EXISTS relationship_exit_decisions (
  approver_person uuid NOT NULL,approved boolean NOT NULL,decided_at timestamptz NOT NULL DEFAULT clock_timestamp(),
  FOREIGN KEY(review_id,user_id) REFERENCES relationship_exit_requests(id,user_id)
 );
--- 종료 개시의 승인 효과는 고객별 하나만 존재한다. 반려 이력은 추가로 보존한다.
-CREATE UNIQUE INDEX IF NOT EXISTS relationship_exit_one_approved ON relationship_exit_decisions(user_id) WHERE approved;
+-- 과거의 영구 단일 승인 제약은 철회 후 새 결정을 막는다. 지원하지 않는 옛 스키마를 자동 변환하지 않는다.
+DO $$ BEGIN
+ IF to_regclass('relationship_exit_one_approved') IS NOT NULL THEN
+  RAISE EXCEPTION '철회와 재개시를 지원하는 현재 종료 스키마가 필요합니다';
+ END IF;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS relationship_exit_decision_customer ON relationship_exit_decisions(review_id,user_id);
+CREATE INDEX IF NOT EXISTS relationship_exit_approved_lookup ON relationship_exit_decisions(user_id) WHERE approved;
 -- 종료 개시 요청·제공·결정은 수정하지 않는다. 자산 반환과 종료 완료는 별도 검증 대상이다.
 DROP TRIGGER IF EXISTS relationship_exit_request_no_change ON relationship_exit_requests;
 CREATE TRIGGER relationship_exit_request_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON relationship_exit_requests FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

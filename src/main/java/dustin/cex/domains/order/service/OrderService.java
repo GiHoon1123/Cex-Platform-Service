@@ -77,8 +77,7 @@ public class OrderService {
             .disable(tools.jackson.databind.cfg.DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS).build();
     
     /**
-     * 생성자: TransactionTemplate 초기화
-     * Constructor: Initialize TransactionTemplate
+     * 주입한 의존성과 주문 접수용 트랜잭션을 초기화한다.
      */
     public OrderService(
             OrderRepository orderRepository,
@@ -98,6 +97,8 @@ public class OrderService {
         this.engineHttpClient = engineHttpClient;
         this.kafkaEventProducer = kafkaEventProducer;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        // 접수와 권한 변경은 같은 고객 행으로 순서를 정한다. 대기 후의 권한 조회가 새 커밋을 읽도록 고정한다.
+        this.transactionTemplate.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
     
     /**
