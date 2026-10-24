@@ -5,7 +5,7 @@ import java.net.http.*;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
-import java.nio.ByteBuffer;
+import dustin.cex.shared.http.LimitedResponseBody;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -48,7 +48,7 @@ public class DiditClient {
         try {
             var request=HttpRequest.newBuilder(base.resolve(path)).timeout(Duration.ofSeconds(10)).header("x-api-key",settings.apiKey).header("Accept","application/json");
             if(payload!=null) request.header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(payload));else request.GET();
-            var pending=http.sendAsync(request.build(),info->new LimitedBody());
+            var pending=http.sendAsync(request.build(),info->new LimitedResponseBody(1048576));
             try {
                 // 입력 스트림의 반환은 본문 수신 완료가 아니다. 본문 전체를 포함해 절대 시간을 제한한다.
                 var result=pending.get(10,TimeUnit.SECONDS);
@@ -74,23 +74,6 @@ public class DiditClient {
             long seconds=Long.parseLong(response.headers().firstValue("Retry-After").orElse("60"));
             return (int)Math.max(60,Math.min(86400,seconds));
         } catch(NumberFormatException e) {return 60;}
-    }
-    /** JDK 수신기에 크기 제한만 추가한다. JSON·HTTP 전송·연결 풀 자체를 재구현하지 않는다. */
-    private static final class LimitedBody implements HttpResponse.BodySubscriber<byte[]> {
-        private final HttpResponse.BodySubscriber<byte[]> delegate=HttpResponse.BodySubscribers.ofByteArray();
-        private Flow.Subscription upstream;private long received;private boolean terminated;
-        @Override public CompletionStage<byte[]> getBody() {return delegate.getBody();}
-        @Override public void onSubscribe(Flow.Subscription subscription) {upstream=subscription;delegate.onSubscribe(subscription);}
-        @Override public void onNext(List<ByteBuffer> buffers) {
-            if(terminated) return;
-            for(var buffer:buffers) received+=buffer.remaining();
-            if(received>1048576) {
-                terminated=true;upstream.cancel();delegate.onError(new java.io.IOException("KYC 공급사 응답 크기 초과"));return;
-            }
-            delegate.onNext(buffers);
-        }
-        @Override public void onError(Throwable error) {if(!terminated){terminated=true;delegate.onError(error);}}
-        @Override public void onComplete() {if(!terminated){terminated=true;delegate.onComplete();}}
     }
     @jakarta.annotation.PreDestroy void stop() {http.shutdownNow();}
     private ResponseStatusException unavailable() {return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"KYC 공급사 결과를 확인할 수 없습니다");}
