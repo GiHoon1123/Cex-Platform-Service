@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
     config=data/"bitcoin.conf"
     config.write_text("\n".join(["regtest=1","server=1","listen=0","networkactive=0","dnsseed=0","discover=0",
         "walletbroadcast=0","printtoconsole=0","rpcauth="+credentials["rpcauth"],"rpcwhitelistdefault=0",
-        "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getnewaddress,getaddressinfo,gettransaction,getblockheader,getblockhash",
+        "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getnewaddress,getaddressinfo,gettransaction,getblockheader,getblockhash,getdescriptoractivity",
         "[regtest]","rpcbind=127.0.0.1","rpcallowip=127.0.0.1","rpcport="+str(rpc_port)])+"\n")
     config.chmod(0o600)
     daemon=None
@@ -104,9 +104,14 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "confirmed_confirmations":rpc("gettransaction",[confirmed,True,True],"cex_watch")["confirmations"],
             "conflicted_confirmations":rpc("gettransaction",[conflicted,True,True],"cex_watch")["confirmations"]}
 
+        script=rpc("getaddressinfo",[watch],"cex_watch")["scriptPubKey"]
+        empty_address=rpc("getnewaddress",["unused_discovery","bech32"],"cex_watch")
+        empty_script=rpc("getaddressinfo",[empty_address],"cex_watch")["scriptPubKey"]
+        confirmed_height=rpc("gettransaction",[confirmed,True,True],"cex_watch")["blockheight"]
         groups={
             "addresses":["*BitcoinCoreClientTest","*BitcoinCoreIntegrationTest","*LimitedResponseBodyTest",
-                "*BitcoinDepositAddressIntegrationTest","*BitcoinDepositReaderTest","*BitcoinDepositReaderIntegrationTest"],
+                "*BitcoinDepositAddressIntegrationTest","*BitcoinDepositReaderTest","*BitcoinDepositReaderIntegrationTest",
+                "*BitcoinBlockDiscoveryTest","*BitcoinBlockDiscoveryIntegrationTest"],
             "observations":["*BitcoinObservationIntegrationTest"],
         }
         result["groups"]=[]
@@ -132,7 +137,9 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                     CEX_BITCOIN_TEST_PASSWORD=credentials["password"],
                     CEX_BITCOIN_TEST_CONFIRMED_TX=confirmed,CEX_BITCOIN_TEST_CONFLICTED_TX=conflicted,
                     CEX_BITCOIN_TEST_UNCONFIRMED_TX=unconfirmed,CEX_BITCOIN_TEST_COINBASE_TX=coinbase,
-                    CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_ADDRESS=watch)
+                    CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_ADDRESS=watch,
+                    CEX_BITCOIN_TEST_SCRIPT=script,CEX_BITCOIN_TEST_EMPTY_SCRIPT=empty_script,
+                    CEX_BITCOIN_TEST_CONFIRMED_HEIGHT=str(confirmed_height))
                 env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
                 command=["./gradlew","test"]
                 for pattern in patterns:command.extend(["--tests",pattern])
