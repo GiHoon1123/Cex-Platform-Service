@@ -59,18 +59,19 @@
 
 CustomerSessionPolicy와 fresh가 현재 소유·수명·키의 생존을 먼저 검사한다. 같은 키 자체의 제거/마지막 키 제거를 막고 모든 금융/감사 원본과 구분해 공개키만 제거한다. 마지막 감사까지 실패하면 DB 트랜잭션이 키와 이력·세션을 되돌린다.
 
-출처: [CustomerMfaKeyChanges.java](../../src/main/java/dustin/cex/domains/security/CustomerMfaKeyChanges.java#L14), 현재 소스의 부분 발췌.
+출처: [CustomerMfaKeyChanges.java](../../src/main/java/dustin/cex/domains/security/CustomerMfaKeyChanges.java#L15), 현재 소스의 부분 발췌.
 
 ```java
     @Transactional(propagation=Propagation.MANDATORY)
     public UUID append(long actor,UUID sid,Kind kind,String fingerprint){
         UUID id=UUID.randomUUID();
         jdbc.update("INSERT INTO customer_mfa_key_changes(id,user_id,session_id,kind,credential_fingerprint) VALUES(?,?,?,?,?)",id,actor,sid,kind.name(),fingerprint);
+        notice.reserve(actor,id);
         return id;
     }
 ```
 
-MANDATORY는 상위 업무 트랜잭션이 없으면 호출을 거부한다. 별도 커밋이나 비동기 기록으로 금융/보안 업무와 이력이 갈라지지 않는다. UUID는 변경 영수증이며 실제 생성 사실을 저장한 뒤에만 반환한다.
+065 이후 현재 발췌에서는 같은 트랜잭션에 보안 통지 예약도 참여한다. MANDATORY는 상위 업무 트랜잭션이 없으면 호출을 거부한다. 별도 커밋이나 비동기 기록으로 금융/보안 업무와 이력이 갈라지지 않는다. UUID는 변경 영수증이며 실제 생성 사실을 저장한 뒤에만 반환한다.
 
 ## 실행 명령과 결과
 
@@ -80,7 +81,7 @@ MANDATORY는 상위 업무 트랜잭션이 없으면 호출을 거부한다. 별
 
 ## 한계와 다음 연결
 
-키 변경 사실에 외부 보안 통지를 연결하는 다음 사이클이 남아 있다. 마지막 키/모든 기기 분실의 독립 복구, 보안 변경·출금의 정확한 내용 결합 추가 인증도 후속이다. 키 수명 구현만으로 고객 MFA/복구·출금 보안 전체를 완료했다고 표시하지 않는다. 실물/동기화 패스키·운영 도메인 HTTPS·보존/키 보호의 실제 검증은 별도다.
+이 기록 당시 보안 통지는 미완료였으며 [065](065-customer-passkey-notices.md)에서 키 변경 원본 조회/보안 통지를 연결했다. 마지막 키/모든 기기 분실의 독립 복구, 보안 변경·출금의 정확한 내용 결합 추가 인증도 후속이다. 키 수명 구현만으로 고객 MFA/복구·출금 보안 전체를 완료했다고 표시하지 않는다. 실물/동기화 패스키·운영 도메인 HTTPS·보존/키 보호의 실제 검증은 별도다.
 
 ## 작성한 테스트 코드
 

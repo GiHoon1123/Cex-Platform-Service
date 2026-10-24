@@ -149,3 +149,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [063. 고객 최초 패스키 등록과 서명 후 세션 교체](decisions/063-customer-passkey-login.md)
 
 - [064. 고객 예비 패스키와 분실 키 폐기의 원자성](decisions/064-customer-passkey-devices.md)
+
+- [065. 키 변경 원본 조회와 검증 주소 보안 통지](decisions/065-customer-passkey-notices.md)
