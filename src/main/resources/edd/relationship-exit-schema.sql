@@ -35,3 +35,6 @@ DROP TRIGGER IF EXISTS relationship_exit_view_no_change ON relationship_exit_vie
 CREATE TRIGGER relationship_exit_view_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON relationship_exit_views FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
 DROP TRIGGER IF EXISTS relationship_exit_decision_no_change ON relationship_exit_decisions;
 CREATE TRIGGER relationship_exit_decision_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON relationship_exit_decisions FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 미결 감독의 시간·식별자 순회를 지원한다. 결정 여부는 별도 불변 결정 표에서 확인한다.
+CREATE INDEX IF NOT EXISTS relationship_exit_request_created ON relationship_exit_requests(created_at,id);
