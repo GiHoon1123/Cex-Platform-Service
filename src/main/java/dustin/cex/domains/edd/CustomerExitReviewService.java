@@ -107,7 +107,8 @@ public class CustomerExitReviewService {
         if(count==0)throw denied(HttpStatus.CONFLICT);
     }
     private void transaction(){if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("고객 후속 업무에는 트랜잭션이 필요합니다");}
-    private void customer(long actor,UUID sid) {
+    /** 같은 도메인의 고객 목록도 이 세션/현재 계정 검사와 사용자 잠금을 재사용한다. */
+    void customer(long actor,UUID sid) {
         var owner=users.lockById(actor).orElse(null);var token=sid==null?null:tokens.findBySessionId(sid).orElse(null);
         if(owner==null||owner.getRole()!=UserRole.CUSTOMER||!owner.isAuthenticationAllowed()||token==null||token.getUserId()!=actor||token.getRevoked()||!token.getExpiresAt().isAfter(LocalDateTime.now()))throw denied(HttpStatus.FORBIDDEN);
     }

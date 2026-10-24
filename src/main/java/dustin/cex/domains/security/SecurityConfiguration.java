@@ -83,7 +83,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits/*/approve/options","/api/admin/compliance/relationship-exits/*/reject/options",
                     "/api/admin/compliance/relationship-exits/*/approve","/api/admin/compliance/relationship-exits/*/reject").access(audited(audit,sessions,"APPROVER"))
                 // 고객 업무 인계는 별도 목적의 보안키 승인으로만 확정한다.
-                .requestMatchers(HttpMethod.GET,"/api/customer/relationship/review-requests/*/final").hasRole("CUSTOMER")
+                .requestMatchers(HttpMethod.GET,"/api/customer/relationship/review-requests/*/final","/api/customer/relationship/final-notices").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.POST,"/api/customer/relationship/review-requests/*/final/acknowledgments").hasRole("CUSTOMER")
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/customer-final-requests/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-review-requests/*/final-proposals").access(audited(audit,sessions,"OPERATOR"))
