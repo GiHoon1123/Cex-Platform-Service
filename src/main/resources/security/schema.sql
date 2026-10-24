@@ -100,14 +100,14 @@ CREATE TRIGGER operator_role_requests_no_truncate BEFORE TRUNCATE ON operator_ro
 -- 승인 근거는 원래 요청과 별도로 불변 보관한다. 과거 업무·감사 표를 바꾸거나 이전하지 않는다.
 -- 요청 당시 담당자 버전까지 고정해 역할을 바꿨다 되돌려도 예전 요청이 살아나지 못하게 한다.
 CREATE TABLE IF NOT EXISTS operator_approval_bindings (
- kind varchar(24) NOT NULL CHECK(kind IN ('ROLE','MFA_RECOVERY','ACCESS_REVIEW','TRADING_RESTRICTION','EDD_REVIEW','EDD_ADDRESS_REVIEW','EDD_FUNDS_REVIEW','EDD_WEALTH_REVIEW','STR_REVIEW')),
+ kind varchar(24) NOT NULL CHECK(kind IN ('ROLE','MFA_RECOVERY','ACCESS_REVIEW','TRADING_RESTRICTION','EDD_REVIEW','EDD_ADDRESS_REVIEW','EDD_FUNDS_REVIEW','EDD_WEALTH_REVIEW','STR_REVIEW','STR_CUSTODY')),
  request_id uuid NOT NULL, requester_id bigint NOT NULL REFERENCES users(id), requester_version bigint NOT NULL,
  payload_hash varchar(64) NOT NULL, expires_at timestamptz NOT NULL,
  PRIMARY KEY(kind,request_id)
 );
 DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='operator_approval_bindings'::regclass
-  AND contype='c' AND conname='operator_approval_bindings_kind_check' AND pg_get_constraintdef(oid) LIKE '%EDD_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%EDD_ADDRESS_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%EDD_FUNDS_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%EDD_WEALTH_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%STR_REVIEW%')
+  AND contype='c' AND conname='operator_approval_bindings_kind_check' AND pg_get_constraintdef(oid) LIKE '%EDD_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%EDD_ADDRESS_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%EDD_FUNDS_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%EDD_WEALTH_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%STR_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%STR_CUSTODY%')
  THEN RAISE EXCEPTION '현재 승인 스키마가 필요합니다. 과거 요청을 자동 변환하지 않습니다'; END IF;
 END $$;
 DROP TRIGGER IF EXISTS operator_approval_binding_no_change ON operator_approval_bindings;

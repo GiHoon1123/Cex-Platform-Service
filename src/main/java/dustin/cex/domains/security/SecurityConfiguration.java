@@ -61,6 +61,10 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/aml-sources/*/inspect","/api/admin/edd/aml-investigations/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/edd/aml-sources/*/investigations").access(audited(audit,sessions,"OPERATOR"))
                 // 비공개 보고 검토는 일반 EDD·감사 역할에 포괄적으로 열지 않는다. 실제 배정은 서비스가 검사한다.
+                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/reporting-orphans","/api/admin/compliance/reviews/*/custody","/api/admin/compliance/reviews/*/custody-history","/api/admin/compliance/custody-requests/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/custody-requests","/api/admin/compliance/reviews/*/custody-context","/api/admin/compliance/custody-requests/*/history").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/custody-requests/*/inspect","/api/admin/compliance/custody-requests/*/approve/options",
+                    "/api/admin/compliance/custody-requests/*/reject/options","/api/admin/compliance/custody-requests/*/approve","/api/admin/compliance/custody-requests/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/reporting-queue","/api/admin/compliance/reviews/*/followups").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews/*/followups","/api/admin/compliance/followups/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews").access(audited(audit,sessions,"OPERATOR"))

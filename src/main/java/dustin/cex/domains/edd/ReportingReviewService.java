@@ -47,12 +47,13 @@ public class ReportingReviewService {
         @Override public String toString() {return "Inspection[비공개 판단 생략]";}
     }
     public record Confirmation(Review review,boolean approve,OperatorMfaService.Options authentication) {}
+    private final ReportingCustody custody;
     private final JdbcTemplate jdbc;private final UserRepository users;private final OperatorSessionPolicy sessions;
     private final EvidenceCrypto crypto;private final CddCrypto cdd;private final ObjectMapper json;
     private final DiditWebhookVerifier verifier;private final OperatorMfaService mfa;private final AuditService audit;private final EddDossier dossiers;private final TransactionTemplate tx;
     public ReportingReviewService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy sessions,EvidenceCrypto crypto,CddCrypto cdd,
-            ObjectMapper json,DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,EddDossier dossiers,PlatformTransactionManager manager) {
-        this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;this.dossiers=dossiers;tx=new TransactionTemplate(manager);
+            ObjectMapper json,DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,EddDossier dossiers,PlatformTransactionManager manager,ReportingCustody custody) {
+        this.custody=custody;this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;this.dossiers=dossiers;tx=new TransactionTemplate(manager);
     }
     /** 요청자는 현재 회부를 선택하고 별도 승인자를 지정한다. 역할만 있으면 모든 사건을 읽는 경로는 제공하지 않는다. */
     public Review propose(long actor,UUID sid,UUID referral,long checker,UUID key,Facts supplied) {
@@ -117,7 +118,8 @@ public class ReportingReviewService {
     record DeliveryOrigin(Payload payload,String payloadHash,Instant decidedAt) {}
     DeliveryOrigin deliveryOrigin(long actor,UUID sid,UUID id) {
         if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("보고 후속 업무에는 트랜잭션이 필요합니다");
-        var r=read(id);assigned(actor,sid,r,lock(actor,r.payload().userId()));return approvedDeliveryOrigin(r);
+        var r=read(id);var state=custody.current(id);var people=custody.lock(state,actor);var person=people.get(actor);sessions.requireFresh(person,sid,UserRole.OPERATOR,UserRole.APPROVER);
+        if(!state.contains(person))throw denied(HttpStatus.NOT_FOUND);return approvedDeliveryOrigin(r);
     }
     /**
      * 한 번에 승인 후보 25개만 검사한다. 미보고 후보로 결과가 비어도 마지막 검사 위치를 반환해 다음 페이지로 진행한다.
@@ -132,19 +134,31 @@ public class ReportingReviewService {
         if((after==null)!=(afterId==null))throw denied(HttpStatus.BAD_REQUEST);
         String sql="""
             SELECT r.id,d.decided_at FROM compliance_reviews r JOIN compliance_review_decisions d ON d.review_id=r.id AND d.approved=true
-            WHERE ((r.requester_id=? AND r.payload::jsonb->>'requesterPerson'=?) OR (r.checker_id=? AND r.payload::jsonb->>'checkerPerson'=?))
+            WHERE EXISTS(SELECT 1 FROM reporting_current_custody c WHERE c.review_id=r.id AND c.member_id=? AND c.member_person=?)
             """;
-        var args=new ArrayList<Object>(List.of(actor,person.getOperatorPersonId().toString(),actor,person.getOperatorPersonId().toString()));
+        var args=new ArrayList<Object>(List.of(actor,person.getOperatorPersonId()));
         if(after!=null) {sql+=" AND (d.decided_at,r.id)>(?,?)";args.add(Timestamp.from(after));args.add(afterId);}
         var rows=jdbc.queryForList(sql+" ORDER BY d.decided_at,r.id LIMIT 25",args.toArray());var result=new ArrayList<DeliveryOrigin>();
         for(var row:rows) {
-            var r=read((UUID)row.get("id"));assigned(actor,sid,r,Map.of(actor,person));
+            var r=read((UUID)row.get("id"));if(!custody.current(r.payload().id()).contains(person))throw denied(HttpStatus.CONFLICT);
             // 개인정보 원문은 반환하지 않는다. 승인된 미보고 판단도 실제 해독·무결성을 검사한 뒤 제외한다.
             if(!"APPROVED".equals(r.status())||!POLICY.equals(r.payload().policy())||!ASSURANCE.equals(r.payload().assurance()))throw denied(HttpStatus.CONFLICT);
             if(facts(r).conclusion()==Conclusion.REPORT_REQUIRED)result.add(new DeliveryOrigin(r.payload(),r.payloadHash(),((Timestamp)row.get("decided_at")).toInstant()));
         }
         var last=rows.isEmpty()?null:rows.getLast();return new DeliveryBatch(result,last==null?null:((Timestamp)last.get("decided_at")).toInstant(),last==null?null:(UUID)last.get("id"),rows.size(),rows.size()==25);
     }
+    /** 인계 서비스 전용의 원래 확정 근거다. 호출자가 배정 또는 고립 복구 권한을 별도로 검사해야 한다. */
+    DeliveryOrigin custodyOrigin(UUID id) {custodyTransaction();return approvedDeliveryOrigin(read(id));}
+    List<UUID> custodyCandidates(Instant after,UUID afterId) {
+        custodyTransaction();
+        String sql="SELECT r.id FROM compliance_reviews r JOIN compliance_review_decisions d ON d.review_id=r.id AND d.approved=true";
+        var args=new ArrayList<Object>();if(after!=null){sql+=" WHERE (d.decided_at,r.id)>(?,?)";args.add(Timestamp.from(after));args.add(afterId);}
+        return jdbc.queryForList(sql+" ORDER BY d.decided_at,r.id LIMIT 25",args.toArray()).stream().map(r->(UUID)r.get("id")).toList();
+    }
+    DeliveryOrigin custodyCandidate(UUID id) {custodyTransaction();var r=read(id);if(!"APPROVED".equals(r.status())||!POLICY.equals(r.payload().policy())||!ASSURANCE.equals(r.payload().assurance()))throw denied(HttpStatus.CONFLICT);return facts(r).conclusion()==Conclusion.REPORT_REQUIRED?approvedDeliveryOrigin(r):null;}
+    Instant custodyDecision(UUID id) {custodyTransaction();return jdbc.queryForObject("SELECT decided_at FROM compliance_review_decisions WHERE review_id=? AND approved=true",Timestamp.class,id).toInstant();}
+    Inspection custodyContent(UUID id,int page) {custodyTransaction();var r=read(id);approvedDeliveryOrigin(r);dossiers.verify(r.payload().dossier(),r.payload().caseId(),r.payload().userId());return new Inspection(r,facts(r),dossiers.page(r.payload().dossier(),page));}
+    private void custodyTransaction() {if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("인계 근거에는 트랜잭션이 필요합니다");}
     private DeliveryOrigin approvedDeliveryOrigin(Review r) {
         if(!"APPROVED".equals(r.status())||!POLICY.equals(r.payload().policy())||!ASSURANCE.equals(r.payload().assurance())||facts(r).conclusion()!=Conclusion.REPORT_REQUIRED)throw denied(HttpStatus.CONFLICT);
         var row=jdbc.queryForMap("SELECT decided_at FROM compliance_review_decisions WHERE review_id=? AND approved=true",r.payload().id());
