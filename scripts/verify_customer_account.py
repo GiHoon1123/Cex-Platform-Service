@@ -11,7 +11,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT.parent / ".local"
 DOCKER = shutil.which("docker") or "/usr/local/bin/docker"
-GROUPS = {"account": ["*CustomerSessionControlIntegrationTest"]}
+GROUPS = {"account": ["*CustomerSessionControlIntegrationTest", "*CustomerPasswordChangeIntegrationTest", "*CustomerPasswordPolicyTest"]}
 result = {"groups": [], "exit": None}
 ARTIFACTS.mkdir(exist_ok=True)
 try:

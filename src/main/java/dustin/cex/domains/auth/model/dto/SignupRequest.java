@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 회원가입 요청 DTO
- * Signup Request DTO
  */
 @Data
 @NoArgsConstructor
@@ -23,9 +22,8 @@ public class SignupRequest {
     @Email(message = "유효한 이메일 형식이 아닙니다")
     private String email;
     
-    @Schema(description = "비밀번호", example = "password123", required = true)
-    @NotBlank(message = "비밀번호는 필수입니다")
-    @Size(min = 8, max = 256, message = "비밀번호는 8~256자여야 합니다")
+    @Schema(description = "새 비밀번호: 15개 코드 포인트 이상, 최대 256 UTF-16 코드 단위", required = true)
+    // 비밀 입력 정책은 서비스에서 검증해 거부된 원문이 바인딩 로그에 남지 않게 한다.
     @lombok.ToString.Exclude
     private String password;
     

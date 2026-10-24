@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 로그인 요청 DTO
- * Signin Request DTO
  */
 @Data
 @NoArgsConstructor
@@ -23,8 +22,7 @@ public class SigninRequest {
     private String email;
     
     @Schema(description = "비밀번호", example = "password123", required = true)
-    @NotBlank(message = "비밀번호는 필수입니다")
-    @jakarta.validation.constraints.Size(max = 256)
+    // 비밀번호 검증기는 null/상한을 포함해 처리한다. 원문을 필드 검증 오류에 넣지 않는다.
     @lombok.ToString.Exclude
     private String password;
 }

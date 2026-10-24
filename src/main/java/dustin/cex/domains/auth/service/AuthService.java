@@ -18,16 +18,19 @@ public class AuthService {
     private final RefreshTokenRepository tokens;
     private final JwtService jwt;
     private final PasswordService passwords;
+    private final CustomerPasswordPolicy policy;
     private final AuditService audit;
     private final TransactionTemplate tx;
     public AuthService(UserRepository users,RefreshTokenRepository tokens,JwtService jwt,PasswordService passwords,
-            AuditService audit,PlatformTransactionManager manager) {
+            AuditService audit,PlatformTransactionManager manager,CustomerPasswordPolicy policy) {
+        this.policy=policy;
         this.users=users;this.tokens=tokens;this.jwt=jwt;this.passwords=passwords;this.audit=audit;
         tx=new TransactionTemplate(manager);
     }
     public SignupResponse signup(SignupRequest request) {
         return attempt(null,"SIGNUP",()->tx.execute(status->{
-            if(users.existsByEmail(request.getEmail())) throw new AuthException("Invalid signup");
+            if(!policy.accepts(request.getPassword()))throw new AuthException(AuthException.Kind.INVALID_SIGNUP);
+            if(users.existsByEmail(request.getEmail())) throw new AuthException(AuthException.Kind.INVALID_SIGNUP);
             var user=users.saveAndFlush(User.builder().email(request.getEmail())
                 .passwordHash(passwords.hash(request.getPassword())).username(request.getUsername()).build());
             audit.record(user.getId(),"SIGNUP","user:"+user.getId(),"SUCCESS","CUSTOMER");
@@ -55,22 +58,22 @@ public class AuthService {
                 .mfaRequired(user.getRole()!=UserRole.CUSTOMER).message(user.getRole()==UserRole.CUSTOMER ? "Login successful" : "MFA_REQUIRED").build();
         });
         // 거부 감사까지 커밋된 다음 예외로 바꾼다. 예외로 감사 기록까지 롤백하지 않는다.
-        if(result==null) throw new AuthException("Invalid credentials");return result;
+        if(result==null) throw new AuthException(AuthException.Kind.INVALID_CREDENTIALS);return result;
     }
     public RefreshTokenResponse refreshAccessToken(String raw) {
         return attempt(null,"REFRESH",()->tx.execute(status->{
             String hash=jwt.hashRefreshToken(raw);
-            var owner=tokens.findOwnerByHash(hash).orElseThrow(()->new AuthException("Invalid token"));
-            var user=users.lockById(owner).orElseThrow(()->new AuthException("Invalid token"));
-            var token=tokens.lockByHash(hash).orElseThrow(()->new AuthException("Invalid token"));
+            var owner=tokens.findOwnerByHash(hash).orElseThrow(()->new AuthException(AuthException.Kind.INVALID_TOKEN));
+            var user=users.lockById(owner).orElseThrow(()->new AuthException(AuthException.Kind.INVALID_TOKEN));
+            var token=tokens.lockByHash(hash).orElseThrow(()->new AuthException(AuthException.Kind.INVALID_TOKEN));
             if(!user.isAuthenticationAllowed() || token.getRevoked() || !token.getExpiresAt().isAfter(LocalDateTime.now()))
-                throw new AuthException("Invalid token");
+                throw new AuthException(AuthException.Kind.INVALID_TOKEN);
             // 동일 갱신 토큰의 동시 사용은 행 잠금 뒤 재검사하여 하나만 성공시킨다.
             token.setRevoked(true); tokens.saveAndFlush(token);
             // 갱신은 최초 보안키 검증 시각을 연장하지 않는다. 미검증 운영 세션은 갱신할 수 없다.
             if(user.getRole()!=UserRole.CUSTOMER && (!token.hasVerifiedMfa()
                     || !token.getMfaVerifiedAt().plusHours(12).isAfter(LocalDateTime.now())))
-                throw new AuthException("MFA required");
+                throw new AuthException(AuthException.Kind.MFA_REQUIRED);
             var pair=create(user,token.getMfaVerifiedAt(),token.getMfaCredentialFingerprint());
             audit.record(user.getId(),"REFRESH","user:"+user.getId(),"SUCCESS","SESSION_ROTATED");
             return RefreshTokenResponse.builder().accessToken(pair.access()).refreshToken(pair.refresh())
@@ -79,10 +82,10 @@ public class AuthService {
     }
     public void logout(long userId,UUID sessionId,String raw) {
         attempt(userId,"LOGOUT",()->tx.execute(status->{
-            users.lockById(userId).orElseThrow(()->new AuthException("Invalid token"));
-            var token=tokens.lockByHash(jwt.hashRefreshToken(raw)).orElseThrow(()->new AuthException("Invalid token"));
+            users.lockById(userId).orElseThrow(()->new AuthException(AuthException.Kind.INVALID_TOKEN));
+            var token=tokens.lockByHash(jwt.hashRefreshToken(raw)).orElseThrow(()->new AuthException(AuthException.Kind.INVALID_TOKEN));
             if(token.getUserId()!=userId || !token.getSessionId().equals(sessionId) || token.getRevoked())
-                throw new AuthException("Invalid token");
+                throw new AuthException(AuthException.Kind.INVALID_TOKEN);
             token.setRevoked(true);tokens.save(token);
             audit.record(userId,"LOGOUT","user:"+userId,"SUCCESS","SESSION_REVOKED");
             return null;
@@ -104,7 +107,7 @@ public class AuthService {
         catch(AuthException denied) { audit.denied(actor,action,"authentication","INVALID_CREDENTIALS");throw denied; }
     }
     public UserResponse getUserInfo(Long userId) {
-        return response(users.findById(userId).orElseThrow(()->new AuthException("User not found")));
+        return response(users.findById(userId).orElseThrow(()->new AuthException(AuthException.Kind.USER_NOT_FOUND)));
     }
     private UserResponse response(User user) {
         return UserResponse.builder().id(user.getId()).email(user.getEmail()).username(user.getUsername())
