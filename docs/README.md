@@ -131,3 +131,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [054. 현재 고객 이메일의 일회용 소유 확인](decisions/054-customer-email-ownership.md)
 
 - [055. 검증 주소의 선택형 고객 회신·최종 승인 메일](decisions/055-customer-service-mail.md)
+
+- [056. 메일 실패·적체를 원문 없이 점검하는 운영 조회](decisions/056-customer-mail-operations.md)
