@@ -15,7 +15,9 @@ import tools.jackson.databind.ObjectMapper;
 /** 업무와 함께 메일을 영속 예약한다. 외부 SMTP 전달은 업무 트랜잭션·고객 잠금 밖에서 수행한다. */
 @Service
 public class CustomerMailOutbox {
-    public enum Kind { EMAIL_VERIFICATION, STATUS_NOTICE, FINAL_NOTICE, PASSWORD_CHANGED, MFA_CHANGED, ACCOUNT_RECOVERY }
+    public enum Kind { EMAIL_VERIFICATION, STATUS_NOTICE, FINAL_NOTICE, PASSWORD_CHANGED, MFA_CHANGED, ACCOUNT_RECOVERY, EMAIL_CHANGE_VERIFICATION, EMAIL_CHANGE_REQUESTED, EMAIL_CHANGED_PREVIOUS, EMAIL_CHANGED_CURRENT;
+        public boolean verification(){return this==EMAIL_VERIFICATION||this==EMAIL_CHANGE_VERIFICATION;}
+    }
     public record Payload(String policy,UUID id,long userId,Kind kind,UUID reference,String email,String token,Instant expiresAt){@Override public String toString(){return "Payload[수신 주소·토큰 생략]";}}
     public record Lease(UUID id,UUID token,int attempt) {}
     public record State(UUID id,String status,int attempts,String reason) {}
@@ -29,7 +31,7 @@ public class CustomerMailOutbox {
      */
     public UUID enqueue(long user,Kind kind,UUID reference,String email,String token,Instant expires){
         if(!TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("업무 트랜잭션에서만 메일을 예약합니다");
-        if(reference==null||kind==null||email==null||email.codePoints().anyMatch(Character::isISOControl)||(kind==Kind.EMAIL_VERIFICATION?(token==null||!token.matches("[A-Za-z0-9_-]{43}")):token!=null)||expires==null||!expires.isAfter(Instant.now()))throw new IllegalArgumentException("메일 예약 근거가 올바르지 않습니다");
+        if(reference==null||kind==null||email==null||email.codePoints().anyMatch(Character::isISOControl)||(kind.verification()?(token==null||!token.matches("[A-Za-z0-9_-]{43}")):token!=null)||expires==null||!expires.isAfter(Instant.now()))throw new IllegalArgumentException("메일 예약 근거가 올바르지 않습니다");
         expires=expires.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         var old=jdbc.queryForList("SELECT id FROM customer_mail_jobs WHERE kind=? AND reference_id=?",kind.name(),reference);
         if(!old.isEmpty()){UUID id=(UUID)old.getFirst().get("id");var p=open(id);if(p.userId()!=user||!p.email().equals(email)||!Objects.equals(p.token(),token)||!p.expiresAt().equals(expires))throw new IllegalStateException("기존 메일과 다른 재예약입니다");return id;}
@@ -56,11 +58,21 @@ public class CustomerMailOutbox {
         if(!mac(raw).equals(row.get("content_mac"))||!"CUSTOMER_MAIL_V1".equals(p.policy())||!p.id().equals(id)||p.userId()!=user||!p.kind().name().equals(row.get("kind"))||!p.reference().equals(row.get("reference_id"))||!p.expiresAt().equals(((Timestamp)row.get("expires_at")).toInstant()))throw new IllegalStateException("메일 예약 문맥 검증 실패");return p;}
     public boolean eligible(Payload p){
         var u=users.findById(p.userId()).orElse(null);
-        if(!p.expiresAt().isAfter(Instant.now())||u==null||u.getRole()!=UserRole.CUSTOMER||!p.email().equals(u.getEmail()))return false;
+        if(!p.expiresAt().isAfter(Instant.now())||u==null||u.getRole()!=UserRole.CUSTOMER)return false;
+        // 이전 주소 경고는 변경 당시 검증 주소와 불변 원본을 확인한다. 현재 주소와 다르다는 이유로 숨기지 않는다.
+        if(p.kind()==Kind.EMAIL_CHANGE_REQUESTED||p.kind()==Kind.EMAIL_CHANGED_PREVIOUS){
+            String source=p.kind()==Kind.EMAIL_CHANGE_REQUESTED?"customer_email_change_requests r WHERE r.id=?":"customer_email_changes c JOIN customer_email_change_requests r ON r.id=c.request_id WHERE c.id=?";
+            return jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM "+source+" AND r.user_id=? AND r.old_email_mac=? AND r.key_id=? AND EXISTS(SELECT 1 FROM customer_email_confirmations v WHERE v.user_id=r.user_id AND v.email_mac=r.old_email_mac AND v.key_id=r.key_id))",Boolean.class,p.reference(),p.userId(),recipients.addressMac(p.email()),crypto.keyId());
+        }
+        if(p.kind()==Kind.EMAIL_CHANGE_VERIFICATION){
+            return u.isAuthenticationAllowed()&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_email_change_requests r WHERE r.id=? AND r.user_id=? AND r.user_version=? AND r.old_email_mac=? AND r.new_email_mac=? AND r.key_id=? AND NOT EXISTS(SELECT 1 FROM customer_email_changes c WHERE c.request_id=r.id))",Boolean.class,p.reference(),p.userId(),u.getVersion(),recipients.addressMac(u.getEmail()),recipients.addressMac(p.email()),crypto.keyId());
+        }
+        if(!p.email().equals(u.getEmail()))return false;
         // 보안 통지는 현재 검증 주소와 실제 변경 사실에만 결합한다. 계정 중지는 이 안내를 숨기지 않는다.
         if(p.kind()==Kind.PASSWORD_CHANGED)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_password_changes WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
         if(p.kind()==Kind.MFA_CHANGED)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_mfa_key_changes WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
         if(p.kind()==Kind.ACCOUNT_RECOVERY)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_recovery_events WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
+        if(p.kind()==Kind.EMAIL_CHANGED_CURRENT)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_email_changes c JOIN customer_email_change_requests r ON r.id=c.request_id WHERE c.id=? AND c.user_id=? AND r.new_email_mac=? AND r.key_id=?)",Boolean.class,p.reference(),p.userId(),recipients.addressMac(p.email()),crypto.keyId());
         if(!u.isAuthenticationAllowed())return false;
         if(p.kind()==Kind.EMAIL_VERIFICATION)return true;
         // 예약 근거와 현재 수신 선택을 발송 직전에 재검사한다. SMTP 동안 고객/금융 잠금은 잡지 않는다.

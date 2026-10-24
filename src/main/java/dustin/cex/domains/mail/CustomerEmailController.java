@@ -12,7 +12,7 @@ public class CustomerEmailController {
     public record Confirmation(@NotNull UUID challengeId,String token){@Override public String toString(){return "Confirmation[토큰 생략]";}}
     private final CustomerEmailVerification service;
     public CustomerEmailController(CustomerEmailVerification service){this.service=service;}
-    @PostMapping("/challenges") public CustomerEmailVerification.Receipt request(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestHeader("Idempotency-Key") UUID key){return service.request(userId,sessionId,key);}
+    @PostMapping("/challenges") public CustomerEmailChallenges.Receipt request(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestHeader("Idempotency-Key") UUID key){return service.request(userId,sessionId,key);}
     @PostMapping("/confirmations") public CustomerEmailVerification.Status confirm(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@Valid @RequestBody Confirmation body){return service.confirm(userId,sessionId,body.challengeId(),body.token());}
     @GetMapping public CustomerEmailVerification.Status status(@RequestAttribute long userId,@RequestAttribute UUID sessionId){return service.status(userId,sessionId);}
 }

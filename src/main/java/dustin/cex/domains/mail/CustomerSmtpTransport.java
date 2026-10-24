@@ -26,6 +26,15 @@ public class CustomerSmtpTransport {
         requireReady();try{var sender=provider.getObject();var address=new InternetAddress(p.email(),true);address.validate();if(!address.getAddress().equals(p.email())||p.email().codePoints().anyMatch(Character::isISOControl))throw new IllegalArgumentException();
             var m=sender.createMimeMessage();var helper=new MimeMessageHelper(m,"UTF-8");helper.setFrom(from);helper.setTo(address);
             if(p.kind()==CustomerMailOutbox.Kind.EMAIL_VERIFICATION){helper.setSubject("이메일 주소 확인");helper.setText("직접 요청한 이메일 확인을 계속하려면 로그인한 상태에서 아래 주소를 여세요. 요청하지 않았다면 무시하세요.\n"+base.resolve("/account/verify-email")+"?challenge="+p.reference()+"&token="+p.token(),false);}
+            else if(p.kind()==CustomerMailOutbox.Kind.EMAIL_CHANGE_VERIFICATION){
+                helper.setSubject("새 이메일 주소 확인");helper.setText("직접 요청한 이메일 변경이라면 로그인 후 아래 주소에서 새 주소를 확인하세요. 요청하지 않았다면 링크를 사용하지 마세요.\n"+base.resolve("/account/change-email")+"?challenge="+p.reference()+"&token="+p.token(),false);
+            }
+            else if(p.kind()==CustomerMailOutbox.Kind.EMAIL_CHANGE_REQUESTED){
+                helper.setSubject("이메일 변경 요청 안내");helper.setText("계정의 이메일 변경이 요청되었습니다. 본인이 요청하지 않았다면 계정 보안 안내를 확인하세요.\n"+base.resolve("/account/security"),false);
+            }
+            else if(p.kind()==CustomerMailOutbox.Kind.EMAIL_CHANGED_PREVIOUS||p.kind()==CustomerMailOutbox.Kind.EMAIL_CHANGED_CURRENT){
+                helper.setSubject("이메일 변경 완료 안내");helper.setText("계정 이메일이 변경되어 기존 세션이 종료되었습니다. 본인이 변경하지 않았다면 계정 보안 안내를 확인하세요.\n"+base.resolve("/account/security"),false);
+            }
             else if(p.kind()==CustomerMailOutbox.Kind.PASSWORD_CHANGED){
                 helper.setSubject("비밀번호 변경 안내");helper.setText("계정 비밀번호가 변경되었습니다. 본인이 변경하지 않았다면 계정 보안 안내를 확인하세요.\n"+base.resolve("/account/security"),false);
             }

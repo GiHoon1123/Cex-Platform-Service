@@ -95,3 +95,28 @@ CREATE TRIGGER customer_recovery_key_change_no_change BEFORE UPDATE OR DELETE OR
 -- 본인 이력의 복합 커서와 한 복구에 속한 변경 수 조회를 각각 제한된 범위로 읽는다.
 CREATE INDEX IF NOT EXISTS customer_recovery_history ON customer_recovery_events(user_id,created_at,id);
 CREATE INDEX IF NOT EXISTS customer_recovery_key_source ON customer_recovery_key_changes(event_id,user_id);
+
+-- 새 주소 자체의 확인 토큰은 기존 메일 확인 원본에 저장하고 변경 의도/서명은 별도로 결합한다.
+CREATE TABLE IF NOT EXISTS customer_email_change_challenges (
+ id uuid PRIMARY KEY,user_id bigint NOT NULL REFERENCES users(id),session_id uuid NOT NULL,user_version bigint NOT NULL,
+ old_email_mac varchar(64) NOT NULL,new_email_mac varchar(64) NOT NULL,key_id varchar(64) NOT NULL,
+ options text NOT NULL,expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS customer_email_change_session ON customer_email_change_challenges(session_id);
+CREATE UNIQUE INDEX IF NOT EXISTS customer_email_challenge_owner ON customer_email_challenges(id,user_id);
+CREATE TABLE IF NOT EXISTS customer_email_change_requests (
+ id uuid PRIMARY KEY,user_id bigint NOT NULL REFERENCES users(id),session_id uuid NOT NULL,authorization_id uuid NOT NULL UNIQUE,
+ user_version bigint NOT NULL,credential_fingerprint varchar(64) NOT NULL,
+ old_email_mac varchar(64) NOT NULL,new_email_mac varchar(64) NOT NULL,key_id varchar(64) NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(id,user_id),
+ FOREIGN KEY(id,user_id) REFERENCES customer_email_challenges(id,user_id)
+);
+CREATE TABLE IF NOT EXISTS customer_email_changes (
+ id uuid PRIMARY KEY,user_id bigint NOT NULL REFERENCES users(id),request_id uuid NOT NULL UNIQUE,session_id uuid NOT NULL,
+ changed_at timestamptz NOT NULL DEFAULT clock_timestamp(),FOREIGN KEY(request_id,user_id) REFERENCES customer_email_change_requests(id,user_id)
+);
+CREATE INDEX IF NOT EXISTS customer_email_change_history ON customer_email_changes(user_id,changed_at,id);
+DROP TRIGGER IF EXISTS customer_email_change_request_no_change ON customer_email_change_requests;
+CREATE TRIGGER customer_email_change_request_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_email_change_requests FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS customer_email_change_no_change ON customer_email_changes;
+CREATE TRIGGER customer_email_change_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_email_changes FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

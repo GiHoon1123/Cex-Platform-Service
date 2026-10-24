@@ -23,7 +23,11 @@ public class CustomerMfaPolicy {
         if(session==null||session.getUserId()!=actor||!session.hasVerifiedMfa()
                 ||!session.getMfaVerifiedAt().plusHours(12).isAfter(LocalDateTime.now()))return false;
         // 회수된 키에 결합된 인증 시각만 남아 있어도 현재 자격으로 인정하지 않는다.
+        return credentialActive(actor,session.getMfaCredentialFingerprint());
+    }
+    // 장기 업무에 결합한 서명 자격도 아직 살아 있는지 확인한다. 호출 업무가 사용자 잠금을 유지한다.
+    boolean credentialActive(long actor,String fingerprint){
         return jdbc.queryForList("SELECT c.credential_id FROM user_credentials c JOIN user_entities u ON u.id=c.user_entity_user_id WHERE u.name=?",String.class,Long.toString(actor))
-            .stream().anyMatch(id->OperatorMfaService.sha256Hex(id).equals(session.getMfaCredentialFingerprint()));
+            .stream().anyMatch(id->OperatorMfaService.sha256Hex(id).equals(fingerprint));
     }
 }
