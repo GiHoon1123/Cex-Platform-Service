@@ -182,3 +182,5 @@ PENDING/RETRY는 아직 접수 확정이 아니고 SENDING은 임대 상태다. 
 기존 [CustomerMailOutboxIntegrationTest](../../src/test/java/dustin/cex/domains/kyc/CustomerMailOutboxIntegrationTest.java)의 신규 `expiredQueuedPayloadIsSuppressedWithoutSmtp`는 과거 만료 접수 표본이 SMTP 발송 없이 SUPPRESSED로 확정됨을 검사한다. 나머지 기존15개 시나리오는 [053](053-durable-customer-mail.md), 확인18개는 [054](054-customer-email-ownership.md)를 따른다.
 
 - [토큰 로그 비노출 보완 cf41cf6](https://github.com/GiHoon1123/Cex-Platform-Service/commit/cf41cf6b0b767a5660518e9f3b8ece5453371cc6)
+
+055 당시 남겨 둔 운영 후속 범위는 [056 운영 조회](056-customer-mail-operations.md)·[057 독립 재시도](057-customer-mail-retry-approval.md)·[058 실제 워커 격리/복구](058-customer-mail-worker-recovery.md)로 이어졌다. 당시 검증 수치는 유지한다. 외부 운영자 경보 전달·실제 공급사 수신/바운스·법적 고지 적합성은 여전히 별도다.

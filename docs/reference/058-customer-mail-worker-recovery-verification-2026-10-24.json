@@ -1,0 +1,1691 @@
+{
+  "cycle": 58,
+  "implementation_commit": "86b7709d564fbc1620d6604ff3d53f3865e3b2b3",
+  "verification": {
+    "commands": [
+      {
+        "command": [
+          "python3",
+          "scripts/verify_customer_mail.py"
+        ],
+        "exit": 0,
+        "last_xml": {
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "changedRequesterOrCheckerVersionInvalidatesPlan()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "anotherBusinessProofCannotApprove()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "proposalAuditFailureRollsBackBindingAndCanRetry()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "decisionAuditFailureRestoresProofAndGrantState()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "sameKeyReplaysAfterApprovalWithoutAnotherGrant()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "oppositeDirectionProofCannotApprove()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "disabledCustomerCannotBeReleased()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "ownInspectionAndExactHashAreRequired()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "verificationMailCannotBeReleasedByOperators()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "changedRecipientInvalidatesProof()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "requesterAndUnassignedCheckerCannotApprove()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "actualHttpRequiresDesignatedApproverAndBoundProof()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "changedCheckerVersionInvalidatesProof()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "sameHumanAcrossTwoAccountsCannotPropose()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "approvalRecordsRejectUpdateDeleteTruncate()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "repeatedApprovalCannotCreateSecondDecision()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "rejectionDoesNotReleaseAndAllowsNewRequest()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "unsubscribeInvalidatesPlanAndDoesNotConsumeProof()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "signedApprovalKeepsOriginalEnvelopeAndIncreasesCumulativeAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "unsubscribeAfterApprovalStillSuppressesSmtp()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "wrongSessionAndAmbientTransactionCannotPropose()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "pendingRequestBlocksAnotherAndChangedKeyTargetConflicts()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "concurrentDecisionsCommitOneGrant()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "expiredSignedPlanIsReadableButCannotBeConfirmed()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "extraBudgetStopsAtTenAndCannotBeGrantedTwice()"
+          }
+        ]
+      },
+      {
+        "command": [
+          "python3",
+          "scripts/verify_customer_mail_recovery.py"
+        ],
+        "exit": 0,
+        "last_xml": {
+          "tests": 0,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": []
+      },
+      {
+        "command": [
+          "python3",
+          "scripts/verify_engine_inbox.py"
+        ],
+        "exit": 0,
+        "last_xml": {
+          "tests": 183,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "aggregateBookQuantityCanExceedSingleAccountColumnLimit()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "rejectsUnsortedNegativeAndOversizedDepth()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "rejectsForgedSequenceAndDuplicateTradeIdentity()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "accountAmountsAndTradeIdsSerializeWithoutBrowserNumberLoss()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "duplicateReceiptDoesNotRewriteBookOrTrades()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "acceptsSortedSnapshotAndSerializesNoPrivateAccountFields()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "jacksonThreePreservesExactAmountAndIsoTime()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "monthlyRetryStopsAfterTransientFailureSucceeds()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "applicationUsesSupportedBootAndSecurityWithoutOldMapperModule()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "dailyRetryMakesThreeAttemptsAndPropagatesLastFailure()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "checkConstraintStillWorksAfterSchemaConnectionCloses()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "monthlyAggregateFailureIsNotReportedAsSuccess()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "monthlyUserFailureDoesNotBecomeSuccessfulCompletion()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketPersistenceTest",
+            "name": "gapRollsBackReceiptAndCanRetryAfterMissingEvent()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketPersistenceTest",
+            "name": "changedPayloadCannotOverwriteConfirmedSnapshot()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketPersistenceTest",
+            "name": "duplicateAfterCommitPreservesOneTradeAndOneCandle()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketPersistenceTest",
+            "name": "earlierRestartSnapshotDoesNotRollBackBookOrDuplicateTrades()"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "존재하지 않는 runId로 updateCompletedStep 호출 시 예외 없이 스킵"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "parseFailedUserIds: 잘못된 JSON이면 빈 리스트 반환"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "failRun 시 failedUserIds null/빈 리스트면 JSON 미설정, NPE 없음"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "런 실패 시 FAILED + failedUserIds 저장"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "런 시작 -> 단계 업데이트 -> 완료 시 SUCCESS 저장"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSocketTest",
+            "name": "connectionLimitReleasesExactlyOneSlotAfterClose()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSocketTest",
+            "name": "publicSocketRejectsOrderMessages()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "consecutivePartialFillsKeepFeesAndFutureReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "alteredRejectionAndPartiallyFilledOrderCannotReleaseFunds()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "marketBudgetDustSurvivesDatabaseCommitWithoutRounding()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "lateBalanceFailureRollsBackTradeOrdersAndEarlierAccountChanges()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "marketBuyUsesBudgetAndReleasesOnlyItsUnusedReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "alteredFeeOrFrozenRateRollsBackAllFinancialRows()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "wrongCompletionTotalsCountsAndStatusDoNotReleaseReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "marketSellPartialCompletionPreservesOtherReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "failedRejectionRefundRollsBackStateAndDispatchThenAllowsCorrectRetry()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "durableRejectionReturnsOnlyOriginalReservationAndConfirmsDelivery()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "zeroFillMarketBuyAndSellReturnWholeReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "overBudgetTradeAndFailedRefundRollBackAndAllowCorrectCompletion()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "marketBuyRejectionUsesOriginalBudgetWithExplicitNullQuantity()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "fullySpentMarketBuyWaitsForCompletionAndDoesNotRefund()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderDispatchTest",
+            "name": "expiredLeaseCanBeClaimedButOldResponseCannotConfirmNewAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderDispatchTest",
+            "name": "backoffIsBoundedAndNeverExpiresFinancialReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderDispatchTest",
+            "name": "confirmedRejectionCannotBeReopenedByLateFailure()"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "allEngineCommandsCarryServiceIdentity()"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[1] timeout = 0"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[2] timeout = -1"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[1] status = 200"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[2] status = 202"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[3] status = 201"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[4] status = 400"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[5] status = 500"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[6] status = 503"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "receivedRequestWithoutResponseTimesOutWithoutResubmitting()"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[1] defect = \"{}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[2] defect = \"wrong-order\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[3] defect = \"wrong-user\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[4] defect = \"numeric-id\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[5] defect = \"missing-time\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[6] defect = \"invalid-time\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[7] defect = \"wrong-state\""
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "concurrentDeliveriesHaveOneWinner()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "financialFailureRollsBackReceiptAndAllowsRetry()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "actualConsumerFailureRollsBackTheRealInboxClaim()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "sameIdentityDifferentPayloadIsRejected()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "transactionAndDurableIdentityAreRequired()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "duplicateDeliveryChangesFinancialStateOnce()"
+          },
+          {
+            "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+            "name": "준비 이벤트를 반복 발행해도 잔액 변경 요청이 없다"
+          },
+          {
+            "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+            "name": "플랫폼 컨텍스트를 다시 만들어도 기존 잔액을 재입금하지 않는다"
+          },
+          {
+            "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+            "name": "플랫폼 준비 이벤트는 기존 잔액을 엔진에 입금하지 않는다"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "unavailableSourceRecordsFailedRunWithoutChangingMoney()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "serviceRejectsUnbalancedPostingWithoutAnyFinancialWrite()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "corruptedProjectionIsDetectedAndNeverRepaired()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "finishedReportAndEvidenceCannotBeRewritten()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "terminalStateCannotDisagreeWithDurableResult()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "openingAndReservationMatchLedgerProjectionAndOriginalOrder()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "changedPageIdentityCannotProduceSuccessfulReport()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "wrongReceiptAndCoherentlyWrongRefundCannotPassIndependentSourceComparison()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "unreceivedEngineResultIsIncompleteRatherThanMatched()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "committedJournalCannotBeEditedDeletedOrExtended()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "openingRefusesFinancialHistoryEvenWhenBalancesLookValid()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "openingCannotBeRepeatedOrInferredFromExistingOrders()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "databaseRejectsUnbalancedDirectInsertAtCommitAndRollsBackBalance()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "customerOverdraftRollsBackBalancedPosting()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "missingOpeningNeverAdoptsCurrentBalanceAutomatically()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "differentKeyCreatesIndependentOrder()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "keyIsScopedToAuthenticatedUser()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "equivalentDecimalAndDefaultQuoteAreTheSameIntent()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "newServiceInstanceUsesDatabaseRatherThanMemoryForReplay()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "sameKeyReturnsSameOrderWithoutAnotherReservationOrSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "unrelatedIntegrityErrorWithoutCommittedKeyIsNotHiddenAsReplay()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "retryAfterLostResponseFindsStoredOrderWithoutResending()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[1] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000e001fb5168@1bb568b1"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[2] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000e001fb5398@71995ebb"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[3] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000e001fb55c8@11c0d919"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[4] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000e001fb57f8@26e0a411"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[5] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000e001fb5a28@49822344"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[6] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000e001fb5c58@4e000f70"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "marketBudgetIsExposedInResponseAndExpiredOrderCannotBeCancelled()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "duplicateWhileFirstHttpIsInFlightDoesNotWaitForOrRepeatHttp()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "failedLocalReservationRollsBackTheKeyToo()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "uniqueConstraintRaceRollsBackCandidateAndReadsWinnerAfterRollback()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "marketBudgetIsPreservedApartFromChangingOrderState()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "feePolicyChangesAffectOnlyNewIntentAndInvalidPolicyRollsBackReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "insufficientBalanceRollsBackOrderBeforeSending()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "corruptNegativeReservationIsRejectedWithoutRepairOrSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "concurrentImmediateClaimSendsOneHttpRequest()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "nextOrderCannotSpendFundsReservedByUnknownSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "[1] failure = org.springframework.web.client.ResourceAccessException: response lost"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "[2] failure = org.springframework.web.client.HttpServerErrorException: 500 INTERNAL_SERVER_ERROR"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "[3] failure = org.springframework.web.client.HttpClientErrorException: 400 BAD_REQUEST"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "[4] failure = java.lang.IllegalStateException: unexpected client failure"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "sellTimeoutPreservesBaseAssetReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "uncertainDeliveryRetriesSameOriginalWithoutSecondReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "omittedQuoteUsesSameAssetForStorageReservationAndSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "ambientTransactionIsRejectedBeforeAnyFinancialWrite()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "createdEventFailureDoesNotUndoOrderOrRepeatSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "claimIsCommittedBeforeHttpAndCompetingWorkerCannotSendAgain()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "failedCancellationPreservesOrderAndReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "marketBuyTimeoutPreservesExactQuoteReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "lateResponseFailureDoesNotOverwriteAlreadyFilledOrder()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "unrepresentableReservationSplitRollsBackOrderAndOriginalBalance()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "cancellationAcceptanceDoesNotPreemptKafkaStateOrBalanceRelease()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "falseResponseDoesNotProveRejectionOrReleaseFunds()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "engineCallObservesCommittedReservationOutsideTransaction()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "committedBeforeSendIsRecoveredByNewServiceInstance()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "unknownOrderCannotBeReadByAnotherOwner()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "missingRequestKeyIsRejectedBeforeService()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "replayReturnsExistingOrderWithOkAndLocation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "missingIdentityDoesNotCreateAnOrder()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "confirmedHttpResponseKeepsCreatedContract()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "statusLookupPassesAuthenticatedOwnerToService()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "differentRequestForSameKeyReturnsConflict()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "malformedRequestKeyIsRejectedBeforeService()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "malformedOrderDoesNotEnterUncertainSubmissionHandling()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "uncertainSubmissionReturnsAcceptedWithExactIdAndQueryLocation()"
+          },
+          {
+            "class": "dustin.cex.shared.services.BalanceSyncServiceTest",
+            "name": "엔진 실패 응답을 성공으로 숨기거나 자동 재시도하지 않는다"
+          },
+          {
+            "class": "dustin.cex.shared.services.BalanceSyncServiceTest",
+            "name": "통신 예외는 원인을 보존하고 자동 재시도하지 않는다"
+          },
+          {
+            "class": "dustin.cex.shared.services.BalanceSyncServiceTest",
+            "name": "명시적 입금 요청은 같은 금액을 한 번 전달한다"
+          },
+          {
+            "class": "dustin.cex.shared.services.BalanceSyncServiceTest",
+            "name": "명시적 출금 요청은 부호를 바꿔 한 번 전달한다"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+            "name": "recordFailure 후 getFailuresByDate로 조회"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+            "name": "recordFailure 시 errorMessage null이어도 예외 없음"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+            "name": "1·2·4단계 실패 기록 시 userId null 허용"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+            "name": "실패 기록 없는 날짜 조회 시 빈 리스트"
+          },
+          {
+            "class": "dustin.cex.domains.fee.service.FeeConfigServiceTest",
+            "name": "specificityAndAtomicRefreshPreserveValidatedPolicy()"
+          },
+          {
+            "class": "dustin.cex.domains.fee.service.FeeConfigServiceTest",
+            "name": "invalidRatesAndUnsupportedTypesAreRejected()"
+          },
+          {
+            "class": "dustin.cex.domains.fee.service.FeeConfigServiceTest",
+            "name": "missingPolicyRejectsInsteadOfInventingDefault()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "actualPartialDepthContractUpdatesBtcReferenceAndIgnoresOlderSnapshot()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "disabledBotsDoNotConnectOrReadAccounts()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "fullBotOrderBudgetCancelsOldestAndWaitsForResultBeforeAdding()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "missingReferenceAndStaleReferenceNeverInventPrice()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "excessiveOrDifferentAssetBotOrdersDoNotReachNormalOrderService()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "enabledBotRequiresProvisionedAccountAndDoesNotCreateMoney()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "unrepresentableReservationProductIsRejectedBeforeReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "marketBuyCannotCarryBaseAmount()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "marketSellReservesBaseAmount()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "limitSellWithInexactQuoteValueIsRejectedLikeLimitBuy()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[1] request = CreateOrderRequest(orderType=BUY, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[2] request = CreateOrderRequest(orderType=buy, orderSide=stop, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[3] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint= SOL, quoteMint=null, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[4] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=USDT, quoteMint=null, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[5] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[6] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=0, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[7] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=null, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[8] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=1)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[9] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=1E-10, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[10] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=1000000000000000000000, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[11] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=1.000000001, amount=1.000000001, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[12] request = CreateOrderRequest(orderType=buy, orderSide=market, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=1)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[13] request = CreateOrderRequest(orderType=sell, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=1)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[1] value = \"1E+1000000000\""
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[2] value = \"1E-1000000000\""
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "marketBuyKeepsMissingAmountAndExactQuoteBudget()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "exactDecimalBoundaryAndTrailingZerosAreAccepted()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "equivalentDecimalsAndDefaultQuoteProduceSameCommand()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[1] value = \"999999999999999999999.123456789\""
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[2] value = \"79228162514264337593.543950336\""
+          },
+          {
+            "class": "dustin.cex.domains.fee.service.FeeRevenueTest",
+            "name": "revenueKeepsEachAssetAndExactDayBoundary()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "knownDuplicateDoesNotTouchFinancialRepositories()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "inboxFailurePropagatesBeforeFinancialUpdates()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "fullApplicationTestConfigurationNeverEnablesBots()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "missingFinancialOrderFailsInsteadOfCommittingOnlyReceipt()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "cancellationMustMatchOriginalOwnerAndMarket()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "unknownEventTypeIsRejected()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "consumerConfigurationStopsInsteadOfDiscardingFailedFinancialEvent()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "newEventCannotSilentlySkipAnAlreadyClosedOrder()"
+          }
+        ]
+      },
+      {
+        "command": [
+          "python3",
+          "scripts/verify_market_path.py"
+        ],
+        "exit": 0,
+        "last_xml": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.integration.MarketPathTest",
+            "name": "botOrderHttpAcceptanceDurableKafkaSnapshotCancelAndReconnect()"
+          }
+        ]
+      },
+      {
+        "command": [
+          "./gradlew",
+          "operatorAdminJar",
+          "bootJar",
+          "jmhClasses",
+          "writeDependencyInventory",
+          "--console=plain"
+        ],
+        "exit": 0,
+        "last_xml": {
+          "tests": 0,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": []
+      }
+    ],
+    "mail": {
+      "groups": [
+        {
+          "group": "mail",
+          "container": "cex-mail-910ade62eb31",
+          "selection": [
+            "*CustomerMailOutboxIntegrationTest",
+            "*CustomerEmailVerificationIntegrationTest",
+            "*CustomerSmtpTransportTest",
+            "*CustomerMailOperationsIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 54,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "tokenReceivedByActualSmtpConfirmsOnceWithoutChangingUserVersion()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "concurrentNewRequestsReserveOnlyOneMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "changedAddressInvalidatesChallengeAndVerification()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "malformedTokenIsRejectedWithoutAppearingInLogs(CapturedOutput)"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "verificationAuditFailureRollsBackTokenConsumption()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "onlyHashedTokenAndEncryptedMailAreStored()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "fifthWrongTokenLimitsFurtherAttempts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "sameKeyReturnsSameReceiptAndOneMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "disabledAccountCannotConfirm()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "wrongTokenAndForeignSessionDoNotVerify()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "wrongTokenAfterConsumptionStillFails()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "anonymousAndOperatorCannotRequestVerification()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "ownershipRecordsAreImmutable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "newRequestWithinCooldownIsRejectedButReplayWorks()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "expiredChallengeCannotConfirm()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "requestAuditFailureRollsBackChallengeAndMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "httpNeverReturnsTokenAndGetDoesNotConsume()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "concurrentConfirmationHasOneEffect()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "hourlyLimitUsesHistoricalRequestsWithoutRewritingThem()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "unsafeOrMissingPublicBaseIsRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "remoteAuthenticationIsRequired()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "blankRemoteCredentialsAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "requiredStarttlsEnforcesIdentityAuthAndFiniteTimeouts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "cleartextSmtpIsRejectedBeforeNetwork()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "remoteTrustOverrideIsRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "optionalStarttlsIsRejectedBeforeNetwork()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "acceptedAndSuppressedAreNotAttention()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "emptyFilteredPagesStillAdvance()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "auditorCanReadButNotDispatch()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "activeLeaseIsNotAnErrorButExpiredLeaseIs()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "absentMalformedAndFuturePositionsAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "exhaustedIsVisibleWithoutRecipientTokenOrLease()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "auditFailurePreventsMetadataResponse()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "httpReadIsAuthenticatedAndDoesNotExposeSecrets()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "customerAndForeignSessionCannotInspect()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "overdueRetrySignalsDelayWithoutStealingLease()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "expiredMetadataIsVisibleWithoutDecryptingPayload()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "disabledOrStaleStaffIsRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "expiredQueuedPayloadIsSuppressedWithoutSmtp()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "concurrentClaimHasOneOwner()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "purgeAuditFailureRestoresCiphertext()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "duplicateBusinessReferenceReplaysButChangedPayloadFails()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "immutableJobsAndAttemptsRejectUpdateDeleteTruncate()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "terminalExpiredPayloadCanBePurgedWithoutDeletingAuditOrJob()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "expiredClaimAfterActualSmtpCanDuplicateSameMessageId()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "changedRecipientSuppressesBeforeAnySmtp()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "encryptedQueueDoesNotExposeAddressOrToken()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "accountDisableSuppressesBeforeAnySmtp()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "actualSmtpsAcceptsFixedTemplateAndStableMessageId()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "smtpResultAuditFailureRollsBackAndSameLeaseCanRetry()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "producerRollbackLeavesNoDeliverableJob()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "retryStopsAtFiveClaimsWithoutFalseSuccess()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "expiredLeaseCanBeReclaimedButOldOwnerCannotOverwrite()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "activeOrRecentPayloadCannotBePurged()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "notices",
+          "container": "cex-mail-97ae90e9e047",
+          "selection": [
+            "*CustomerServiceMailIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 16,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "defaultOffAndUnverifiedCannotEnable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "finalDecisionAuditFailureRestoresSignatureAndMailReservation()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "sameReplyKeyCannotReserveTwice()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "draftAndRejectionNeverReserveMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "changedAddressInvalidatesConsentAndSuppressesOldTarget()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "unsubscribeBeforeSendSuppressesQueuedMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "preferenceHistoryReplayDoesNotUndoLaterUnsubscribe()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "replyAuditFailureRollsBackMailAndBusinessThenRetries()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "browserPutPreflightAcceptsOnlyConfiguredOrigin()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "preferenceHistoryIsImmutable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "disableBeforeSendSuppressesQueuedMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "preferenceAuditFailureDoesNotChangeCurrentChoice()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "finalApprovalReservesOneGenericNotice()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "verificationAloneDoesNotSubscribe()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "actualStatusMailIsGenericAndCannotLeakInternalReason()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "httpPreferenceRequiresCustomerAndReturnsCurrentEligibility()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "redrive",
+          "container": "cex-mail-558ef6de5146",
+          "selection": [
+            "*CustomerMailRetryIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 25,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "changedRequesterOrCheckerVersionInvalidatesPlan()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "anotherBusinessProofCannotApprove()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "proposalAuditFailureRollsBackBindingAndCanRetry()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "decisionAuditFailureRestoresProofAndGrantState()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "sameKeyReplaysAfterApprovalWithoutAnotherGrant()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "oppositeDirectionProofCannotApprove()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "disabledCustomerCannotBeReleased()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "ownInspectionAndExactHashAreRequired()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "verificationMailCannotBeReleasedByOperators()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "changedRecipientInvalidatesProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "requesterAndUnassignedCheckerCannotApprove()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "actualHttpRequiresDesignatedApproverAndBoundProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "changedCheckerVersionInvalidatesProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "sameHumanAcrossTwoAccountsCannotPropose()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "approvalRecordsRejectUpdateDeleteTruncate()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "repeatedApprovalCannotCreateSecondDecision()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "rejectionDoesNotReleaseAndAllowsNewRequest()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "unsubscribeInvalidatesPlanAndDoesNotConsumeProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "signedApprovalKeepsOriginalEnvelopeAndIncreasesCumulativeAttempt()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "unsubscribeAfterApprovalStillSuppressesSmtp()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "wrongSessionAndAmbientTransactionCannotPropose()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "pendingRequestBlocksAnotherAndChangedKeyTargetConflicts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "concurrentDecisionsCommitOneGrant()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "expiredSignedPlanIsReadableButCannotBeConfirmed()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "extraBudgetStopsAtTenAndCannotBeGrantedTwice()"
+            }
+          ],
+          "container_removed": true
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 95,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "process": {
+      "container": "cex-mail-recovery-bbda22599b8e",
+      "checks": [
+        {
+          "test": "pause-before_kill_preserves_lease_and_unconfirmed_result",
+          "passed": true,
+          "killed_exit": -9,
+          "default_scheduler_alive": true
+        },
+        {
+          "test": "pause-before_fresh_jvm_recovers_original_message_id",
+          "passed": true,
+          "smtp_copies": 1
+        },
+        {
+          "test": "pause-after_kill_preserves_lease_and_unconfirmed_result",
+          "passed": true,
+          "killed_exit": -9,
+          "default_scheduler_alive": true
+        },
+        {
+          "test": "pause-after_fresh_jvm_recovers_original_message_id",
+          "passed": true,
+          "smtp_copies": 2
+        },
+        {
+          "test": "confirmed_jobs_are_not_resent_by_later_jvm",
+          "passed": true
+        },
+        {
+          "test": "unsafe_tls_prevents_scheduler_start_and_claim",
+          "passed": true
+        }
+      ],
+      "bots_disabled": true,
+      "worker_jvm_runs": 6,
+      "exit": 0,
+      "container_removed": true,
+      "smtp_closed": true,
+      "owned_processes_stopped": true
+    },
+    "finance": {
+      "container": "cex-inbox-4a978ea50b8b",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "market": {
+      "postgres": "cex-market-pg-2ff1fcf2cf",
+      "kafka": "cex-market-broker-948d2beb71",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    },
+    "prior_security": {
+      "container": "cex-bound-approvals-cd3aaae916ac",
+      "groups": [
+        {
+          "name": "bound",
+          "exit": 0,
+          "tests": {
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "roles",
+          "exit": 0,
+          "tests": {
+            "tests": 51,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "lifecycle",
+          "exit": 0,
+          "tests": {
+            "tests": 37,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "security",
+          "exit": 0,
+          "tests": {
+            "tests": 40,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 190,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "prior_mfa": {
+      "container": "cex-operator-mfa-0c9eed00c07e",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "prior_security_source_commit": "ebb44239906476fbd784a40863b486d1b420c985",
+    "before_failure": {
+      "container": "cex-mail-recovery-604522d88a75",
+      "checks": [],
+      "bots_disabled": true,
+      "exit": null,
+      "container_removed": true,
+      "smtp_closed": true,
+      "owned_processes_stopped": true
+    },
+    "summary": {
+      "selected_unique_junit": 511,
+      "new_junit": 37,
+      "new_process_checks": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "artifact_probe_classes_excluded": true,
+    "initialization_order_commit": "39abf7d4b1e3fd27fe196396f313897444c69325",
+    "initialization_order_process_recheck": {
+      "container": "cex-mail-recovery-099cd11ea168",
+      "checks": [
+        {
+          "test": "pause-before_kill_preserves_lease_and_unconfirmed_result",
+          "passed": true,
+          "killed_exit": -9,
+          "default_scheduler_alive": true
+        },
+        {
+          "test": "pause-before_fresh_jvm_recovers_original_message_id",
+          "passed": true,
+          "smtp_copies": 1
+        },
+        {
+          "test": "pause-after_kill_preserves_lease_and_unconfirmed_result",
+          "passed": true,
+          "killed_exit": -9,
+          "default_scheduler_alive": true
+        },
+        {
+          "test": "pause-after_fresh_jvm_recovers_original_message_id",
+          "passed": true,
+          "smtp_copies": 2
+        },
+        {
+          "test": "confirmed_jobs_are_not_resent_by_later_jvm",
+          "passed": true
+        },
+        {
+          "test": "unsafe_tls_prevents_scheduler_start_and_claim",
+          "passed": true
+        }
+      ],
+      "bots_disabled": true,
+      "worker_jvm_runs": 6,
+      "exit": 0,
+      "container_removed": true,
+      "smtp_closed": true,
+      "owned_processes_stopped": true
+    },
+    "final_artifacts_recheck": {
+      "command": "./gradlew operatorAdminJar bootJar jmhClasses writeDependencyInventory --console=plain",
+      "exit": 0,
+      "probe_classes_excluded": true
+    },
+    "scheduler_auto_configuration_inspection": {
+      "artifact": "org.springframework.boot:spring-boot-autoconfigure:4.1.1",
+      "sha256": "59228756ddd76cea050f95d86deff334789bc53b6688beaa673b1af2b9794592",
+      "command": "javap -v -classpath <설치된 JAR> 'org.springframework.boot.autoconfigure.task.TaskSchedulingConfigurations$TaskSchedulerConfiguration'",
+      "observed_annotation": "ConditionalOnMissingBean(value=[TaskScheduler.class,ScheduledExecutorService.class])"
+    },
+    "code_excerpts": {
+      "legacy_current": 202,
+      "mail": {
+        "count": 17,
+        "entries": [
+          {
+            "document": "docs/decisions/053-durable-customer-mail.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailDispatcher.java",
+            "first_line": 9,
+            "lines": 6,
+            "sha256": "d755e542c2e8d534907330dcb65b0dee95dd899fcec6ecb47a0d2e51ca138dcd"
+          },
+          {
+            "document": "docs/decisions/053-durable-customer-mail.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java",
+            "first_line": 47,
+            "lines": 7,
+            "sha256": "91fcfacb1f0fad9ee2055b0afc6134dbfe175ac3f904c59136747354ba3cb3e9"
+          },
+          {
+            "document": "docs/decisions/054-customer-email-ownership.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java",
+            "first_line": 62,
+            "lines": 7,
+            "sha256": "f91b37a2bc9a916098de112b326cd44af0a3fdd6be106510f0d78d724c563f67"
+          },
+          {
+            "document": "docs/decisions/054-customer-email-ownership.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java",
+            "first_line": 49,
+            "lines": 5,
+            "sha256": "4f5ead647b0b713969140bbebf26a49323ed6e19599b5b59d170a0a7d4f17dc8"
+          },
+          {
+            "document": "docs/decisions/054-customer-email-ownership.md",
+            "source": "src/main/java/dustin/cex/domains/security/CustomerSessionPolicy.java",
+            "first_line": 18,
+            "lines": 8,
+            "sha256": "f96804d5c07bceaabb38c41d88e35a172ed19b47a3e8b85b95fc5dfc7858024b"
+          },
+          {
+            "document": "docs/decisions/055-customer-service-mail.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerEmailController.java",
+            "first_line": 11,
+            "lines": 2,
+            "sha256": "1225b15e741e6d2715d6d881178ad8fec1f0a1ec5e8c177e5c2d9acef0a4fe0b"
+          },
+          {
+            "document": "docs/decisions/055-customer-service-mail.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerSmtpTransport.java",
+            "first_line": 29,
+            "lines": 5,
+            "sha256": "a531d774547ff86d7d7e614c4dc16c3487e1bd6b0b39ea290accc77f54dc9078"
+          },
+          {
+            "document": "docs/decisions/055-customer-service-mail.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerServiceMail.java",
+            "first_line": 36,
+            "lines": 7,
+            "sha256": "f7f866028ba2b56e3395e0b7883586a23b0d9710a96e7cd407141ec659f8f2a4"
+          },
+          {
+            "document": "docs/decisions/055-customer-service-mail.md",
+            "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java",
+            "first_line": 50,
+            "lines": 3,
+            "sha256": "281bf0ea054521ef5bc14e6e16483f3d8fa980b61e02917faa37048cac93625f"
+          },
+          {
+            "document": "docs/decisions/055-customer-service-mail.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailRecipientPolicy.java",
+            "first_line": 15,
+            "lines": 7,
+            "sha256": "ba6b7c3a6ed112a9ffd758d66bb40d427344f0b1018ea5a3198a3123bb382b83"
+          },
+          {
+            "document": "docs/decisions/056-customer-mail-operations.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailOperations.java",
+            "first_line": 23,
+            "lines": 2,
+            "sha256": "69460fa592243284ba39351ddc1c78b06cf5fd2c5345f51855a554ac18e77ed2"
+          },
+          {
+            "document": "docs/decisions/056-customer-mail-operations.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailOperations.java",
+            "first_line": 30,
+            "lines": 6,
+            "sha256": "aefad3008b06a5f468cae7ffc7002157e6d824d37fb00c0e3f4eea6e0c6da5a5"
+          },
+          {
+            "document": "docs/decisions/057-customer-mail-retry-approval.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailRetryService.java",
+            "first_line": 80,
+            "lines": 4,
+            "sha256": "5021b3bb19d2f4eca445f65281e6b386b29d0e08dcbb0df35354fa1188abfb52"
+          },
+          {
+            "document": "docs/decisions/057-customer-mail-retry-approval.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailRetryService.java",
+            "first_line": 64,
+            "lines": 4,
+            "sha256": "387097e327846cdfe9aff2e3689b3a5e6858f1e8a777430e524b9c094e8c3584"
+          },
+          {
+            "document": "docs/decisions/058-customer-mail-worker-recovery.md",
+            "source": "src/test/java/dustin/cex/domains/kyc/CustomerMailRecoveryProcessProbe.java",
+            "first_line": 25,
+            "lines": 6,
+            "sha256": "4a767fa28a207cd65db7bc5ec9807d9ded9bd3d1b882a0354bc8d80f57a3967e"
+          },
+          {
+            "document": "docs/decisions/058-customer-mail-worker-recovery.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailScheduling.java",
+            "first_line": 30,
+            "lines": 4,
+            "sha256": "573994ce410d2b5321544d11667119c2290ae2ad479a608dcdb6d12800f40246"
+          },
+          {
+            "document": "docs/decisions/058-customer-mail-worker-recovery.md",
+            "source": "src/main/java/dustin/cex/domains/mail/CustomerMailScheduling.java",
+            "first_line": 22,
+            "lines": 8,
+            "sha256": "18989c75904c75fa538bef63e4fc191795794888d7aef2f83561bbe4508bfc7f"
+          }
+        ]
+      },
+      "total_current": 219,
+      "historical_separate": 4,
+      "scope_separate": 2
+    }
+  }
+}

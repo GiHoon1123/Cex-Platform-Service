@@ -104,3 +104,5 @@
 
 - [구현 ebb4423](https://github.com/GiHoon1123/Cex-Platform-Service/commit/ebb44239906476fbd784a40863b486d1b420c985)
 - [격리 실행 증적](../reference/057-customer-mail-retry-approval-verification-2026-10-24.json)
+
+추가 운영 제약: 인물/고객 버전이 바뀐 계획은 승인/반려할 수 없고 최대10분의 원래 요청 기한까지 새 계획이 막힐 수 있다. 만료 뒤 새 요청을 만들며 오래된 계획이나 원래 금융 기록을 삭제하지 않는다.
