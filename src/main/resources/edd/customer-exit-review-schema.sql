@@ -26,3 +26,15 @@ DROP TRIGGER IF EXISTS customer_review_view_no_change ON customer_exit_review_vi
 CREATE TRIGGER customer_review_view_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_exit_review_views FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
 DROP TRIGGER IF EXISTS customer_review_note_no_change ON customer_exit_review_notes;
 CREATE TRIGGER customer_review_note_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_exit_review_notes FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 고객 공개 회신은 내부 메모를 복사하지 않고 기존 확정 상태의 참조를 보존한다.
+CREATE UNIQUE INDEX IF NOT EXISTS customer_review_note_basis ON customer_exit_review_notes(id,request_id,sequence);
+CREATE TABLE IF NOT EXISTS customer_exit_review_replies (
+ id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES customer_exit_review_requests(id),sequence bigint NOT NULL CHECK(sequence>0),
+ actor_id bigint NOT NULL REFERENCES users(id),request_key uuid NOT NULL,note_id uuid NOT NULL,note_sequence bigint NOT NULL,
+ payload text NOT NULL,content_mac varchar(64) NOT NULL,fingerprint_key_id varchar(64) NOT NULL,
+ FOREIGN KEY(note_id,request_id,note_sequence) REFERENCES customer_exit_review_notes(id,request_id,sequence),
+ UNIQUE(actor_id,request_key),UNIQUE(request_id,sequence)
+);
+DROP TRIGGER IF EXISTS customer_review_reply_no_change ON customer_exit_review_replies;
+CREATE TRIGGER customer_review_reply_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_exit_review_replies FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

@@ -43,6 +43,12 @@ public class CustomerReviewNoteService {
     }));}
     public List<Note> list(long actor,UUID sid,UUID request,int page){return attempt(actor,()->tx.execute(t->{requests.workRequest(actor,sid,request);if(page<0||page>10000)throw denied(HttpStatus.BAD_REQUEST);var rows=jdbc.queryForList("SELECT * FROM customer_exit_review_notes WHERE request_id=? ORDER BY sequence DESC LIMIT 25 OFFSET ?",request,page*25);for(var row:rows)facts(row);audit.record(actor,"CUSTOMER_REVIEW_NOTES_LISTED","customer-review:"+request,"SUCCESS","METADATA_ONLY");return rows.stream().map(this::metadata).toList();}));}
     public Inspection inspect(long actor,UUID sid,UUID id){return attempt(actor,()->tx.execute(t->{var row=read(id);requests.workRequest(actor,sid,(UUID)row.get("request_id"));var f=facts(row);audit.record(actor,"CUSTOMER_REVIEW_NOTE_VIEWED","customer-note:"+id,"SUCCESS","INTERNAL_ONLY");return new Inspection(metadata(row),f);}));}
+    /** 회신 서비스가 현재 고객/행위자를 잠근 뒤 호출해 실제 최신 내부 근거를 확인한다. */
+    Note currentBasis(UUID request,UUID expected){
+        if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("후속 근거에는 트랜잭션이 필요합니다");
+        var rows=jdbc.queryForList("SELECT * FROM customer_exit_review_notes WHERE request_id=? ORDER BY sequence DESC LIMIT 1",request);
+        if(rows.isEmpty()||!rows.getFirst().get("id").equals(expected))throw denied(HttpStatus.CONFLICT);facts(rows.getFirst());return metadata(rows.getFirst());
+    }
     private Map<String,Object> read(UUID id){var rows=jdbc.queryForList("SELECT * FROM customer_exit_review_notes WHERE id=?",id);if(rows.isEmpty())throw denied(HttpStatus.NOT_FOUND);return rows.getFirst();}
     private Note metadata(Map<String,Object> row){return new Note((UUID)row.get("id"),(UUID)row.get("request_id"),((Number)row.get("sequence")).longValue(),Progress.valueOf((String)row.get("progress")),((Timestamp)row.get("recorded_at")).toInstant());}
     private Facts facts(Map<String,Object> row){var n=metadata(row);long actor=((Number)row.get("actor_id")).longValue();String mac=(String)row.get("content_mac");var f=json.readValue(crypto.decrypt((String)row.get("evidence_key_id"),context(n.id(),n.requestId(),actor,n.sequence(),mac),(byte[])row.get("note_cipher")),Facts.class).validated();if(!fingerprints.keyId().equals(row.get("fingerprint_key_id"))||!f.progress().equals(n.progress())||!mac.equals(mac(n.requestId(),actor,f)))throw new IllegalStateException("내부 처리 기록 검증 실패");return f;}
