@@ -296,3 +296,8 @@ Didit 공식 보고서/개요, 업비트 공개 고객확인 안내, 국내 제5
 ## 고객 후속 운영 점검 050 · 2026-10-24
 
 [구현·근거·트레이드오프·코드·테스트](../decisions/050-customer-periodic-updates.md)와 [선택 회귀 33개 증적](customer-periodic-updates-verification-2026-10-24.json)을 따른다. 고객 재검토의 업무 확정과 금융 효과·외부 통지/법정 기한·기관/운영 확인을 구분한다.
+
+
+## 고객 후속 운영 점검 051 · 2026-10-24
+
+[구현·근거·트레이드오프·코드·테스트](../decisions/051-customer-open-case-review.md)와 [선택 회귀 72개 증적](customer-open-case-review-verification-2026-10-24.json)을 따른다. 고객 재검토의 업무 확정과 금융 효과·외부 통지/법정 기한·기관/운영 확인을 구분한다.

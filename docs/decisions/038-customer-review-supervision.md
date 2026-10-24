@@ -22,7 +22,7 @@ GET /api/admin/compliance/customer-review-supervision. 현재 APPROVER와 최근
 
 ### 시각과 UUID로 제한 순회
 
-[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L46)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
+[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L48)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
 
 ```java
 var candidates=after==null?jdbc.queryForList("SELECT id,user_id,exit_id,created_at FROM customer_exit_review_requests ORDER BY created_at,id LIMIT 25"):
@@ -44,7 +44,7 @@ var progress=jdbc.queryForMap("""
     LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id
     """,id,id);
 var assessment=CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply")),instant(progress.get("decided_at")),Instant.now());
-var item=new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available),assessment,(UUID)progress.get("request_id"),instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")));
+var item=new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available),assessment,(UUID)progress.get("request_id"),instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),updates.assess(id,((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()),CustomerReviewCompletionTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()));
 if(!attentionOnly||item.requiresAttention())items.add(item);
 ```
 
@@ -100,3 +100,6 @@ Spring 트랜잭션 콜백에서 감사가 성공한 뒤 응답 값을 반환한
 
 
 048 이후 현재 전사 감독은 최초 공개 응답 목표·최종 승인·고객 확인도 구분한다. 별도 attention 경로는 미응답 지연/시각 이상/미확인 최종 결과/담당자 공백만 고르고, 빈 필터 페이지의 커서는 유지한다. [048 구현](048-customer-review-attention.md)을 따르며038 당시 회귀/증적은 보존한다.
+
+
+051 이후 전사 감독에는 후속 회신 간격과 원래 접수부터의 미종결 감독도 포함한다. [051 구현](051-customer-open-case-review.md)을 따르고038 당시 실행/증적은 보존한다.

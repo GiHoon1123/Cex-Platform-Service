@@ -27,14 +27,14 @@
 [CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L24)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
-public boolean requiresAttention(){return responseTarget.state()==CustomerReviewResponseTarget.State.OVERDUE||responseTarget.state()==CustomerReviewResponseTarget.State.TIME_REVIEW_REQUIRED||(finalReviewId!=null&&customerAcknowledgedAt==null)||(orphaned&&finalReviewId==null);}
+public boolean requiresAttention(){return updateTarget.state()==CustomerReviewUpdateTarget.State.OVERDUE||updateTarget.state()==CustomerReviewUpdateTarget.State.TIME_REVIEW_REQUIRED||completionReview.state()==CustomerReviewCompletionTarget.State.OPEN_REVIEW_DUE||completionReview.state()==CustomerReviewCompletionTarget.State.TIME_REVIEW_REQUIRED||responseTarget.state()==CustomerReviewResponseTarget.State.OVERDUE||responseTarget.state()==CustomerReviewResponseTarget.State.TIME_REVIEW_REQUIRED||(finalReviewId!=null&&customerAcknowledgedAt==null)||(orphaned&&finalReviewId==null);}
 ```
 
 미응답 지연·시각 이상·미확인 최종 결과·미종결 담당자 공백을 고른다. 늦게라도 응답한 과거 이력은 전체 목록에 남고 현재 지연으로 영구 남기지 않는다.
 
 ### 전사 주의 목록의 별도 목적
 
-[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L37)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L39)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 public Page attention(long actor,UUID sid,Cursor after){
@@ -89,3 +89,6 @@ GET `/api/admin/compliance/customer-review-attention`은 현재 APPROVER만 사�
 
 
 고객의 본인 확정 결과 발견과 명시적 확인 의미는 [049 알림 목록](049-customer-final-notices.md)을 따른다. 당시 회귀/증적은 보존한다.
+
+
+051 이후에는 후속 회신 지연과 미종결 감독 기준 초과도 독립적인 주의 사유다. 이 문서가 기록한 최초 응답만의 당시 한계는 [051 계층](051-customer-open-case-review.md)으로 보완했고 과거 검증 수치는 보존한다.

@@ -41,7 +41,7 @@ note=reply=0이면 아직 내부 기록과 회신이 없는 접수다. note>repl
 
 ### 원래 작성자 대신 현재 배정으로 목록 구성
 
-[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L44)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L46)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 UUID id=(UUID)row.get("id");var state=custody.current(id);
@@ -68,14 +68,14 @@ long note=((Number)progress.get("note_sequence")).longValue(),reply=((Number)pro
 if(reply>note)throw new IllegalStateException("회신의 내부 기록 근거가 존재하지 않습니다");
 UUID finalId=(UUID)progress.get("final_id");
 // 최종 답변은 과거 관측 회신과 다른 지표다. 과거 상태 회신과 승인/고객 확인을 따로 제공한다.
-items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply_at")),instant(progress.get("decided_at")),Instant.now()),updates.assess(id,((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now())));
+items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply_at")),instant(progress.get("decided_at")),Instant.now()),updates.assess(id,((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()),CustomerReviewCompletionTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now())));
 ```
 
 max(sequence)와 max(note_sequence)를 하나의 SQL 관측에서 읽는다. 회신 건수나 기록 시각 대신 040이 실제 서명/보존한 내부 기록 순번을 비교한다. 새 내부 기록이 회신보다 앞서면 hasUnreflectedNote가 true다. note=reply=0은 아직 내부 기록과 회신이 없다는 뜻이며 업무 완료를 뜻하지 않는다.
 
 ### 빈 필터 페이지도 순회를 계속
 
-[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L63)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L65)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 var last=rows.isEmpty()?null:rows.getLast();Cursor next=rows.size()==25?new Cursor(((Timestamp)last.get("created_at")).toInstant(),(UUID)last.get("id")):null;
@@ -136,3 +136,6 @@ return new Page(items,next,rows.size(),observed,SEMANTICS);
 
 
 050 이후 updateTarget은 최초 응답과 별개인 후속 공개 회신의 목표/과거 초과 횟수다. [050 실제 계산](050-customer-periodic-updates.md)을 따르며043 당시 실행은 보존한다.
+
+
+051 이후 completionReview는 첫/후속 응답과 별개인 원래 접수부터의 미종결 감독 기준이다. [051 구현](051-customer-open-case-review.md)을 따른다.
