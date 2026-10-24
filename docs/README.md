@@ -125,3 +125,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [051. 고객 후속 운영 점검 customer-open-case-review](decisions/051-customer-open-case-review.md): 실제 코드·판단·테스트·실행 한계.
 
 - [052. 고객 후속 운영 점검 customer-review-notices](decisions/052-customer-review-notices.md): 실제 코드·판단·테스트·실행 한계.
+
+- [053. 고객 메일의 영속 예약·SMTP 출력과 결과 불명 처리](decisions/053-durable-customer-mail.md)
