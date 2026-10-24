@@ -27,7 +27,9 @@ import lombok.NoArgsConstructor;
 @Table(name = "refresh_tokens", indexes = {
     @Index(name = "idx_refresh_tokens_user_id", columnList = "user_id"),
     @Index(name = "idx_refresh_tokens_token_hash", columnList = "token_hash"),
-    @Index(name = "idx_refresh_tokens_expires_at", columnList = "expires_at")
+    @Index(name = "idx_refresh_tokens_expires_at", columnList = "expires_at"),
+    // 본인 기록은 같은 시각의 식별자까지 묶어 순회한다. 토큰 해시 인덱스를 조회 API에 노출하지 않는다.
+    @Index(name = "idx_refresh_tokens_user_history", columnList = "user_id,created_at,session_id")
 })
 @Data
 @Builder

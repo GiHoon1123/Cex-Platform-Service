@@ -39,14 +39,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     void revokeAllByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
     
     /**
-     * 만료된 토큰 삭제
-     * Delete expired tokens
-     */
-    @Modifying
-    @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < :now")
-    void deleteExpiredTokens(@Param("now") LocalDateTime now);
-    
-    /**
      * 사용자의 유효한 Refresh Token 개수 조회
      * Count valid refresh tokens for a user
      */
