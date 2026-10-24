@@ -93,3 +93,5 @@ Java21·실행 소유 PostgreSQL16·격리 Kafka·로컬 SMTP로 실행했다. `
 
 - [구현 31ae57d](https://github.com/GiHoon1123/Cex-Platform-Service/commit/31ae57d4980c3e49987414ff847025a671802cec)
 - [격리 실행 증적](../reference/061-customer-password-notice-verification-2026-10-25.json)
+
+063의 [고객 패스키 로그인](063-customer-passkey-login.md)을 등록한 고객은 비밀번호 단계의 대기 세션으로 이 고객 보안 업무를 수행할 수 없다. 실제 서명 후 새 세션이 필요하며, 당시 검증 수치는 각 기록의 실행 시점으로 구분한다.

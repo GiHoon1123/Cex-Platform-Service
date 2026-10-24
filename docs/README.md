@@ -145,3 +145,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [061. 비밀번호 변경 이력과 검증 주소 보안 통지](decisions/061-customer-password-notice.md)
 
 - [062. 표준 보안키 검증과 운영자 업무 정책 분리](decisions/062-webauthn-verifier-boundary.md)
+
+- [063. 고객 최초 패스키 등록과 서명 후 세션 교체](decisions/063-customer-passkey-login.md)

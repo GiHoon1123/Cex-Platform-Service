@@ -81,3 +81,6 @@ record의 필드는 실제 JSON 응답 계약이다. 엔티티 전체를 반환�
 
 - [구현 cc3a0c8](https://github.com/GiHoon1123/Cex-Platform-Service/commit/cc3a0c8ebeea45f42b6ea4f603e50ee4319d3cc0)
 - [격리 실행 증적](../reference/059-customer-session-control-verification-2026-10-25.json)
+
+063의 [고객 패스키 로그인](063-customer-passkey-login.md)을 등록한 고객은 비밀번호 단계의 대기 세션으로 이 고객 보안 업무를 수행할 수 없다. 실제 서명 후 새 세션이 필요하며, 당시 검증 수치는 각 기록의 실행 시점으로 구분한다.
+등록된 고객의 재로그인은 실제 새 서명 성공 전까지 기존 강한 세션을 회수하지 않는다. 대기 세션만 교체하므로 대기/강한 세션이 잠시 공존할 수 있다. 이 목록의 ACTIVE는 회수/만료 기준의 생존 상태이며 다중 인증 완료를 뜻하지 않는다.

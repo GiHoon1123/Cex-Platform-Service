@@ -112,3 +112,5 @@ String.length는 TypeScript처럼 UTF-16 코드 단위다. codePointCount는 서
 
 - [구현 7b35541](https://github.com/GiHoon1123/Cex-Platform-Service/commit/7b35541670ba641b9ce6a221bef119bda288330f)
 - [격리 실행 증적](../reference/060-customer-password-change-verification-2026-10-25.json)
+
+063의 [고객 패스키 로그인](063-customer-passkey-login.md)을 등록한 고객은 비밀번호 단계의 대기 세션으로 이 고객 보안 업무를 수행할 수 없다. 실제 서명 후 새 세션이 필요하며, 당시 검증 수치는 각 기록의 실행 시점으로 구분한다.

@@ -25,7 +25,7 @@ CustomerSessionPolicy는 기존 고객 재검토의 계정 잠금·CUSTOMER·활
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CustomerSessionPolicy.java](../../src/main/java/dustin/cex/domains/security/CustomerSessionPolicy.java#L18), 현재 소스의 부분 발췌.
+출처: [CustomerSessionPolicy.java](../../src/main/java/dustin/cex/domains/security/CustomerSessionPolicy.java#L19), 현재 소스의 부분 발췌.
 
 ```java
     public User require(long actor,UUID sid){
@@ -34,11 +34,13 @@ CustomerSessionPolicy는 기존 고객 재검토의 계정 잠금·CUSTOMER·활
         var owner=users.lockById(actor).orElse(null);
         var token=sid==null?null:tokens.findBySessionId(sid).orElse(null);
         if(owner==null||owner.getRole()!=UserRole.CUSTOMER||!owner.isAuthenticationAllowed()||token==null||token.getUserId()!=actor||token.getRevoked()||!token.getExpiresAt().isAfter(LocalDateTime.now()))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"현재 고객 계정과 본인 세션을 확인하세요");
+        // HTTP 역할 검사와 별개로 서비스 직접 호출도 등록된 고객의 서명 수준을 재확인한다.
+        if(!mfa.satisfied(actor,token))throw new ResponseStatusException(HttpStatus.FORBIDDEN,"고객 패스키 확인이 필요합니다");
         return owner;
     }
 ```
 
-User를 반환하되 트랜잭션 안에서만 사용한다. HTTP 필터만 믿지 않고 직접 서비스 호출에서도 현재 계정과 세션을 검사한다. TypeScript 타입 선언과 달리 User의 JPA 잠금은 DB 트랜잭션 종료까지 유지된다.
+063 연결 뒤 현재 발췌다. 등록된 고객의 실제 패스키 인증도 검사한다. User를 반환하되 트랜잭션 안에서만 사용한다. HTTP 필터만 믿지 않고 직접 서비스 호출에서도 현재 계정과 세션을 검사한다. TypeScript 타입 선언과 달리 User의 JPA 잠금은 DB 트랜잭션 종료까지 유지된다.
 
 출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L49), 현재 소스의 부분 발췌.
 
