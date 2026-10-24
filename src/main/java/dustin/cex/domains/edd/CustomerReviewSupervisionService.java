@@ -19,8 +19,9 @@ public class CustomerReviewSupervisionService {
     public static final String SEMANTICS="REFRESH_FROM_START_NOT_A_DURABLE_CHECKPOINT";
     public record Cursor(Instant receivedAt,UUID requestId) {}
     public record Member(long id,boolean available) {}
-    public record Item(UUID requestId,long userId,UUID exitId,Instant receivedAt,Instant latestViewRecordedAt,List<Member> members,boolean orphaned) {
+    public record Item(UUID requestId,long userId,UUID exitId,Instant receivedAt,Instant latestViewRecordedAt,List<Member> members,boolean orphaned,CustomerReviewResponseTarget.Assessment responseTarget,UUID finalReviewId,Instant finalDecidedAt,Instant customerAcknowledgedAt) {
         public Item {members=List.copyOf(members);}
+        public boolean requiresAttention(){return responseTarget.state()==CustomerReviewResponseTarget.State.OVERDUE||responseTarget.state()==CustomerReviewResponseTarget.State.TIME_REVIEW_REQUIRED||(finalReviewId!=null&&customerAcknowledgedAt==null)||(orphaned&&finalReviewId==null);}
     }
     public record Page(List<Item> items,Cursor next,int scanned,Instant observedAt,String semantics) {
         public Page {items=List.copyOf(items);}
@@ -32,7 +33,12 @@ public class CustomerReviewSupervisionService {
         this.custody=custody;
         this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.exits=exits;this.audit=audit;tx=new TransactionTemplate(manager);
     }
-    public Page queue(long actor,UUID sid,Cursor after) {
+    public Page queue(long actor,UUID sid,Cursor after){return scan(actor,sid,after,false);}
+    public Page attention(long actor,UUID sid,Cursor after){
+        // 전체 감독과 같은 관측/커서를 쓰되 지금 조치할 건만 고른다. 과거 지연 이력은 전체 목록에 남는다.
+        return scan(actor,sid,after,true);
+    }
+    private Page scan(long actor,UUID sid,Cursor after,boolean attentionOnly) {
         try {return tx.execute(t->{
             sessions.requireFresh(users.lockById(actor).orElse(null),sid,UserRole.APPROVER);
             Instant observed=Instant.now();validate(after,observed);
@@ -45,13 +51,22 @@ public class CustomerReviewSupervisionService {
                 if(p.userId()!=((Number)row.get("user_id")).longValue())throw new IllegalStateException("고객 재검토 대상 검증 실패");
                 var state=custody.current(id);var members=state.members().stream().map(m->member(m.id(),m.person())).toList();
                 Timestamp viewed=jdbc.queryForObject("SELECT max(occurred_at) FROM security_audit WHERE action='CUSTOMER_EXIT_REVIEW_VIEWED' AND outcome='SUCCESS' AND target=?",Timestamp.class,"customer-review:"+id);
-                items.add(new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available)));
+                var progress=jdbc.queryForMap("""
+                    SELECT (SELECT min((payload::jsonb->>'observedAt')::timestamptz) FROM customer_exit_review_replies WHERE request_id=?) AS first_reply,
+                    d.request_id,d.decided_at,a.acknowledged_at FROM (SELECT 1) seed
+                    LEFT JOIN customer_review_final_decisions d ON d.review_id=? AND d.approved
+                    LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id
+                    """,id,id);
+                var assessment=CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply")),instant(progress.get("decided_at")),Instant.now());
+                var item=new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available),assessment,(UUID)progress.get("request_id"),instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")));
+                if(!attentionOnly||item.requiresAttention())items.add(item);
             }
             var last=candidates.isEmpty()?null:candidates.getLast();Cursor next=candidates.size()==25?new Cursor(((Timestamp)last.get("created_at")).toInstant(),(UUID)last.get("id")):null;
-            audit.record(actor,"CUSTOMER_REVIEW_SUPERVISION_READ","operator:"+actor,"SUCCESS","METADATA_ONLY");
+            audit.record(actor,attentionOnly?"CUSTOMER_REVIEW_ATTENTION_READ":"CUSTOMER_REVIEW_SUPERVISION_READ","operator:"+actor,"SUCCESS","METADATA_ONLY");
             return new Page(items,next,candidates.size(),observed,SEMANTICS);
         });}catch(ResponseStatusException e){audit.denied(actor,"CUSTOMER_REVIEW_SUPERVISION","restricted","POLICY_DENIED_"+e.getStatusCode().value());throw e;}
     }
+    private Instant instant(Object value){return value==null?null:((Timestamp)value).toInstant();}
     private Member member(long id,UUID person) {
         var u=users.findById(id).orElse(null);
         boolean available=u!=null&&u.isAuthenticationAllowed()&&person.equals(u.getOperatorPersonId())
