@@ -40,18 +40,18 @@
 
 ## 실제 코드와 이해에 필요한 원리
 
-출처: [CustomerMfaService.java](../../src/main/java/dustin/cex/domains/security/CustomerMfaService.java#L61), 현재 소스의 부분 발췌.
+출처: [CustomerMfaService.java](../../src/main/java/dustin/cex/domains/security/CustomerMfaService.java#L62), 현재 소스의 부분 발췌.
 
 ```java
-            var key=verifier.register(stored.options(),publicKey);UUID event=UUID.randomUUID();
-            jdbc.update("INSERT INTO customer_mfa_enrollments(id,user_id,credential_fingerprint) VALUES(?,?,?)",event,actor,OperatorMfaService.sha256Hex(key.getCredentialId().toBase64UrlString()));
+            boolean first=!policy.required(actor);var key=verifier.register(stored.options(),publicKey);
+            String fingerprint=OperatorMfaService.sha256Hex(key.getCredentialId().toBase64UrlString());
+            UUID event=changes.append(actor,sid,CustomerMfaKeyChanges.Kind.ADDED,fingerprint);
+            if(first)jdbc.update("INSERT INTO customer_mfa_enrollments(id,user_id,credential_fingerprint) VALUES(?,?,?)",event,actor,fingerprint);
             // 등록 자체를 로그인 서명으로 간주하지 않는다. 모든 기존 세션을 회수하고 별도로 인증한다.
             tokens.revokeAllByUserId(actor,LocalDateTime.now());
-            audit.record(actor,"CUSTOMER_MFA_REGISTER","customer-mfa:"+event,"SUCCESS","ALL_SESSIONS_REVOKED");
-            return new Enrolled(event,true);
 ```
 
-등록 사실과 기존 세션 회수는 같은 트랜잭션이다. 마지막 감사가 실패하면 공개키까지 롤백하며 강한 로그인 세션을 발급하지 않는다. var는 타입을 없애는 것이 아니라 컴파일러가 타입을 추론하는 Java 문법이다.
+064의 예비 키 분기까지 포함한 현재 발췌다. 모든 추가 사실은 새 불변 변경 행으로 남기고 최초 등록 사실은 첫 등록에서만 만든다. 등록 사실과 기존 세션 회수는 같은 트랜잭션이다. 마지막 감사가 실패하면 공개키까지 롤백하며 강한 로그인 세션을 발급하지 않는다. var는 타입을 없애는 것이 아니라 컴파일러가 타입을 추론하는 Java 문법이다.
 
 출처: [AuthService.java](../../src/main/java/dustin/cex/domains/auth/service/AuthService.java#L55), 현재 소스의 부분 발췌.
 
@@ -68,7 +68,7 @@
 
 등록된 고객은 이전 대기 세션만 바꾼다. 다음 실제 서명 성공의 전체 회수와 구분한다. TypeScript의 Promise 완료 여부만으로 인증 권한을 높이지 않는 것처럼, 대기 JWT 발급과 다중 인증 완료는 별개 상태다.
 
-출처: [CustomerMfaPolicy.java](../../src/main/java/dustin/cex/domains/security/CustomerMfaPolicy.java#L17), 현재 소스의 부분 발췌.
+출처: [CustomerMfaPolicy.java](../../src/main/java/dustin/cex/domains/security/CustomerMfaPolicy.java#L21), 현재 소스의 부분 발췌.
 
 ```java
     public boolean satisfied(long actor,RefreshToken session){
@@ -122,3 +122,5 @@
 
 - [구현 686c502](https://github.com/GiHoon1123/Cex-Platform-Service/commit/686c5020cd8e9b8e185d5bf7fbc10d04baf59bc1)
 - [격리 실행 증적](../reference/063-customer-passkey-login-verification-2026-10-25.json)
+
+064에서 [예비 키·분실 키 폐기](064-customer-passkey-devices.md)를 추가했다. 최초 등록/로그인 검증 수치는063 당시 결과이며 위 현재 발췌는064 소스와 대조한다.
