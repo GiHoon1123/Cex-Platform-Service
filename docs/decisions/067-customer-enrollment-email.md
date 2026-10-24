@@ -34,16 +34,15 @@
 
 ## 실제 코드와 이해에 필요한 원리
 
-출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L66), 현재 소스의 부분 발췌.
+출처: [CustomerEmailChallenges.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailChallenges.java#L68), 현재 소스의 부분 발췌.
 
 ```java
         jdbc.update("INSERT INTO customer_email_confirmations(challenge_id,user_id,email_mac,key_id) VALUES(?,?,?,?)",id,actor,row.get("email_mac"),crypto.keyId());
-        // 실제 토큰을 확인한 현재 세션을 불변 사실로 남긴다. 소비된 토큰의 재호출로 이 결합을 갱신하지 않는다.
         jdbc.update("INSERT INTO customer_email_confirmation_sessions(challenge_id,session_id) VALUES(?,?)",id,sid);
-        audit.record(actor,"CUSTOMER_EMAIL_VERIFIED","email-check:"+id,"SUCCESS","CURRENT_ADDRESS_ONLY");return new Status(true,recipients.recentlyVerified(user,sid));
+        audit.record(actor,"CUSTOMER_EMAIL_VERIFIED","email-check:"+id,"SUCCESS","CURRENT_ADDRESS_ONLY");
 ```
 
-새 확인 원본과 실제 확인 세션을 함께 기록하고 마지막 감사를 요구한다. 소비된 토큰은 이 구간 전에 반환하므로 재호출로 소유 확인을 새 세션/시각에 옮기지 않는다.
+071에서 `CustomerEmailChallenges`로 분리한 현재 코드다. 새 확인 원본과 실제 확인 세션을 함께 기록하고 마지막 감사를 요구한다. 소비된 토큰은 이 구간 전에 반환하므로 재호출로 소유 확인을 새 세션/시각에 옮기지 않는다.
 
 출처: [CustomerMailRecipientPolicy.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailRecipientPolicy.java#L16), 현재 소스의 부분 발췌.
 
@@ -104,3 +103,5 @@ Java의 삼중 따옴표는 여러 줄 SQL 문자열이며 TypeScript 템플릿 
 
 - [구현 a1374a8](https://github.com/GiHoon1123/Cex-Platform-Service/commit/a1374a84e5b7b417475e37930feb6e120f7727e1)
 - [격리 실행 증적](../reference/067-customer-enrollment-email-verification-2026-10-25.json)
+
+[071 이메일 변경](071-customer-email-change.md)에서 일회 확인 저장/검증을 CustomerEmailChallenges로 분리하고 현재 주소 확인과 새 주소 변경이 같은 발송 한도·확인 사실을 사용하게 했다. 과거 테스트 결과는 당시 기준이며 위 현재 발췌는 분리 후 소스와 대조한다.

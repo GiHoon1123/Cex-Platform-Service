@@ -23,7 +23,7 @@
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CustomerMailOutbox.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java#L47), 현재 소스의 부분 발췌.
+출처: [CustomerMailOutbox.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java#L49), 현재 소스의 부분 발췌.
 
 ```java
     public Lease claim(){return tx.execute(t->{

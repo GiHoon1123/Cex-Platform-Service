@@ -53,7 +53,7 @@
 
 064의 예비 키 분기까지 포함한 현재 발췌다. 모든 추가 사실은 새 불변 변경 행으로 남기고 최초 등록 사실은 첫 등록에서만 만든다. 등록 사실과 기존 세션 회수는 같은 트랜잭션이다. 마지막 감사가 실패하면 공개키까지 롤백하며 강한 로그인 세션을 발급하지 않는다. var는 타입을 없애는 것이 아니라 컴파일러가 타입을 추론하는 Java 문법이다.
 
-출처: [AuthService.java](../../src/main/java/dustin/cex/domains/auth/service/AuthService.java#L55), 현재 소스의 부분 발췌.
+출처: [AuthService.java](../../src/main/java/dustin/cex/domains/auth/service/AuthService.java#L59), 현재 소스의 부분 발췌.
 
 ```java
             boolean customerMfa=user.getRole()==UserRole.CUSTOMER&&mfa.required(user.getId());
@@ -76,8 +76,12 @@
         if(session==null||session.getUserId()!=actor||!session.hasVerifiedMfa()
                 ||!session.getMfaVerifiedAt().plusHours(12).isAfter(LocalDateTime.now()))return false;
         // 회수된 키에 결합된 인증 시각만 남아 있어도 현재 자격으로 인정하지 않는다.
+        return credentialActive(actor,session.getMfaCredentialFingerprint());
+    }
+    // 장기 업무에 결합한 서명 자격도 아직 살아 있는지 확인한다. 호출 업무가 사용자 잠금을 유지한다.
+    boolean credentialActive(long actor,String fingerprint){
         return jdbc.queryForList("SELECT c.credential_id FROM user_credentials c JOIN user_entities u ON u.id=c.user_entity_user_id WHERE u.name=?",String.class,Long.toString(actor))
-            .stream().anyMatch(id->OperatorMfaService.sha256Hex(id).equals(session.getMfaCredentialFingerprint()));
+            .stream().anyMatch(id->OperatorMfaService.sha256Hex(id).equals(fingerprint));
     }
 ```
 

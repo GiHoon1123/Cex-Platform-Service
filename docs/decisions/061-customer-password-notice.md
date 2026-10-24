@@ -39,18 +39,19 @@
 
 실제 변경 행과 호출자의 소유·시각을 앞에서 검사한 뒤 같은 트랜잭션에 예약한다. return은 확인 주소가 없는 정상 상태에만 적용하며 암호화/무결성 예외를 숨기는 폴백이 아니다.
 
-출처: [CustomerMailOutbox.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java#L60), 현재 소스의 부분 발췌.
+출처: [CustomerMailOutbox.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java#L71), 현재 소스의 부분 발췌.
 
 ```java
         // 보안 통지는 현재 검증 주소와 실제 변경 사실에만 결합한다. 계정 중지는 이 안내를 숨기지 않는다.
         if(p.kind()==Kind.PASSWORD_CHANGED)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_password_changes WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
         if(p.kind()==Kind.MFA_CHANGED)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_mfa_key_changes WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
         if(p.kind()==Kind.ACCOUNT_RECOVERY)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_recovery_events WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
+        if(p.kind()==Kind.EMAIL_CHANGED_CURRENT)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_email_changes c JOIN customer_email_change_requests r ON r.id=c.request_id WHERE c.id=? AND c.user_id=? AND r.new_email_mac=? AND r.key_id=?)",Boolean.class,p.reference(),p.userId(),recipients.addressMac(p.email()),crypto.keyId());
         if(!u.isAuthenticationAllowed())return false;
         if(p.kind()==Kind.EMAIL_VERIFICATION)return true;
 ```
 
-065 이후 키 변경, 069 이후 계정 복구 보안 통지에도 같은 현재 주소/계정 중지 정책을 적용한 현재 발췌다. PASSWORD_CHANGED 분기는 본인 실제 변경·현재 검증 주소를 재확인한다. 계정 활성 검사는 그 아래에 있어 중지 계정의 보안 경고를 숨기지 않는다. 기존 일반 알림은 다음 활성/수신 선택 검사를 계속 통과해야 한다.
+065 이후 키 변경, 069 이후 계정 복구 보안 통지에도 같은 현재 주소/계정 중지 정책을 적용한 현재 발췌다. PASSWORD_CHANGED 분기는 본인 실제 변경·현재 검증 주소를 재확인한다. 계정 활성 검사는 그 아래에 있어 중지 계정의 보안 경고를 숨기지 않는다. 기존 일반 알림은 다음 활성/수신 선택 검사를 계속 통과해야 한다. 071의 이전 주소 경고는 이 구간 앞에서 변경 당시의 검증 주소와 실제 원본을 따로 확인한다. 모든 보안 통지를 임의의 옛 주소로 보내는 것은 아니다.
 
 출처: [CustomerPasswordHistory.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordHistory.java#L23), 현재 소스의 부분 발췌.
 
