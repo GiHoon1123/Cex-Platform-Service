@@ -14,6 +14,7 @@ import dustin.cex.domains.security.AuditService;
 /** 세션 교체·회수와 성공 감사는 함께 커밋한다. 거부 감사는 업무 롤백 후 별도로 기록한다. */
 @Service
 public class AuthService {
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final UserRepository users;
     private final RefreshTokenRepository tokens;
     private final JwtService jwt;
@@ -23,14 +24,17 @@ public class AuthService {
     private final dustin.cex.domains.security.CustomerMfaPolicy mfa;
     private final TransactionTemplate tx;
     public AuthService(UserRepository users,RefreshTokenRepository tokens,JwtService jwt,PasswordService passwords,
-            AuditService audit,PlatformTransactionManager manager,CustomerPasswordPolicy policy,dustin.cex.domains.security.CustomerMfaPolicy mfa) {
-        this.policy=policy;this.mfa=mfa;
+            AuditService audit,PlatformTransactionManager manager,CustomerPasswordPolicy policy,dustin.cex.domains.security.CustomerMfaPolicy mfa,org.springframework.jdbc.core.JdbcTemplate jdbc) {
+        this.jdbc=jdbc;this.policy=policy;this.mfa=mfa;
         this.users=users;this.tokens=tokens;this.jwt=jwt;this.passwords=passwords;this.audit=audit;
         tx=new TransactionTemplate(manager);
     }
     public SignupResponse signup(SignupRequest request) {
         return attempt(null,"SIGNUP",()->tx.execute(status->{
             if(!policy.accepts(request.getPassword()))throw new AuthException(AuthException.Kind.INVALID_SIGNUP);
+            // 같은 주소의 신규 가입과 이메일 변경 확정을 DB 트랜잭션 단위로 직렬화한다.
+            // 해시 충돌은 추가 대기만 만들며 최종 유일성은 users의 제약이 보장한다.
+            jdbc.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?,0))","customer-email-owner-v1:"+request.getEmail());
             if(users.existsByEmail(request.getEmail())) throw new AuthException(AuthException.Kind.INVALID_SIGNUP);
             var user=users.saveAndFlush(User.builder().email(request.getEmail())
                 .passwordHash(passwords.hash(request.getPassword())).username(request.getUsername()).build());

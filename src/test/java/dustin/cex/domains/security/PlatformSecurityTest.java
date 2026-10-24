@@ -384,4 +384,20 @@ class PlatformSecurityTest {
         });
     }
     CreateOrderRequest order() {return CreateOrderRequest.builder().orderType("buy").orderSide("limit").baseMint("BTC").quoteMint("USDT").price(new BigDecimal("100")).amount(BigDecimal.ONE).build();}
+    /** 같은 주소를 동시에 할당해도 한 계정만 만들고 다른 요청은 통제된 가입 거부로 끝낸다. */
+    @Test void concurrentSignupAllocatesOneEmailAddress() throws Exception {
+        String email=UUID.randomUUID()+"@signup-race.invalid";
+        try(var pool=Executors.newFixedThreadPool(2)){
+            var gate=new CountDownLatch(1);
+            java.util.concurrent.Callable<Boolean> signup=()->{
+                gate.await();
+                try{auth.signup(new SignupRequest(email,"independent-signup-password","격리 동시 가입"));return true;}
+                catch(dustin.cex.domains.auth.exception.AuthException denied){return false;}
+            };
+            var first=pool.submit(signup);var second=pool.submit(signup);gate.countDown();
+            assertNotEquals(first.get(20,TimeUnit.SECONDS),second.get(20,TimeUnit.SECONDS));
+        }
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM users WHERE email=?",Long.class,email));
+    }
+
 }
