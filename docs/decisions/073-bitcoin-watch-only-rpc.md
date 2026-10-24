@@ -147,3 +147,5 @@ python3 scripts/verify_kyc.py
 후속 구현: [074 고객 주소 영속 연결](074-customer-bitcoin-deposit-address.md). 073의 API 미구현 설명은 해당 사이클 시점이며, 현재 발급/조회는 074를 따른다. 입금 감지·잔액 반영은 여전히 미완료다.
 
 077 현행 기준: 노드 전송/기본 준비 확인은 BitcoinRpcClient로 분리했다. 주소 파생은 BitcoinCoreClient, 거래 출력 관찰은 [077 기록](077-bitcoin-deposit-observation.md)을 따른다. 주소용64KiB 제한과 별도로 거래 원문/해독 결과용32MiB 제한을 사용한다.
+
+082 현행 기준: 노드 설정이 있으면 [전용 발견 워커](082-bitcoin-discovery-processing-worker.md)가 완료 블록 조회와 입금 ID 생성을 자동 실행한다. `BITCOIN_PROCESSING_ENABLED=false`로 중지하며 test 프로필/격리 실행기는 false를 명시한다. 잔액 적립은 아직 연결하지 않았다.
