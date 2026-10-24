@@ -30,6 +30,8 @@ public class CustomerReviewReplyService {
         var prior=jdbc.queryForList("SELECT * FROM customer_exit_review_replies WHERE actor_id=? AND request_key=?",actor,key);
         // 재송신은 당시 회신을 반환한다. 나중에 상태/메모가 변해도 옛 회신을 다시 만들지 않는다.
         if(!prior.isEmpty()){var payload=verify(prior.getFirst());if(!payload.requestId().equals(request)||!payload.noteId().equals(latestNote)||payload.userId()!=user)throw denied(HttpStatus.CONFLICT);audit.record(actor,"CUSTOMER_REVIEW_REPLY_REPLAYED","customer-reply:"+payload.id(),"SUCCESS","HISTORICAL_REPLY");return safe(payload);}
+        // 확정 답변 이후에는 같은 접수에 새 근거/관측 회신을 붙이지 않는다. 이미 보존한 같은 키 재송신은 위에서 반환한다.
+        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_review_final_decisions WHERE review_id=? AND approved)",Boolean.class,request))throw denied(HttpStatus.CONFLICT);
         requests.requirePersonalView(actor,sid,request);var note=notes.currentBasis(request,latestNote);
         if(jdbc.queryForObject("SELECT count(*) FROM customer_exit_review_replies WHERE request_id=? AND (payload::jsonb->>'observedAt')::timestamptz>clock_timestamp()-interval '1 day'",Long.class,request)>=10)throw denied(HttpStatus.TOO_MANY_REQUESTS);
         UUID exit=(UUID)origin.get("exit_id");Status status;UUID basis;

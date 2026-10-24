@@ -33,6 +33,8 @@ public class CustomerReviewNoteService {
         requests.workRequest(actor,sid,request);if(key==null||supplied==null)throw denied(HttpStatus.BAD_REQUEST);var f=supplied.validated();String mac=mac(request,actor,f);
         var old=jdbc.queryForList("SELECT * FROM customer_exit_review_notes WHERE actor_id=? AND request_key=?",actor,key);
         if(!old.isEmpty()){var row=old.getFirst();if(!request.equals(row.get("request_id"))||!mac.equals(row.get("content_mac")))throw denied(HttpStatus.CONFLICT);facts(row);audit.record(actor,"CUSTOMER_REVIEW_NOTE_REPLAYED","customer-note:"+row.get("id"),"SUCCESS","METADATA_ONLY");return metadata(row);}
+        // 확정 답변 이후에는 같은 접수에 새 근거/관측 회신을 붙이지 않는다. 이미 보존한 같은 키 재송신은 위에서 반환한다.
+        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_review_final_decisions WHERE review_id=? AND approved)",Boolean.class,request))throw denied(HttpStatus.CONFLICT);
         requests.requirePersonalView(actor,sid,request);
         if(jdbc.queryForObject("SELECT count(*) FROM customer_exit_review_notes WHERE request_id=? AND recorded_at>clock_timestamp()-interval '1 day'",Long.class,request)>=10)throw denied(HttpStatus.TOO_MANY_REQUESTS);
         // 시계가 역행하거나 같은 시각이어도 논리 순번은 증가한다. 고객 잠금 아래에서만 계산한다.

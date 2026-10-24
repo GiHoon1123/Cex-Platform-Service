@@ -75,6 +75,19 @@ public class CustomerFinalReviewService {
         var viewer=users.findById(actor).orElseThrow();jdbc.update("INSERT INTO customer_review_final_views(id,request_id,actor_id,actor_person,actor_version,session_id,payload_hash) VALUES(?,?,?,?,?,?,?)",UUID.randomUUID(),id,actor,viewer.getOperatorPersonId(),viewer.getVersion(),sid,r.payloadHash());
         audit.record(actor,"CUSTOMER_FINAL_VIEWED","customer-final:"+id,"SUCCESS","DESIGNATED_REVIEW_ONLY");return new Inspection(r,explanation,reason,note);
     }));}
+    public record Confirmation(Request request,boolean approve,OperatorMfaService.Options authentication) {}
+    public Confirmation options(long actor,UUID sid,UUID id,String hash,boolean approve){return attempt(actor,()->tx.execute(t->{
+        var r=checked(actor,sid,id,true);if(!r.payloadHash().equals(hash))throw denied(HttpStatus.CONFLICT);
+        return new Confirmation(r,approve,mfa.approvalOptions(actor,sid,OperatorMfaService.ApprovalKind.CUSTOMER_REVIEW_FINAL,id,hash,approve));
+    }));}
+    @Transactional(propagation=Propagation.NEVER)
+    public Request decide(long actor,UUID sid,UUID id,String hash,boolean approve,OperatorMfaService.AuthorizationProof proof){return attempt(actor,()->tx.execute(t->{
+        var r=checked(actor,sid,id,true);if(!r.payloadHash().equals(hash))throw denied(HttpStatus.CONFLICT);
+        // 실제 인증기 카운터·증명 소모·최종 결정·감사를 모두 같은 트랜잭션에 확정한다.
+        mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.CUSTOMER_REVIEW_FINAL,id,hash,approve,proof);
+        jdbc.update("INSERT INTO customer_review_final_decisions(request_id,review_id,approver_id,approver_person,approved) VALUES(?,?,?,?,?)",id,r.payload().reviewId(),actor,r.payload().checker().person(),approve);
+        audit.record(actor,"CUSTOMER_FINAL_DECIDED","customer-final:"+id,"SUCCESS",approve?"APPROVED":"REJECTED");return read(id);
+    }));}
     public Request status(long actor,UUID sid,UUID id){return attempt(actor,()->tx.execute(t->{var r=read(id);var p=r.payload();var state=custody.current(p.reviewId());var viewer=custody.lock(state,actor).get(actor);sessions.requireFresh(viewer,sid,UserRole.OPERATOR,UserRole.APPROVER);
         if(!state.contains(viewer)&&!(actor==p.requester().id()&&p.requester().person().equals(viewer.getOperatorPersonId())))throw denied(HttpStatus.NOT_FOUND);
         audit.record(actor,"CUSTOMER_FINAL_STATUS","customer-final:"+id,"SUCCESS","METADATA_ONLY");return r;
