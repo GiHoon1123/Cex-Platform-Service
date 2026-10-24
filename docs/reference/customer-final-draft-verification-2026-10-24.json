@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-24",
+  "implementation_commit": "89173b6d107a4c5fba6b548cb697d06eb39ca659",
+  "junit": {
+    "tests": 61,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "report": {
+    "container": "cex-edd-5f7c2c87e140",
+    "exit": 0,
+    "tests": {
+      "tests": 61,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "container_removed": true,
+    "suites": [
+      {
+        "class": "dustin.cex.domains.kyc.CustomerWorkCustodyIntegrationTest",
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "legacyApprovalAndUnboundViewSchemasAreRejectedWithoutBackfill()",
+          "httpTransferAndNewContextWorkWhileOldExitListIsRemoved()",
+          "outsiderCannotSelfAssignHealthyWork()",
+          "ownInspectionIsRequiredForOptions()",
+          "requesterVersionChangeInvalidatesRequest()",
+          "resultAfterResponseLossIsReadableWithoutAnotherTransfer()",
+          "proposalAuditFailureRollsBackRequestAndBinding()",
+          "generationChangeInvalidatesEvenReturningOwnersOldPersonalReceipt()",
+          "viewAuditFailureDoesNotProvideAssignmentReason()",
+          "duplicateSameKeyReplaysButChangedReasonConflicts()",
+          "requesterCurrentMembersAndTargetsCannotApprove()",
+          "newOwnerMustObtainOwnReasonBeforeNewNotesOrReplies()",
+          "pendingAndRejectedTransferDoNotMoveAccess()",
+          "approvalAndRejectionRaceCommitsExactlyOneDecision()",
+          "allCustodyRecordsRejectUpdateDeleteAndTruncate()",
+          "unchangedPeopleAndSameHumanTargetsAreRejected()",
+          "targetVersionChangeInvalidatesSignedRequestWithoutConsumingProof()",
+          "priorPeopleLoseReasonNotesAndRepliesAuthority()",
+          "approvedTransferMovesOnlyCustomerWorkAndPreservesHistory()",
+          "newPeopleDoNotGainOriginalExitOrRescissionAuthority()",
+          "oppositeDecisionAndOtherBusinessProofCannotAuthorizeTransfer()",
+          "decisionAuditFailureRestoresProofAndSameProofRetries()",
+          "supervisionUsesCurrentCustodiansRatherThanOriginalPeople()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerReviewReplyIntegrationTest",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "staleInternalNoteCannotBeUsedForNewReplyButOldKeyStillReplays()",
+          "immutableReplyAndCopiedPayloadIntegrityAreEnforced()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"identity\"",
+          "customerCannotReadOtherCustomersReplies()",
+          "concurrentRepliesKeepDistinctLogicalOrder()",
+          "tenRepliesAndIdempotentReplayRespectDailyLimit()",
+          "activeExitProducesOnlyControlledHistoricalStatus()",
+          "httpOnlyAssignedStaffCanRecordAndCustomerReadsSafeReply()",
+          "anotherPersonsViewCannotAuthorizeReply()",
+          "badPageKeyAndAmbientTransactionAreRejected()",
+          "customerReadAuditFailureDoesNotReturnReplyList()",
+          "sameKeyReplayPreservesOldStatusAfterActualStateChange()",
+          "rescindedStatusRequiresActualApprovedIndependentRescission()",
+          "auditFailureRollsBackReplyAndSameKeyCanRetry()",
+          "missingAndForeignNoteIdsAreRejected()",
+          "pendingAndRejectedRescissionDoNotPublishRescindedStatus()",
+          "oldMfaAndRevokedCustomerSessionAreRejected()",
+          "oldRequestIsNotConfusedWithAReinitiatedExit()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerFinalDraftIntegrationTest",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "missingCurrentCheckerDoesNotChooseUnassignedApprover()",
+          "httpDraftUsesRoleBoundaryAndNoStore()",
+          "changedOriginalFinancialBasisInvalidatesDraft()",
+          "transferredCustodyInvalidatesDraft()",
+          "currentSessionAndAccountVersionAreRequired()",
+          "allNewHistoryTablesRejectUpdateDeleteAndTruncate()",
+          "outsidersAndMakerCannotInspectCheckerDraft()",
+          "newNoteInvalidatesExistingInspection()",
+          "sameKeyReplaysAndChangedTextOrNoteConflicts()",
+          "metadataAndDatabaseDoNotExposePublicDraftPlaintext()",
+          "proposalAuditFailureRollsBackDraftAndApprovalBinding()",
+          "inspectionAuditFailureRollsBackBothPersonalAndDraftViews()",
+          "newOwnerWithoutPersonalReasonViewCannotCreateDraft()",
+          "staleOrForeignNoteCannotBeProposed()",
+          "anotherPendingDraftIsRejected()",
+          "designatedCheckerReceivesExactDraftAndActualBasisOnly()",
+          "invalidPublicTextIsRejected()"
+        ],
+        "failed_cases": []
+      }
+    ],
+    "actual_xml_totals": {
+      "tests": 61,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "command": [
+    "python3",
+    "/tmp/verify-cycle44.py"
+  ],
+  "code_excerpts": [
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java",
+      "first_line": 33,
+      "snippet": "public record Payload(UUID id,UUID reviewId,long userId,long customerVersion,Person requester,Person checker,\n    long custodyGeneration,String custodyStamp,UUID noteId,long noteSequence,Basis basis,String explanationMac,\n    String evidenceKeyId,String fingerprintKeyId,String policy,Instant expiresAt) {}"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java",
+      "first_line": 67,
+      "snippet": "String raw=json.writeValueAsString(payload),hash=verifier.digest(json.readTree(raw));byte[] cipher=crypto.encrypt(cipherContext(payload),explanation.text().getBytes(StandardCharsets.UTF_8));\njdbc.update(\"INSERT INTO customer_review_final_requests(id,review_id,requester_id,request_key,payload,payload_hash,explanation_cipher,expires_at) VALUES(?,?,?,?,?,?,?,?)\",id,review,actor,key,raw,hash,cipher,Timestamp.from(payload.expiresAt()));\nmfa.bindApproval(OperatorMfaService.ApprovalKind.CUSTOMER_REVIEW_FINAL,id,actor,maker.getVersion(),hash,payload.expiresAt());\naudit.record(actor,\"CUSTOMER_FINAL_PROPOSED\",\"customer-final:\"+id,\"SUCCESS\",\"DRAFT_ONLY\");return read(id);"
+    }
+  ],
+  "new_dependencies": 0,
+  "approval_kind_count": 14,
+  "limits": [
+    "실제 PostgreSQL/암호 서명/감사/MVC와 공통 외부 연계 대역을 구분",
+    "법정 기한/외부 통지·기관/조직·실물키·운영/인증 심사와 구분",
+    "기존 DB 변환·서버 재시작·배포 없음, 봇0명, 엔진/프론트 변경 없음"
+  ],
+  "warnings": [
+    "기존 deprecated/unchecked/JVM 클래스 공유 경고"
+  ]
+}
