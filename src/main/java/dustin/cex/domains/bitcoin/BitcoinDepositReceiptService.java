@@ -60,6 +60,12 @@ public class BitcoinDepositReceiptService {
                     audit.record(null,"BTC_DEPOSIT_DISCOVERED","bitcoin-deposit:"+receipt.get("id"),"SUCCESS","SCAN:"+scan);
                 }
             }
+            // 새 입금과 재확인 작업을 같은 TX에서 남긴다. 작업 전달만 성공하고 입금 원본이 빠지는 틈을 만들지 않는다.
+            jdbc.update("""
+                INSERT INTO bitcoin_deposit_observation_jobs(network,wallet,txid)
+                 SELECT DISTINCT network,?,txid FROM bitcoin_deposit_receipts WHERE first_scan_id=?
+                 ON CONFLICT(network,wallet,txid) DO NOTHING
+                """,settings.wallet,scan);
             // 수신이 없는 블록도 완료로 남긴다. 출력 원본/모든 입금 ID/완료 표시/감사가 한 번에 확정된다.
             jdbc.update("INSERT INTO bitcoin_scan_receipt_projections(scan_id,output_count,new_count) VALUES(?,?,?)",scan,outputs.size(),created);
             audit.record(null,"BTC_SCAN_RECEIPTS_PROJECTED","bitcoin-scan:"+scan,"SUCCESS","OUTPUTS:"+outputs.size()+":NEW:"+created);

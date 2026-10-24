@@ -166,3 +166,40 @@ CREATE TRIGGER bitcoin_projection_complete BEFORE INSERT ON bitcoin_scan_receipt
 DROP TRIGGER IF EXISTS bitcoin_projection_no_change ON bitcoin_scan_receipt_projections;
 CREATE TRIGGER bitcoin_projection_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_scan_receipt_projections
  FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 작업 행은 실행 상태만 갱신한다. 관찰/입금 원본을 수정하거나 실패를 금액으로 보정하지 않는다.
+CREATE TABLE IF NOT EXISTS bitcoin_deposit_observation_jobs (
+ network varchar(32) NOT NULL,wallet varchar(64) NOT NULL,txid varchar(64) NOT NULL CHECK(txid ~ '^[0-9a-f]{64}$'),
+ next_attempt_at timestamptz NOT NULL DEFAULT clock_timestamp(),lease_id uuid,lease_until timestamptz,
+ latest_observation_id bigint,last_attempt_at timestamptz,last_outcome varchar(32),failures bigint NOT NULL DEFAULT 0 CHECK(failures>=0),
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),PRIMARY KEY(network,wallet,txid),
+ FOREIGN KEY(latest_observation_id,network,txid) REFERENCES bitcoin_transaction_observations(id,network,txid),
+ CHECK((lease_id IS NULL)=(lease_until IS NULL)),
+ CHECK(last_outcome IS NULL OR last_outcome IN ('OBSERVED','OBSERVATION_CONFLICT','NODE_UNAVAILABLE','INTERNAL_FAILURE'))
+);
+CREATE INDEX IF NOT EXISTS bitcoin_observation_job_due ON bitcoin_deposit_observation_jobs(network,wallet,next_attempt_at,txid);
+CREATE OR REPLACE FUNCTION bitcoin_observation_job_source() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='INSERT' THEN
+  IF NOT EXISTS(SELECT 1 FROM bitcoin_deposit_receipts r JOIN bitcoin_deposit_addresses a ON a.id=r.address_id
+    WHERE r.network=NEW.network AND a.wallet=NEW.wallet AND r.txid=NEW.txid) THEN
+   RAISE EXCEPTION '관찰 작업은 같은 네트워크/지갑의 실제 입금 원본을 참조해야 합니다';
+  END IF;
+ ELSE
+  IF NEW.network<>OLD.network OR NEW.wallet<>OLD.wallet OR NEW.txid<>OLD.txid OR NEW.created_at<>OLD.created_at
+    OR(OLD.latest_observation_id IS NOT NULL AND (NEW.latest_observation_id IS NULL OR NEW.latest_observation_id<OLD.latest_observation_id)) THEN
+   RAISE EXCEPTION '관찰 작업의 원본을 바꾸거나 과거 결과로 되돌릴 수 없습니다';
+  END IF;
+ END IF;
+ IF NEW.latest_observation_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM bitcoin_transaction_observations o
+    WHERE o.id=NEW.latest_observation_id AND o.network=NEW.network AND o.wallet=NEW.wallet AND o.txid=NEW.txid) THEN
+  RAISE EXCEPTION '관찰 결과는 같은 지갑/거래 원본이어야 합니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_observation_job_original ON bitcoin_deposit_observation_jobs;
+CREATE TRIGGER bitcoin_observation_job_original BEFORE INSERT OR UPDATE ON bitcoin_deposit_observation_jobs
+ FOR EACH ROW EXECUTE FUNCTION bitcoin_observation_job_source();
+DROP TRIGGER IF EXISTS bitcoin_observation_job_no_delete ON bitcoin_deposit_observation_jobs;
+CREATE TRIGGER bitcoin_observation_job_no_delete BEFORE DELETE OR TRUNCATE ON bitcoin_deposit_observation_jobs
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

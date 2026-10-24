@@ -116,6 +116,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "scans":["*BitcoinScanIntegrationTest"],
             "receipts":["*BitcoinDepositReceiptIntegrationTest"],
             "worker":["*BitcoinProcessingWorkerTest","*BitcoinProcessingWorkerIntegrationTest"],
+            "jobs":["*BitcoinDepositObservationJobsIntegrationTest"],
         }
         result["groups"]=[]
         for group,patterns in groups.items():
