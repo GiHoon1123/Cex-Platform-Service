@@ -115,6 +115,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "observations":["*BitcoinObservationIntegrationTest"],
             "scans":["*BitcoinScanIntegrationTest"],
             "receipts":["*BitcoinDepositReceiptIntegrationTest"],
+            "worker":["*BitcoinProcessingWorkerTest","*BitcoinProcessingWorkerIntegrationTest"],
         }
         result["groups"]=[]
         for group,patterns in groups.items():
@@ -133,7 +134,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                 db_address=subprocess.check_output([docker,"port",database,"5432/tcp"],text=True).strip()
                 env={k:v for k,v in os.environ.items() if not k.startswith(("BITCOIN_","CEX_BITCOIN_TEST_","CDD_","EDD_","DIDIT_","SPRING_MAIL_","CUSTOMER_MAIL_"))}
                 env.update(CEX_TEST_DATABASE_URL="jdbc:postgresql://"+db_address+"/cex_test",
-                    JWT_SECRET="isolated-process-jwt-secret-at-least-32-bytes",ENGINE_SERVICE_TOKEN="isolated-engine-service-token-32-bytes",
+                    BITCOIN_PROCESSING_ENABLED="false",JWT_SECRET="isolated-process-jwt-secret-at-least-32-bytes",ENGINE_SERVICE_TOKEN="isolated-engine-service-token-32-bytes",
                     SPRING_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:1",BOT_BOT_COUNT="0",ORDER_DISPATCH_ENABLED="false",ENGINE_HTTP_URL="http://127.0.0.1:1")
                 env.update(CEX_BITCOIN_TEST_URL="http://127.0.0.1:"+str(rpc_port),CEX_BITCOIN_TEST_USER=credentials["username"],
                     CEX_BITCOIN_TEST_PASSWORD=credentials["password"],
