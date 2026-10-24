@@ -20,6 +20,7 @@ public class CustomerWorkCustodyController {
     public record Decision(@NotBlank @Pattern(regexp="[0-9a-f]{64}") String payloadHash,@NotNull OperatorMfaService.AuthorizationProof proof) {
         @Override public String toString(){return "Decision[서명 생략]";}
     }
+    @GetMapping("/customer-review-orphans") public CustomerWorkCustodyService.Orphans orphans(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestParam(required=false) Instant afterReceived,@RequestParam(required=false) UUID afterRequest){return service.orphans(userId,sessionId,afterReceived==null&&afterRequest==null?null:new CustomerWorkCustodyService.Cursor(afterReceived,afterRequest));}
     @GetMapping("/customer-review-requests/{review}/custody") public CustomerWorkCustodyService.Context context(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable UUID review) {return service.context(userId,sessionId,review);}
     @PostMapping("/customer-custody-requests") public CustomerWorkCustodyService.Request propose(@RequestAttribute long userId,@RequestAttribute UUID sessionId,
             @RequestHeader("Idempotency-Key") UUID key,@Valid @RequestBody Proposal b) {return service.propose(userId,sessionId,b.reviewId(),b.expectedStamp(),b.primaryId(),b.checkerId(),key,b.reason());}

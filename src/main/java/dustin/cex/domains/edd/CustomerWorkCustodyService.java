@@ -23,11 +23,13 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class CustomerWorkCustodyService {
     public static final String POLICY="CUSTOMER_WORK_CUSTODY_V1";
-    public enum Mode { TRANSFER }
+    public enum Mode { TRANSFER, RECOVERY }
     public record Target(long id,UUID person,long version) {}
     public record Payload(UUID id,UUID reviewId,long userId,String reviewHash,long generation,String previousStamp,
-        Target primary,Target checker,Mode mode,String policy,String reasonMac,String evidenceKeyId,String cddKeyId,
+        Target primary,Target checker,Mode mode,List<Target> previousMembers,String policy,String reasonMac,String evidenceKeyId,String cddKeyId,
         long requesterId,UUID requesterPerson,long requesterVersion,Instant expiresAt) {}
+    public record Cursor(Instant receivedAt,UUID requestId) {}
+    public record Orphans(List<Context> items,Cursor next,int scanned){public Orphans{items=List.copyOf(items);}}
     public record Request(Payload payload,String payloadHash,String status) {}
     public record Context(UUID reviewId,long userId,long generation,String stamp,List<CustomerWorkCustody.Member> members,boolean orphaned) {
         public Context {members=List.copyOf(members);}
@@ -42,6 +44,18 @@ public class CustomerWorkCustodyService {
             OperatorMfaService mfa,AuditService audit,PlatformTransactionManager manager) {
         this.jdbc=jdbc;this.custody=custody;this.users=users;this.sessions=sessions;this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;tx=new TransactionTemplate(manager);tx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
+    /** 두 현재 인물이 모두 사용할 수 없는 업무만 원문 없이 발견한다. 이 조회로 인수 권한을 확정하지 않는다. */
+    public Orphans orphans(long actor,UUID sid,Cursor after){return attempt(actor,()->tx.execute(t->{
+        sessions.requireFresh(users.lockById(actor).orElse(null),sid,UserRole.OPERATOR,UserRole.APPROVER);
+        if(after!=null&&(after.receivedAt()==null||after.requestId()==null||after.receivedAt().isBefore(Instant.EPOCH)||after.receivedAt().isAfter(Instant.now())))throw denied(HttpStatus.BAD_REQUEST);
+        var rows=after==null?jdbc.queryForList("SELECT id,created_at FROM customer_exit_review_requests ORDER BY created_at,id LIMIT 25"):
+            jdbc.queryForList("SELECT id,created_at FROM customer_exit_review_requests WHERE (created_at,id)>(?,?) ORDER BY created_at,id LIMIT 25",Timestamp.from(after.receivedAt()),after.requestId());
+        var result=new ArrayList<Context>();for(var row:rows){var state=custody.current((UUID)row.get("id"));if(state.members().stream().noneMatch(m->custody.available(m,users.findById(m.id()).orElse(null))))result.add(context(state,true));}
+        var last=rows.isEmpty()?null:rows.getLast();Cursor next=rows.size()==25?new Cursor(((Timestamp)last.get("created_at")).toInstant(),(UUID)last.get("id")):null;
+        audit.record(actor,"CUSTOMER_WORK_ORPHANS_READ","operator:"+actor,"SUCCESS","METADATA_ONLY");return new Orphans(result,next,rows.size());
+    }));}
+    // 계정이 복구됐다 다시 비활성화돼도 옛 복구 서명이 살아나지 않도록 두 행 버전을 고정한다.
+    private List<Target> prior(CustomerWorkCustody.State state,Map<Long,User> people){return state.members().stream().map(m->{var u=people.get(m.id());if(u==null)throw new IllegalStateException("원래 배정 계정이 없습니다");return new Target(m.id(),m.person(),u.getVersion());}).toList();}
     public Context context(long actor,UUID sid,UUID review) {
         return attempt(actor,()->tx.execute(s->{
             custody.origin(review);var state=custody.current(review);var people=custody.lock(state,actor);var person=people.get(actor);
@@ -64,7 +78,7 @@ public class CustomerWorkCustodyService {
             if(jdbc.queryForObject("SELECT count(*) FROM customer_work_custody_requests r WHERE r.review_id=? AND r.generation=? AND r.expires_at>clock_timestamp() AND NOT EXISTS(SELECT 1 FROM customer_work_custody_decisions d WHERE d.request_id=r.id)",Long.class,review,state.generation()+1)>0)throw denied(HttpStatus.CONFLICT);
             if(jdbc.queryForObject("SELECT count(*) FROM customer_work_custody_requests WHERE review_id=? AND created_at>clock_timestamp()-interval '1 day'",Long.class,review)>=10)throw denied(HttpStatus.TOO_MANY_REQUESTS);
             UUID id=UUID.randomUUID();Instant expires=Instant.now().plusSeconds(600).truncatedTo(ChronoUnit.MICROS);
-            var p=new Payload(id,review,origin.userId(),origin.hash(),state.generation()+1,state.stamp(),first,second,Mode.TRANSFER,POLICY,mac,crypto.keyId(),cdd.keyId(),actor,maker.getOperatorPersonId(),maker.getVersion(),expires);
+            var p=new Payload(id,review,origin.userId(),origin.hash(),state.generation()+1,state.stamp(),first,second,state.contains(maker)?Mode.TRANSFER:Mode.RECOVERY,prior(state,people),POLICY,mac,crypto.keyId(),cdd.keyId(),actor,maker.getOperatorPersonId(),maker.getVersion(),expires);
             String hash=verifier.digest(json.valueToTree(p));byte[] cipher=crypto.encrypt(cipherContext(p),value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             jdbc.update("INSERT INTO customer_work_custody_requests(id,review_id,user_id,generation,requester_id,request_key,primary_id,checker_id,payload,payload_hash,reason_cipher,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",id,review,p.userId(),p.generation(),actor,key,primary,checker,json.writeValueAsString(p),hash,cipher,Timestamp.from(expires));
             mfa.bindApproval(OperatorMfaService.ApprovalKind.CUSTOMER_REVIEW_CUSTODY,id,actor,maker.getVersion(),hash,expires);
@@ -105,14 +119,14 @@ public class CustomerWorkCustodyService {
         eligible(maker,state,people);var first=target(people.get(p.primary().id()),UserRole.OPERATOR);var second=target(people.get(p.checker().id()),UserRole.APPROVER);
         if(!first.equals(p.primary())||!second.equals(p.checker())||first.person().equals(second.person()))throw denied(HttpStatus.CONFLICT);
         var origin=custody.origin(p.reviewId());
-        if(p.mode()!=Mode.TRANSFER||!read(p.id()).status().equals("PENDING")||!r.payloadHash().equals(hash)||!POLICY.equals(p.policy())||!p.evidenceKeyId().equals(crypto.keyId())||!p.cddKeyId().equals(cdd.keyId())
+        if(p.mode()!=(state.contains(maker)?Mode.TRANSFER:Mode.RECOVERY)||!prior(state,people).equals(p.previousMembers())||!read(p.id()).status().equals("PENDING")||!r.payloadHash().equals(hash)||!POLICY.equals(p.policy())||!p.evidenceKeyId().equals(crypto.keyId())||!p.cddKeyId().equals(cdd.keyId())
             ||!state.stamp().equals(p.previousStamp())||state.generation()+1!=p.generation()||!origin.hash().equals(p.reviewHash()))throw denied(HttpStatus.CONFLICT);
         decrypt(r);
         if(viewed&&jdbc.queryForObject("SELECT count(*) FROM customer_work_custody_views WHERE request_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND payload_hash=? AND viewed_at>clock_timestamp()-interval '5 minutes'",Long.class,p.id(),actor,approver.getOperatorPersonId(),approver.getVersion(),sid,hash)==0)throw denied(HttpStatus.CONFLICT);
         return approver;
     }
     private Target target(User user,UserRole role) {if(user==null||user.getRole()!=role||!user.isAuthenticationAllowed())throw denied(HttpStatus.CONFLICT);return new Target(user.getId(),user.getOperatorPersonId(),user.getVersion());}
-    private void eligible(User maker,CustomerWorkCustody.State state,Map<Long,User> people) {if(!state.contains(maker))throw denied(HttpStatus.NOT_FOUND);}
+    private void eligible(User maker,CustomerWorkCustody.State state,Map<Long,User> people) {if(!state.contains(maker)&&!custody.orphaned(state,people))throw denied(HttpStatus.NOT_FOUND);}
     private Context context(CustomerWorkCustody.State state,boolean orphaned) {return new Context(state.reviewId(),state.userId(),state.generation(),state.stamp(),state.members(),orphaned);}
     private String decrypt(Request request) {
         var p=request.payload();try {byte[] cipher=jdbc.queryForObject("SELECT reason_cipher FROM customer_work_custody_requests WHERE id=?",byte[].class,p.id());String value=reason(new String(crypto.decrypt(p.evidenceKeyId(),cipherContext(p),cipher),java.nio.charset.StandardCharsets.UTF_8));
