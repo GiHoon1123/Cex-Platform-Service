@@ -42,4 +42,15 @@ class OperatorMfaConfigurationTest {
         assertNotEquals(Boolean.TRUE,cors.getAllowCredentials());
     }
 
+
+    @Test void standardVerifierRejectsMutationWithoutBusinessTransaction() {
+        // 옵션 생성도 신원 저장을 할 수 있으므로 검증과 함께 업무 확정 경계 안에서만 허용한다.
+        var jdbc=mock(JdbcTemplate.class);
+        var verifier=new WebAuthnVerifier(jdbc,"localhost","http://localhost:3003","격리 테스트");
+        assertThrows(IllegalStateException.class,()->verifier.creation(1));
+        assertThrows(IllegalStateException.class,()->verifier.request(1));
+        assertThrows(IllegalStateException.class,()->verifier.register("{}",null));
+        assertThrows(IllegalStateException.class,()->verifier.verifyAssertion(1,"{}",null));
+        verifyNoInteractions(jdbc);
+    }
 }

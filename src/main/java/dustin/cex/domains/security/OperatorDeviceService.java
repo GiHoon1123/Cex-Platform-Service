@@ -18,11 +18,11 @@ public class OperatorDeviceService {
     private final UserRepository users;private final RefreshTokenRepository tokens;
     private final OperatorSessionPolicy policy;private final AuditService audit;private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;private final JdbcPublicKeyCredentialUserEntityRepository identities;
-    private final OperatorCredentialRepository credentials;
+    private final WebAuthnCredentialRepository credentials;
     public OperatorDeviceService(UserRepository users,RefreshTokenRepository tokens,OperatorSessionPolicy policy,
             AuditService audit,JdbcTemplate jdbc,PlatformTransactionManager manager) {
         this.users=users;this.tokens=tokens;this.policy=policy;this.audit=audit;this.jdbc=jdbc;tx=new TransactionTemplate(manager);
-        identities=new JdbcPublicKeyCredentialUserEntityRepository(jdbc);credentials=new OperatorCredentialRepository(jdbc);
+        identities=new JdbcPublicKeyCredentialUserEntityRepository(jdbc);credentials=new WebAuthnCredentialRepository(jdbc);
     }
     public record Device(String fingerprint,String label,Instant created,Instant lastUsed) {}
     public List<Device> devices(long actor,UUID sid) {

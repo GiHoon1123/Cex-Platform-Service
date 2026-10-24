@@ -13,9 +13,9 @@ import org.springframework.security.web.webauthn.management.UserCredentialReposi
  * 표준 JDBC 구현의 빈 전송수단 문자열 복원 문제를 피하되 같은 표와 타입 계약을 사용한다.
  * 호출하는 서비스가 사용자 행을 먼저 잠그므로 같은 사람의 카운터 갱신도 직렬화된다.
  */
-final class OperatorCredentialRepository implements UserCredentialRepository {
+final class WebAuthnCredentialRepository implements UserCredentialRepository {
     private final JdbcTemplate jdbc;
-    OperatorCredentialRepository(JdbcTemplate jdbc) { this.jdbc=jdbc; }
+    WebAuthnCredentialRepository(JdbcTemplate jdbc) { this.jdbc=jdbc; }
     @Override public CredentialRecord findByCredentialId(Bytes id) {
         var rows=jdbc.query("SELECT * FROM user_credentials WHERE credential_id=?",this::read,id.toBase64UrlString());
         return rows.isEmpty()?null:rows.getFirst();

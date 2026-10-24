@@ -46,6 +46,7 @@ class OperatorMfaTest {
     @MockitoBean dustin.cex.shared.http.EngineHttpClient engine;
     @MockitoBean dustin.cex.shared.kafka.KafkaEventProducer producer;
     @MockitoBean dustin.cex.domains.fee.service.FeeConfigService fees;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
     String hash;User user;SigninResponse pending;UUID sid;SoftwareAuthenticator key;
     final String enrollment="isolated-enrollment-256-bit-test-secret-at-least-43-characters";
     @BeforeAll void password() {hash=passwords.hash("security-test-password");}
@@ -310,4 +311,38 @@ class OperatorMfaTest {
         assertNotNull(mfa.authenticate(user.getId(),full,challenge.challengeId(),key.assertion(challenge,"http://localhost:3003",true,2,null)));
     }
 
+
+    @Test void separateRelyingPartyInstancesDoNotShareAllowedOrigins() throws Exception {
+        // 동일 사용자의 공개키 저장소를 써도 고객/운영자의 허용 출처를 합쳐서는 안 된다.
+        var exchange=new WebAuthnVerifier(jdbc,"example.test","https://exchange.example.test","고객 테스트");
+        var admin=new WebAuthnVerifier(jdbc,"example.test","https://admin.example.test","운영 테스트");
+        var tx=new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        var browser=new SoftwareAuthenticator();
+        // 전역 금융 JSON 매퍼는 표준 Bytes를 직렬화하지 않는다. 제품과 같은 전용 모듈을 사용한다.
+        var webauthnJson=tools.jackson.databind.json.JsonMapper.builder()
+            .addModule(new org.springframework.security.web.webauthn.jackson.WebauthnJacksonModule()).build();
+        tx.executeWithoutResult(status->{
+            users.lockById(user.getId()).orElseThrow();
+            var create=exchange.creation(user.getId());
+            try {
+                var option=new OperatorMfaService.Options(UUID.randomUUID(),webauthnJson.valueToTree(create));
+                exchange.register(webauthnJson.writeValueAsString(create),browser.registration(option,"https://exchange.example.test",true));
+            } catch(Exception e) {throw new IllegalStateException(e);}
+        });
+        var customerRequest=tx.execute(status->{users.lockById(user.getId()).orElseThrow();return exchange.request(user.getId());});
+        var customerOptions=new OperatorMfaService.Options(UUID.randomUUID(),webauthnJson.valueToTree(customerRequest));
+        var proof=browser.assertion(customerOptions,"https://exchange.example.test",true,1,null);
+        tx.executeWithoutResult(status->{
+            users.lockById(user.getId()).orElseThrow();
+            assertEquals(browser.id(),exchange.verifyAssertion(user.getId(),webauthnJson.writeValueAsString(customerRequest),proof).getRawId().toBase64UrlString());
+        });
+        var adminRequest=tx.execute(status->{users.lockById(user.getId()).orElseThrow();return admin.request(user.getId());});
+        var adminOptions=new OperatorMfaService.Options(UUID.randomUUID(),webauthnJson.valueToTree(adminRequest));
+        var foreignProof=browser.assertion(adminOptions,"https://exchange.example.test",true,2,null);
+        assertThrows(RuntimeException.class,()->tx.executeWithoutResult(status->{
+            users.lockById(user.getId()).orElseThrow();
+            admin.verifyAssertion(user.getId(),webauthnJson.writeValueAsString(adminRequest),foreignProof);
+        }));
+        assertEquals(1,jdbc.queryForObject("SELECT signature_count FROM user_credentials WHERE credential_id=?",Long.class,browser.id()));
+    }
 }
