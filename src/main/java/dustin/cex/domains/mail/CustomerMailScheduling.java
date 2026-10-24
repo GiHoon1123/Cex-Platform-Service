@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 /** 명시적으로 켠 환경에서만 메일 전용 워커를 만든다. 기본 예약 작업의 스케줄러 선택에는 참여하지 않는다. */
 @Component
+// 첫 틱 전에 기록 표 준비를 마친다. 초기화 순서를 클래스 탐색 순서에 맡기지 않는다.
+@org.springframework.context.annotation.DependsOn("kycSchemaInitializer")
 @ConditionalOnProperty(name="customer-mail.dispatch-enabled",havingValue="true")
 public class CustomerMailScheduling {
     private final CustomerMailDispatcher dispatcher;
