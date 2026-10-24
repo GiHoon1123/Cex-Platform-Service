@@ -20,7 +20,7 @@ public class CustomerWorkQueueService {
     public record Cursor(Instant receivedAt,UUID requestId) {}
     public record Item(UUID requestId,long userId,Instant receivedAt,long custodyGeneration,
                        long latestNoteSequence,long latestReplyNoteSequence,boolean hasReply,boolean hasUnreflectedNote,
-                       UUID finalReviewId,Instant finalDecidedAt,Instant customerAcknowledgedAt) {}
+                       UUID finalReviewId,Instant finalDecidedAt,Instant customerAcknowledgedAt,CustomerReviewResponseTarget.Assessment responseTarget) {}
     public record Page(List<Item> items,Cursor next,int scanned,Instant observedAt,String semantics) {
         public Page {items=List.copyOf(items);}
     }
@@ -48,15 +48,16 @@ public class CustomerWorkQueueService {
                 var progress=jdbc.queryForMap("""
                     SELECT (SELECT coalesce(max(sequence),0) FROM customer_exit_review_notes WHERE request_id=?) AS note_sequence,
                     (SELECT coalesce(max(note_sequence),0) FROM customer_exit_review_replies WHERE request_id=?) AS reply_sequence,
+                    (SELECT min((payload::jsonb->>'observedAt')::timestamptz) FROM customer_exit_review_replies WHERE request_id=?) AS first_reply_at,
                     d.request_id AS final_id,d.decided_at,a.acknowledged_at
                     FROM (SELECT 1) seed LEFT JOIN customer_review_final_decisions d ON d.review_id=? AND d.approved
                     LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id
-                    """,id,id,id);
+                    """,id,id,id,id);
                 long note=((Number)progress.get("note_sequence")).longValue(),reply=((Number)progress.get("reply_sequence")).longValue();
                 if(reply>note)throw new IllegalStateException("회신의 내부 기록 근거가 존재하지 않습니다");
                 UUID finalId=(UUID)progress.get("final_id");
                 // 최종 답변은 과거 관측 회신과 다른 지표다. 과거 상태 회신과 승인/고객 확인을 따로 제공한다.
-                items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at"))));
+                items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply_at")),instant(progress.get("decided_at")),Instant.now())));
             }
             // 필터 뒤 빈 페이지도 마지막 검사 위치를 반환한다. 빈 items는 순회 종료의 조건이 아니다.
             var last=rows.isEmpty()?null:rows.getLast();Cursor next=rows.size()==25?new Cursor(((Timestamp)last.get("created_at")).toInstant(),(UUID)last.get("id")):null;
