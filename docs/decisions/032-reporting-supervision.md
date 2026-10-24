@@ -122,7 +122,7 @@ tx.execute의 콜백에서 감사 예외가 나면 트랜잭션이 롤백되고 
 
 ### 경로별 권한과 정확한 시간 경계 테스트
 
-출처: [SecurityConfiguration.java](../../src/main/java/dustin/cex/domains/security/SecurityConfiguration.java#L65)
+출처: [SecurityConfiguration.java](../../src/main/java/dustin/cex/domains/security/SecurityConfiguration.java#L66)
 
 ```java
 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/reporting-supervision").access(audited(audit,sessions,"APPROVER"))
