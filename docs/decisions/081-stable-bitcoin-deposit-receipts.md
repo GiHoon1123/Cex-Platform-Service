@@ -61,7 +61,7 @@ Stripe의 [멱등 요청](https://docs.stripe.com/api/idempotent_requests)은 �
 
 `ON CONFLICT ... DO NOTHING RETURNING id`는 기존 금융 기록을 수정하지 않는다. 삽입 결과가 비어도 원래 행을 다시 읽어 고객/주소/자산/정확한 금액이 같은지 확인한다. `BigDecimal.compareTo`는 숫자 값이 같은 서로 다른 소수 표현을 동등하게 다룬다. JS number의 이진 반올림은 사용하지 않는다.
 
-출처: [BitcoinDepositReceiptService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReceiptService.java#L64), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReceiptService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReceiptService.java#L70), 현재 소스의 부분 발췌.
 
 ```java
             jdbc.update("INSERT INTO bitcoin_scan_receipt_projections(scan_id,output_count,new_count) VALUES(?,?,?)",scan,outputs.size(),created);
