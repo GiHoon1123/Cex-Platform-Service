@@ -120,3 +120,6 @@ DROP TRIGGER IF EXISTS customer_email_change_request_no_change ON customer_email
 CREATE TRIGGER customer_email_change_request_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_email_change_requests FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
 DROP TRIGGER IF EXISTS customer_email_change_no_change ON customer_email_changes;
 CREATE TRIGGER customer_email_change_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_email_changes FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 요청 시각/ID 순회는 실제 완료 행의 추가와 별개로 안정된 요청 원본을 기준으로 한다.
+CREATE INDEX IF NOT EXISTS customer_email_request_history ON customer_email_change_requests(user_id,created_at,id);

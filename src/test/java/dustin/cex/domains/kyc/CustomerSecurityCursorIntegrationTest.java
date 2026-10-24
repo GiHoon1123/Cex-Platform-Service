@@ -15,11 +15,13 @@ class CustomerSecurityCursorIntegrationTest extends CustomerMailTestSupport {
     @Autowired CustomerPasswordHistory passwordsHistory;
     @Autowired CustomerMfaHistory keys;
     @Autowired CustomerRecoveryHistory recovery;
+    @Autowired CustomerEmailChangeHistory emails;
     @Test void cursorBoundsAreCheckedBeforeJdbcConversion() {
         List<Function<Instant,Object>> reads=List.of(
             at->passwordsHistory.own(customer.getId(),sid,at==null?null:new CustomerPasswordHistory.Cursor(at,UUID.randomUUID())),
             at->keys.own(customer.getId(),sid,at==null?null:new CustomerMfaHistory.Cursor(at,UUID.randomUUID())),
-            at->recovery.own(customer.getId(),sid,at==null?null:new CustomerRecoveryHistory.Cursor(at,UUID.randomUUID())));
+            at->recovery.own(customer.getId(),sid,at==null?null:new CustomerRecoveryHistory.Cursor(at,UUID.randomUUID())),
+            at->emails.own(customer.getId(),sid,at==null?null:new CustomerEmailChangeHistory.Cursor(at,UUID.randomUUID())));
         for(var read:reads){
             for(Instant invalid:List.of(Instant.MIN,Instant.EPOCH.minusNanos(1),Instant.now().plusSeconds(600)))
                 assertEquals(400,assertThrows(ResponseStatusException.class,()->read.apply(invalid)).getStatusCode().value());
