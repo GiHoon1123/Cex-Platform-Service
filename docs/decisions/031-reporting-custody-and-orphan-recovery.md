@@ -125,7 +125,7 @@ STR_CUSTODY는 인계 요청 ID·전체 해시·승인/반려 방향에 서명�
 
 ### 후속 업무는 현재 배정으로 검사
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L119)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L118)
 
 ```java
 DeliveryOrigin deliveryOrigin(long actor,UUID sid,UUID id) {

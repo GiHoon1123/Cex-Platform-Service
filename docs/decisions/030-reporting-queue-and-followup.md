@@ -56,7 +56,7 @@
 
 ### 후보 페이지의 권한과 순서
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L135)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L134)
 
 ```java
 String sql="""
@@ -72,7 +72,7 @@ var rows=jdbc.queryForList(sql+" ORDER BY d.decided_at,r.id LIMIT 25",args.toArr
 
 ### 빈 페이지를 끝으로 오인하지 않기
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L142)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L141)
 
 ```java
 for(var row:rows) {
@@ -88,7 +88,7 @@ var last=rows.isEmpty()?null:rows.getLast();return new DeliveryBatch(result,last
 
 ### 현재 사건이 아니라 확정된 원래 판단
 
-출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L162)
+출처: [ReportingReviewService.java](../../src/main/java/dustin/cex/domains/edd/ReportingReviewService.java#L161)
 
 ```java
 private DeliveryOrigin approvedDeliveryOrigin(Review r) {
