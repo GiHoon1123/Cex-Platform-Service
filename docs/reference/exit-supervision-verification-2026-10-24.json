@@ -1,0 +1,479 @@
+{
+  "checked_date": "2026-10-24",
+  "cycle": 35,
+  "implementation_commits": [
+    "e397647403c11d2596aca89e4aa8317a69754ec0"
+  ],
+  "scope": "현재 종료 개시의 전사 점검",
+  "junit": {
+    "tests": 119,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "report": {
+    "container": "cex-edd-d9f701b817fb",
+    "exit": 0,
+    "tests": {
+      "tests": 119,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "container_removed": true,
+    "suites": [
+      {
+        "class": "dustin.cex.domains.kyc.ExitSupervisionIntegrationTest",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "unrelatedApproverSeesActiveMetadataWithoutPrivateJudgmentOrAuthority()",
+          "staleRevokedAndForeignSessionCannotRead()",
+          "emptyFilteredPageAdvancesAndLaterActiveExitIsNotLost()",
+          "oldMfaDoesNotMeanStaffIdentityOrRoleHasDisappeared()",
+          "incompleteNegativeAndFutureCursorsAreRejected()",
+          "pendingRejectedAndRescindedApprovalsAreNotActive()",
+          "newCustomerDeclarationAndDisabledCustomerDoNotHideActiveExit()",
+          "auditFailureReturnsNoMetadataAndRetryDoesNotChangeHold()",
+          "httpRoleBoundaryNoStoreAndIncompleteCursor()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "[5] how = \"identity\""
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.edd.ExitRescissionFactsTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "rescissionJudgmentMustBeExplicit()",
+          "[1] rationale = null",
+          "[2] rationale = \"\"",
+          "[3] rationale = \" \"",
+          "[4] rationale = \"안\\n쪽\"",
+          "[5] rationale = \"안‮쪽\"",
+          "normalizationLengthBoundaryAndSafePrinting()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.ExitRescissionIntegrationTest",
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "expiredRequestIsReadableWithoutRevivingItsDecisionAuthority()",
+          "actualCddClearanceThenIndependentWithdrawalPermitsOrders()",
+          "staleMfaInvalidSessionAndBadPageDoNotProvideOriginal()",
+          "unsupportedIsolationCannotApplyExitOrRescissionEffects()",
+          "decisionAuditFailurePreservesHoldAndProofThenSameProofRetries()",
+          "withdrawalRemovesOnlyExitHoldAndPreservesOriginalApprovedRecord()",
+          "sameFactsAndKeyReplayButChangedReasonOrCheckerConflicts()",
+          "copiedCipherCannotReturnReasonOrCreateViews()",
+          "databaseGuardSerializesDirectConcurrentApprovals()",
+          "anotherBusinessKindCannotAuthorizeWithdrawal()",
+          "noPersonalViewsMeansNoOptionsAndMakerViewsCannotSubstitute()",
+          "newDeclarationBlocksStaleDecisionButHistoryRemainsReadable()",
+          "withdrawalPreservesMoneyAndReopensOnlyFutureAdmissionAfterAllChecks()",
+          "designatedThirdPersonReadsOriginalOnlyThroughAuditedCorrectionPurpose()",
+          "auditFailureReturnsNoReasonAndRollsBackViews()",
+          "makerOrCheckerVersionChangeInvalidatesRequest()",
+          "oldElevenKindSchemaAndLegacyPermanentIndexAreRejected()",
+          "newEvidenceAfterSignatureInvalidatesWithdrawalWithoutConsumingProof()",
+          "checkerVersionAndOldSessionViewsCannotBeReused()",
+          "identicalContentUsesOneSetOfPagesDespiteDifferentSnapshotIds()",
+          "decisionOutcomeCanBeReadAfterResponseLossWithoutReapplyingIt()",
+          "rejectionPreservesHoldAndAllowsNewCorrectionRequest()",
+          "generalTradingRestrictionStillAppliesAfterWithdrawal()",
+          "actualHttpIndependentWithdrawalAndCustomerSafeStatus()",
+          "newExitRequiresNewReferralAndOldWithdrawalReplayCannotClearIt()",
+          "currentExitParticipantsCannotReviewTheirOwnOriginalDecision()",
+          "auditFailureRollsBackProposalSnapshotCipherAndBinding()",
+          "reasonIsAbsentFromMetadataCipherAndAudit()",
+          "customerVersionChangeInvalidatesAlreadySignedWithdrawal()",
+          "bothDifferentBundlesRequireLastPartialPage()",
+          "outsiderCannotSelfAssignCorrectionToReadPrivateOriginalReason()",
+          "oldViewAloneCannotAuthorizeNewOptions()",
+          "rejectedOrUnapprovedExitCannotBeWithdrawn()",
+          "withdrawalNeverRemovesReportingDutyOrGrantsReportingPlaintextAccess()",
+          "customerAndAuditorCannotUseCorrectionRoutes()",
+          "concurrentApprovalAndRejectionCommitExactlyOneDecision()",
+          "concurrentSameKeyProducesOneRequest()",
+          "allNewRecordsRejectUpdateDeleteAndTruncate()",
+          "originalReviewerWhoIsNotDesignatedCannotReadWithdrawalReason()",
+          "receiptFromDifferentSessionCannotAuthorizeWithdrawal()",
+          "oppositeDecisionCannotUseApprovalProof()",
+          "differentOriginalAndCurrentContentRequireBothCompleteSets()",
+          "rescissionCannotBeDuplicatedByDirectDatabaseInsertion()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.RelationshipExitIntegrationTest",
+        "tests": 44,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "customerHttpStatusOmitsInternalReasonAndOtherIdentities()",
+          "newEvidenceAfterSignatureRejectsDecisionWithoutConsumingProof()",
+          "makersInspectionCannotReplaceCheckersOwnReceipt()",
+          "changedCheckerVersionInvalidatesOptionsAndOldReceipts()",
+          "newDeclarationMakesOldReferralUnusableButHistoryStaysReadable()",
+          "approvedExitInitiatesWithoutMarkingClosedOrChangingOriginalCase()",
+          "unauthorizedCustomerAndAuditorCannotReadAnyReviewEndpoint()",
+          "existingReservationReplayAndCancellationSurviveWhileNewOrderIsDenied()",
+          "oneLiveRequestAndOneApprovedDecisionPerCustomer()",
+          "signatureForDifferentBusinessKindCannotApproveExitReview()",
+          "realHttpProposalInspectionOptionsAndBoundSignatureUseStoredFacts()",
+          "receiptFromAnotherSessionIsNotUsable()",
+          "reportingAndExitJudgmentsUseIndependentDecisionsAndNeitherErasesOther()",
+          "sameKeyReplaysExactTargetAndFactsButChangedReasonConflicts()",
+          "oldReceiptCannotAuthorizeDecision()",
+          "actualApproveRejectRaceCommitsExactlyOneDecision()",
+          "assignedMetadataNeverIncludesRationaleOrUnableJudgment()",
+          "everyFrozenPageIsRequiredIncludingFinalPartialPage()",
+          "oldTenKindSchemaFailsWithoutTransformingExistingHistory()",
+          "staleMfaCannotReadOrDecide()",
+          "awaitingEvidenceDecisionIsNotExitReferral()",
+          "sameHumanDifferentAccountsCannotBeMakerAndChecker()",
+          "decisionAuditFailureRollsBackProofAndDecisionThenRetrySucceeds()",
+          "changedCustomerVersionInvalidatesSignatureWithoutConsumingIt()",
+          "expiredRequestIsReadableButCannotIssueNewDecision()",
+          "rejectionAddsNoExitHoldAfterActualCddClearance()",
+          "anotherOperatorsAssignedReviewIsNotVisibleEvenWithCorrectRole()",
+          "newCaseConclusionInvalidatesOldExitReview()",
+          "requesterCannotApproveByChangingRole()",
+          "rejectionPreservesReasonAndAllowsNewRequest()",
+          "explicitUnableJudgmentIsRequiredInsteadOfTreatingAnyRiskAsTermination()",
+          "unapprovedOrNonReferralCannotCreateReview()",
+          "commonReferralVerifierRequiresBusinessTransaction()",
+          "copiedCipherFromAnotherReviewFailsWithoutPlaintextOrReceipt()",
+          "changedMakerVersionInvalidatesBoundRequest()",
+          "oppositeDecisionCannotUseApprovalSignature()",
+          "proposalAuditFailureRollsBackCipherAndBinding()",
+          "newTablesRejectAllMutationStatements()",
+          "laterActualCddAndEddClearanceCannotUndoApprovedExit()",
+          "inspectionAuditFailureRollsBackReceiptAndReturnsNoReason()",
+          "simultaneousSameKeyCreatesOneReview()",
+          "noPageInspectionCannotIssueApprovalOptions()",
+          "customerStatusAuditFailureDoesNotReturnState()",
+          "auditAndGeneralDossierDoNotCopyDecisionOrReason()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.edd.RelationshipExitFactsTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "unableJudgmentCannotBeOmittedOrSubstitutedByRisk()",
+          "[1] rationale = null",
+          "[2] rationale = \"\"",
+          "[3] rationale = \" \"",
+          "[4] rationale = \"안\\n쪽\"",
+          "[5] rationale = \"안‮쪽\"",
+          "normalizationLengthBoundaryAndSafePrinting()"
+        ],
+        "failed_cases": []
+      }
+    ],
+    "actual_xml_totals": {
+      "tests": 119,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "new_dependencies": 0,
+  "new_process_tests": 0,
+  "current_code_excerpts": [
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/ExitSupervisionService.java",
+      "first_line": 42,
+      "sha256": "b4236fbb2fc8b43f926b961eff0b80114d7db3aaa4cce90c2113e6c41756fa45"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/ExitSupervisionService.java",
+      "first_line": 53,
+      "sha256": "da067ea50afc524cdbfb750c2347621c1af6e8f372d9ee390fc75fe7a6fe2b2e"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/ExitSupervisionService.java",
+      "first_line": 59,
+      "sha256": "ff22ff42b2f3722851b0161811747545935a725ba1bf85e1057094d4528d7989"
+    }
+  ],
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "/tmp/verify-cycle35.py"
+      ],
+      "exit": 0,
+      "runner_sha256": "a1e1409d05ad259dc213d5a7104912e80881d319cce451669fda6c8b63fc2848"
+    }
+  ],
+  "limits": [
+    "선택한 회귀 범위이며 전체 제품 테스트 수와 구분",
+    "실제 PG/보안키 암호 서명/감사/MVC, Didit 생성/엔진 HTTP/Kafka 등 외부 연계는 공통 대역",
+    "운영 배포/기존 DB 변환/개발 서버 재시작 없음, 봇 0명",
+    "법적 기한/기관 제출/인증/조직/실물키/운영 검증과 구분",
+    "엔진/프론트 변경 없음"
+  ],
+  "warnings": [
+    "기존 deprecated/unchecked 컴파일 경고",
+    "테스트 JVM 클래스 공유/도구 경고"
+  ],
+  "official_sources": [
+    {
+      "url": "https://docs.adyen.com/risk-management/case-management",
+      "read_date": "2026-10-24",
+      "sha256": "d80056464f67076465870f282620c1afe7c56b5a0b3641995285b0619edf5138",
+      "bytes": 167178,
+      "retrieved": true
+    },
+    {
+      "url": "https://docs.stripe.com/disputes/api",
+      "read_date": "2026-10-24",
+      "sha256": "dfa8ca6a153b9cea235bf3d96598ea066124ece3503a90b43d2fe06ce1b58cde",
+      "bytes": 608949,
+      "retrieved": true
+    },
+    {
+      "url": "https://www.postgresql.org/docs/16/queries-limit.html",
+      "read_date": "2026-10-24",
+      "sha256": "0422addcf1349b3698ebba2282a139518eb046b04bc5a41913807159d3d80452",
+      "bytes": 17301,
+      "retrieved": true
+    },
+    {
+      "url": "https://law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1022860887",
+      "read_date": "2026-10-24",
+      "sha256": "2e2163f064b379ed80a10a7dff0978339a7d8845fcf501bcd2c7e3d1b449dd97",
+      "bytes": 21566,
+      "retrieved": true
+    },
+    {
+      "url": "https://static.upbit.com/terms/private_data.html",
+      "read_date": "2026-10-24",
+      "sha256": "d59c313430d257bd06bd27f00ee8b85c6ef87f5c8889cdb94765ca6bb3a91acc",
+      "bytes": 77676,
+      "retrieved": true
+    },
+    {
+      "url": "https://privacy.bithumb.com/ko/faq/",
+      "read_date": "2026-10-24",
+      "sha256": "77fc253f7e4c606ee62beda789175a46b91cfd92c10785d4e84c19ab3c62ebc2",
+      "bytes": 7005,
+      "retrieved": true
+    }
+  ],
+  "official_source_limits": [
+    "삼성증권 민원 안내 본문 HTTP 502로 미확인",
+    "국내 법률/자체 정책/외국 제품 참고를 구분, 정확한 법정 기한/기관 절차/인원 수를 이 자료로 추정하지 않음"
+  ],
+  "intermediate_failure": {
+    "container": "cex-edd-b5fcf1ee0a60",
+    "exit": 1,
+    "container_removed": true,
+    "suites": [
+      {
+        "class": "dustin.cex.domains.kyc.ExitSupervisionIntegrationTest",
+        "tests": 18,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "unrelatedApproverSeesActiveMetadataWithoutPrivateJudgmentOrAuthority()",
+          "staleRevokedAndForeignSessionCannotRead()",
+          "emptyFilteredPageAdvancesAndLaterActiveExitIsNotLost()",
+          "oldMfaDoesNotMeanStaffIdentityOrRoleHasDisappeared()",
+          "incompleteNegativeAndFutureCursorsAreRejected()",
+          "pendingRejectedAndRescindedApprovalsAreNotActive()",
+          "newCustomerDeclarationAndDisabledCustomerDoNotHideActiveExit()",
+          "auditFailureReturnsNoMetadataAndRetryDoesNotChangeHold()",
+          "httpRoleBoundaryNoStoreAndIncompleteCursor()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "[5] how = \"identity\""
+        ],
+        "failed_cases": [
+          {
+            "name": "httpRoleBoundaryNoStoreAndIncompleteCursor()",
+            "message": "org.opentest4j.AssertionFailedError: expected: <true> but was: <false>"
+          }
+        ]
+      },
+      {
+        "class": "dustin.cex.domains.edd.ExitRescissionFactsTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "rescissionJudgmentMustBeExplicit()",
+          "[1] rationale = null",
+          "[2] rationale = \"\"",
+          "[3] rationale = \" \"",
+          "[4] rationale = \"안\\n쪽\"",
+          "[5] rationale = \"안‮쪽\"",
+          "normalizationLengthBoundaryAndSafePrinting()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.ExitRescissionIntegrationTest",
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "expiredRequestIsReadableWithoutRevivingItsDecisionAuthority()",
+          "actualCddClearanceThenIndependentWithdrawalPermitsOrders()",
+          "staleMfaInvalidSessionAndBadPageDoNotProvideOriginal()",
+          "unsupportedIsolationCannotApplyExitOrRescissionEffects()",
+          "decisionAuditFailurePreservesHoldAndProofThenSameProofRetries()",
+          "withdrawalRemovesOnlyExitHoldAndPreservesOriginalApprovedRecord()",
+          "sameFactsAndKeyReplayButChangedReasonOrCheckerConflicts()",
+          "copiedCipherCannotReturnReasonOrCreateViews()",
+          "databaseGuardSerializesDirectConcurrentApprovals()",
+          "anotherBusinessKindCannotAuthorizeWithdrawal()",
+          "noPersonalViewsMeansNoOptionsAndMakerViewsCannotSubstitute()",
+          "newDeclarationBlocksStaleDecisionButHistoryRemainsReadable()",
+          "withdrawalPreservesMoneyAndReopensOnlyFutureAdmissionAfterAllChecks()",
+          "designatedThirdPersonReadsOriginalOnlyThroughAuditedCorrectionPurpose()",
+          "auditFailureReturnsNoReasonAndRollsBackViews()",
+          "makerOrCheckerVersionChangeInvalidatesRequest()",
+          "oldElevenKindSchemaAndLegacyPermanentIndexAreRejected()",
+          "newEvidenceAfterSignatureInvalidatesWithdrawalWithoutConsumingProof()",
+          "checkerVersionAndOldSessionViewsCannotBeReused()",
+          "identicalContentUsesOneSetOfPagesDespiteDifferentSnapshotIds()",
+          "decisionOutcomeCanBeReadAfterResponseLossWithoutReapplyingIt()",
+          "rejectionPreservesHoldAndAllowsNewCorrectionRequest()",
+          "generalTradingRestrictionStillAppliesAfterWithdrawal()",
+          "actualHttpIndependentWithdrawalAndCustomerSafeStatus()",
+          "newExitRequiresNewReferralAndOldWithdrawalReplayCannotClearIt()",
+          "currentExitParticipantsCannotReviewTheirOwnOriginalDecision()",
+          "auditFailureRollsBackProposalSnapshotCipherAndBinding()",
+          "reasonIsAbsentFromMetadataCipherAndAudit()",
+          "customerVersionChangeInvalidatesAlreadySignedWithdrawal()",
+          "bothDifferentBundlesRequireLastPartialPage()",
+          "outsiderCannotSelfAssignCorrectionToReadPrivateOriginalReason()",
+          "oldViewAloneCannotAuthorizeNewOptions()",
+          "rejectedOrUnapprovedExitCannotBeWithdrawn()",
+          "withdrawalNeverRemovesReportingDutyOrGrantsReportingPlaintextAccess()",
+          "customerAndAuditorCannotUseCorrectionRoutes()",
+          "concurrentApprovalAndRejectionCommitExactlyOneDecision()",
+          "concurrentSameKeyProducesOneRequest()",
+          "allNewRecordsRejectUpdateDeleteAndTruncate()",
+          "originalReviewerWhoIsNotDesignatedCannotReadWithdrawalReason()",
+          "receiptFromDifferentSessionCannotAuthorizeWithdrawal()",
+          "oppositeDecisionCannotUseApprovalProof()",
+          "differentOriginalAndCurrentContentRequireBothCompleteSets()",
+          "rescissionCannotBeDuplicatedByDirectDatabaseInsertion()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.RelationshipExitIntegrationTest",
+        "tests": 44,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "customerHttpStatusOmitsInternalReasonAndOtherIdentities()",
+          "newEvidenceAfterSignatureRejectsDecisionWithoutConsumingProof()",
+          "makersInspectionCannotReplaceCheckersOwnReceipt()",
+          "changedCheckerVersionInvalidatesOptionsAndOldReceipts()",
+          "newDeclarationMakesOldReferralUnusableButHistoryStaysReadable()",
+          "approvedExitInitiatesWithoutMarkingClosedOrChangingOriginalCase()",
+          "unauthorizedCustomerAndAuditorCannotReadAnyReviewEndpoint()",
+          "existingReservationReplayAndCancellationSurviveWhileNewOrderIsDenied()",
+          "oneLiveRequestAndOneApprovedDecisionPerCustomer()",
+          "signatureForDifferentBusinessKindCannotApproveExitReview()",
+          "realHttpProposalInspectionOptionsAndBoundSignatureUseStoredFacts()",
+          "receiptFromAnotherSessionIsNotUsable()",
+          "reportingAndExitJudgmentsUseIndependentDecisionsAndNeitherErasesOther()",
+          "sameKeyReplaysExactTargetAndFactsButChangedReasonConflicts()",
+          "oldReceiptCannotAuthorizeDecision()",
+          "actualApproveRejectRaceCommitsExactlyOneDecision()",
+          "assignedMetadataNeverIncludesRationaleOrUnableJudgment()",
+          "everyFrozenPageIsRequiredIncludingFinalPartialPage()",
+          "oldTenKindSchemaFailsWithoutTransformingExistingHistory()",
+          "staleMfaCannotReadOrDecide()",
+          "awaitingEvidenceDecisionIsNotExitReferral()",
+          "sameHumanDifferentAccountsCannotBeMakerAndChecker()",
+          "decisionAuditFailureRollsBackProofAndDecisionThenRetrySucceeds()",
+          "changedCustomerVersionInvalidatesSignatureWithoutConsumingIt()",
+          "expiredRequestIsReadableButCannotIssueNewDecision()",
+          "rejectionAddsNoExitHoldAfterActualCddClearance()",
+          "anotherOperatorsAssignedReviewIsNotVisibleEvenWithCorrectRole()",
+          "newCaseConclusionInvalidatesOldExitReview()",
+          "requesterCannotApproveByChangingRole()",
+          "rejectionPreservesReasonAndAllowsNewRequest()",
+          "explicitUnableJudgmentIsRequiredInsteadOfTreatingAnyRiskAsTermination()",
+          "unapprovedOrNonReferralCannotCreateReview()",
+          "commonReferralVerifierRequiresBusinessTransaction()",
+          "copiedCipherFromAnotherReviewFailsWithoutPlaintextOrReceipt()",
+          "changedMakerVersionInvalidatesBoundRequest()",
+          "oppositeDecisionCannotUseApprovalSignature()",
+          "proposalAuditFailureRollsBackCipherAndBinding()",
+          "newTablesRejectAllMutationStatements()",
+          "laterActualCddAndEddClearanceCannotUndoApprovedExit()",
+          "inspectionAuditFailureRollsBackReceiptAndReturnsNoReason()",
+          "simultaneousSameKeyCreatesOneReview()",
+          "noPageInspectionCannotIssueApprovalOptions()",
+          "customerStatusAuditFailureDoesNotReturnState()",
+          "auditAndGeneralDossierDoNotCopyDecisionOrReason()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.edd.RelationshipExitFactsTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "unableJudgmentCannotBeOmittedOrSubstitutedByRisk()",
+          "[1] rationale = null",
+          "[2] rationale = \"\"",
+          "[3] rationale = \" \"",
+          "[4] rationale = \"안\\n쪽\"",
+          "[5] rationale = \"안‮쪽\"",
+          "normalizationLengthBoundaryAndSafePrinting()"
+        ],
+        "failed_cases": []
+      }
+    ],
+    "actual_xml_totals": {
+      "tests": 119,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "failure_resolution": "공유 불변 역사에서 자신의 새 표본이 첫 페이지에 있다고 잘못 기대한 MVC 테스트를 수정했다. 실제 시작 커서를 HTTP 요청에도 전달했다. 제품의 페이지 계약은 유지하며 최종 선택 회귀를 다시 실행했다.",
+  "documentation_correction": "문서 확정 도구의 전체 파일/부분 발췌 들여쓰기 비교 오류로 첫 문서 커밋의 결과/증적 갱신이 빠졌다. 행 범위별 실제 소스 비교로 수정하고 별도 문서 정정 커밋으로 보완했다. 제품 테스트 실패와 구분한다."
+}

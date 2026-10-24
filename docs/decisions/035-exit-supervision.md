@@ -94,7 +94,7 @@ private Member member(long id,UUID person) {
 
 ## 실행 명령과 결과
 
-__RESULTS__
+선택 JUnit **119개**, 실패·오류·제외 0개. ExitSupervisionIntegrationTest 18개, ExitRescissionFactsTest 7개, ExitRescissionIntegrationTest 43개, RelationshipExitIntegrationTest 44개, RelationshipExitFactsTest 7개. 별도 실행 소유 PostgreSQL을 제거했고 bootJar 빌드도 성공했다. `python3 /tmp/verify-cycle35.py`는 기존 scripts/verify_edd.py의 봇 0명·외부 주소/DB 격리를 유지하고 이번 변경에 관련된 --tests 선택만 조정한 임시 실행기다. 실제 선택과 함수·입력별 사례 목록은 확정 증적에 남겼다. 첫 119개 중 1개는 자신의 새 표본이 전체 역사 첫 페이지에 있다고 기대한 MVC 테스트 오류였다. HTTP에도 시작 커서를 전달해 수정했으며 첫 실패를 최종 통과에 합산하지 않았다.
 
 실제 PG·CDD/EDD·원래 종료/철회 보안키 서명·감사·MVC를 사용했다. 26건 페이지 fixture도 실제 독립 승인/철회이며 이력·트리거를 우회하지 않는다. Didit 세션 생성·엔진 HTTP·Kafka 등 공통 외부 연계는 대역이다. 운영 배포·실물 보안키·외부 기관 검증과 구분한다.
 
@@ -104,6 +104,6 @@ __RESULTS__
 
 ## 관련 커밋과 증적
 
-__COMMITS__
+- [`e397647`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/e397647403c11d2596aca89e4aa8317a69754ec0): 현재 종료 개시의 전사 점검와 관련 회귀.
 
 [035 확정 증적](../reference/exit-supervision-verification-2026-10-24.json), [선행 034](034-exit-rescission.md), [공통 진행 기록](../../../docs/roadmap/edd-case-review.md).
