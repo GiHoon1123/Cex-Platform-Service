@@ -43,6 +43,13 @@ public class ReportingFollowupService {
         @Override public String toString() {return "Detail[외부 참조·메모 생략]";}
     }
     public record Cursor(Instant decidedAt,UUID reviewId) {}
+    /** 원래 승인부터 24시간인 자체 점검 목표다. 영업일이나 법정 보고 기한을 계산하지 않는다. */
+    public record InternalCheck(Instant targetAt,boolean overdue) {
+        public static InternalCheck at(Instant decision,Instant observed) {
+            Instant target=decision.plusSeconds(86400);
+            return new InternalCheck(target,!target.isAfter(observed));
+        }
+    }
     public record Item(UUID reviewId,long userId,Instant internalDecisionAt,Instant internalCheckTargetAt,boolean internalCheckOverdue,
         String legalDeadlineStatus,String taskStatus,Observation latestObservation) {}
     public record Page(List<Item> items,Cursor next,int scanned,String semantics) {
@@ -62,8 +69,9 @@ public class ReportingFollowupService {
         return attempt(actor,()->tx.execute(s->{
             if(after!=null&&(after.decidedAt()==null||after.reviewId()==null||after.decidedAt().isBefore(Instant.EPOCH)||after.decidedAt().isAfter(Instant.now())))throw denied(HttpStatus.BAD_REQUEST);
             var batch=reviews.deliveryBatch(actor,sid,after==null?null:after.decidedAt(),after==null?null:after.reviewId());
-            var items=batch.origins().stream().map(origin->{Instant target=origin.decidedAt().plusSeconds(86400);
-                return new Item(origin.payload().id(),origin.payload().userId(),origin.decidedAt(),target,!target.isAfter(Instant.now()),DEADLINE,"FOLLOW_UP_REQUIRED",latest(origin));}).toList();
+            Instant observed=Instant.now();
+            var items=batch.origins().stream().map(origin->{var check=InternalCheck.at(origin.decidedAt(),observed);
+                return new Item(origin.payload().id(),origin.payload().userId(),origin.decidedAt(),check.targetAt(),check.overdue(),DEADLINE,"FOLLOW_UP_REQUIRED",latest(origin));}).toList();
             Cursor next=batch.more()?new Cursor(batch.lastDecision(),batch.lastReview()):null;
             audit.record(actor,"REPORTING_QUEUE_READ","operator:"+actor,"SUCCESS","ASSIGNED_HISTORY_SCAN");return new Page(items,next,batch.scanned(),"REFRESH_FROM_START_NOT_A_DURABLE_CHECKPOINT");
         }));
@@ -98,7 +106,8 @@ public class ReportingFollowupService {
             audit.record(actor,"REPORTING_FOLLOWUPS_LISTED","compliance-review:"+review,"SUCCESS","METADATA_ONLY");return result;
         }));
     }
-    private Observation latest(ReportingReviewService.DeliveryOrigin origin) {
+    /** 내부 감독에서도 메타데이터와 원래 확정 근거의 연결을 검사한다. 원문 해독이나 열람 권한 부여는 하지 않는다. */
+    Observation latest(ReportingReviewService.DeliveryOrigin origin) {
         var rows=jdbc.queryForList("SELECT id FROM reporting_followups WHERE review_id=? ORDER BY recorded_at DESC,id DESC LIMIT 1",origin.payload().id());
         if(rows.isEmpty())return null;var result=read((UUID)rows.getFirst().get("id"));verifyOrigin(result,origin);return result;
     }
