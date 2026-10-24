@@ -151,3 +151,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [064. 고객 예비 패스키와 분실 키 폐기의 원자성](decisions/064-customer-passkey-devices.md)
 
 - [065. 키 변경 원본 조회와 검증 주소 보안 통지](decisions/065-customer-passkey-notices.md)
+
+- [066. 비밀번호 변경 내용에 결합한 일회 패스키 서명](decisions/066-customer-password-authorization.md)

@@ -29,29 +29,28 @@ CustomerSessionPolicy의 사용자 잠금 안에서 재확인→새 해시 저�
 
 ## 실제 코드와 이해에 필요한 원리
 
-출처: [CustomerPasswordChange.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordChange.java#L40), 현재 소스의 부분 발췌.
+출처: [CustomerPasswordChange.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordChange.java#L38), 현재 소스의 부분 발췌.
 
 ```java
                 // 현재 세션도 남기지 않는다. 갱신/로그인이 같은 사용자 잠금을 사용하므로 옛 자격으로 새 세션을 만들지 못한다.
-                tokens.revokeAllByUserId(actor,LocalDateTime.now());UUID id=UUID.randomUUID();
+                tokens.revokeAllByUserId(actor,LocalDateTime.now());
                 jdbc.update("INSERT INTO customer_password_changes(id,user_id,session_id) VALUES(?,?,?)",id,actor,sid);
                 Instant at=jdbc.queryForObject("SELECT changed_at FROM customer_password_changes WHERE id=?",Timestamp.class,id).toInstant();
                 notice.reserve(actor,id,at);
                 audit.record(actor,"CUSTOMER_PASSWORD_CHANGED","password-change:"+id,"SUCCESS","ALL_SESSIONS_REVOKED");
-                return new Outcome(new Receipt(id,at,true),null);
 ```
 
-061 연결 뒤 현재 발췌다. 같은 트랜잭션에 해시·세션 회수·불변 변경 행·보안 통지 예약·감사가 참여한다. 마지막 감사/DB 커밋이 실패하면 새 비밀번호만 적용하거나 토큰만 회수하는 반쪽 결과를 반환하지 않는다.
+066 추가 인증 연결 뒤 현재 발췌다. 같은 트랜잭션에 해시·세션 회수·불변 변경 행·보안 통지 예약·감사가 참여한다. 마지막 감사/DB 커밋이 실패하면 새 비밀번호만 적용하거나 토큰만 회수하는 반쪽 결과를 반환하지 않는다.
 
-출처: [CustomerPasswordChange.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordChange.java#L35), 현재 소스의 부분 발췌.
+출처: [CustomerPasswordChange.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordChange.java#L66), 현재 소스의 부분 발췌.
 
 ```java
-                    // 사용자 잠금 안에서 실패까지 커밋한다. 밖에서 예외로 변환해 실패 집계가 롤백되지 않게 한다.
-                    audit.record(actor,"CUSTOMER_PASSWORD_CHANGE",target,"DENIED","WRONG_PASSWORD");return new Outcome(null,HttpStatus.FORBIDDEN);
-                }
+            // 사용자 잠금 안에서 실패까지 커밋한다. 호출자는 트랜잭션 밖에서 오류 응답으로 변환한다.
+            audit.record(actor,"CUSTOMER_PASSWORD_CHANGE",target,"DENIED","WRONG_PASSWORD");return HttpStatus.FORBIDDEN;
+        }
 ```
 
-실패 결과는 예외로 즉시 롤백하지 않고 Outcome에 담아 트랜잭션 밖에서403으로 바꾼다. 그 뒤 실패 한도 집계가 남아 병렬 요청으로 우회하기 어렵다.
+실패 결과는 예외로 즉시 롤백하지 않고 검증 함수가 반환한 실패 상태를 각 응답 결과에 담아 트랜잭션 밖에서403으로 바꾼다. 그 뒤 실패 한도 집계가 남아 병렬 요청으로 우회하기 어렵다.
 
 출처: [CustomerPasswordPolicy.java](../../src/main/java/dustin/cex/domains/auth/service/CustomerPasswordPolicy.java#L7), 현재 소스의 부분 발췌.
 
@@ -114,3 +113,5 @@ String.length는 TypeScript처럼 UTF-16 코드 단위다. codePointCount는 서
 - [격리 실행 증적](../reference/060-customer-password-change-verification-2026-10-25.json)
 
 063의 [고객 패스키 로그인](063-customer-passkey-login.md)을 등록한 고객은 비밀번호 단계의 대기 세션으로 이 고객 보안 업무를 수행할 수 없다. 실제 서명 후 새 세션이 필요하며, 당시 검증 수치는 각 기록의 실행 시점으로 구분한다.
+
+등록된 고객의 변경 전용 옵션/서명은 [066 구현](066-customer-password-authorization.md)을 따른다. 현재 발췌의 실패 검증 함수 분리는066 소스이며060의 당시 테스트 수치는 변경하지 않는다.
