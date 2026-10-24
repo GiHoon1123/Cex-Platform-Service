@@ -1,4 +1,5 @@
 """서로 다른 Spring 설정은 별도 DB 서버에 두고 고객 계정 보안 계약을 검증한다."""
+import argparse
 import json
 import os
 from pathlib import Path
@@ -11,7 +12,13 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT.parent / ".local"
 DOCKER = shutil.which("docker") or "/usr/local/bin/docker"
-GROUPS = {"account": ["*CustomerSessionControlIntegrationTest", "*CustomerPasswordChangeIntegrationTest", "*CustomerPasswordPolicyTest"], "notices": ["*CustomerPasswordNoticeIntegrationTest"], "mfa": ["*CustomerMfaIntegrationTest"], "devices": ["*CustomerDeviceIntegrationTest"], "mfa-notices": ["*CustomerMfaNoticeIntegrationTest"], "password-authorization": ["*CustomerPasswordAuthorizationIntegrationTest"], "enrollment-email": ["*CustomerEnrollmentEmailIntegrationTest"]}
+GROUPS = {"account": ["*CustomerSessionControlIntegrationTest", "*CustomerPasswordChangeIntegrationTest", "*CustomerPasswordPolicyTest"], "notices": ["*CustomerPasswordNoticeIntegrationTest"], "mfa": ["*CustomerMfaIntegrationTest"], "devices": ["*CustomerDeviceIntegrationTest"], "mfa-notices": ["*CustomerMfaNoticeIntegrationTest"], "password-authorization": ["*CustomerPasswordAuthorizationIntegrationTest"], "enrollment-email": ["*CustomerEnrollmentEmailIntegrationTest"], "recovery": ["*CustomerRecoveryIntegrationTest"]}
+# 실패한 업무 묶음만 다시 실행할 때도 같은 격리 계약을 유지한다. 기본은 전체 묶음이다.
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--group", action="append", choices=GROUPS, help="검증할 업무 묶음; 여러 번 지정 가능")
+selection = parser.parse_args().group
+if selection:
+    GROUPS = {name: patterns for name, patterns in GROUPS.items() if name in selection}
 result = {"groups": [], "exit": None}
 ARTIFACTS.mkdir(exist_ok=True)
 try:
