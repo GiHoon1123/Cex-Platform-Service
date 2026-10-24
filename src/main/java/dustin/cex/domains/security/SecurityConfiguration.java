@@ -82,6 +82,11 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits/*/approve/options","/api/admin/compliance/relationship-exits/*/reject/options",
                     "/api/admin/compliance/relationship-exits/*/approve","/api/admin/compliance/relationship-exits/*/reject").access(audited(audit,sessions,"APPROVER"))
+                // 고객 사유는 현재 종료 대상에만 접수하고 원문은 지정 운영 인물에게만 제공한다.
+                .requestMatchers(HttpMethod.POST,"/api/customer/relationship/review-requests").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.GET,"/api/customer/relationship/review-requests","/api/customer/relationship/review-requests/*").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/relationship-exits/*/review-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-review-requests/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/customer/relationship").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/reviews").access(audited(audit,sessions,"OPERATOR","APPROVER"))
