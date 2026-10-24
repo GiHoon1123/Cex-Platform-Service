@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 public class CustomerReviewUpdateTimeline {
     private final JdbcTemplate jdbc;
     public CustomerReviewUpdateTimeline(JdbcTemplate jdbc){this.jdbc=jdbc;}
-    public CustomerReviewUpdateTarget.Assessment assess(UUID review,Instant received,Instant finalized,Instant observed){
+    public CustomerReviewUpdateTarget.Assessment assess(UUID review,Instant received,Instant finalized){
         // 최종 승인은 마지막 공개 응답이다. 시각 정렬을 쓰면 시계 역행을 숨길 수 있어 종류·논리 순번으로 정렬한다.
         var row=jdbc.queryForMap("""
             WITH events AS (
@@ -23,7 +23,8 @@ public class CustomerReviewUpdateTimeline {
                 coalesce(bool_or(elapsed<interval '0 seconds'),false) AS reversed
             FROM gaps
             """,Timestamp.from(received),review,finalized==null?null:Timestamp.from(finalized),finalized==null?null:Timestamp.from(finalized));
+        // 같은 조회 도중 확정된 새 회신을 미래 데이터로 오인하지 않도록 DB 결과를 받은 뒤 관측한다.
         var latest=(Timestamp)row.get("latest_public");
-        return CustomerReviewUpdateTarget.assess(received,latest==null?null:latest.toInstant(),finalized,((Number)row.get("breached")).longValue(),Boolean.TRUE.equals(row.get("reversed")),observed);
+        return CustomerReviewUpdateTarget.assess(received,latest==null?null:latest.toInstant(),finalized,((Number)row.get("breached")).longValue(),Boolean.TRUE.equals(row.get("reversed")),Instant.now());
     }
 }
