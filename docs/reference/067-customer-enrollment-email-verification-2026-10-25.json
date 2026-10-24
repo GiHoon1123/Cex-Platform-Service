@@ -1,0 +1,1154 @@
+{
+  "cycle": 67,
+  "implementation_commit": "a1374a84e5b7b417475e37930feb6e120f7727e1",
+  "verification": {
+    "account": {
+      "groups": [
+        {
+          "group": "account",
+          "container": "cex-account-3e8f1d0c94c7",
+          "selection": [
+            "*CustomerSessionControlIntegrationTest",
+            "*CustomerPasswordChangeIntegrationTest",
+            "*CustomerPasswordPolicyTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 35,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "concurrentRevocationHasOneEffect()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "httpOwnReadRevokeAndRoleBoundary()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "listContainsOnlyOwnMetadataAndMarksCurrent()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "foreignAndAbsentTargetAreEquallyNotFound()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "listAuditFailurePreventsResponse()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "revocationAuditFailureRollsBackFlag()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "invalidCursorAndAmbientMutationAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "otherSessionRevocationCanBeReplayed()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "operatorForeignAndDisabledSessionsCannotUseCustomerFlow()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "revokedRefreshTokenCannotRotate()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "revokedAndExpiredAreDistinguished()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "currentRevocationImmediatelyBlocksOldAccessJwt()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "refreshRaceCannotRestoreRevokedSession()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSessionControlIntegrationTest",
+              "name": "pagesPreserveAllSameTimestampRows()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordPolicyTest",
+              "name": "codePointsAreCountedRatherThanUtf16Units()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordPolicyTest",
+              "name": "controlsAndUnpairedSurrogatesAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordPolicyTest",
+              "name": "noCompositionRuleOrWhitespaceTrimmingIsAdded()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordPolicyTest",
+              "name": "lengthBoundariesAreEnforced()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "ambientTransactionIsRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "concurrentChangesCommitOnePasswordAndOneEvent()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "currentSessionCannotChangeAgainAfterSuccess()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "successChangesHashRevokesAllAndRecordsOneEvent()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "explicitAuthFailuresHaveCorrectHttpStatus()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "malformedPasswordDoesNotAppearInLogs(CapturedOutput)"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "unregisteredCustomerCannotRequestPasskeyChangeOptions()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "auditFailureRollsBackHashSessionsAndEvent()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "fiveWrongAttemptsAreDurableAndBoundFurtherChanges()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "signupAndChangeUseSameNewPasswordPolicy()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "pendingOperatorMfaCannotRefreshAndReturnsForbidden()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "actualHttpReturnsReceiptButNoTokens()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "changedPasswordCannotMintOldRefreshSession()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "operatorForeignAndDisabledSessionsAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "wrongCurrentDoesNotChangeHashOrSessions()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "immutableEventsCannotBeUpdatedDeletedOrTruncated()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordChangeIntegrationTest",
+              "name": "weakSameAndInvalidInputsAreRejected()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "notices",
+          "container": "cex-account-4f1a397c39e3",
+          "selection": [
+            "*CustomerPasswordNoticeIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 13,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "verifiedAddressReceivesSecurityMailWithoutServiceOptIn()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "passwordAuditFailureAlsoRollsBackQueuedMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "historyAuditFailurePreventsResponse()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "actualHttpHistoryRequiresFreshValidCustomerSession()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "disabledAccountStillGetsVerifiedSecurityWarning()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "operatorsCannotReleaseExhaustedSecurityMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "unverifiedAddressHasHistoryButNoExternalMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "addressChangeBeforeDispatchSuppressesOriginalRecipient()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "oldSessionCannotReadHistoryButNewLoginCan()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "foreignOrOperatorSessionCannotReadCustomerHistory()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "sameTimestampHistoryUsesIdCursorWithoutOmission()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "mailReservationFailureRollsBackPasswordSessionsAndHistory()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordNoticeIntegrationTest",
+              "name": "invalidCursorIsRejected()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "mfa",
+          "container": "cex-account-b00c3681b390",
+          "selection": [
+            "*CustomerMfaIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 17,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "concurrentSignatureConsumptionCommitsOnce()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "operatorForeignAndDisabledSessionsCannotEnroll()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "registrationRejectsForeignOriginAndMissingUserVerification()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "firstRegistrationNeedsVerifiedAddressAndCurrentPassword()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "actualHttpOptionsRequireAuthenticationAndDoNotExposePassword()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "enrollmentFactIsImmutableAndMissingKeyDoesNotRestorePasswordAccess()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "expiredPendingSessionAndOldMfaTimeCannotAuthorizeCustomer()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "registrationRevokesAllAndNextPasswordLoginIsPending()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "fiveFailuresAreDurableAndBoundFurtherProofs()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "foreignKeyHandlePurposeAndExpiredChallengeAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "registrationAuditFailureRollsBackKeyFactAndRevocation()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "actualSignatureRotatesSessionAndOpensCustomerHttpOnly()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "authenticationRejectsForeignOriginAndMissingUserVerification()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "authenticationAuditFailureRollsBackCounterChallengeAndSession()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "passwordOnlyReloginPreservesStrongSessionUntilActualSignature()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "pendingRefreshFailsAndVerifiedRefreshDoesNotExtendMfaTime()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaIntegrationTest",
+              "name": "addressChangeInvalidatesEnrollmentOptions()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "devices",
+          "container": "cex-account-764ec86c425e",
+          "selection": [
+            "*CustomerDeviceIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 11,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "foreignAndOperatorSessionsCannotManageCustomerKeys()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "backupRequiresVerifiedAndFreshExistingKey()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "keyChangeFactsCannotBeRewrittenOrErased()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "concurrentRevokeHasOneEffect()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "fiveKeyLimitCannotBeExceeded()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "lastKeyAndCurrentlySigningKeyCannotBeRemoved()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "backupKeyCanRevokeLostKeyAndEndsEverySession()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "deviceHttpReturnsOnlyOwnMetadata()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "backupAuditFailureRestoresOriginalKeyAndHistory()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "revokeAuditFailureRestoresKeySessionsAndHistory()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerDeviceIntegrationTest",
+              "name": "backupRevokesAllAndBothKeysCanAuthenticate()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "mfa-notices",
+          "container": "cex-account-a444b0465086",
+          "selection": [
+            "*CustomerMfaNoticeIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 10,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "revokeAuditFailureAlsoRollsBackQueuedSecurityWarning()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "historyCursorHandlesSameTimeAndRejectsInvalidPositions()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "changedAddressSuppressesOriginalRecipient()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "disabledCustomerStillReceivesSecurityWarning()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "verifiedAddressGetsFixedSecurityNoticeWithoutServiceOptIn()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "ownHistoryIncludesRemovedKeyAndHttpRequiresVerifiedCustomer()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "reservationFailureRollsBackKeyFactSessionsAndMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "historyAuditFailureDoesNotReturnFacts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "unverifiedChangedAddressDoesNotPreventLostKeyRevocation()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMfaNoticeIntegrationTest",
+              "name": "exhaustedKeyWarningCannotUseOperatorExtraRetry()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "password-authorization",
+          "container": "cex-account-72f318322a53",
+          "selection": [
+            "*CustomerPasswordAuthorizationIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 14,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "loginChallengeCannotAuthorizePasswordChange()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "optionsExposePurposeWithoutPasswordsOrPublicPasswordHashes()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "optionsAuditFailureCreatesNoPendingAuthorization()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "verifiedLoginAloneCannotChangePassword()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "newlyVerifiedSessionCannotUsePreviousSessionsOptions()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "sourceMustExistAtCommitAndAuthorizationFactsAreImmutable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "proofCannotApplyDifferentNewPasswordAndOriginalStillWorks()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "passwordSetupFailureDoesNotConsumeVerificationBudget()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "factorSetupFailureDoesNotConsumeVerificationBudget()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "concurrentUseCommitsOneChangeAndOneBinding()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "fiveFailedProofsAreDurableAndRateLimited()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "wrongOriginUserVerificationKeyAndExpiredProofAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "exactSignatureChangesPasswordAndBindsImmutableSource()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerPasswordAuthorizationIntegrationTest",
+              "name": "finalAuditFailureRollsBackSignatureChangeSessionsAndMail()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "enrollment-email",
+          "container": "cex-account-7d5ea1b3e44d",
+          "selection": [
+            "*CustomerEnrollmentEmailIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 9,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "anotherSessionCannotReuseConfirmedPossession()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "historicalFactWithoutSessionIsNotInferred()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "consumedOldTokenDoesNotRenewConfirmationTime()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "possessionSessionBindingIsImmutable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "idempotentRequestOrConfirmationCannotRebindOldProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "nineMinuteConfirmationIsStillFresh()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "confirmationAuditFailureRollsBackPossessionBinding()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "historicalVerificationCannotBootstrapFirstKey()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEnrollmentEmailIntegrationTest",
+              "name": "newConfirmationAllowsFirstKeyWithoutRewritingOldFacts()"
+            }
+          ],
+          "container_removed": true
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 109,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "mail": {
+      "groups": [
+        {
+          "group": "mail",
+          "container": "cex-mail-99865e6a5e17",
+          "selection": [
+            "*CustomerMailOutboxIntegrationTest",
+            "*CustomerEmailVerificationIntegrationTest",
+            "*CustomerSmtpTransportTest",
+            "*CustomerMailOperationsIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 54,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "tokenReceivedByActualSmtpConfirmsOnceWithoutChangingUserVersion()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "concurrentNewRequestsReserveOnlyOneMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "changedAddressInvalidatesChallengeAndVerification()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "malformedTokenIsRejectedWithoutAppearingInLogs(CapturedOutput)"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "verificationAuditFailureRollsBackTokenConsumption()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "onlyHashedTokenAndEncryptedMailAreStored()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "fifthWrongTokenLimitsFurtherAttempts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "sameKeyReturnsSameReceiptAndOneMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "disabledAccountCannotConfirm()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "wrongTokenAndForeignSessionDoNotVerify()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "wrongTokenAfterConsumptionStillFails()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "anonymousAndOperatorCannotRequestVerification()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "ownershipRecordsAreImmutable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "newRequestWithinCooldownIsRejectedButReplayWorks()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "expiredChallengeCannotConfirm()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "requestAuditFailureRollsBackChallengeAndMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "httpNeverReturnsTokenAndGetDoesNotConsume()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "concurrentConfirmationHasOneEffect()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerEmailVerificationIntegrationTest",
+              "name": "hourlyLimitUsesHistoricalRequestsWithoutRewritingThem()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "unsafeOrMissingPublicBaseIsRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "remoteAuthenticationIsRequired()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "blankRemoteCredentialsAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "requiredStarttlsEnforcesIdentityAuthAndFiniteTimeouts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "cleartextSmtpIsRejectedBeforeNetwork()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "remoteTrustOverrideIsRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerSmtpTransportTest",
+              "name": "optionalStarttlsIsRejectedBeforeNetwork()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "acceptedAndSuppressedAreNotAttention()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "emptyFilteredPagesStillAdvance()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "auditorCanReadButNotDispatch()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "activeLeaseIsNotAnErrorButExpiredLeaseIs()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "absentMalformedAndFuturePositionsAreRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "exhaustedIsVisibleWithoutRecipientTokenOrLease()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "auditFailurePreventsMetadataResponse()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "httpReadIsAuthenticatedAndDoesNotExposeSecrets()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "customerAndForeignSessionCannotInspect()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "overdueRetrySignalsDelayWithoutStealingLease()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "expiredMetadataIsVisibleWithoutDecryptingPayload()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOperationsIntegrationTest",
+              "name": "disabledOrStaleStaffIsRejected()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "expiredQueuedPayloadIsSuppressedWithoutSmtp()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "concurrentClaimHasOneOwner()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "purgeAuditFailureRestoresCiphertext()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "duplicateBusinessReferenceReplaysButChangedPayloadFails()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "immutableJobsAndAttemptsRejectUpdateDeleteTruncate()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "terminalExpiredPayloadCanBePurgedWithoutDeletingAuditOrJob()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "expiredClaimAfterActualSmtpCanDuplicateSameMessageId()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "changedRecipientSuppressesBeforeAnySmtp()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "encryptedQueueDoesNotExposeAddressOrToken()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "accountDisableSuppressesBeforeAnySmtp()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "actualSmtpsAcceptsFixedTemplateAndStableMessageId()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "smtpResultAuditFailureRollsBackAndSameLeaseCanRetry()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "producerRollbackLeavesNoDeliverableJob()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "retryStopsAtFiveClaimsWithoutFalseSuccess()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "expiredLeaseCanBeReclaimedButOldOwnerCannotOverwrite()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailOutboxIntegrationTest",
+              "name": "activeOrRecentPayloadCannotBePurged()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "notices",
+          "container": "cex-mail-9f02233dc415",
+          "selection": [
+            "*CustomerServiceMailIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 16,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "defaultOffAndUnverifiedCannotEnable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "finalDecisionAuditFailureRestoresSignatureAndMailReservation()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "sameReplyKeyCannotReserveTwice()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "draftAndRejectionNeverReserveMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "changedAddressInvalidatesConsentAndSuppressesOldTarget()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "unsubscribeBeforeSendSuppressesQueuedMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "preferenceHistoryReplayDoesNotUndoLaterUnsubscribe()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "replyAuditFailureRollsBackMailAndBusinessThenRetries()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "browserPutPreflightAcceptsOnlyConfiguredOrigin()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "preferenceHistoryIsImmutable()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "disableBeforeSendSuppressesQueuedMail()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "preferenceAuditFailureDoesNotChangeCurrentChoice()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "finalApprovalReservesOneGenericNotice()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "verificationAloneDoesNotSubscribe()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "actualStatusMailIsGenericAndCannotLeakInternalReason()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerServiceMailIntegrationTest",
+              "name": "httpPreferenceRequiresCustomerAndReturnsCurrentEligibility()"
+            }
+          ],
+          "container_removed": true
+        },
+        {
+          "group": "redrive",
+          "container": "cex-mail-5561b1685718",
+          "selection": [
+            "*CustomerMailRetryIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 25,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "changedRequesterOrCheckerVersionInvalidatesPlan()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "anotherBusinessProofCannotApprove()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "proposalAuditFailureRollsBackBindingAndCanRetry()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "decisionAuditFailureRestoresProofAndGrantState()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "sameKeyReplaysAfterApprovalWithoutAnotherGrant()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "oppositeDirectionProofCannotApprove()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "disabledCustomerCannotBeReleased()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "ownInspectionAndExactHashAreRequired()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "verificationMailCannotBeReleasedByOperators()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "changedRecipientInvalidatesProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "requesterAndUnassignedCheckerCannotApprove()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "actualHttpRequiresDesignatedApproverAndBoundProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "changedCheckerVersionInvalidatesProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "sameHumanAcrossTwoAccountsCannotPropose()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "approvalRecordsRejectUpdateDeleteTruncate()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "repeatedApprovalCannotCreateSecondDecision()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "rejectionDoesNotReleaseAndAllowsNewRequest()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "unsubscribeInvalidatesPlanAndDoesNotConsumeProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "signedApprovalKeepsOriginalEnvelopeAndIncreasesCumulativeAttempt()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "unsubscribeAfterApprovalStillSuppressesSmtp()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "wrongSessionAndAmbientTransactionCannotPropose()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "pendingRequestBlocksAnotherAndChangedKeyTargetConflicts()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "concurrentDecisionsCommitOneGrant()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "expiredSignedPlanIsReadableButCannotBeConfirmed()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+              "name": "extraBudgetStopsAtTenAndCannotBeGrantedTwice()"
+            }
+          ],
+          "container_removed": true
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 95,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "commands": [
+      {
+        "command": [
+          "python3",
+          "scripts/verify_customer_mail.py"
+        ],
+        "exit": 0,
+        "last_xml": {
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "changedRequesterOrCheckerVersionInvalidatesPlan()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "anotherBusinessProofCannotApprove()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "proposalAuditFailureRollsBackBindingAndCanRetry()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "decisionAuditFailureRestoresProofAndGrantState()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "sameKeyReplaysAfterApprovalWithoutAnotherGrant()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "oppositeDirectionProofCannotApprove()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "disabledCustomerCannotBeReleased()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "ownInspectionAndExactHashAreRequired()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "verificationMailCannotBeReleasedByOperators()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "changedRecipientInvalidatesProof()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "requesterAndUnassignedCheckerCannotApprove()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "actualHttpRequiresDesignatedApproverAndBoundProof()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "changedCheckerVersionInvalidatesProof()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "sameHumanAcrossTwoAccountsCannotPropose()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "approvalRecordsRejectUpdateDeleteTruncate()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "repeatedApprovalCannotCreateSecondDecision()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "rejectionDoesNotReleaseAndAllowsNewRequest()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "unsubscribeInvalidatesPlanAndDoesNotConsumeProof()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "signedApprovalKeepsOriginalEnvelopeAndIncreasesCumulativeAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "unsubscribeAfterApprovalStillSuppressesSmtp()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "wrongSessionAndAmbientTransactionCannotPropose()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "pendingRequestBlocksAnotherAndChangedKeyTargetConflicts()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "concurrentDecisionsCommitOneGrant()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "expiredSignedPlanIsReadableButCannotBeConfirmed()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerMailRetryIntegrationTest",
+            "name": "extraBudgetStopsAtTenAndCannotBeGrantedTwice()"
+          }
+        ]
+      },
+      {
+        "command": [
+          "./gradlew",
+          "operatorAdminJar",
+          "bootJar",
+          "jmhClasses",
+          "writeDependencyInventory",
+          "--console=plain"
+        ],
+        "exit": 0,
+        "last_xml": {
+          "tests": 0,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": []
+      }
+    ]
+  }
+}

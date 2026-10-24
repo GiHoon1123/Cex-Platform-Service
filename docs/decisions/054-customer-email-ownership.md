@@ -42,7 +42,7 @@ CustomerSessionPolicy는 기존 고객 재검토의 계정 잠금·CUSTOMER·활
 
 063 연결 뒤 현재 발췌다. 등록된 고객의 실제 패스키 인증도 검사한다. User를 반환하되 트랜잭션 안에서만 사용한다. HTTP 필터만 믿지 않고 직접 서비스 호출에서도 현재 계정과 세션을 검사한다. TypeScript 타입 선언과 달리 User의 JPA 잠금은 DB 트랜잭션 종료까지 유지된다.
 
-출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L49), 현재 소스의 부분 발췌.
+출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L48), 현재 소스의 부분 발췌.
 
 ```java
         UUID id=UUID.randomUUID();byte[] bytes=new byte[32];new SecureRandom().nextBytes(bytes);String token=Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -54,19 +54,21 @@ CustomerSessionPolicy는 기존 고객 재검토의 계정 잠금·CUSTOMER·활
 
 SecureRandom은 추측하기 어려운 난수를 만들고 URL-safe Base64는 메일 링크에 담을 문자열을 만든다. digest는 challengeId와 토큰을 묶는다. 도전/메일 예약/필수 감사는 한 트랜잭션이므로 어느 하나 실패하면 모두 롤백한다.
 
-출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L62), 현재 소스의 부분 발췌.
+출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L61), 현재 소스의 부분 발췌.
 
 ```java
         if(!MessageDigest.isEqual(digest(id,token).getBytes(StandardCharsets.US_ASCII),((String)row.get("token_hash")).getBytes(StandardCharsets.US_ASCII))){audit.denied(actor,"CUSTOMER_EMAIL_CHECK","email-check:"+id,"WRONG_TOKEN");throw denied(HttpStatus.FORBIDDEN);}
         if(!crypto.keyId().equals(row.get("key_id"))||!addressMac(user.getEmail()).equals(row.get("email_mac")))throw denied(HttpStatus.CONFLICT);
         // 소모된 토큰의 같은 요청은 기존 사실만 반환한다. 새 검증 효과나 다른 주소에 대한 권한은 만들지 않는다.
-        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_email_confirmations WHERE challenge_id=?)",Boolean.class,id))return new Status(true);
+        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_email_confirmations WHERE challenge_id=?)",Boolean.class,id))return new Status(true,recipients.recentlyVerified(user,sid));
         if(!((Timestamp)row.get("expires_at")).toInstant().isAfter(Instant.now()))throw denied(HttpStatus.GONE);
         jdbc.update("INSERT INTO customer_email_confirmations(challenge_id,user_id,email_mac,key_id) VALUES(?,?,?,?)",id,actor,row.get("email_mac"),crypto.keyId());
-        audit.record(actor,"CUSTOMER_EMAIL_VERIFIED","email-check:"+id,"SUCCESS","CURRENT_ADDRESS_ONLY");return new Status(true);
+        // 실제 토큰을 확인한 현재 세션을 불변 사실로 남긴다. 소비된 토큰의 재호출로 이 결합을 갱신하지 않는다.
+        jdbc.update("INSERT INTO customer_email_confirmation_sessions(challenge_id,session_id) VALUES(?,?)",id,sid);
+        audit.record(actor,"CUSTOMER_EMAIL_VERIFIED","email-check:"+id,"SUCCESS","CURRENT_ADDRESS_ONLY");return new Status(true,recipients.recentlyVerified(user,sid));
 ```
 
-해시는 일정 시간 비교 API로 대조한다. 현재 주소와 키를 검사한 뒤 이미 소모된 같은 토큰은 기존 사실만 반환한다. 토큰을 반복 소모해 새 확인/금융 효과를 만들지 않는다. 다른 토큰은 소모 후에도 거부한다.
+067 이후 현재 발췌는 실제 확인 세션의 불변 근거도 함께 저장한다. 해시는 일정 시간 비교 API로 대조한다. 현재 주소와 키를 검사한 뒤 이미 소모된 같은 토큰은 기존 사실만 반환한다. 토큰을 반복 소모해 새 확인/금융 효과를 만들지 않는다. 다른 토큰은 소모 후에도 거부한다.
 
 ## 실행 명령과 결과
 
@@ -110,3 +112,5 @@ SecureRandom은 추측하기 어려운 난수를 만들고 URL-safe Base64는 �
 - [격리 실행 증적](../reference/054-customer-email-ownership-verification-2026-10-24.json)
 
 2026-10-24 현재 확인 테스트는055의 로그 비노출 회귀1개를 더해19개다. 당시054의18개 결과는 유지하며 컨트롤러 중복 검증 제거와 현재 실행은 [055](055-customer-service-mail.md)를 따른다.
+
+067에서 최초 키 설정용 최근 확인을 추가했다. 현재 상태 응답은 verified/recentlyVerified를 구분하고 이미 확인한 주소도 기존 발송 한도 안에서 새 요청/토큰으로 다시 확인할 수 있다. 실제 소유 확인의 세션은 새 확인과 함께 기록하며 과거 원본을 갱신하거나 추측하지 않는다. [현재 구현](067-customer-enrollment-email.md)을 따른다.

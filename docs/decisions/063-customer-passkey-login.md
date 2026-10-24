@@ -124,3 +124,5 @@
 - [격리 실행 증적](../reference/063-customer-passkey-login-verification-2026-10-25.json)
 
 064에서 [예비 키·분실 키 폐기](064-customer-passkey-devices.md)를 추가했다. 최초 등록/로그인 검증 수치는063 당시 결과이며 위 현재 발췌는064 소스와 대조한다.
+
+067에서 [최초 등록의 최근 이메일 확인](067-customer-enrollment-email.md)을 강화했다. 최초 등록은 같은 세션에서10분 내 실제 확인한 근거가 필요하며 기존 키를 가진 계정은 기존 패스키의 최근 인증을 사용한다.

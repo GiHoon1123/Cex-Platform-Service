@@ -36,14 +36,14 @@
     private void requireRegistration(User user,UUID sid){
         var keys=verifier.keys(user.getId());
         if(keys.size()>=5||!recipients.verified(user))throw denied();
-        // 최초 등록에는 현재 비밀번호/확인 주소를, 예비 키에는 추가로 살아 있는 기존 키의 최근 서명을 요구한다.
+        // 최초 등록에는 이번 세션의 최근 이메일 확인/현재 비밀번호를, 예비 키에는 살아 있는 기존 키의 최근 서명을 요구한다.
         if(policy.required(user.getId())){
             if(!policy.fresh(user.getId(),tokens.findBySessionId(sid).orElseThrow()))throw denied();
-        }else if(!keys.isEmpty())throw denied();
+        }else if(!keys.isEmpty()||!recipients.recentlyVerified(user,sid))throw denied();
     }
 ```
 
-기존 최초 등록 사실을 지우거나 수정하지 않는다. 정책상 이미 등록된 고객은 현재 서명 키/시각까지 만족해야 추가할 수 있다. 분기 자체는 고객의 정상 등록 상태를 표현하며 과거 API/데이터 형식을 우회하는 폴백이 아니다.
+067 이후 현재 발췌는 최초 등록에 이번 세션의 최근 이메일 확인도 요구한다. 기존 최초 등록 사실을 지우거나 수정하지 않는다. 정책상 이미 등록된 고객은 현재 서명 키/시각까지 만족해야 추가할 수 있다. 분기 자체는 고객의 정상 등록 상태를 표현하며 과거 API/데이터 형식을 우회하는 폴백이 아니다.
 
 출처: [CustomerDeviceService.java](../../src/main/java/dustin/cex/domains/security/CustomerDeviceService.java#L47), 현재 소스의 부분 발췌.
 

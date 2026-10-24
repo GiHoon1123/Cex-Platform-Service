@@ -31,7 +31,7 @@
 
 ## 이해에 필요한 문법과 실제 코드
 
-출처: [CustomerMailRecipientPolicy.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailRecipientPolicy.java#L15), 현재 소스의 부분 발췌.
+출처: [CustomerMailRecipientPolicy.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailRecipientPolicy.java#L25), 현재 소스의 부분 발췌.
 
 ```java
     public boolean allowed(User user){
