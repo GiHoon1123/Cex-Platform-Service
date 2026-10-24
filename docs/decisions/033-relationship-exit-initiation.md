@@ -96,7 +96,7 @@ dossiers.verify(r.dossier(),r.caseId(),r.user());if(!r.dossier().digest().equals
 
 ### 서명 후 변한 고객과 근거 재검사
 
-출처: [RelationshipExitService.java](../../src/main/java/dustin/cex/domains/edd/RelationshipExitService.java#L149)
+출처: [RelationshipExitService.java](../../src/main/java/dustin/cex/domains/edd/RelationshipExitService.java#L153)
 
 ```java
 var origin=referrals.read(p.referralId());long revision=referrals.current(origin);
@@ -109,7 +109,7 @@ facts(r);
 
 ### 승인·서명 소비·감사의 원자적 확정
 
-출처: [RelationshipExitService.java](../../src/main/java/dustin/cex/domains/edd/RelationshipExitService.java#L108)
+출처: [RelationshipExitService.java](../../src/main/java/dustin/cex/domains/edd/RelationshipExitService.java#L110)
 
 ```java
 mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.RELATIONSHIP_EXIT,id,hash,approve,proof);
@@ -126,18 +126,30 @@ TransactionTemplate 콜백 안에서 업무별 증명을 검증하고 불변 결
 
 ```java
 // 관계 종료 개시 결정은 일반 거래 제한 해제나 고객의 새 신고와 독립된 차단 근거다.
-|| Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_exit_decisions WHERE user_id=? AND approved)",Boolean.class,userId))
+|| Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_active_exits WHERE user_id=?)",Boolean.class,userId))
 ```
 
 EXISTS는 승인된 종료 개시 결정의 존재를 확인한다. 신규 예약과 같은 고객 행 잠금 뒤 수행하는 SQL이므로 승인과 주문 접수의 순서를 정한다. 종료 판정을 엔진으로 보내거나 코어의 메모리 상태를 읽지 않는다. 일반 거래 제한 플래그를 해제해도 이 결정은 남는다.
 
-출처: [relationship-exit-schema.sql](../../src/main/resources/edd/relationship-exit-schema.sql#L24)
+출처: [relationship-exit-rescission-schema.sql](../../src/main/resources/edd/relationship-exit-rescission-schema.sql#L27)
 
 ```sql
-CREATE UNIQUE INDEX IF NOT EXISTS relationship_exit_one_approved ON relationship_exit_decisions(user_id) WHERE approved;
+CREATE OR REPLACE FUNCTION relationship_exit_require_single_active() RETURNS trigger LANGUAGE plpgsql VOLATILE AS $$
+BEGIN
+ IF NEW.approved THEN
+  IF current_setting('transaction_isolation') <> 'read committed' THEN
+   RAISE EXCEPTION '종료 업무는 READ COMMITTED 격리 수준이 필요합니다' USING ERRCODE='25000';
+  END IF;
+  PERFORM 1 FROM users WHERE id=NEW.user_id FOR UPDATE;
+  IF EXISTS(SELECT 1 FROM relationship_active_exits WHERE user_id=NEW.user_id) THEN
+   RAISE EXCEPTION '이미 유효한 종료 개시 결정이 있습니다' USING ERRCODE='23505';
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;
 ```
 
-부분 고유 인덱스는 approved=true인 고객만 유일하게 만든다. 반려 기록은 여러 개 남길 수 있지만 승인 효과는 고객별 하나다. 복합 외래 키로 결정의 고객과 원래 요청의 고객을 결합한다. 애플리케이션 잠금 외에 DB에서도 중복 효과를 막는다.
+034 이후의 현재 코드다. 고객 행을 잠근 뒤 승인되고 아직 철회되지 않은 활성 결정이 있는지 검사한다. 과거 승인 이력은 여러 개 보존하되 활성 효과는 고객별 하나다. 복합 외래 키로 고객과 원래 요청을 결합하고 DB에서도 단일 활성 효과를 강제한다. 033 당시의 영구 단일 승인 인덱스는 더 이상 지원하지 않는다. 기존 DB를 자동 변환하지 않았으며 자세한 변경은 [034](034-exit-rescission.md)를 따른다.
 
 ### 고객 응답과 캐시 경계
 
@@ -149,7 +161,9 @@ public CustomerStatus customerStatus(long actor) {
         var person=users.lockById(actor).orElse(null);
         if(person==null||person.getRole()!=UserRole.CUSTOMER||!person.isAuthenticationAllowed())throw denied(HttpStatus.FORBIDDEN);
         audit.record(actor,"RELATIONSHIP_STATUS_READ","customer:"+actor,"SUCCESS","CUSTOMER_SAFE_STATUS");
-        return new CustomerStatus(exitInitiated(actor)?"EXIT_PENDING":"NO_EXIT_DECISION");
+        if(exitInitiated(actor))return new CustomerStatus("EXIT_PENDING");
+        boolean history=Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_exit_decisions WHERE user_id=? AND approved)",Boolean.class,actor));
+        return new CustomerStatus(history?"EXIT_RESCINDED":"NO_EXIT_DECISION");
     });
 }
 ```
@@ -276,3 +290,6 @@ python3 scripts/verify_dependency_integrity.py
 - [`8de215e`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/8de215ee5657315c0a55865871a6f4a74a267b21): 공통 회부 검증 분리·종료 개시 독립 서명·새 접수 차단/기존 권리 보존과 신규 테스트 51개.
 
 [029 비공개 보고 판단](029-confidential-reporting-review.md)·[030 후속 관찰](030-reporting-queue-and-followup.md)·[031 실제 인계](031-reporting-custody-and-orphan-recovery.md)·[032 전사 점검](032-reporting-supervision.md)은 종료 판단과 다른 업무다. 공통 로드맵의 F1·R2·R3를 함께 읽는다.
+
+
+2026-10-24 후속: [034 독립 철회와 재개시](034-exit-rescission.md)는 원래 승인 기록을 지우지 않고 차단 효과만 거둔다. 고객 상태에 EXIT_RESCINDED를 추가하고 원래 근거의 반복 재사용을 막으며, 새로운 현재 회부에 따른 재개시는 허용한다. 과거 이 문서의 실행 수치·확정 증적은 당시 결과로 보존하고 현재 발췌와 원문/권한/상태 설명은 연결한 후속 기준을 함께 읽는다.

@@ -1,0 +1,3671 @@
+{
+  "checked_date": "2026-10-24",
+  "scope": "원래 승인·STR·자산/예약·다른 정책을 보존하고 원래 참여 요청자와 독립 제삼자의 현재 근거/전체 제공·EXIT_RESCISSION 서명·감사로 지정 종료 개시 효과만 철회. 새 현재 회부로 재개시하며 옛 키 재조회는 새 차단에 영향 없음",
+  "implementation_commits": [
+    "eeb4faa525ee8364daa7703c7aa0006022a15082"
+  ],
+  "baseline_commit": "3a9b20cf2afabde3ea3fa75ace8356917b6460ca",
+  "junit": {
+    "tests": 1248,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suite_counts": {
+    "edd_evidence_aml_reporting_custody_supervision_exit_rescission": 682,
+    "kyc": 150,
+    "bound": 190,
+    "mfa": 42,
+    "financial": 183,
+    "market": 1
+  },
+  "new_junit_cases": 50,
+  "new_tests": {
+    "dustin.cex.domains.edd.ExitRescissionFactsTest": 7,
+    "dustin.cex.domains.kyc.ExitRescissionIntegrationTest": 43
+  },
+  "previous_edd_cases": 632,
+  "new_process_scenarios": 0,
+  "process_scenarios": 15,
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "scripts/verify_edd.py"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 25.16
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_kyc_recovery.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 9.39
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_bound_approvals.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 173.7
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_mfa.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 20.18
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_engine_inbox.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 32.1
+    },
+    {
+      "command": [
+        "./gradlew",
+        "operatorAdminJar",
+        "bootJar",
+        "jmhClasses",
+        "writeDependencyInventory",
+        "--console=plain"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.64
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_operator_admin.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 15.75
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_order_idempotency.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 18.46
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_market_path.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 24.04
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/audit_dependencies.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 2.31
+    },
+    {
+      "command": [
+        "python3",
+        "scripts/verify_dependency_integrity.py"
+      ],
+      "exit": 0,
+      "elapsed_seconds": 1.12
+    }
+  ],
+  "isolated_reports": {
+    "edd": {
+      "container": "cex-edd-fbce40f0c2a8",
+      "exit": 0,
+      "tests": {
+        "tests": 682,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true,
+      "suites": [
+        {
+          "class": "dustin.cex.domains.kyc.AmlInvestigationIntegrationTest",
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "missingAmlCanOnlyBeRecordedAsInsufficientInformation()",
+            "changingWriterVersionInvalidatesOldReceipt()",
+            "auditAndMetadataExcludePlaintextNotesAndApprovedReferralRetainsHold()",
+            "staleEventCannotCreateNewSource()",
+            "sourceFromAnotherCustomerCannotUseCurrentCustomersReceipt()",
+            "newInvestigationInvalidatesOldReferralSignatureWithoutChangingCaseRevision()",
+            "investigationReadAuditFailureDoesNotReturnNotes()",
+            "[1] status = \"Approved\"",
+            "[2] status = \"In Review\"",
+            "[3] status = \"Declined\"",
+            "customerAndAuditorCannotReadOriginalsWhileAuditorCanReadMetadata()",
+            "staleMfaCannotReadOrWriteSource()",
+            "unverifiedSignatureCannotCreateSourceAssessmentOrCase()",
+            "originalNumbersUrlsAndMediaNeverEnterStoredProjectionOrLogs()",
+            "actualHttpWriterAndApproverUseSameStoredInvestigation()",
+            "sameHitInDifferentNodesIsBoundToSpecificNode()",
+            "nonemptyCandidateChangeWithoutMatchingSignedEventFailsReconciliation()",
+            "simultaneousSameKeyNeverAddsTwoInvestigations()",
+            "newProviderDataPreservesOldSourceButRejectsItsNewInvestigation()",
+            "changedMetadataFailsSourceIntegrityWithSanitizedError()",
+            "normalCustomerHasNoAdditionalAmlInvestigationOrEddCase()",
+            "newDeclarationPreventsInvestigationAgainstOldAssessment()",
+            "nonexistentHitCannotBeInventedAndNoPartialRecordRemains()",
+            "duplicateHitWithinSameNodeIsAmbiguousAndRejected()",
+            "repeatedKeyReusesExactNotesAndTargetButChangedNotesConflict()",
+            "sourceInspectionAuditFailureRollsBackReceiptAndReturnsNoContent()",
+            "anotherOperatorsReceiptCannotAuthorizeThisWriter()",
+            "duplicateWebhookDoesNotCreateDuplicateSources()",
+            "nonexistentAndExpiredReceiptCannotCreateMemo()",
+            "missingHitCanOnlyHaveInsufficientInformationFinding()",
+            "investigationAuditFailureRollsBackNotesAndMetadata()",
+            "[1] notes = null",
+            "[2] notes = \"\"",
+            "[3] notes = \" \"",
+            "[4] notes = \"가‮\"",
+            "[5] notes = \"a\\t\"",
+            "mismatchedDecisionSessionCannotBecomeInvestigationEvidence()",
+            "missedInReviewWebhookIsRecoveredFromActualArchivedSignature()",
+            "sourceCaptureAuditFailureRollsBackEventAssessmentAndCase()",
+            "oversizedNotesAndInvalidNodeAreRejected()",
+            "allNewRecordsRejectUpdateDeleteAndTruncate()",
+            "changedDuplicateEventBlocksNewInvestigationWithoutOverwritingSource()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.AmlResolutionIntegrationTest",
+          "tests": 35,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "derivedCaseCannotExtendAnImmutableApprovedValidity()",
+            "closedFlagWithoutApprovedResolutionDoesNotAuthorizeTrading()",
+            "pastConfirmedMatchCannotBeClearedWithThisLimitedPolicy()",
+            "signedResolutionAndIndependentDecisionReopenNewOrdersWithoutRewritingRiskHistory()",
+            "rejectionDoesNotGrantButAllowsFreshRequest()",
+            "helperCannotResolveOutsideBusinessTransaction()",
+            "eligibilityHttpIsMetadataOnlyAndNotCustomerOrAuditorPermission()",
+            "newDeclarationAfterOptionsPreventsClosure()",
+            "oldSourceInvestigationDoesNotReplaceCurrentSourceInvestigation()",
+            "nullPastAndMoreThanOneDayValidityAreRejected()",
+            "[1] date = \"1990-01-01\"",
+            "[2] date = \"1974\"",
+            "[3] date = \"1974-01\"",
+            "decisionAuditFailureRollsBackCaseProofAndGrantThenSameProofCanRetry()",
+            "newProviderEventReopensApprovedCaseAndStopsNewOrders()",
+            "operationalTradingRestrictionStillOverridesResolvedCase()",
+            "pepDeclarationCannotBeClearedThroughAmlFalsePositive()",
+            "requestedAddressOrFundsEvidencePreventsNarrowClosure()",
+            "providerFreshnessLossAfterOptionsPreventsClosure()",
+            "oldProtocolRequestIsHistoricalOnlyAndItsDossierStillReadable()",
+            "disappearingHistoricalCandidateCannotBeTreatedAsFalsePositive()",
+            "concurrentApproveAndRejectLeaveOneDecisionAndOnlyMatchingFinancialPermission()",
+            "eligibilityAuditFailureDoesNotReturnBasis()",
+            "approvedResolutionExpiresWithoutBackgroundStateMutation()",
+            "confidentialReportingReviewCannotBeBypassedByNarrowFalsePositiveClosure()",
+            "providerResolutionWithoutCurrentInvestigationCannotClose()",
+            "contributorWhoMovesToApproverCannotApproveOwnInvestigation()",
+            "everyCurrentCandidateNeedsInvestigation()",
+            "validUntilCannotExceedCurrentIdentityExpiry()",
+            "historicalIdentityMismatchCannotBeClearedThroughAmlFalsePositive()",
+            "sameProviderTimeWithNewEventIdCannotReplaceNewResolutionEvidence()",
+            "opinionWithoutNewProviderResolutionCannotClose()",
+            "[1] unresolved = true",
+            "[2] unresolved = false",
+            "historicalMissingSourceNeverGetsInventedToEnableClosure()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.AddressFactsTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "[1] address = \"\"",
+            "[2] address = \"가상\\n주소\"",
+            "[3] address = \"가상‮주소\"",
+            "[1] days = 0",
+            "[2] days = 1",
+            "[3] days = 89",
+            "[4] days = 90",
+            "recordsEveryMismatchAndOldDateInsteadOfPretendingToVerify()",
+            "differentAddressPunctuationIsNotSilentlyMerged()",
+            "normalizesUnicodeSpacesAndNameCaseButKeepsAddressPunctuation()",
+            "futureDateHasIndependentReason()",
+            "requiresDocumentTypeIssuerNameAndBoundedDate()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.EvidenceCryptoTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "randomizedNonceRoundTripAndRedactedDescription()",
+            "missingKeyDoesNotOfferFallbackOrPlaintextStorage()",
+            "[1] context = \"다른고객\"",
+            "[2] context = \"다른사건\"",
+            "[3] context = \"다른요청\"",
+            "[4] context = \"다른목적\"",
+            "[5] context = \"VIEW\"",
+            "corruptionTruncationAndWrongKeyIdFailClosed()",
+            "independentEncryptionKeyIsRequired()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.ReportingFollowupIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "sameHumanOnAnotherAccountHasNoImplicitAssignment()",
+            "recordAuditFailureRollsBackAndSameKeyRetries()",
+            "sameKeyAndSameFactsReplayButChangedOutcomeOrNotesConflict()",
+            "changedOperatorIdentityCannotRecoverOldAssignmentUsingSameAccount()",
+            "disabledCustomerDoesNotEraseHistoricalReportingWork()",
+            "declaredEarlierExternalTimeDoesNotResetInternalAnchorOrCertifyLegalTime()",
+            "approvedNoReportIsActuallyVerifiedAndExcluded()",
+            "realApprovedReportNeededAppearsWithoutDeclaringLegalDeadlineOrSubmissionSuccess()",
+            "inspectionAuditFailureDoesNotReturnPrivateNotes()",
+            "unapprovedAndApprovedNoReportNeverBecomePendingReport()",
+            "actualHttpQueueRecordHistoryAndPrivateInspectionUseAssignedFacts()",
+            "emptyFilteredFirstPageStillAdvancesAndFindsOldHistoricalWork()",
+            "latestRecordedObservationCannotHideEarlierFailureHistory()",
+            "allObservationMutationsAreRejected()",
+            "perReviewDailyLimitDoesNotTreatObservationAsCompletion()",
+            "freshScanFindsApprovalCommittedAfterEarlierQueueRead()",
+            "observationMetadataAndAuditExcludePrivateReferenceAndNotes()",
+            "customerAuditorAndUnassignedOperatorCannotUseHttpRoutes()",
+            "oldNeededDecisionSurvivesNewDeclarationAndAnotherApprovedConclusion()",
+            "malformedAndFutureCursorsAndNegativeHistoryPageAreRejected()",
+            "bothAssignedPeopleCanReadButOthersHaveNoQueueOrObservationAccess()",
+            "staleMfaBlocksQueueAndRawObservation()",
+            "sameKeyCannotBeMovedToAnotherApprovedReview()",
+            "[1] outcome = OUTCOME_UNKNOWN",
+            "[2] outcome = REJECTION_OBSERVED",
+            "[3] outcome = RECEIPT_REFERENCE_OBSERVED",
+            "queueAuditFailureDoesNotReturnPendingList()",
+            "concurrentSameKeyCommitsOneObservation()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.WealthReviewIntegrationTest",
+          "tests": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "factsReferenceAndNamesAreEncryptedAndAuditedInspectionOnly()",
+            "[1] same = true",
+            "[2] same = false",
+            "samePersonDifferentAccountCannotInspect()",
+            "independentSignatureConfirmsContentButNeverReleasesTrading()",
+            "expiredClosingViewPreventsContextDespiteFreshOtherViews()",
+            "missingIndependentObservationCreatesNoChallenge()",
+            "directionReplayAndDifferentHashCannotConsumeProof()",
+            "auditorGetsMetadataOnlyAndCustomerHasNoAdminAccess()",
+            "approvedWealthObservationCannotBypassEvidenceHoldOnStandardCustomer()",
+            "staleMfaAndRevokedSessionCannotReadOrDecide()",
+            "comparisonIsPrivateAndReflectsAssetsLiabilitiesIncomeAndConsumption()",
+            "singleEvidenceCannotPlayMultipleRoles()",
+            "minimalContextReturnsNameWithoutInventingWealthDeclaration()",
+            "unexplainedDifferenceSurvivesIndependentApprovalAndTradingRemainsBlocked()",
+            "simultaneousApproveRejectCommitOneDecision()",
+            "mismatchReasonsSurviveApproval()",
+            "immutableReportsAndDecisionsRejectMutation()",
+            "requesterVersionChangeInvalidatesPendingReview()",
+            "proposalAuditFailureRollsBackReviewCipherAndBinding()",
+            "duplicateOriginalCannotBecomeIndependentThirdDocument()",
+            "otherNamespaceCannotConsumeWealthSignature()",
+            "threeViewsCannotBeSwappedOrBorrowed()",
+            "newUploadInvalidatesThreeOldViewsAndSignature()",
+            "expiredImmutableReportCannotIssueOptions()",
+            "completeHttpWealthReviewUsesOwnViewsAndRealSignature()",
+            "[1] purpose = \"SOURCE_OF_FUNDS\"",
+            "[2] purpose = \"RESIDENTIAL_ADDRESS\"",
+            "customerKycChangeInvalidatesReview()",
+            "[1] action = \"EDD_WEALTH_CONTEXT_READ\"",
+            "[2] action = \"EDD_WEALTH_FACTS_READ\"",
+            "changedObservationCannotConsumeSignedChallenge()",
+            "rejectionRequiresNoInventedObservationAndKeepsHold()",
+            "caseSignatureCannotAuthorizeWealthOrBeConsumedThere()",
+            "[1] badOrigin = true",
+            "[2] badOrigin = false",
+            "previousSevenKindSchemaFailsWithoutChangingHistory()",
+            "newDeclarationInvalidatesThreeDocumentsAndSignature()",
+            "decisionAuditFailureRollsBackProofCounterRevisionAndConclusion()",
+            "requestKeyBindsThreeDocumentsViewsAndFacts()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.ExitRescissionFactsTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "rescissionJudgmentMustBeExplicit()",
+            "[1] rationale = null",
+            "[2] rationale = \"\"",
+            "[3] rationale = \" \"",
+            "[4] rationale = \"안\\n쪽\"",
+            "[5] rationale = \"안‮쪽\"",
+            "normalizationLengthBoundaryAndSafePrinting()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.EddDossierIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "pendingDuplicateProposalRollsBackUnreferencedSnapshot()",
+            "allPagesAreRequiredAndRepeatingFirstPageCannotCompleteInspection()",
+            "invalidPageNeverLeavesViewReceipt()",
+            "componentCannotCaptureWithoutBusinessTransaction()",
+            "frozenHistorySurvivesNewRequestButOldSignatureCannotDecide()",
+            "[1] kind = \"ADDRESS\"",
+            "[2] kind = \"FUNDS\"",
+            "[3] kind = \"WEALTH\"",
+            "uploadChangesCurrentCaseAndCannotReuseOldInspection()",
+            "receiptOlderThanFiveMinutesCannotReplaceFreshInspection()",
+            "proposalAuditFailureRollsBackSnapshotReportAndBindingTogether()",
+            "inspectionAuditFailureRollsBackReceiptAndDoesNotReturnBundle()",
+            "emptyBundleStillRequiresIndependentPageZeroAndDoesNotClaimExternalVerification()",
+            "snapshotDigestDoesNotDependOnDatabaseSessionTimeZone()",
+            "auditorReadsHistoricalMetadataButCannotCreateApprovalReceipt()",
+            "evidenceRequestsAndReceivedFilesAreDistinctAndContainNoPrivateContent()",
+            "anotherPersonInspectionCannotAuthorizeCurrentApprover()",
+            "completedDossierAndViewsRejectUpdateDeleteAndTruncate()",
+            "approvedNegativeAddressObservationIsCarriedIntoReferralWithoutResolvingRisk()",
+            "historicalGetDoesNotCountAsIndependentInspection()",
+            "historicalReadAuditFailureReturnsNoMetadata()",
+            "staleSessionMfaAndSamePersonCannotInspect()",
+            "oldReportPolicyCanBeReadButCannotInspectOrExecute()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.FundsFactsTest",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "invalidPeriodAndMissingDateAreRejected()",
+            "futureAndReversedChronologyRemainReasons()",
+            "recordedLedgerTimeIsComparedAsDateOnly()",
+            "tradeComparisonDoesNotInventExchangeRateOrAllocateFunds()",
+            "[1] code = \"XXXQ\"",
+            "[2] code = \"usd \"",
+            "[3] code = \"U$D\"",
+            "[4] code = \"\"",
+            "[5] code = \"bitcoin\"",
+            "targetMustBeExplicitAndCannotFallBackFromMissingTrade()",
+            "nameSenderCurrencyAndAmountDifferencesRemainDistinct()",
+            "documentAndReceiptBeforePeriodAreNotSilentlyAccepted()",
+            "[1] amount = \"0\"",
+            "[2] amount = \"-1\"",
+            "[3] amount = \"0.0000000001\"",
+            "[4] amount = \"1E+22\"",
+            "[5] amount = \"792281625142643375935.43950336\"",
+            "receiptRequiresNamesReferenceAndExactAmount()",
+            "normalizedValuesRetainExactAmountAndHidePrivateString()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.AmlFalsePositiveRulesTest",
+          "tests": 38,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "positiveOrInvalidScoreCannotClear()",
+            "oneEqualBirthAmongSeveralCannotBeIgnored()",
+            "[1] value = \"1990-01-01\"",
+            "[2] value = \"1974\"",
+            "[3] value = \"1974-01\"",
+            "[4] value = \"1974-02-30\"",
+            "[5] value = \"1974-1-1\"",
+            "[6] value = \"9999-01-01\"",
+            "[7] value = \"\"",
+            "historyMayRetainUnreviewedButCurrentCannot()",
+            "duplicateNodeIdIsAmbiguous()",
+            "sameHitInDifferentNodesHasDifferentKeys()",
+            "[1] field = \"node_id\"",
+            "[2] field = \"status\"",
+            "[3] field = \"total_hits\"",
+            "[4] field = \"entity_type\"",
+            "[5] field = \"score\"",
+            "[6] field = \"warnings\"",
+            "[7] field = \"hits\"",
+            "[8] field = \"screened_data\"",
+            "[1] field = \"full_name\"",
+            "[2] field = \"date_of_birth\"",
+            "[3] field = \"nationality\"",
+            "countsCannotHideAnExtraCandidate()",
+            "allSignedIdentityEntriesMustAgree()",
+            "noRemainingCandidateDoesNotProveHistoryResolved()",
+            "completeDistinctBirthAndProviderFalsePositiveAreEligibleData()",
+            "[1] field = \"identity\"",
+            "[2] field = \"screenings\"",
+            "candidateListCannotBeMutatedByCaller()",
+            "[1] value = \"Unreviewed\"",
+            "[2] value = \"Confirmed Match\"",
+            "[3] value = \"Inconclusive\"",
+            "[4] value = \"False positive\"",
+            "[5] value = \"\"",
+            "warningNeverDisappearsBehindZeroScore()",
+            "oldConfirmedMatchRequiresEscalationEvenWithLaterDateEvidence()",
+            "duplicateHitInOneNodeIsAmbiguous()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.ReportingCustodyIntegrationTest",
+          "tests": 45,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "requesterAndEitherBeneficiaryCannotApproveTheirOwnAssignment()",
+            "oneAvailableOldPersonPreventsOutsiderRescueButCanRequestHandoff()",
+            "[1] value = null",
+            "[2] value = \"\"",
+            "[3] value = \" \"",
+            "[4] value = \"안\\n쪽\"",
+            "[5] value = \"안‮쪽\"",
+            "authorityCannotBeReadWithoutBusinessTransaction()",
+            "staleMfaCannotDiscoverOrReadOrPropose()",
+            "makerVersionChangeAfterSignatureRejectsHandoff()",
+            "[1] how = \"disabled\"",
+            "[2] how = \"expired\"",
+            "[3] how = \"recovery\"",
+            "[4] how = \"role\"",
+            "[5] how = \"identity\"",
+            "unchangedPairAndStaleStampAreRejected()",
+            "customerAndAuditorCannotUseCustodyHttpRoutes()",
+            "sameHumanCannotHoldBothNewResponsibilities()",
+            "inspectionFromOtherSessionDoesNotAuthorizeOptions()",
+            "laterGenerationsReplaceEarlierFollowupRightsAndKeepHistory()",
+            "approvedHandoffMovesFollowupRightsWithoutChangingReportOrFinancialState()",
+            "onlyOnePendingRequestAndRejectionLeavesOldRightsButAllowsNewRequest()",
+            "sameKeyConcurrencyCreatesOneRequest()",
+            "requestAuditFailureRollsBackCipherAndApprovalBinding()",
+            "changingCustomerDeclarationDoesNotEraseEstablishedReportingDutyOrBlockHandoff()",
+            "healthyOutsiderCannotUseKnownStampToSeizeWork()",
+            "initialAuthorityIsRealOriginalPairAndHealthyCaseIsNotOrphan()",
+            "idempotencyReplaysSameContentAndRejectsAnotherReasonOrTarget()",
+            "missingOrFutureCursorAndBadHistoryPageAreRejected()",
+            "cannotUseOppositeDecisionSignatureAndProofIsNotConsumed()",
+            "custodyReasonDoesNotEnterMetadataOrAudit()",
+            "allCustodyRecordsRejectUpdateDeleteAndTruncate()",
+            "oversizedReasonCannotBeStored()",
+            "wrongRoleDisabledAndExpiredTargetCannotReceiveWork()",
+            "originalRequesterAndActualDeciderCanConfirmCommittedOutcomeWithoutRegainingFollowupAccess()",
+            "historyReadIsNotApprovalInspectionAndNoReceiptMeansNoOptions()",
+            "concurrentApprovalAndRejectionCommitOnlyOneDecision()",
+            "actualHttpIndependentHandoffAndNewCustodianContext()",
+            "decisionAuditFailureRestoresOldAuthorityAndProofThenSameProofRetries()",
+            "recoveredOriginalAuthorityAfterOptionsInvalidatesOutsiderRescueWithoutConsumingProof()",
+            "inspectionAuditFailureRollsBackReceiptAndReturnsNoReason()",
+            "targetVersionChangeAfterSignatureRejectsHandoff()",
+            "previousNineKindSchemaIsRejectedWithoutTransformingHistory()",
+            "newCustodiansReadPastObservationsAndOriginalBasisButCannotApproveOriginalReport()",
+            "orphanAuditFailureReturnsNoDiscoveryList()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.FundsReviewIntegrationTest",
+          "tests": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "minimalContextExcludesAddressBirthdayAndWealth()",
+            "factsReferenceAndNamesAreEncryptedAndAuditedInspectionOnly()",
+            "[1] same = true",
+            "[2] same = false",
+            "samePersonDifferentAccountCannotInspect()",
+            "independentSignatureConfirmsContentButNeverReleasesTrading()",
+            "newUploadInvalidatesBothOldViewsAndSignature()",
+            "missingIndependentObservationCreatesNoChallenge()",
+            "directionReplayAndDifferentHashCannotConsumeProof()",
+            "auditorGetsMetadataOnlyAndCustomerHasNoAdminAccess()",
+            "expiredSecondViewPreventsPairContextDespiteFreshFirstView()",
+            "requestKeyBindsBothDocumentsViewsTargetAndFacts()",
+            "staleMfaAndRevokedSessionCannotReadOrDecide()",
+            "actualConsumerLedgerLinksNetSpendAndIndependentApproval()",
+            "previousSixKindSchemaFailsWithoutChangingHistory()",
+            "duplicateOriginalCannotBecomeIndependentSecondDocument()",
+            "simultaneousApproveRejectCommitOneDecision()",
+            "mismatchReasonsSurviveApproval()",
+            "caseSignatureCannotAuthorizeFundsOrBeConsumedThere()",
+            "[1] amount = \"1000.000000000\"",
+            "[2] amount = \"0.000000001\"",
+            "[3] amount = \"10000.000000001\"",
+            "immutableReportsAndDecisionsRejectMutation()",
+            "requesterVersionChangeInvalidatesPendingReview()",
+            "proposalAuditFailureRollsBackReviewCipherAndBinding()",
+            "singleEvidenceCannotPlayBothRoles()",
+            "standardCddStillCannotBypassEvidenceHoldAfterFundsApproval()",
+            "newDeclarationInvalidatesOldPairAndSignature()",
+            "otherNamespaceCannotConsumeFundsSignature()",
+            "customerKycChangeInvalidatesReview()",
+            "[1] action = \"EDD_FUNDS_CONTEXT_READ\"",
+            "[2] action = \"EDD_FUNDS_FACTS_READ\"",
+            "changedTradeProjectionCannotUseOldBoundSignature()",
+            "pairViewsCannotBeSwappedOrBorrowed()",
+            "changedObservationCannotConsumeSignedChallenge()",
+            "rejectionRequiresNoInventedObservationAndKeepsHold()",
+            "[1] badOrigin = true",
+            "[2] badOrigin = false",
+            "completeHttpPairReviewUsesOwnViewsAndRealSignature()",
+            "[1] purpose = \"SOURCE_OF_WEALTH\"",
+            "[2] purpose = \"RESIDENTIAL_ADDRESS\"",
+            "unknownOtherCustomerAndOpeningAreNeverTradeFallbacks()",
+            "decisionAuditFailureRollsBackProofCounterRevisionAndConclusion()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.EddEvidenceIntegrationTest",
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "exactReplayDoesNotIncrementRevisionOrStoreTwice()",
+            "uploadInvalidatesEarlierReportProofAndDoesNotOpenTrading()",
+            "auditorAndUnassignedOperatorHaveNoContentAccess()",
+            "readQuotaIsPersistedAndCustomerStillHasNoContentEndpoint()",
+            "readAuditFailureDoesNotReleaseContentOrConsumeQuota()",
+            "separateEncryptionPreservesOriginalAndRemovesTrailingPayloadFromView()",
+            "submissionAuditFailureRollsBackCipherAndCaseRevision()",
+            "authenticatedCustomerSubmitsOnlyRequestedEvidenceAndRemainsBlocked()",
+            "actualHttpUploadAndPrivateAttachmentHaveNoCacheAndNoOriginalFilename()",
+            "oldAssessmentCannotAcceptFileAndCustomerSeesStaleRequest()",
+            "enabledCustomerWithoutReviewCaseCannotBeAskedForEvidence()",
+            "requestAlonePreventsBypassingUnreviewedMaterialsWithIdentityClosure()",
+            "newDeclarationWithoutAssessmentInvalidatesRequest()",
+            "malformedAndOversizedHttpBodyAreRejectedWithoutSaving()",
+            "requestedAndReceivedLimitsDoNotPermitUnlimitedCollection()",
+            "revokedAndForeignCustomerSessionsCannotWrite()",
+            "immutableRequestsAndFilesRejectUpdateDeleteTruncate()",
+            "independentApproverMustGiveCorrectReasonAndBeDifferentPerson()",
+            "concurrentDuplicateSubmissionHasOneFileAndOneRevisionChange()",
+            "actualRequestApiRequiresOperatorAndBindsRequestKey()",
+            "expiredRequestIsNeverAcceptedOrDeleted()",
+            "metadataAccessAlsoRequiresFreshMfaAndNeverHasOriginalBytes()",
+            "revokedAndStaleMfaNeverReturnsImage()",
+            "requestKeyCannotBeReusedForDifferentPurposeAndPendingPurposeIsUnique()",
+            "requestAuditFailureRollsBackRequestAndRetryKeyRemainsUsable()",
+            "unrelatedCustomerCannotSubmitOrEnumerateRequest()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.ExitRescissionIntegrationTest",
+          "tests": 43,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "expiredRequestIsReadableWithoutRevivingItsDecisionAuthority()",
+            "actualCddClearanceThenIndependentWithdrawalPermitsOrders()",
+            "staleMfaInvalidSessionAndBadPageDoNotProvideOriginal()",
+            "unsupportedIsolationCannotApplyExitOrRescissionEffects()",
+            "decisionAuditFailurePreservesHoldAndProofThenSameProofRetries()",
+            "withdrawalRemovesOnlyExitHoldAndPreservesOriginalApprovedRecord()",
+            "sameFactsAndKeyReplayButChangedReasonOrCheckerConflicts()",
+            "copiedCipherCannotReturnReasonOrCreateViews()",
+            "databaseGuardSerializesDirectConcurrentApprovals()",
+            "anotherBusinessKindCannotAuthorizeWithdrawal()",
+            "noPersonalViewsMeansNoOptionsAndMakerViewsCannotSubstitute()",
+            "newDeclarationBlocksStaleDecisionButHistoryRemainsReadable()",
+            "withdrawalPreservesMoneyAndReopensOnlyFutureAdmissionAfterAllChecks()",
+            "designatedThirdPersonReadsOriginalOnlyThroughAuditedCorrectionPurpose()",
+            "auditFailureReturnsNoReasonAndRollsBackViews()",
+            "makerOrCheckerVersionChangeInvalidatesRequest()",
+            "oldElevenKindSchemaAndLegacyPermanentIndexAreRejected()",
+            "newEvidenceAfterSignatureInvalidatesWithdrawalWithoutConsumingProof()",
+            "checkerVersionAndOldSessionViewsCannotBeReused()",
+            "identicalContentUsesOneSetOfPagesDespiteDifferentSnapshotIds()",
+            "decisionOutcomeCanBeReadAfterResponseLossWithoutReapplyingIt()",
+            "rejectionPreservesHoldAndAllowsNewCorrectionRequest()",
+            "generalTradingRestrictionStillAppliesAfterWithdrawal()",
+            "actualHttpIndependentWithdrawalAndCustomerSafeStatus()",
+            "newExitRequiresNewReferralAndOldWithdrawalReplayCannotClearIt()",
+            "currentExitParticipantsCannotReviewTheirOwnOriginalDecision()",
+            "auditFailureRollsBackProposalSnapshotCipherAndBinding()",
+            "reasonIsAbsentFromMetadataCipherAndAudit()",
+            "customerVersionChangeInvalidatesAlreadySignedWithdrawal()",
+            "bothDifferentBundlesRequireLastPartialPage()",
+            "outsiderCannotSelfAssignCorrectionToReadPrivateOriginalReason()",
+            "oldViewAloneCannotAuthorizeNewOptions()",
+            "rejectedOrUnapprovedExitCannotBeWithdrawn()",
+            "withdrawalNeverRemovesReportingDutyOrGrantsReportingPlaintextAccess()",
+            "customerAndAuditorCannotUseCorrectionRoutes()",
+            "concurrentApprovalAndRejectionCommitExactlyOneDecision()",
+            "concurrentSameKeyProducesOneRequest()",
+            "allNewRecordsRejectUpdateDeleteAndTruncate()",
+            "originalReviewerWhoIsNotDesignatedCannotReadWithdrawalReason()",
+            "receiptFromDifferentSessionCannotAuthorizeWithdrawal()",
+            "oppositeDecisionCannotUseApprovalProof()",
+            "differentOriginalAndCurrentContentRequireBothCompleteSets()",
+            "rescissionCannotBeDuplicatedByDirectDatabaseInsertion()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.ReportingFactsTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "noConclusionCannotBecomeDecision()",
+            "[1] reason = null",
+            "[2] reason = \"\"",
+            "[3] reason = \" \"",
+            "[4] reason = \"\\t\"",
+            "[5] reason = \"사유\\n줄\"",
+            "[6] reason = \"사유‮역전\"",
+            "[7] reason = \"사유​숨김\"",
+            "normalizesOuterWhitespaceWithoutDroppingReason()",
+            "reasonHasExplicitTwoThousandCharacterBoundary()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.ReportingInternalCheckTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "[1] nanos = -1",
+            "[2] nanos = 0",
+            "[3] nanos = 1"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.EddIntegrationTest",
+          "tests": 35,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "freshnessLostAfterOptionsCannotBeRestoredByOldSignature()",
+            "proposalKeyIsBoundToExactCurrentBodyAndOnePendingReport()",
+            "rejectionPreservesHoldAndAllowsNewReport()",
+            "caseAuditFailureRollsBackIdentityAndAssessmentTogether()",
+            "proposalAuditFailureRollsBackReportAndApprovalBinding()",
+            "freshSignedReverificationAndIndependentSignatureCloseOnlyMismatch()",
+            "invalidClosureLifetimeAndRetentionFindingLifetimeAreRejected()",
+            "invalidOriginOrMissingUserVerificationNeverConsumesBusinessDecision()",
+            "requesterRoleVersionChangeInvalidatesPendingReport()",
+            "currentKycFreshnessStillRequiredForClosure()",
+            "awaitingEvidenceApprovalDoesNotPretendToFinishEdd()",
+            "immutableReportAndDecisionRejectMutation()",
+            "samePersonDifferentApproverAccountCannotSelfApprove()",
+            "complianceReferralRecordsConclusionWithoutOpeningTrading()",
+            "approvalProofCannotAuthorizeRejectionOrDifferentPayload()",
+            "roleAndEddProofsAreNotInterchangeable()",
+            "disclosureChangeAfterOptionsInvalidatesSignature()",
+            "closedCaseReopensOnNewVerificationFact()",
+            "customerAndAuditorCannotWriteAndResponsesContainOnlyBoundEvidence()",
+            "reviewCreatesCaseAndNewDeclarationCannotRemoveHold()",
+            "expiredImmutableReportCannotIssueOptions()",
+            "historicalAmlRiskCannotBeErasedByLaterCleanScreening()",
+            "concurrentApprovalAndRejectionHaveExactlyOneConclusion()",
+            "sessionRevocationAndStaleMfaPreventApproval()",
+            "approvalAuditFailureRollsBackCaseDecisionChallengeAndCounter()",
+            "oldApprovalSchemaFailsWithoutModifyingExistingHistory()",
+            "ordinaryVerifiedCustomerDoesNotNeedEddCase()",
+            "proofCannotBeReplayedAfterCommittedDecision()",
+            "completeApprovalHttpUsesStoredPayloadAndActualSignature()",
+            "closedDispositionExpiresWithoutBackgroundWorker()",
+            "historicalPepCannotBeErasedByNoPepRedeclaration()",
+            "newAssessmentInvalidatesOldReportAndDoesNotBlockNewProposal()",
+            "[1] sameKey = true",
+            "[2] sameKey = false",
+            "oldOrUnverifiedAssessmentCannotBeClosedByHuman()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.ReportingFollowupFactsTest",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "normalizationAndMicrosecondsDoNotInventNewTime()",
+            "receiptNeedsReferenceButUnknownAndRejectionMayHaveNoReference()",
+            "[1] outcome = OUTCOME_UNKNOWN",
+            "[2] outcome = REJECTION_OBSERVED",
+            "[3] outcome = RECEIPT_REFERENCE_OBSERVED",
+            "lengthAndControlBoundariesAreExplicit()",
+            "[1] notes = null",
+            "[2] notes = \"\"",
+            "[3] notes = \" \"",
+            "[4] notes = \"\\t\"",
+            "[5] notes = \"안\\n쪽\"",
+            "[6] notes = \"안‮쪽\"",
+            "[7] notes = \"안​쪽\"",
+            "missingOutcomeAndReferenceAreRejected()",
+            "missingFutureAndPreEpochTimeAreRejected()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.WealthFactsTest",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "missingCoverageAndOutOfPeriodMovementsRemainExplicit()",
+            "movementListIsDefensivelyCopiedAndImmutable()",
+            "aggregateOverflowIsRejectedBeforePersistence()",
+            "futureDatesAndPrematureDocumentAreNotHidden()",
+            "newLoanIncreasesAssetsAndLiabilitiesTogetherWithoutCreatingWealth()",
+            "[1] amount = \"0\"",
+            "[2] amount = \"-1\"",
+            "[3] amount = \"0.0000000001\"",
+            "[4] amount = \"1E+22\"",
+            "[5] amount = \"792281625142643375935.43950336\"",
+            "emptyMovementStatementCanDescribeUnchangedPeriodButNotProveOpeningOrigin()",
+            "[1] kind = CONSUMPTION",
+            "[2] kind = INVESTMENT_NET_LOSS",
+            "[1] kind = EMPLOYMENT_NET_INCOME",
+            "[2] kind = BUSINESS_NET_PROFIT",
+            "[3] kind = INVESTMENT_NET_GAIN",
+            "[4] kind = INHERITANCE_NET_RECEIVED",
+            "[5] kind = GIFT_NET_RECEIVED",
+            "negativeNetWorthIsValidAndNotSilentlyClampedToZero()",
+            "missingComponentsAndInvalidPeriodsAreRejected()",
+            "duplicatesOrReorderedTimelineAreRejectedInsteadOfDeduplicatedOrSorted()",
+            "currencyMismatchSuppressesEveryAggregateInsteadOfGuessingRate()",
+            "[1] kind = VALUATION_INCREASE",
+            "[2] kind = VALUATION_DECREASE",
+            "normalizedNamesAmountsAndCurrencyAreEqualWithoutLosingNinthDecimal()",
+            "[1] kind = LOAN_PROCEEDS",
+            "[2] kind = ASSET_SALE_GROSS",
+            "[3] kind = OTHER",
+            "assetsMinusLiabilitiesAndNetChangesExplainClosingWealth()",
+            "moreThanTwelveMovementsIsRejected()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.EvidenceImageTest",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "[1] width = 0",
+            "[2] width = 4097",
+            "[3] width = 100000",
+            "[4] width = 2000000000",
+            "totalPixelsHaveIndependentLimit()",
+            "truncatedPngIsRejectedAndPermitIsReleased()",
+            "trailingBytesAreNotReturnedAsReviewImage()",
+            "exactInputLimitCanBeReadAndEmptyInputCannot()",
+            "boundedReadDoesNotTrustAvailableOrDeclaredLength()",
+            "[1] content = \"<svg/>\"",
+            "[2] content = \"%PDF-1.7\"",
+            "[3] content = \"GIF89a\"",
+            "[4] content = \"\"",
+            "[5] content = \"<html>자료</html>\""
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.AmlSourceProjectionTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "scoresArePreservedWithoutThresholdClassification()",
+            "projectionHasIndependentMutableContainers()",
+            "emptyWarningsAreDifferentFromAbsentWarnings()",
+            "captureRequiresBusinessTransaction()",
+            "propertiesUseExplicitNameAliasBirthDateCitizenshipAllowlist()",
+            "noCandidateReviewStatusIsInvented()",
+            "ambiguousArrayTypesBecomeNullRatherThanCoercedNames()",
+            "missingAmlRemainsMissingInsteadOfInventingClearResult()",
+            "emptyAmlArrayIsPreserved()",
+            "unknownObjectInScalarSlotIsNotCopied()",
+            "identityAndScreenedDataNeverCopyDocumentNumbersOrImages()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.ReportingSupervisionIntegrationTest",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "emptyFilteredPageStillAdvancesThenFreshScanFindsLaterApproval()",
+            "newDeclarationAndDisabledCustomerDoNotHidePastReportingDuty()",
+            "oneUnavailablePersonIsVisibleButNotOrphaned()",
+            "[1] outcome = OUTCOME_UNKNOWN",
+            "[2] outcome = REJECTION_OBSERVED",
+            "[3] outcome = RECEIPT_REFERENCE_OBSERVED",
+            "httpApproverGetsNoStoreMetadataWhileOtherRolesAndAnonymousAreDenied()",
+            "metadataCannotSeizeHealthyWorkOrWriteFollowup()",
+            "[1] how = \"disabled\"",
+            "[2] how = \"expired\"",
+            "[3] how = \"recovery\"",
+            "[4] how = \"role\"",
+            "[5] how = \"identity\"",
+            "[1] how = \"disabled\"",
+            "[2] how = \"expired\"",
+            "[3] how = \"recovery\"",
+            "[4] how = \"role\"",
+            "handoffUpdatesCurrentPeopleButPreservesOriginalTargetAndFinancialHold()",
+            "pendingRejectedAndNoReportDoNotBecomeReportingDuty()",
+            "staleRevokedAndForeignSessionCannotReadSupervision()",
+            "staleCustodianMfaDoesNotPretendAuthorityIsLost()",
+            "malformedAndFutureCursorAreRejected()",
+            "failedAuditReturnsNoListAndSuccessAuditContainsNoReportText()",
+            "unrelatedApproverSeesHealthyAssignedDutyButGetsNoOriginalContent()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.ReportingReviewIntegrationTest",
+          "tests": 37,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "newCaseConclusionInvalidatesOldReportingReview()",
+            "oldEightKindSchemaFailsWithoutTransformingExistingHistory()",
+            "newEvidenceAfterSignatureRejectsDecisionWithoutConsumingProof()",
+            "makersInspectionCannotReplaceCheckersOwnReceipt()",
+            "changedCheckerVersionInvalidatesOptionsAndOldReceipts()",
+            "newDeclarationMakesOldReferralUnusableButHistoryStaysReadable()",
+            "unauthorizedCustomerAndAuditorCannotReadAnyReviewEndpoint()",
+            "realHttpProposalInspectionOptionsAndBoundSignatureUseStoredFacts()",
+            "receiptFromAnotherSessionIsNotUsable()",
+            "sameKeyReplaysExactTargetAndFactsButChangedReasonConflicts()",
+            "oldReceiptCannotAuthorizeDecision()",
+            "actualApproveRejectRaceCommitsExactlyOneDecision()",
+            "everyFrozenPageIsRequiredIncludingFinalPartialPage()",
+            "staleMfaCannotReadOrDecide()",
+            "sameHumanDifferentAccountsCannotBeMakerAndChecker()",
+            "decisionAuditFailureRollsBackProofAndDecisionThenRetrySucceeds()",
+            "signatureForDifferentBusinessKindCannotApproveReportingReview()",
+            "expiredRequestIsReadableButCannotIssueNewDecision()",
+            "awaitingEvidenceDecisionIsNotReportingReferral()",
+            "reportReviewBlocksOldSimpleIdentityClosureAfterReassessment()",
+            "anotherOperatorsAssignedReviewIsNotVisibleEvenWithCorrectRole()",
+            "requesterCannotApproveByChangingRole()",
+            "rejectionPreservesReasonAndAllowsNewRequest()",
+            "unapprovedOrNonReferralCannotCreateReview()",
+            "copiedCipherFromAnotherReviewFailsWithoutPlaintextOrReceipt()",
+            "changedMakerVersionInvalidatesBoundRequest()",
+            "oppositeDecisionCannotUseApprovalSignature()",
+            "proposalAuditFailureRollsBackCipherAndBinding()",
+            "newTablesRejectAllMutationStatements()",
+            "[1] conclusion = REPORT_REQUIRED",
+            "[2] conclusion = NO_REPORT_ON_CURRENT_FACTS",
+            "oneLiveRequestAndOneApprovedDecisionPerReferral()",
+            "inspectionAuditFailureRollsBackReceiptAndReturnsNoReason()",
+            "simultaneousSameKeyCreatesOneReview()",
+            "noPageInspectionCannotIssueApprovalOptions()",
+            "auditAndGeneralDossierDoNotCopyDecisionOrReason()",
+            "actualAssignedListsAndMetadataNeverIncludeRationaleOrConclusion()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.RelationshipExitIntegrationTest",
+          "tests": 44,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "customerHttpStatusOmitsInternalReasonAndOtherIdentities()",
+            "newEvidenceAfterSignatureRejectsDecisionWithoutConsumingProof()",
+            "makersInspectionCannotReplaceCheckersOwnReceipt()",
+            "changedCheckerVersionInvalidatesOptionsAndOldReceipts()",
+            "newDeclarationMakesOldReferralUnusableButHistoryStaysReadable()",
+            "approvedExitInitiatesWithoutMarkingClosedOrChangingOriginalCase()",
+            "unauthorizedCustomerAndAuditorCannotReadAnyReviewEndpoint()",
+            "existingReservationReplayAndCancellationSurviveWhileNewOrderIsDenied()",
+            "oneLiveRequestAndOneApprovedDecisionPerCustomer()",
+            "signatureForDifferentBusinessKindCannotApproveExitReview()",
+            "realHttpProposalInspectionOptionsAndBoundSignatureUseStoredFacts()",
+            "receiptFromAnotherSessionIsNotUsable()",
+            "reportingAndExitJudgmentsUseIndependentDecisionsAndNeitherErasesOther()",
+            "sameKeyReplaysExactTargetAndFactsButChangedReasonConflicts()",
+            "oldReceiptCannotAuthorizeDecision()",
+            "actualApproveRejectRaceCommitsExactlyOneDecision()",
+            "assignedMetadataNeverIncludesRationaleOrUnableJudgment()",
+            "everyFrozenPageIsRequiredIncludingFinalPartialPage()",
+            "oldTenKindSchemaFailsWithoutTransformingExistingHistory()",
+            "staleMfaCannotReadOrDecide()",
+            "awaitingEvidenceDecisionIsNotExitReferral()",
+            "sameHumanDifferentAccountsCannotBeMakerAndChecker()",
+            "decisionAuditFailureRollsBackProofAndDecisionThenRetrySucceeds()",
+            "changedCustomerVersionInvalidatesSignatureWithoutConsumingIt()",
+            "expiredRequestIsReadableButCannotIssueNewDecision()",
+            "rejectionAddsNoExitHoldAfterActualCddClearance()",
+            "anotherOperatorsAssignedReviewIsNotVisibleEvenWithCorrectRole()",
+            "newCaseConclusionInvalidatesOldExitReview()",
+            "requesterCannotApproveByChangingRole()",
+            "rejectionPreservesReasonAndAllowsNewRequest()",
+            "explicitUnableJudgmentIsRequiredInsteadOfTreatingAnyRiskAsTermination()",
+            "unapprovedOrNonReferralCannotCreateReview()",
+            "commonReferralVerifierRequiresBusinessTransaction()",
+            "copiedCipherFromAnotherReviewFailsWithoutPlaintextOrReceipt()",
+            "changedMakerVersionInvalidatesBoundRequest()",
+            "oppositeDecisionCannotUseApprovalSignature()",
+            "proposalAuditFailureRollsBackCipherAndBinding()",
+            "newTablesRejectAllMutationStatements()",
+            "laterActualCddAndEddClearanceCannotUndoApprovedExit()",
+            "inspectionAuditFailureRollsBackReceiptAndReturnsNoReason()",
+            "simultaneousSameKeyCreatesOneReview()",
+            "noPageInspectionCannotIssueApprovalOptions()",
+            "customerStatusAuditFailureDoesNotReturnState()",
+            "auditAndGeneralDossierDoNotCopyDecisionOrReason()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.AddressReviewIntegrationTest",
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "differentHashCannotConsumeValidSignature()",
+            "expiredViewIsRejectedEvenWithFreshMfa()",
+            "alteredObservationAfterOptionsDoesNotConsumeProof()",
+            "approvedAddressReviewCannotBypassEvidenceHoldOnStandardCustomer()",
+            "anotherEvidenceReceiptCannotSubstituteForReviewedImage()",
+            "expiredImmutableReviewCannotIssueOptions()",
+            "completeHttpReviewUsesStoredPayloadAndOwnObservation()",
+            "sameRequestKeyCannotBeReboundToAnotherView()",
+            "allowedFrontendCanReadReceiptHeaderAndForeignOriginCannot()",
+            "newDeclarationInvalidatesOptionsAndOldReceipt()",
+            "factsAreEncryptedAndOnlyIndependentInspectionReturnsThem()",
+            "auditorSeesMetadataButCannotReadFactsAndCustomerHasNoAdminAccess()",
+            "negativeObservationCanBeIndependentlyConfirmedWithoutOpeningTrading()",
+            "newSignedAssessmentCannotReuseOldDocumentReview()",
+            "viewAuditFailureRollsBackNewReceipt()",
+            "customerKycChangeCannotLeaveOldReviewExecutable()",
+            "rejectionRequiresNoInventedObservationAndPreservesHold()",
+            "contextAuditFailureDoesNotReturnDeclaredPersonalData()",
+            "requesterVersionChangeInvalidatesPendingReview()",
+            "independentTypedObservationAndSignatureApproveOnlyContentReview()",
+            "missingReceiptAndAnotherPersonsReceiptCannotAuthorizeReview()",
+            "existingEddSignatureCannotApproveAddressReviewOrBeConsumedThere()",
+            "immutableViewsReportsAndDecisionsRejectMutation()",
+            "proposalAuditFailureRollsBackCipherBindingAndReview()",
+            "previousFiveKindSchemaFailsWithoutRewritingAnyHistory()",
+            "newEvidenceInvalidatesPendingReviewAndRequiresFreshView()",
+            "approverMustSubmitIndependentMatchingFields()",
+            "requestKeyBindsExactObservationAndCurrentFacts()",
+            "[1] badOrigin = true",
+            "[2] badOrigin = false",
+            "contextExposesOnlyNameAndAddressAfterOwnedFreshView()",
+            "concurrentApprovalAndRejectionCommitOneConclusion()",
+            "inspectionAuditFailureNeverReturnsPrivateFacts()",
+            "oldSessionCannotReadCustomerContextOrApprove()",
+            "sourceOfFundsEvidenceIsNotProcessedAsAddress()",
+            "otherEddNamespaceCannotConsumeAddressSignature()",
+            "decisionAuditFailureRollsBackChallengeCounterDecisionAndRevision()",
+            "samePersonDifferentAccountCannotIndependentlyInspect()",
+            "approvalProofCannotAuthorizeRejectionOrReplay()",
+            "httpViewReceiptEnablesOnlyMinimalAuditedContextAndInspection()",
+            "[1] same = true",
+            "[2] same = false"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.edd.RelationshipExitFactsTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "unableJudgmentCannotBeOmittedOrSubstitutedByRisk()",
+            "[1] rationale = null",
+            "[2] rationale = \"\"",
+            "[3] rationale = \" \"",
+            "[4] rationale = \"안\\n쪽\"",
+            "[5] rationale = \"안‮쪽\"",
+            "normalizationLengthBoundaryAndSafePrinting()"
+          ]
+        }
+      ]
+    },
+    "kyc": {
+      "container": "cex-kyc-476225079c16",
+      "exit": 0,
+      "tests": {
+        "tests": 150,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "bound": {
+      "container": "cex-bound-approvals-7c6f74fb9ae4",
+      "groups": [
+        {
+          "name": "bound",
+          "exit": 0,
+          "tests": {
+            "tests": 62,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "roles",
+          "exit": 0,
+          "tests": {
+            "tests": 51,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "lifecycle",
+          "exit": 0,
+          "tests": {
+            "tests": 37,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "security",
+          "exit": 0,
+          "tests": {
+            "tests": 40,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "exit": 0,
+      "tests": {
+        "tests": 190,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "mfa": {
+      "container": "cex-operator-mfa-61c02391a7be",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "financial": {
+      "container": "cex-inbox-6e0edfb1710a",
+      "exit": 0,
+      "tests": {
+        "tests": 183,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "market": {
+      "postgres": "cex-market-pg-3a2317507c",
+      "kafka": "cex-market-broker-03993cc7df",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    }
+  },
+  "existing_process_reports": {
+    "kyc_recovery": {
+      "container": "cex-kyc-recovery-36070d040b69",
+      "checks": [
+        {
+          "test": "kill_during_provider_get_preserves_pending_attempt_and_lease",
+          "passed": true
+        },
+        {
+          "test": "fresh_jvm_recovers_expired_lease_and_original_signed_approval",
+          "passed": true
+        },
+        {
+          "test": "subsequent_reconciliation_keeps_one_receipt_and_original_expiry",
+          "passed": true
+        }
+      ],
+      "provider": "loopback",
+      "bots_disabled": true,
+      "killed_exit": -9,
+      "exit": 0,
+      "jvm_runs": 2,
+      "container_removed": true
+    },
+    "operator_admin": {
+      "database": "cex_idempotency_1da51deffbb7",
+      "temporary_database_removed": true,
+      "platform_runs": 1,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "dedicated_grant_without_ddl_or_workers",
+          "passed": true
+        },
+        {
+          "test": "reject_financial_customer_and_duplicate_grant",
+          "passed": true
+        }
+      ]
+    },
+    "order_resolution": {
+      "database": "cex_idempotency_f201a93305a9",
+      "temporary_database_removed": true,
+      "platform_runs": 2,
+      "bots_disabled": true,
+      "checks": [
+        {
+          "test": "test_concurrent_same_key",
+          "new": 1,
+          "existing": 11,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_concurrent_same_key_different_content",
+          "new": 1,
+          "existing": 5,
+          "conflicts": 6,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_invalid_balance_and_unrepresentable_split_roll_back_everything",
+          "rollback_cases": 2,
+          "engine_posts": 0
+        },
+        {
+          "test": "test_invalid_header_and_command_have_no_financial_effect",
+          "statuses": [
+            400,
+            400,
+            400
+          ],
+          "engine_posts": 0
+        },
+        {
+          "test": "test_key_is_scoped_to_authenticated_user",
+          "users": 2,
+          "engine_posts": 2
+        },
+        {
+          "test": "test_lost_response_then_same_key",
+          "statuses": [
+            202,
+            200
+          ],
+          "engine_posts": 1
+        },
+        {
+          "test": "test_market_original_budget_survives_order_changes",
+          "quote_amount": "123.250000001",
+          "replay": 200,
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_process_restart_uses_committed_key",
+          "after_restart": 200,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_same_key_different_content",
+          "conflict": 409,
+          "engine_posts": 1
+        },
+        {
+          "test": "test_unrepresentable_commands_are_rejected_without_financial_effect",
+          "rejections": 2,
+          "engine_posts": 0
+        }
+      ]
+    }
+  },
+  "market_suite": [
+    {
+      "class": "dustin.cex.integration.MarketPathTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        "botOrderHttpAcceptanceDurableKafkaSnapshotCancelAndReconnect()"
+      ]
+    }
+  ],
+  "dependency_audit": {
+    "checked_at": "2026-10-24T04:54:30.756067+00:00",
+    "status": "NO_KNOWN_FINDINGS",
+    "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+    "package_versions": 222,
+    "findings": []
+  },
+  "dependency_integrity": {
+    "check": "gradle_rejects_altered_checksum",
+    "original_cache_modified": false,
+    "gradle_exit": 1,
+    "passed": true,
+    "temporary_copy_removed": true
+  },
+  "inventory_sha256": "590da8748d7e2940dbc56dfe714c8c4cab4d1e5ed9b0be72dbf14e024e79268a",
+  "new_dependencies": 0,
+  "new_table_count": 3,
+  "new_view": "relationship_active_exits",
+  "new_effect_guard_functions": [
+    "relationship_exit_require_single_active",
+    "relationship_rescission_require_active"
+  ],
+  "supported_effect_isolation": "READ COMMITTED",
+  "new_approval_kinds": [
+    "EXIT_RESCISSION"
+  ],
+  "approval_kind_count": 12,
+  "current_code_excerpts": {
+    "count": 154,
+    "entries": [
+      {
+        "document": "Cex-Platform-Service/docs/decisions/001-remove-startup-balance-replay.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/shared/services/BalanceSyncService.java",
+        "first_line": 45,
+        "lines": 21,
+        "sha256": "92a72375c99bb7ed30fce9fb4b11138eb1a534fbf37347a030dfaa62cc119a49"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/002-preserve-uncertain-order-submission.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/order/service/OrderService.java",
+        "first_line": 174,
+        "lines": 7,
+        "sha256": "df0ff96b751d25daa46f3451c55e28fe7155161b51b9c07c6baeda9d716a8eef"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/003-idempotent-order-submission.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/order/service/OrderService.java",
+        "first_line": 211,
+        "lines": 9,
+        "sha256": "10c1305744bc551218191cd6b7bde15683c600c44e0eddd198d6aa380204990f"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/004-verify-durable-engine-receipt.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/shared/http/EngineHttpClient.java",
+        "first_line": 137,
+        "lines": 13,
+        "sha256": "e2bbdd043c46f5b7af3e8046ef524b01b3779077b3582363e17de2e0bdb183be"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/005-common-exact-amount-contract.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/shared/model/ExactAmount.java",
+        "first_line": 17,
+        "lines": 7,
+        "sha256": "b1e12bc802208cc1c9e0c91256c4e8f18523c33887da9408c42f5da1826af6ee"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/006-engine-event-inbox.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/shared/kafka/EngineEventInbox.java",
+        "first_line": 34,
+        "lines": 8,
+        "sha256": "80cc8dfb3e1bbc11d8c5ba9d65cff4b493cfb19625943a74ccc3d01455d8406f"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/007-platform-market-gateway.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/market/MarketService.java",
+        "first_line": 25,
+        "lines": 18,
+        "sha256": "402e4a5d47f7edc5717e371548214da046a9d55117779f96dc708681a1fac23c"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/008-fee-authority-and-balance-deltas.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/fee/service/FeeConfigService.java",
+        "first_line": 51,
+        "lines": 7,
+        "sha256": "e9224df7d3df185634bef2449aa33c6de0aaf351ae4b77d330f543cba3b73866"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/009-market-ioc-settlement.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/shared/kafka/KafkaOrderEventConsumer.java",
+        "first_line": 164,
+        "lines": 14,
+        "sha256": "2d9424429a03ec7bc7d39c79c3561d30292ff06a7e98d1b2423eeafe69f73b48"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/010-durable-order-resolution.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/order/service/OrderDispatchService.java",
+        "first_line": 35,
+        "lines": 18,
+        "sha256": "8594e5740508124ba7b26faf47fbbd0af7af71a4c48753801cbeff96a35e47ae"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/011-asset-ledger-and-reconciliation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/ledger/LedgerService.java",
+        "first_line": 64,
+        "lines": 13,
+        "sha256": "5d2a23a8fa01e5e127b27b8f60662c40bfcdf433f4e1f94570d7ecc80d695ec3"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/012-platform-access-approval-audit.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/SecurityConfiguration.java",
+        "first_line": 20,
+        "lines": 4,
+        "sha256": "54723fe011b09f816f7aa4030a05a2f57618ca709be20b3245d6d4572ece890a"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/013-supported-runtime-and-dependency-audit.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/settlement/trade/scheduler/TradeSettlementScheduler.java",
+        "first_line": 78,
+        "lines": 7,
+        "sha256": "64b4ab5514d2bc79c2f395638b71f1624869a108ce3f82a276036e60d9f1f92a"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/014-operator-webauthn-mfa.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorMfaService.java",
+        "first_line": 136,
+        "lines": 8,
+        "sha256": "d92b606fa82b43c99e881ee69356973382746b1fe5446c2a83ef2750cb415632"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/015-operator-recovery-and-access-lifecycle.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorSessionPolicy.java",
+        "first_line": 19,
+        "lines": 10,
+        "sha256": "aeb02ff28ddb6fe3c3dc3dcf157b0779f79424895a9fd3f701a674af38fcfe55"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/016-operator-role-approval-and-bound-authentication.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorRoleService.java",
+        "first_line": 113,
+        "lines": 13,
+        "sha256": "b9f6a0182b565464b316a9e3c751ed19729741f0dec032fae6de796c45d4e2cd"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/017-bound-approval-for-existing-operations.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorMfaService.java",
+        "first_line": 172,
+        "lines": 19,
+        "sha256": "13420d4eb761da89c65fc8b1e11124a97e52110875fcd17536851c56a72cf80c"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/018-didit-identity-verification-and-trading-policy.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/kyc/DiditWebhookVerifier.java",
+        "first_line": 45,
+        "lines": 10,
+        "sha256": "1271628636b6e0c62cded40c8d06b012f1ab8edfcf873a7fbd7592053372fa2a"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/019-platform-kyc-reconciliation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/kyc/KycReconciliationService.java",
+        "first_line": 58,
+        "lines": 18,
+        "sha256": "ec276edf375911bec9bc52fbad1d2c2813c34210f8139797093f6119e78a2199"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/020-customer-declaration-and-initial-risk.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/CddCrypto.java",
+        "first_line": 50,
+        "lines": 7,
+        "sha256": "e052fe236c6adf160f0763de76e1c0a76c6188e88689926ca3b3885a17a5043f"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/001-remove-engine-auth.md",
+        "source": "Cex-Engine/src/shared/services/app_state.rs",
+        "first_line": 28,
+        "lines": 8,
+        "sha256": "26deb500fda1f3019adc038f49c067765fb7c5534a18f9c2a25331567cc20e3a"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/002-block-incomplete-startup-state.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/startup.rs",
+        "first_line": 16,
+        "lines": 9,
+        "sha256": "48de5c4635c831ab90f48fddebb4b453169c8b04253e7ea678924bdf9bcea65c"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/003-durable-order-acceptance.md",
+        "source": "Cex-Engine/src/domains/cex/services/order_receipt.rs",
+        "first_line": 108,
+        "lines": 10,
+        "sha256": "80932ab6928361f8ad56d2fac11ea70d2d1364b9da5cda5f3d12144d8f3c512f"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/004-atomic-trade-cache-settlement.md",
+        "source": "Cex-Engine/src/domains/cex/engine/balance_cache/settlement.rs",
+        "first_line": 14,
+        "lines": 11,
+        "sha256": "2a773cbbad75526bd98679379cd479c725a6b3e710382a0a4c20ee2f0c085949"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/005-exact-amount-boundaries-review.md",
+        "source": "Cex-Engine/src/shared/database/exact_decimal.rs",
+        "first_line": 22,
+        "lines": 13,
+        "sha256": "527196d1308a3135817d540373891f833045cbc45e62c0453be66725e835e8af"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/006-atomic-order-memory-commit.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/submission.rs",
+        "first_line": 41,
+        "lines": 10,
+        "sha256": "5fb4d8add54d3caf76ca4560c8569e503223b77daad0364730add6ddae4aed99"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/007-single-owner-engine-state.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/handle.rs",
+        "first_line": 20,
+        "lines": 5,
+        "sha256": "72c3151047bb0dcb4f37727e594f1c67cb0f4a4770a75e29a546fc4f28c3c4a2"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/008-ordered-output-worker.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/output.rs",
+        "first_line": 239,
+        "lines": 8,
+        "sha256": "126066711bea951106506193cac4bbfd954366750689e8991659a12e8a8eb765"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/009-durable-journal-recovery.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/journal/store.rs",
+        "first_line": 258,
+        "lines": 23,
+        "sha256": "0d5d936d241687b69a7bf24021f52593f81cdffa64be0e8bb37f9485e081f68c"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/010-remove-engine-bot.md",
+        "source": "Cex-Engine/src/domains/mod.rs",
+        "first_line": 2,
+        "lines": 3,
+        "sha256": "be9f63f8df9bb555720d35a75a00dda00cfdce015680b5ad19c04ff87bc58089"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/011-durable-market-output.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/market.rs",
+        "first_line": 160,
+        "lines": 26,
+        "sha256": "5acfa48d5f9537dbcb45275da374dc758a0a43903cdadfd7ee6bccf590233831"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/012-received-asset-fees.md",
+        "source": "Cex-Engine/src/domains/cex/engine/amount.rs",
+        "first_line": 92,
+        "lines": 8,
+        "sha256": "cc1839b796471dc543087bcdc97d306f1ac4fe9a5b0dfb6ac71073b36ffde0e9"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/013-market-ioc-completion.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/output.rs",
+        "first_line": 143,
+        "lines": 17,
+        "sha256": "31ce84b74570c9c5d8fc156fd653e4e70aac65ceb5c370370c13ce7933922148"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/014-durable-order-rejection.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/output.rs",
+        "first_line": 95,
+        "lines": 23,
+        "sha256": "e20bfcc5d1939e30ee3cfd839b9082a8106c1d2262e0dd23723ecc6e65f850f7"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/015-read-only-journal-audit.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/audit.rs",
+        "first_line": 57,
+        "lines": 12,
+        "sha256": "05af4d753cf9a98fae6e82cc2c870c411b7bf8ecb489d56779a3cb0caf814025"
+      },
+      {
+        "document": "Cex-Engine/docs/decisions/016-platform-service-boundary.md",
+        "source": "Cex-Engine/src/routes/mod.rs",
+        "first_line": 11,
+        "lines": 15,
+        "sha256": "2c7932a66791e83b92953ab7f6bfad32c878bfc760aa1a84d6d11bb93b20caac"
+      },
+      {
+        "document": "Cex-Frontend/docs/decisions/001-platform-market-and-btc.md",
+        "source": "Cex-Frontend/src/lib/market.ts",
+        "first_line": 18,
+        "lines": 3,
+        "sha256": "addccea57891478c5f921136cff195b041805e55081788f9cd2042adae03f5f0"
+      },
+      {
+        "document": "Cex-Frontend/docs/decisions/002-next-security-update.md",
+        "source": "Cex-Frontend/package.json",
+        "first_line": 16,
+        "lines": 3,
+        "sha256": "33bda2719d76b9de87bbc7f3cf16d558b7c9c92c3fa7b16e763cbda957cb6a4b"
+      },
+      {
+        "document": "docs/roadmap/features.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/order/service/OrderService.java",
+        "first_line": 211,
+        "lines": 9,
+        "sha256": "10c1305744bc551218191cd6b7bde15683c600c44e0eddd198d6aa380204990f"
+      },
+      {
+        "document": "docs/roadmap/reliability.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/ledger/LedgerService.java",
+        "first_line": 64,
+        "lines": 13,
+        "sha256": "5d2a23a8fa01e5e127b27b8f60662c40bfcdf433f4e1f94570d7ecc80d695ec3"
+      },
+      {
+        "document": "docs/roadmap/compliance-security.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorSessionPolicy.java",
+        "first_line": 19,
+        "lines": 10,
+        "sha256": "aeb02ff28ddb6fe3c3dc3dcf157b0779f79424895a9fd3f701a674af38fcfe55"
+      },
+      {
+        "document": "docs/roadmap/infrastructure.md",
+        "source": "Cex-Engine/src/routes/mod.rs",
+        "first_line": 11,
+        "lines": 15,
+        "sha256": "2c7932a66791e83b92953ab7f6bfad32c878bfc760aa1a84d6d11bb93b20caac"
+      },
+      {
+        "document": "docs/roadmap/didit-kyc.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/kyc/DiditWebhookVerifier.java",
+        "first_line": 45,
+        "lines": 10,
+        "sha256": "1271628636b6e0c62cded40c8d06b012f1ab8edfcf873a7fbd7592053372fa2a"
+      },
+      {
+        "document": "docs/roadmap/access-approval-audit.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/SecurityConfiguration.java",
+        "first_line": 20,
+        "lines": 4,
+        "sha256": "54723fe011b09f816f7aa4030a05a2f57618ca709be20b3245d6d4572ece890a"
+      },
+      {
+        "document": "docs/roadmap/asset-ledger-reconciliation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/ledger/LedgerService.java",
+        "first_line": 64,
+        "lines": 13,
+        "sha256": "5d2a23a8fa01e5e127b27b8f60662c40bfcdf433f4e1f94570d7ecc80d695ec3"
+      },
+      {
+        "document": "docs/roadmap/bound-approval.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorMfaService.java",
+        "first_line": 172,
+        "lines": 19,
+        "sha256": "13420d4eb761da89c65fc8b1e11124a97e52110875fcd17536851c56a72cf80c"
+      },
+      {
+        "document": "docs/roadmap/btc-platform-market.md",
+        "source": "Cex-Frontend/src/lib/market.ts",
+        "first_line": 18,
+        "lines": 3,
+        "sha256": "addccea57891478c5f921136cff195b041805e55081788f9cd2042adae03f5f0"
+      },
+      {
+        "document": "docs/roadmap/customer-initial-risk.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/CddCrypto.java",
+        "first_line": 50,
+        "lines": 7,
+        "sha256": "e052fe236c6adf160f0763de76e1c0a76c6188e88689926ca3b3885a17a5043f"
+      },
+      {
+        "document": "docs/roadmap/edd-case-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/EddService.java",
+        "first_line": 58,
+        "lines": 3,
+        "sha256": "fc2149d0b34412808ee8b376c7dafad59eaeab6acdbe005fd5ce6b3dcfcd24e5"
+      },
+      {
+        "document": "docs/roadmap/fee-consistency.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/fee/service/FeeConfigService.java",
+        "first_line": 51,
+        "lines": 7,
+        "sha256": "e9224df7d3df185634bef2449aa33c6de0aaf351ae4b77d330f543cba3b73866"
+      },
+      {
+        "document": "docs/roadmap/kyc-identity.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/kyc/DiditWebhookVerifier.java",
+        "first_line": 45,
+        "lines": 10,
+        "sha256": "1271628636b6e0c62cded40c8d06b012f1ab8edfcf873a7fbd7592053372fa2a"
+      },
+      {
+        "document": "docs/roadmap/market-ioc.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/shared/kafka/KafkaOrderEventConsumer.java",
+        "first_line": 164,
+        "lines": 14,
+        "sha256": "2d9424429a03ec7bc7d39c79c3561d30292ff06a7e98d1b2423eeafe69f73b48"
+      },
+      {
+        "document": "docs/roadmap/operator-lifecycle.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorSessionPolicy.java",
+        "first_line": 19,
+        "lines": 10,
+        "sha256": "aeb02ff28ddb6fe3c3dc3dcf157b0779f79424895a9fd3f701a674af38fcfe55"
+      },
+      {
+        "document": "docs/roadmap/operator-mfa.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorMfaService.java",
+        "first_line": 136,
+        "lines": 8,
+        "sha256": "d92b606fa82b43c99e881ee69356973382746b1fe5446c2a83ef2750cb415632"
+      },
+      {
+        "document": "docs/roadmap/operator-role-approval.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorRoleService.java",
+        "first_line": 113,
+        "lines": 13,
+        "sha256": "b9f6a0182b565464b316a9e3c751ed19729741f0dec032fae6de796c45d4e2cd"
+      },
+      {
+        "document": "docs/roadmap/order-resolution.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/order/service/OrderDispatchService.java",
+        "first_line": 35,
+        "lines": 18,
+        "sha256": "8594e5740508124ba7b26faf47fbbd0af7af71a4c48753801cbeff96a35e47ae"
+      },
+      {
+        "document": "docs/roadmap/platform-kyc-reconciliation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/kyc/KycReconciliationService.java",
+        "first_line": 58,
+        "lines": 18,
+        "sha256": "ec276edf375911bec9bc52fbad1d2c2813c34210f8139797093f6119e78a2199"
+      },
+      {
+        "document": "docs/roadmap/runtime-upgrade.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/settlement/trade/scheduler/TradeSettlementScheduler.java",
+        "first_line": 78,
+        "lines": 7,
+        "sha256": "64b4ab5514d2bc79c2f395638b71f1624869a108ce3f82a276036e60d9f1f92a"
+      },
+      {
+        "document": "docs/reviews/2026-10-21-order-safety-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/order/service/OrderService.java",
+        "first_line": 211,
+        "lines": 9,
+        "sha256": "10c1305744bc551218191cd6b7bde15683c600c44e0eddd198d6aa380204990f"
+      },
+      {
+        "document": "docs/reviews/2026-10-21-engine-design-identity-audit.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/handle.rs",
+        "first_line": 20,
+        "lines": 5,
+        "sha256": "72c3151047bb0dcb4f37727e594f1c67cb0f4a4770a75e29a546fc4f28c3c4a2"
+      },
+      {
+        "document": "Cex-Engine/DELETE_REVIEW.md",
+        "source": "Cex-Engine/src/routes/mod.rs",
+        "first_line": 11,
+        "lines": 15,
+        "sha256": "2c7932a66791e83b92953ab7f6bfad32c878bfc760aa1a84d6d11bb93b20caac"
+      },
+      {
+        "document": "Cex-Engine/README.md",
+        "source": "Cex-Engine/src/domains/cex/engine/runtime/handle.rs",
+        "first_line": 20,
+        "lines": 5,
+        "sha256": "72c3151047bb0dcb4f37727e594f1c67cb0f4a4770a75e29a546fc4f28c3c4a2"
+      },
+      {
+        "document": "Cex-Platform-Service/README.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/shared/kafka/EngineEventInbox.java",
+        "first_line": 34,
+        "lines": 8,
+        "sha256": "80cc8dfb3e1bbc11d8c5ba9d65cff4b493cfb19625943a74ccc3d01455d8406f"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/SETTLEMENT_DESIGN.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/settlement/trade/scheduler/TradeSettlementScheduler.java",
+        "first_line": 78,
+        "lines": 7,
+        "sha256": "64b4ab5514d2bc79c2f395638b71f1624869a108ce3f82a276036e60d9f1f92a"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/reference/access-control-compliance.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/OperatorSessionPolicy.java",
+        "first_line": 19,
+        "lines": 10,
+        "sha256": "aeb02ff28ddb6fe3c3dc3dcf157b0779f79424895a9fd3f701a674af38fcfe55"
+      },
+      {
+        "document": "Cex-Frontend/README.md",
+        "source": "Cex-Frontend/src/lib/market.ts",
+        "first_line": 18,
+        "lines": 3,
+        "sha256": "addccea57891478c5f921136cff195b041805e55081788f9cd2042adae03f5f0"
+      },
+      {
+        "document": "Cex-Frontend/PROJECT_PLAN.md",
+        "source": "Cex-Frontend/src/lib/market.ts",
+        "first_line": 18,
+        "lines": 3,
+        "sha256": "addccea57891478c5f921136cff195b041805e55081788f9cd2042adae03f5f0"
+      },
+      {
+        "document": "Cex-Frontend/docs/plans/frontend-architecture.md",
+        "source": "Cex-Frontend/src/lib/market.ts",
+        "first_line": 18,
+        "lines": 3,
+        "sha256": "addccea57891478c5f921136cff195b041805e55081788f9cd2042adae03f5f0"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/BENCHMARK.md",
+        "source": "Cex-Platform-Service/build.gradle",
+        "first_line": 105,
+        "lines": 11,
+        "sha256": "00a8ad262d91a5e2055b0e220ac048721a7573590483016975414927be89708f"
+      },
+      {
+        "document": "Cex-Platform-Service/src/main/java/dustin/cex/domains/engine/Description.md",
+        "source": "Cex-Platform-Service/build.gradle",
+        "first_line": 105,
+        "lines": 11,
+        "sha256": "00a8ad262d91a5e2055b0e220ac048721a7573590483016975414927be89708f"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/022-edd-evidence-storage-and-access.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/EvidenceImage.java",
+        "first_line": 35,
+        "lines": 4,
+        "sha256": "1f7c5c7fd73d4b25b785382f7ed75b1ad5376c34592979c7b1541ade0ba73379"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/022-edd-evidence-storage-and-access.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/EvidenceService.java",
+        "first_line": 73,
+        "lines": 4,
+        "sha256": "7d82a4405eb2a8d5dfadefd396577869086c1996f8b6dee0e9d6c743bea70592"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/022-edd-evidence-storage-and-access.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/EvidenceCrypto.java",
+        "first_line": 45,
+        "lines": 4,
+        "sha256": "80638889d39c73b27fdda7799f71842467ccaf586da2980bad2085a038968825"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/022-edd-evidence-storage-and-access.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/EvidenceService.java",
+        "first_line": 90,
+        "lines": 6,
+        "sha256": "5b3e8bac42487c65355855ba9ad12d7e1c3c53516ff335b3501dbf695b60238d"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/023-address-document-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AddressFacts.java",
+        "first_line": 20,
+        "lines": 7,
+        "sha256": "c73e2fa69c9447133f7f105b92815228d2946d70005306e002f12fa03572773c"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/023-address-document-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/EvidenceService.java",
+        "first_line": 91,
+        "lines": 5,
+        "sha256": "8f4864b16326e47857781b8f7ad171a695e8d3e4829a6e2aadfc7463c77c5234"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/023-address-document-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AddressReviewService.java",
+        "first_line": 76,
+        "lines": 5,
+        "sha256": "b50e9cacb220c32833e8d3f29f48ea76caf8178cb863ed767256bb0573bf9bbd"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/023-address-document-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AddressReviewService.java",
+        "first_line": 128,
+        "lines": 5,
+        "sha256": "9832728fe9b5199d2313caa52af0c489e37ea0958a5a763575d9643d16f0f6ae"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/023-address-document-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AddressReviewService.java",
+        "first_line": 99,
+        "lines": 6,
+        "sha256": "41d118a47cf85ec845aea6971b227285fdfa5a3a2020463519ea4467f664dce8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/024-source-of-funds-pair-and-trade-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/FundsFacts.java",
+        "first_line": 37,
+        "lines": 7,
+        "sha256": "783644ad26c800873e5518236b0e2a899590d7e80d6d6d75422d27aff0e5b638"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/024-source-of-funds-pair-and-trade-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/FundsTradeLink.java",
+        "first_line": 39,
+        "lines": 7,
+        "sha256": "9d6332187a99419096fcc2ef58029933273e84058250fbe9b6874e509eecf9e0"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/024-source-of-funds-pair-and-trade-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/FundsReviewService.java",
+        "first_line": 158,
+        "lines": 5,
+        "sha256": "65f47a1f4e2c89d5f353020e4dc8d8104f4c3bd97a96880cb5fc61d64ff3ce46"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/024-source-of-funds-pair-and-trade-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/FundsReviewService.java",
+        "first_line": 79,
+        "lines": 3,
+        "sha256": "24eebcfecfa4096f252cd11d3156444019d4beca909d89bb3ded7f7778b8d9bc"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/024-source-of-funds-pair-and-trade-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/FundsReviewService.java",
+        "first_line": 102,
+        "lines": 6,
+        "sha256": "23832a7c187ed8fba64b4f6cb89a917ca802dffece53a836807756c076e7aad1"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/024-source-of-funds-pair-and-trade-review.md",
+        "source": "Cex-Platform-Service/src/test/java/dustin/cex/domains/kyc/FundsReviewIntegrationTest.java",
+        "first_line": 94,
+        "lines": 14,
+        "sha256": "987d2e5513dce8fcd46826d13ccef37023af2a0e93e7113f7916d69b4702327a"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/025-wealth-period-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/WealthFacts.java",
+        "first_line": 27,
+        "lines": 5,
+        "sha256": "6f019a254fad4d04f30e26d2000523d0ac629aef7dc9dbb390a8dee9c902a61f"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/025-wealth-period-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/WealthFacts.java",
+        "first_line": 73,
+        "lines": 8,
+        "sha256": "0e15e74b86626facebdff23dcd745e78bcd995e4cc7424b2d23786e76f296cc5"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/025-wealth-period-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/WealthFacts.java",
+        "first_line": 16,
+        "lines": 4,
+        "sha256": "3897fcd5d4b5174b2ac72867c8f13c8a999275197fc06f2db2e29d561a171c37"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/025-wealth-period-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/WealthReviewService.java",
+        "first_line": 155,
+        "lines": 6,
+        "sha256": "2d462fde3b1be2e23b91c6e90768beb954772fc1a36276cea43d9bfe0cb0c200"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/025-wealth-period-independent-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/WealthReviewService.java",
+        "first_line": 101,
+        "lines": 6,
+        "sha256": "e88ab868ce304548a06b80ab51d2476c02a46eceb8d4507e1f6edfe0cb79066e"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/025-wealth-period-independent-review.md",
+        "source": "Cex-Platform-Service/src/test/java/dustin/cex/domains/kyc/WealthReviewIntegrationTest.java",
+        "first_line": 95,
+        "lines": 12,
+        "sha256": "89fab67ea677f87209a54e793f19db79160b8e9f77a1f5b1300326ac01e5b358"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/026-edd-dossier-and-independent-inspection.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/EddDossier.java",
+        "first_line": 68,
+        "lines": 5,
+        "sha256": "f81e8fe12b724e0a926080f9531e1d36d3e0a97b89ce91ac3bb287b09afa9a82"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/026-edd-dossier-and-independent-inspection.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/EddService.java",
+        "first_line": 91,
+        "lines": 4,
+        "sha256": "781d3f43b8611288bd3369eb60bcf190e04a2d4c95ed41e5e261121225c0cabb"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/026-edd-dossier-and-independent-inspection.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/EddDossier.java",
+        "first_line": 90,
+        "lines": 4,
+        "sha256": "cbf9208429ad0690f5dd9e7bdc139fc43530b0baff1946ee2eb14ddded86ee26"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/026-edd-dossier-and-independent-inspection.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/EddService.java",
+        "first_line": 148,
+        "lines": 9,
+        "sha256": "175b385840085c7bedc72ff0c0b795d0022dd7c26616fa6d363aa88a1c2b031a"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/026-edd-dossier-and-independent-inspection.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/EddService.java",
+        "first_line": 104,
+        "lines": 4,
+        "sha256": "fd2889a004b78a0f81c754d47ce9a9347616b155dc4b4cb3eb82a86fb567431d"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/026-edd-dossier-and-independent-inspection.md",
+        "source": "Cex-Platform-Service/src/test/java/dustin/cex/domains/kyc/EddDossierIntegrationTest.java",
+        "first_line": 61,
+        "lines": 8,
+        "sha256": "10b1c7fd7d584f74ed00215af1e1b30332f39409d84a497d449d6f23e46739d5"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/027-signed-aml-evidence-and-investigation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/kyc/KycService.java",
+        "first_line": 231,
+        "lines": 10,
+        "sha256": "e5cb0b59e417290d3d8b41c3f4535dabf585f8d16e37ad346585a4bc267a47bc"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/027-signed-aml-evidence-and-investigation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AmlSource.java",
+        "first_line": 68,
+        "lines": 4,
+        "sha256": "38a93c3a08329f87b037bbec3dba295b603392e8431f80af3c6903991e67eabc"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/027-signed-aml-evidence-and-investigation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AmlSource.java",
+        "first_line": 44,
+        "lines": 4,
+        "sha256": "0a950a7169a39b3ee19059cc709faa3236aa47c63ec98a9e49f05e6e3763d7ed"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/027-signed-aml-evidence-and-investigation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AmlInvestigationService.java",
+        "first_line": 79,
+        "lines": 4,
+        "sha256": "df647ecb02fcc1be8cd278ae25c85ff19536fef582d5fdae216f49738e37695d"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/027-signed-aml-evidence-and-investigation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/CddService.java",
+        "first_line": 156,
+        "lines": 2,
+        "sha256": "00e8cf0b5dfe9331892651a6301f7de78578f7cfba56847cb38e202a7756e6b8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/027-signed-aml-evidence-and-investigation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/EddDossier.java",
+        "first_line": 61,
+        "lines": 5,
+        "sha256": "8aac4e93978f29424828f2d04ac4d91e92932e0b744189d2d64137e6719da6a3"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/027-signed-aml-evidence-and-investigation.md",
+        "source": "Cex-Platform-Service/src/test/java/dustin/cex/domains/kyc/AmlInvestigationIntegrationTest.java",
+        "first_line": 145,
+        "lines": 4,
+        "sha256": "80c0dd68956683e0b4e1a37c48c0f23b0d6928713936adc5fa24c858a6e5aa24"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/028-aml-false-positive-resolution.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AmlFalsePositiveRules.java",
+        "first_line": 49,
+        "lines": 11,
+        "sha256": "9493bd70be8b0900f375a623287c619a1b0dee36ab406baf6fe3714d183025c8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/028-aml-false-positive-resolution.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AmlResolutionPolicy.java",
+        "first_line": 67,
+        "lines": 10,
+        "sha256": "792c4600bfaefa5086fa6fb89831bebb2342c0c293ebbc38b302652206dba03f"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/028-aml-false-positive-resolution.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AmlResolutionPolicy.java",
+        "first_line": 87,
+        "lines": 5,
+        "sha256": "411d7dcf64b7c8ad7c7650c5db49d0de77667bbdba20c0b43746abd719c34a82"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/028-aml-false-positive-resolution.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/EddService.java",
+        "first_line": 152,
+        "lines": 5,
+        "sha256": "d9e6b02da6a1cc999e463844e381ddc2fd683c9ce8cea59a7a17b85a23e96664"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/028-aml-false-positive-resolution.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/cdd/CddService.java",
+        "first_line": 136,
+        "lines": 10,
+        "sha256": "ee89cab8c07d089a45473f0dac1ffa38c16a8afeef103e4e729ca767d3841d46"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/028-aml-false-positive-resolution.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/AmlResolutionPolicy.java",
+        "first_line": 20,
+        "lines": 7,
+        "sha256": "b885c2d9dd37a13379a9a822438e761edb78fa7c2b93b0c23fbb0f39dfdd44e4"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/028-aml-false-positive-resolution.md",
+        "source": "Cex-Platform-Service/src/test/java/dustin/cex/domains/kyc/AmlResolutionIntegrationTest.java",
+        "first_line": 112,
+        "lines": 7,
+        "sha256": "3041856c80638fed5801448801af6211b7453ec62e37d61e1edb960fdfdd6097"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/029-confidential-reporting-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 32,
+        "lines": 6,
+        "sha256": "25a793b758b16ea276e7248841ed0859fc8271bfc6974308994d42712f516359"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/029-confidential-reporting-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 79,
+        "lines": 3,
+        "sha256": "ba3d2d19a65919aa9c351fef772452541d8d6a4dc00087e3d63712f6432f3a26"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/029-confidential-reporting-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 180,
+        "lines": 4,
+        "sha256": "0a1b1db34366114864f0a0045c11923db1683ea11cdebfd28ac5ae1769e18fe5"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/029-confidential-reporting-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ComplianceReferralBasis.java",
+        "first_line": 41,
+        "lines": 2,
+        "sha256": "f5c0087fbae41ac8e90dc362bb9b9fb58a07c1056699748bc03a0c9e473d8d6b"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/029-confidential-reporting-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 177,
+        "lines": 2,
+        "sha256": "a68f82d8ea2c2844be49f04b84c82e71c0660cc9f8d374a818cdafab7dcc86fe"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/029-confidential-reporting-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 101,
+        "lines": 4,
+        "sha256": "e78511e9fca1f4b16a783f7b36c01da5c2bc8834438caabaefb0277ac55119ca"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/029-confidential-reporting-review.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 188,
+        "lines": 3,
+        "sha256": "339f173e9f517faefd7ea754b0bf90ced6aba9402ad5ea483218b5aeb8c233a0"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/030-reporting-queue-and-followup.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 134,
+        "lines": 7,
+        "sha256": "1e8a046828b5ce45ea69165df47d2352053c87f7bd8b0f19d0075c5c31dd3a69"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/030-reporting-queue-and-followup.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 141,
+        "lines": 7,
+        "sha256": "351f26a7b3d408be40e793102b07bd59f043d854eaeeb3bb7416c97daddede70"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/030-reporting-queue-and-followup.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 161,
+        "lines": 4,
+        "sha256": "b279b07860a06b34026dfff42f93a20c7db71ebf1c41d9fe1245ef2e23f15f69"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/030-reporting-queue-and-followup.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java",
+        "first_line": 72,
+        "lines": 3,
+        "sha256": "0e21e14fef4882091e30ba1fa89a0c441d1de06ad0364daa7621adfa6c144c44"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/030-reporting-queue-and-followup.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java",
+        "first_line": 84,
+        "lines": 4,
+        "sha256": "04c2bb80f1e301829022d404f338f69f9dee1e3095d6fe27830674336074bb69"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/030-reporting-queue-and-followup.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java",
+        "first_line": 90,
+        "lines": 4,
+        "sha256": "ef92dc8c7e21833242ced0e1d7cee4f2330264061fa2771091c4ac4371877fd9"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/030-reporting-queue-and-followup.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java",
+        "first_line": 120,
+        "lines": 3,
+        "sha256": "519b70afa78511b466d64f7cb8402c9ab1009e6e46710f60668217114ab1afc0"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/031-reporting-custody-and-orphan-recovery.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingCustody.java",
+        "first_line": 28,
+        "lines": 5,
+        "sha256": "efc611dc75a5c653519a1c7a73815c739dbf831887e991e6cec3735088d92d49"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/031-reporting-custody-and-orphan-recovery.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingCustody.java",
+        "first_line": 35,
+        "lines": 4,
+        "sha256": "78636bf239b1c6eebf4d52316020ebde62f22e6cccc4cb146ea55cae7412f787"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/031-reporting-custody-and-orphan-recovery.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingCustodyService.java",
+        "first_line": 145,
+        "lines": 1,
+        "sha256": "31de37232a2ba29ce6bcfc10011b2b6b5c95942bee0cff1fd93389732c2fc143"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/031-reporting-custody-and-orphan-recovery.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingCustodyService.java",
+        "first_line": 133,
+        "lines": 5,
+        "sha256": "a5f6085823f3ac7c9b920aeebffb1bbce14ed454c85efdae30720d11a67ad7e0"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/031-reporting-custody-and-orphan-recovery.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingCustodyService.java",
+        "first_line": 98,
+        "lines": 3,
+        "sha256": "99d6e91ad943939b0b5e761671be2aa22b65f4cd4486285542501d2b466e08c8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/031-reporting-custody-and-orphan-recovery.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingReviewService.java",
+        "first_line": 118,
+        "lines": 4,
+        "sha256": "23600570fbc9725d91246d99861679795e289fdf81d3de69ab8a99012bfaa4e5"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/031-reporting-custody-and-orphan-recovery.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingCustodyService.java",
+        "first_line": 110,
+        "lines": 6,
+        "sha256": "987ba78bb3b4fbee7467f645588342bd2d3e1e41b63cbde5ebc44f2e9b789c53"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/032-reporting-supervision.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java",
+        "first_line": 47,
+        "lines": 6,
+        "sha256": "74c0bfaf82ec557fb803453fcd475ce6e624c681f6a05e81da7f6cff4416a2c8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/032-reporting-supervision.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingSupervisionService.java",
+        "first_line": 54,
+        "lines": 7,
+        "sha256": "d20241f8ccc861cf635e99e269e591b185c3abeb68c87cbad17a63c084e5bc7f"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/032-reporting-supervision.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingSupervisionService.java",
+        "first_line": 63,
+        "lines": 15,
+        "sha256": "7637da25b2bbd0e473cdbf99cdb6fe3dcaa07171d9996e5699c587487506733f"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/032-reporting-supervision.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ReportingSupervisionService.java",
+        "first_line": 81,
+        "lines": 2,
+        "sha256": "2d257185e58d51ba3ee23efafd07f1a7aa65b4d4935bce3a62a23bfe4d3497f8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/032-reporting-supervision.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/SecurityConfiguration.java",
+        "first_line": 65,
+        "lines": 1,
+        "sha256": "e97efe3c1e4b2e469ed73dcb8cea15a8979a1a409e87dd9f417546da72b0ff52"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/032-reporting-supervision.md",
+        "source": "Cex-Platform-Service/src/test/java/dustin/cex/domains/edd/ReportingInternalCheckTest.java",
+        "first_line": 12,
+        "lines": 5,
+        "sha256": "f4cf54ed08c10fa866217c2f5fcd292d6ebe7307f90f35945a26feae5af46907"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/033-relationship-exit-initiation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/RelationshipExitService.java",
+        "first_line": 31,
+        "lines": 7,
+        "sha256": "420b050a040ea13d3e8597dcb8dabc620a5fa23777caaf82619797356ad380a8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/033-relationship-exit-initiation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ComplianceReferralBasis.java",
+        "first_line": 41,
+        "lines": 2,
+        "sha256": "f5c0087fbae41ac8e90dc362bb9b9fb58a07c1056699748bc03a0c9e473d8d6b"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/033-relationship-exit-initiation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/RelationshipExitService.java",
+        "first_line": 155,
+        "lines": 4,
+        "sha256": "892220cd867f85c5da669768043aca03b55c8a5dad9fccc95fb72bfff9e662f8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/033-relationship-exit-initiation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/RelationshipExitService.java",
+        "first_line": 112,
+        "lines": 4,
+        "sha256": "4bce85dffa5a45cfb13f0c0cc43186b88ac4821c40a6e776100f8398215c9f01"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/033-relationship-exit-initiation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/security/TradingAccessPolicy.java",
+        "first_line": 20,
+        "lines": 2,
+        "sha256": "39d374dfb06c3ab5bbf406769f0c50ccf279aa908011606ae85d096b564d7af1"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/033-relationship-exit-initiation.md",
+        "source": "Cex-Platform-Service/src/main/resources/edd/relationship-exit-rescission-schema.sql",
+        "first_line": 27,
+        "lines": 13,
+        "sha256": "a28495f268b68c9cbf0fe75a7779fd533cc6eb58655f52d6c7169c317d0cf7c8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/033-relationship-exit-initiation.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/RelationshipExitService.java",
+        "first_line": 129,
+        "lines": 10,
+        "sha256": "988692d55c942576ba7e58f8057717895d21b16c369f8f3e5c563eacc05192c9"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/033-relationship-exit-initiation.md",
+        "source": "Cex-Platform-Service/src/test/java/dustin/cex/domains/kyc/RelationshipExitIntegrationTest.java",
+        "first_line": 155,
+        "lines": 4,
+        "sha256": "1592a4161b68c9c1dc4f286b67c1b93068b16540b9454d24e531de235c0ac052"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/034-exit-rescission.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ExitRescissionService.java",
+        "first_line": 41,
+        "lines": 7,
+        "sha256": "671d2af316fd43adf9dccae3eebdd99b0e1c9fc6b0cc2f2cb9b5ee702e3058d7"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/034-exit-rescission.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ExitRescissionService.java",
+        "first_line": 135,
+        "lines": 9,
+        "sha256": "bbf665482c36af6c9772c3009f3f68fae81a4ef2bac5c5b4d07b5f508e03bde6"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/034-exit-rescission.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ExitRescissionService.java",
+        "first_line": 144,
+        "lines": 6,
+        "sha256": "a81f5b2b61a3407c1c706bc6b79c53654675c9b2dedc6b0f01b45323f797106d"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/034-exit-rescission.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ExitRescissionService.java",
+        "first_line": 169,
+        "lines": 4,
+        "sha256": "49630a7ffb1ef1299a54885203397af21a23ec717639c508b512b991c187ce94"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/034-exit-rescission.md",
+        "source": "Cex-Platform-Service/src/main/resources/edd/relationship-exit-rescission-schema.sql",
+        "first_line": 23,
+        "lines": 3,
+        "sha256": "3ba5ac9317595a7b092ecd3aa8a44592e6fa619a5c89bfb13504122f517053f5"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/034-exit-rescission.md",
+        "source": "Cex-Platform-Service/src/main/resources/edd/relationship-exit-rescission-schema.sql",
+        "first_line": 27,
+        "lines": 13,
+        "sha256": "a28495f268b68c9cbf0fe75a7779fd533cc6eb58655f52d6c7169c317d0cf7c8"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/034-exit-rescission.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/edd/ExitRescissionService.java",
+        "first_line": 112,
+        "lines": 4,
+        "sha256": "a0230722f5136567d232d475842ae8acb56e8bd7b7764d196cfc13d6e5f3cccf"
+      },
+      {
+        "document": "Cex-Platform-Service/docs/decisions/034-exit-rescission.md",
+        "source": "Cex-Platform-Service/src/main/java/dustin/cex/domains/order/service/OrderService.java",
+        "first_line": 99,
+        "lines": 3,
+        "sha256": "ee148800117ed2785cf015e2857cd35eb49a1edd53fb079141fc441d4ba8136d"
+      }
+    ],
+    "updated_documents": []
+  },
+  "additional_code_excerpts": {
+    "historical": 4,
+    "scope_review": 2,
+    "all_match": true
+  },
+  "official_body_checks": {
+    "customer_due_diligence": {
+      "source": "https://law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1022860887",
+      "raw_sha256": "2e2163f064b379ed80a10a7dff0978339a7d8845fcf501bcd2c7e3d1b449dd97",
+      "text_length": 5544,
+      "retrieved": true,
+      "exit_text_found": true,
+      "str_text_found": true
+    },
+    "stripe_review": {
+      "source": "https://stripe.com/en-ca/legal/unacceptable-risk-policy",
+      "raw_sha256": "e4dd200d98b97e7aae3b7558ad174787edc66865d86c25330dff8fac47b06d1a",
+      "text_length": 15925,
+      "retrieved": true
+    },
+    "adyen_reference": {
+      "source": "https://docs.adyen.com/online-payments/reversal",
+      "raw_sha256": "4eede2b2aff4dadd15938c4d7a9a5b3e0e3f42579a50fff67eb5ff27a61adac9",
+      "text_length": 23335,
+      "retrieved": true
+    },
+    "pg_volatility": {
+      "source": "https://www.postgresql.org/docs/16/xfunc-volatility.html",
+      "raw_sha256": "a203d1e60795599fa9a6a13088475c3d251e986849295bc9192a2230ba83a2ca",
+      "text_length": 5923,
+      "retrieved": true
+    },
+    "pg_isolation": {
+      "source": "https://www.postgresql.org/docs/16/transaction-iso.html",
+      "raw_sha256": "05d46458aba7b3d33fb5cab5494ab2ee1ee282f37d3f564654f03baed1501757",
+      "text_length": 24139,
+      "retrieved": true
+    },
+    "spring_propagation": {
+      "source": "https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-propagation.html",
+      "raw_sha256": "75f8cdf9210c684ebb108ee83e6c8c2e3d5c3c5137a69e19bb6cc941de5038b2",
+      "text_length": 19620,
+      "retrieved": true
+    },
+    "upbit": {
+      "source": "https://static.upbit.com/terms/private_data.html",
+      "raw_sha256": "d59c313430d257bd06bd27f00ee8b85c6ef87f5c8889cdb94765ca6bb3a91acc",
+      "text_length": 26456,
+      "retrieved": true
+    },
+    "bithumb": {
+      "source": "https://privacy.bithumb.com/ko/faq/",
+      "raw_sha256": "ad05924eaec64cc5ba1fda18ae80c44ad2fbe182b83e1b5647c07681bd05d97a",
+      "text_length": 4496,
+      "retrieved": true
+    }
+  },
+  "additional_official_review": {
+    "samsung_aml_pdf": "https://www.samsungsecurities.co.kr/download/kor/pdf/control_file05.pdf",
+    "samsung_complaint_body_verified": false,
+    "samsung_complaint_body_failure": "HTTP 502",
+    "statutory_three_person_requirement_claimed": false
+  },
+  "intermediate_successes_not_added_to_total": [
+    {
+      "container": "cex-edd-2734d5e20ea3",
+      "exit": 0,
+      "tests": {
+        "tests": 43,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    {
+      "container": "cex-edd-f66b7e72d5ae",
+      "exit": 0,
+      "tests": {
+        "tests": 49,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true,
+      "suites": [
+        {
+          "class": "dustin.cex.domains.edd.ExitRescissionFactsTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "rescissionJudgmentMustBeExplicit()",
+            "[1] rationale = null",
+            "[2] rationale = \"\"",
+            "[3] rationale = \" \"",
+            "[4] rationale = \"안\\n쪽\"",
+            "[5] rationale = \"안‮쪽\"",
+            "normalizationLengthBoundaryAndSafePrinting()"
+          ]
+        },
+        {
+          "class": "dustin.cex.domains.kyc.ExitRescissionIntegrationTest",
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "cases": [
+            "expiredRequestIsReadableWithoutRevivingItsDecisionAuthority()",
+            "actualCddClearanceThenIndependentWithdrawalPermitsOrders()",
+            "staleMfaInvalidSessionAndBadPageDoNotProvideOriginal()",
+            "decisionAuditFailurePreservesHoldAndProofThenSameProofRetries()",
+            "withdrawalRemovesOnlyExitHoldAndPreservesOriginalApprovedRecord()",
+            "sameFactsAndKeyReplayButChangedReasonOrCheckerConflicts()",
+            "copiedCipherCannotReturnReasonOrCreateViews()",
+            "databaseGuardSerializesDirectConcurrentApprovals()",
+            "anotherBusinessKindCannotAuthorizeWithdrawal()",
+            "noPersonalViewsMeansNoOptionsAndMakerViewsCannotSubstitute()",
+            "newDeclarationBlocksStaleDecisionButHistoryRemainsReadable()",
+            "withdrawalPreservesMoneyAndReopensOnlyFutureAdmissionAfterAllChecks()",
+            "designatedThirdPersonReadsOriginalOnlyThroughAuditedCorrectionPurpose()",
+            "auditFailureReturnsNoReasonAndRollsBackViews()",
+            "makerOrCheckerVersionChangeInvalidatesRequest()",
+            "oldElevenKindSchemaAndLegacyPermanentIndexAreRejected()",
+            "newEvidenceAfterSignatureInvalidatesWithdrawalWithoutConsumingProof()",
+            "checkerVersionAndOldSessionViewsCannotBeReused()",
+            "identicalContentUsesOneSetOfPagesDespiteDifferentSnapshotIds()",
+            "decisionOutcomeCanBeReadAfterResponseLossWithoutReapplyingIt()",
+            "rejectionPreservesHoldAndAllowsNewCorrectionRequest()",
+            "generalTradingRestrictionStillAppliesAfterWithdrawal()",
+            "actualHttpIndependentWithdrawalAndCustomerSafeStatus()",
+            "newExitRequiresNewReferralAndOldWithdrawalReplayCannotClearIt()",
+            "currentExitParticipantsCannotReviewTheirOwnOriginalDecision()",
+            "auditFailureRollsBackProposalSnapshotCipherAndBinding()",
+            "reasonIsAbsentFromMetadataCipherAndAudit()",
+            "customerVersionChangeInvalidatesAlreadySignedWithdrawal()",
+            "bothDifferentBundlesRequireLastPartialPage()",
+            "outsiderCannotSelfAssignCorrectionToReadPrivateOriginalReason()",
+            "oldViewAloneCannotAuthorizeNewOptions()",
+            "rejectedOrUnapprovedExitCannotBeWithdrawn()",
+            "withdrawalNeverRemovesReportingDutyOrGrantsReportingPlaintextAccess()",
+            "customerAndAuditorCannotUseCorrectionRoutes()",
+            "concurrentApprovalAndRejectionCommitExactlyOneDecision()",
+            "concurrentSameKeyProducesOneRequest()",
+            "allNewRecordsRejectUpdateDeleteAndTruncate()",
+            "originalReviewerWhoIsNotDesignatedCannotReadWithdrawalReason()",
+            "receiptFromDifferentSessionCannotAuthorizeWithdrawal()",
+            "oppositeDecisionCannotUseApprovalProof()",
+            "differentOriginalAndCurrentContentRequireBothCompleteSets()",
+            "rescissionCannotBeDuplicatedByDirectDatabaseInsertion()"
+          ]
+        }
+      ]
+    },
+    {
+      "container": "cex-edd-2cac3d9ee3d9",
+      "exit": 0,
+      "tests": {
+        "tests": 681,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true,
+      "suites": [
+        {
+          "name": "dustin.cex.domains.kyc.AmlInvestigationIntegrationTest",
+          "tests": "42",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:31:15.662Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "24.627",
+          "cases": [
+            "missingAmlCanOnlyBeRecordedAsInsufficientInformation()",
+            "changingWriterVersionInvalidatesOldReceipt()",
+            "auditAndMetadataExcludePlaintextNotesAndApprovedReferralRetainsHold()",
+            "staleEventCannotCreateNewSource()",
+            "sourceFromAnotherCustomerCannotUseCurrentCustomersReceipt()",
+            "newInvestigationInvalidatesOldReferralSignatureWithoutChangingCaseRevision()",
+            "investigationReadAuditFailureDoesNotReturnNotes()",
+            "[1] status = \"Approved\"",
+            "[2] status = \"In Review\"",
+            "[3] status = \"Declined\"",
+            "customerAndAuditorCannotReadOriginalsWhileAuditorCanReadMetadata()",
+            "staleMfaCannotReadOrWriteSource()",
+            "unverifiedSignatureCannotCreateSourceAssessmentOrCase()",
+            "originalNumbersUrlsAndMediaNeverEnterStoredProjectionOrLogs()",
+            "actualHttpWriterAndApproverUseSameStoredInvestigation()",
+            "sameHitInDifferentNodesIsBoundToSpecificNode()",
+            "nonemptyCandidateChangeWithoutMatchingSignedEventFailsReconciliation()",
+            "simultaneousSameKeyNeverAddsTwoInvestigations()",
+            "newProviderDataPreservesOldSourceButRejectsItsNewInvestigation()",
+            "changedMetadataFailsSourceIntegrityWithSanitizedError()",
+            "normalCustomerHasNoAdditionalAmlInvestigationOrEddCase()",
+            "newDeclarationPreventsInvestigationAgainstOldAssessment()",
+            "nonexistentHitCannotBeInventedAndNoPartialRecordRemains()",
+            "duplicateHitWithinSameNodeIsAmbiguousAndRejected()",
+            "repeatedKeyReusesExactNotesAndTargetButChangedNotesConflict()",
+            "sourceInspectionAuditFailureRollsBackReceiptAndReturnsNoContent()",
+            "anotherOperatorsReceiptCannotAuthorizeThisWriter()",
+            "duplicateWebhookDoesNotCreateDuplicateSources()",
+            "nonexistentAndExpiredReceiptCannotCreateMemo()",
+            "missingHitCanOnlyHaveInsufficientInformationFinding()",
+            "investigationAuditFailureRollsBackNotesAndMetadata()",
+            "[1] notes = null",
+            "[2] notes = \"\"",
+            "[3] notes = \" \"",
+            "[4] notes = \"가‮\"",
+            "[5] notes = \"a\\t\"",
+            "mismatchedDecisionSessionCannotBecomeInvestigationEvidence()",
+            "missedInReviewWebhookIsRecoveredFromActualArchivedSignature()",
+            "sourceCaptureAuditFailureRollsBackEventAssessmentAndCase()",
+            "oversizedNotesAndInvalidNodeAreRejected()",
+            "allNewRecordsRejectUpdateDeleteAndTruncate()",
+            "changedDuplicateEventBlocksNewInvestigationWithoutOverwritingSource()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.AmlResolutionIntegrationTest",
+          "tests": "35",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:31:40.533Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "27.923",
+          "cases": [
+            "derivedCaseCannotExtendAnImmutableApprovedValidity()",
+            "closedFlagWithoutApprovedResolutionDoesNotAuthorizeTrading()",
+            "pastConfirmedMatchCannotBeClearedWithThisLimitedPolicy()",
+            "signedResolutionAndIndependentDecisionReopenNewOrdersWithoutRewritingRiskHistory()",
+            "rejectionDoesNotGrantButAllowsFreshRequest()",
+            "helperCannotResolveOutsideBusinessTransaction()",
+            "eligibilityHttpIsMetadataOnlyAndNotCustomerOrAuditorPermission()",
+            "newDeclarationAfterOptionsPreventsClosure()",
+            "oldSourceInvestigationDoesNotReplaceCurrentSourceInvestigation()",
+            "nullPastAndMoreThanOneDayValidityAreRejected()",
+            "[1] date = \"1990-01-01\"",
+            "[2] date = \"1974\"",
+            "[3] date = \"1974-01\"",
+            "decisionAuditFailureRollsBackCaseProofAndGrantThenSameProofCanRetry()",
+            "newProviderEventReopensApprovedCaseAndStopsNewOrders()",
+            "operationalTradingRestrictionStillOverridesResolvedCase()",
+            "pepDeclarationCannotBeClearedThroughAmlFalsePositive()",
+            "requestedAddressOrFundsEvidencePreventsNarrowClosure()",
+            "providerFreshnessLossAfterOptionsPreventsClosure()",
+            "oldProtocolRequestIsHistoricalOnlyAndItsDossierStillReadable()",
+            "disappearingHistoricalCandidateCannotBeTreatedAsFalsePositive()",
+            "concurrentApproveAndRejectLeaveOneDecisionAndOnlyMatchingFinancialPermission()",
+            "eligibilityAuditFailureDoesNotReturnBasis()",
+            "approvedResolutionExpiresWithoutBackgroundStateMutation()",
+            "confidentialReportingReviewCannotBeBypassedByNarrowFalsePositiveClosure()",
+            "providerResolutionWithoutCurrentInvestigationCannotClose()",
+            "contributorWhoMovesToApproverCannotApproveOwnInvestigation()",
+            "everyCurrentCandidateNeedsInvestigation()",
+            "validUntilCannotExceedCurrentIdentityExpiry()",
+            "historicalIdentityMismatchCannotBeClearedThroughAmlFalsePositive()",
+            "sameProviderTimeWithNewEventIdCannotReplaceNewResolutionEvidence()",
+            "opinionWithoutNewProviderResolutionCannotClose()",
+            "[1] unresolved = true",
+            "[2] unresolved = false",
+            "historicalMissingSourceNeverGetsInventedToEnableClosure()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.AddressFactsTest",
+          "tests": "12",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.494Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.018",
+          "cases": [
+            "[1] address = \"\"",
+            "[2] address = \"가상\\n주소\"",
+            "[3] address = \"가상‮주소\"",
+            "[1] days = 0",
+            "[2] days = 1",
+            "[3] days = 89",
+            "[4] days = 90",
+            "recordsEveryMismatchAndOldDateInsteadOfPretendingToVerify()",
+            "differentAddressPunctuationIsNotSilentlyMerged()",
+            "normalizesUnicodeSpacesAndNameCaseButKeepsAddressPunctuation()",
+            "futureDateHasIndependentReason()",
+            "requiresDocumentTypeIssuerNameAndBoundedDate()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.EvidenceCryptoTest",
+          "tests": "9",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.608Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.016",
+          "cases": [
+            "randomizedNonceRoundTripAndRedactedDescription()",
+            "missingKeyDoesNotOfferFallbackOrPlaintextStorage()",
+            "[1] context = \"다른고객\"",
+            "[2] context = \"다른사건\"",
+            "[3] context = \"다른요청\"",
+            "[4] context = \"다른목적\"",
+            "[5] context = \"VIEW\"",
+            "corruptionTruncationAndWrongKeyIdFailClosed()",
+            "independentEncryptionKeyIsRequired()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.ReportingFollowupIntegrationTest",
+          "tests": "28",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:35:32.088Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "20.79",
+          "cases": [
+            "sameHumanOnAnotherAccountHasNoImplicitAssignment()",
+            "recordAuditFailureRollsBackAndSameKeyRetries()",
+            "sameKeyAndSameFactsReplayButChangedOutcomeOrNotesConflict()",
+            "changedOperatorIdentityCannotRecoverOldAssignmentUsingSameAccount()",
+            "disabledCustomerDoesNotEraseHistoricalReportingWork()",
+            "declaredEarlierExternalTimeDoesNotResetInternalAnchorOrCertifyLegalTime()",
+            "approvedNoReportIsActuallyVerifiedAndExcluded()",
+            "realApprovedReportNeededAppearsWithoutDeclaringLegalDeadlineOrSubmissionSuccess()",
+            "inspectionAuditFailureDoesNotReturnPrivateNotes()",
+            "unapprovedAndApprovedNoReportNeverBecomePendingReport()",
+            "actualHttpQueueRecordHistoryAndPrivateInspectionUseAssignedFacts()",
+            "emptyFilteredFirstPageStillAdvancesAndFindsOldHistoricalWork()",
+            "latestRecordedObservationCannotHideEarlierFailureHistory()",
+            "allObservationMutationsAreRejected()",
+            "perReviewDailyLimitDoesNotTreatObservationAsCompletion()",
+            "freshScanFindsApprovalCommittedAfterEarlierQueueRead()",
+            "observationMetadataAndAuditExcludePrivateReferenceAndNotes()",
+            "customerAuditorAndUnassignedOperatorCannotUseHttpRoutes()",
+            "oldNeededDecisionSurvivesNewDeclarationAndAnotherApprovedConclusion()",
+            "malformedAndFutureCursorsAndNegativeHistoryPageAreRejected()",
+            "bothAssignedPeopleCanReadButOthersHaveNoQueueOrObservationAccess()",
+            "staleMfaBlocksQueueAndRawObservation()",
+            "sameKeyCannotBeMovedToAnotherApprovedReview()",
+            "[1] outcome = OUTCOME_UNKNOWN",
+            "[2] outcome = REJECTION_OBSERVED",
+            "[3] outcome = RECEIPT_REFERENCE_OBSERVED",
+            "queueAuditFailureDoesNotReturnPendingList()",
+            "concurrentSameKeyCommitsOneObservation()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.WealthReviewIntegrationTest",
+          "tests": "40",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:36:40.534Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "26.314",
+          "cases": [
+            "factsReferenceAndNamesAreEncryptedAndAuditedInspectionOnly()",
+            "[1] same = true",
+            "[2] same = false",
+            "samePersonDifferentAccountCannotInspect()",
+            "independentSignatureConfirmsContentButNeverReleasesTrading()",
+            "expiredClosingViewPreventsContextDespiteFreshOtherViews()",
+            "missingIndependentObservationCreatesNoChallenge()",
+            "directionReplayAndDifferentHashCannotConsumeProof()",
+            "auditorGetsMetadataOnlyAndCustomerHasNoAdminAccess()",
+            "approvedWealthObservationCannotBypassEvidenceHoldOnStandardCustomer()",
+            "staleMfaAndRevokedSessionCannotReadOrDecide()",
+            "comparisonIsPrivateAndReflectsAssetsLiabilitiesIncomeAndConsumption()",
+            "singleEvidenceCannotPlayMultipleRoles()",
+            "minimalContextReturnsNameWithoutInventingWealthDeclaration()",
+            "unexplainedDifferenceSurvivesIndependentApprovalAndTradingRemainsBlocked()",
+            "simultaneousApproveRejectCommitOneDecision()",
+            "mismatchReasonsSurviveApproval()",
+            "immutableReportsAndDecisionsRejectMutation()",
+            "requesterVersionChangeInvalidatesPendingReview()",
+            "proposalAuditFailureRollsBackReviewCipherAndBinding()",
+            "duplicateOriginalCannotBecomeIndependentThirdDocument()",
+            "otherNamespaceCannotConsumeWealthSignature()",
+            "threeViewsCannotBeSwappedOrBorrowed()",
+            "newUploadInvalidatesThreeOldViewsAndSignature()",
+            "expiredImmutableReportCannotIssueOptions()",
+            "completeHttpWealthReviewUsesOwnViewsAndRealSignature()",
+            "[1] purpose = \"SOURCE_OF_FUNDS\"",
+            "[2] purpose = \"RESIDENTIAL_ADDRESS\"",
+            "customerKycChangeInvalidatesReview()",
+            "[1] action = \"EDD_WEALTH_CONTEXT_READ\"",
+            "[2] action = \"EDD_WEALTH_FACTS_READ\"",
+            "changedObservationCannotConsumeSignedChallenge()",
+            "rejectionRequiresNoInventedObservationAndKeepsHold()",
+            "caseSignatureCannotAuthorizeWealthOrBeConsumedThere()",
+            "[1] badOrigin = true",
+            "[2] badOrigin = false",
+            "previousSevenKindSchemaFailsWithoutChangingHistory()",
+            "newDeclarationInvalidatesThreeDocumentsAndSignature()",
+            "decisionAuditFailureRollsBackProofCounterRevisionAndConclusion()",
+            "requestKeyBindsThreeDocumentsViewsAndFacts()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.ExitRescissionFactsTest",
+          "tests": "7",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.925Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.004",
+          "cases": [
+            "rescissionJudgmentMustBeExplicit()",
+            "[1] rationale = null",
+            "[2] rationale = \"\"",
+            "[3] rationale = \" \"",
+            "[4] rationale = \"안\\n쪽\"",
+            "[5] rationale = \"안‮쪽\"",
+            "normalizationLengthBoundaryAndSafePrinting()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.EddDossierIntegrationTest",
+          "tests": "23",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:32:08.694Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "14.29",
+          "cases": [
+            "pendingDuplicateProposalRollsBackUnreferencedSnapshot()",
+            "allPagesAreRequiredAndRepeatingFirstPageCannotCompleteInspection()",
+            "invalidPageNeverLeavesViewReceipt()",
+            "componentCannotCaptureWithoutBusinessTransaction()",
+            "frozenHistorySurvivesNewRequestButOldSignatureCannotDecide()",
+            "[1] kind = \"ADDRESS\"",
+            "[2] kind = \"FUNDS\"",
+            "[3] kind = \"WEALTH\"",
+            "uploadChangesCurrentCaseAndCannotReuseOldInspection()",
+            "receiptOlderThanFiveMinutesCannotReplaceFreshInspection()",
+            "proposalAuditFailureRollsBackSnapshotReportAndBindingTogether()",
+            "inspectionAuditFailureRollsBackReceiptAndDoesNotReturnBundle()",
+            "emptyBundleStillRequiresIndependentPageZeroAndDoesNotClaimExternalVerification()",
+            "snapshotDigestDoesNotDependOnDatabaseSessionTimeZone()",
+            "auditorReadsHistoricalMetadataButCannotCreateApprovalReceipt()",
+            "evidenceRequestsAndReceivedFilesAreDistinctAndContainNoPrivateContent()",
+            "anotherPersonInspectionCannotAuthorizeCurrentApprover()",
+            "completedDossierAndViewsRejectUpdateDeleteAndTruncate()",
+            "approvedNegativeAddressObservationIsCarriedIntoReferralWithoutResolvingRisk()",
+            "historicalGetDoesNotCountAsIndependentInspection()",
+            "historicalReadAuditFailureReturnsNoMetadata()",
+            "staleSessionMfaAndSamePersonCannotInspect()",
+            "oldReportPolicyCanBeReadButCannotInspectOrExecute()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.FundsFactsTest",
+          "tests": "19",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:33:40.995Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.006",
+          "cases": [
+            "invalidPeriodAndMissingDateAreRejected()",
+            "futureAndReversedChronologyRemainReasons()",
+            "recordedLedgerTimeIsComparedAsDateOnly()",
+            "tradeComparisonDoesNotInventExchangeRateOrAllocateFunds()",
+            "[1] code = \"XXXQ\"",
+            "[2] code = \"usd \"",
+            "[3] code = \"U$D\"",
+            "[4] code = \"\"",
+            "[5] code = \"bitcoin\"",
+            "targetMustBeExplicitAndCannotFallBackFromMissingTrade()",
+            "nameSenderCurrencyAndAmountDifferencesRemainDistinct()",
+            "documentAndReceiptBeforePeriodAreNotSilentlyAccepted()",
+            "[1] amount = \"0\"",
+            "[2] amount = \"-1\"",
+            "[3] amount = \"0.0000000001\"",
+            "[4] amount = \"1E+22\"",
+            "[5] amount = \"792281625142643375935.43950336\"",
+            "receiptRequiresNamesReferenceAndExactAmount()",
+            "normalizedValuesRetainExactAmountAndHidePrivateString()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.AmlFalsePositiveRulesTest",
+          "tests": "38",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.561Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.034",
+          "cases": [
+            "positiveOrInvalidScoreCannotClear()",
+            "oneEqualBirthAmongSeveralCannotBeIgnored()",
+            "[1] value = \"1990-01-01\"",
+            "[2] value = \"1974\"",
+            "[3] value = \"1974-01\"",
+            "[4] value = \"1974-02-30\"",
+            "[5] value = \"1974-1-1\"",
+            "[6] value = \"9999-01-01\"",
+            "[7] value = \"\"",
+            "historyMayRetainUnreviewedButCurrentCannot()",
+            "duplicateNodeIdIsAmbiguous()",
+            "sameHitInDifferentNodesHasDifferentKeys()",
+            "[1] field = \"node_id\"",
+            "[2] field = \"status\"",
+            "[3] field = \"total_hits\"",
+            "[4] field = \"entity_type\"",
+            "[5] field = \"score\"",
+            "[6] field = \"warnings\"",
+            "[7] field = \"hits\"",
+            "[8] field = \"screened_data\"",
+            "[1] field = \"full_name\"",
+            "[2] field = \"date_of_birth\"",
+            "[3] field = \"nationality\"",
+            "countsCannotHideAnExtraCandidate()",
+            "allSignedIdentityEntriesMustAgree()",
+            "noRemainingCandidateDoesNotProveHistoryResolved()",
+            "completeDistinctBirthAndProviderFalsePositiveAreEligibleData()",
+            "[1] field = \"identity\"",
+            "[2] field = \"screenings\"",
+            "candidateListCannotBeMutatedByCaller()",
+            "[1] value = \"Unreviewed\"",
+            "[2] value = \"Confirmed Match\"",
+            "[3] value = \"Inconclusive\"",
+            "[4] value = \"False positive\"",
+            "[5] value = \"\"",
+            "warningNeverDisappearsBehindZeroScore()",
+            "oldConfirmedMatchRequiresEscalationEvenWithLaterDateEvidence()",
+            "duplicateHitInOneNodeIsAmbiguous()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.ReportingCustodyIntegrationTest",
+          "tests": "45",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:34:35.761Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "56.082",
+          "cases": [
+            "requesterAndEitherBeneficiaryCannotApproveTheirOwnAssignment()",
+            "oneAvailableOldPersonPreventsOutsiderRescueButCanRequestHandoff()",
+            "[1] value = null",
+            "[2] value = \"\"",
+            "[3] value = \" \"",
+            "[4] value = \"안\\n쪽\"",
+            "[5] value = \"안‮쪽\"",
+            "authorityCannotBeReadWithoutBusinessTransaction()",
+            "staleMfaCannotDiscoverOrReadOrPropose()",
+            "makerVersionChangeAfterSignatureRejectsHandoff()",
+            "[1] how = \"disabled\"",
+            "[2] how = \"expired\"",
+            "[3] how = \"recovery\"",
+            "[4] how = \"role\"",
+            "[5] how = \"identity\"",
+            "unchangedPairAndStaleStampAreRejected()",
+            "customerAndAuditorCannotUseCustodyHttpRoutes()",
+            "sameHumanCannotHoldBothNewResponsibilities()",
+            "inspectionFromOtherSessionDoesNotAuthorizeOptions()",
+            "laterGenerationsReplaceEarlierFollowupRightsAndKeepHistory()",
+            "approvedHandoffMovesFollowupRightsWithoutChangingReportOrFinancialState()",
+            "onlyOnePendingRequestAndRejectionLeavesOldRightsButAllowsNewRequest()",
+            "sameKeyConcurrencyCreatesOneRequest()",
+            "requestAuditFailureRollsBackCipherAndApprovalBinding()",
+            "changingCustomerDeclarationDoesNotEraseEstablishedReportingDutyOrBlockHandoff()",
+            "healthyOutsiderCannotUseKnownStampToSeizeWork()",
+            "initialAuthorityIsRealOriginalPairAndHealthyCaseIsNotOrphan()",
+            "idempotencyReplaysSameContentAndRejectsAnotherReasonOrTarget()",
+            "missingOrFutureCursorAndBadHistoryPageAreRejected()",
+            "cannotUseOppositeDecisionSignatureAndProofIsNotConsumed()",
+            "custodyReasonDoesNotEnterMetadataOrAudit()",
+            "allCustodyRecordsRejectUpdateDeleteAndTruncate()",
+            "oversizedReasonCannotBeStored()",
+            "wrongRoleDisabledAndExpiredTargetCannotReceiveWork()",
+            "originalRequesterAndActualDeciderCanConfirmCommittedOutcomeWithoutRegainingFollowupAccess()",
+            "historyReadIsNotApprovalInspectionAndNoReceiptMeansNoOptions()",
+            "concurrentApprovalAndRejectionCommitOnlyOneDecision()",
+            "actualHttpIndependentHandoffAndNewCustodianContext()",
+            "decisionAuditFailureRestoresOldAuthorityAndProofThenSameProofRetries()",
+            "recoveredOriginalAuthorityAfterOptionsInvalidatesOutsiderRescueWithoutConsumingProof()",
+            "inspectionAuditFailureRollsBackReceiptAndReturnsNoReason()",
+            "targetVersionChangeAfterSignatureRejectsHandoff()",
+            "previousNineKindSchemaIsRejectedWithoutTransformingHistory()",
+            "newCustodiansReadPastObservationsAndOriginalBasisButCannotApproveOriginalReport()",
+            "orphanAuditFailureReturnsNoDiscoveryList()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.FundsReviewIntegrationTest",
+          "tests": "43",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:33:41.259Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "26.389",
+          "cases": [
+            "minimalContextExcludesAddressBirthdayAndWealth()",
+            "factsReferenceAndNamesAreEncryptedAndAuditedInspectionOnly()",
+            "[1] same = true",
+            "[2] same = false",
+            "samePersonDifferentAccountCannotInspect()",
+            "independentSignatureConfirmsContentButNeverReleasesTrading()",
+            "newUploadInvalidatesBothOldViewsAndSignature()",
+            "missingIndependentObservationCreatesNoChallenge()",
+            "directionReplayAndDifferentHashCannotConsumeProof()",
+            "auditorGetsMetadataOnlyAndCustomerHasNoAdminAccess()",
+            "expiredSecondViewPreventsPairContextDespiteFreshFirstView()",
+            "requestKeyBindsBothDocumentsViewsTargetAndFacts()",
+            "staleMfaAndRevokedSessionCannotReadOrDecide()",
+            "actualConsumerLedgerLinksNetSpendAndIndependentApproval()",
+            "previousSixKindSchemaFailsWithoutChangingHistory()",
+            "duplicateOriginalCannotBecomeIndependentSecondDocument()",
+            "simultaneousApproveRejectCommitOneDecision()",
+            "mismatchReasonsSurviveApproval()",
+            "caseSignatureCannotAuthorizeFundsOrBeConsumedThere()",
+            "[1] amount = \"1000.000000000\"",
+            "[2] amount = \"0.000000001\"",
+            "[3] amount = \"10000.000000001\"",
+            "immutableReportsAndDecisionsRejectMutation()",
+            "requesterVersionChangeInvalidatesPendingReview()",
+            "proposalAuditFailureRollsBackReviewCipherAndBinding()",
+            "singleEvidenceCannotPlayBothRoles()",
+            "standardCddStillCannotBypassEvidenceHoldAfterFundsApproval()",
+            "newDeclarationInvalidatesOldPairAndSignature()",
+            "otherNamespaceCannotConsumeFundsSignature()",
+            "customerKycChangeInvalidatesReview()",
+            "[1] action = \"EDD_FUNDS_CONTEXT_READ\"",
+            "[2] action = \"EDD_FUNDS_FACTS_READ\"",
+            "changedTradeProjectionCannotUseOldBoundSignature()",
+            "pairViewsCannotBeSwappedOrBorrowed()",
+            "changedObservationCannotConsumeSignedChallenge()",
+            "rejectionRequiresNoInventedObservationAndKeepsHold()",
+            "[1] badOrigin = true",
+            "[2] badOrigin = false",
+            "completeHttpPairReviewUsesOwnViewsAndRealSignature()",
+            "[1] purpose = \"SOURCE_OF_WEALTH\"",
+            "[2] purpose = \"RESIDENTIAL_ADDRESS\"",
+            "unknownOtherCustomerAndOpeningAreNeverTradeFallbacks()",
+            "decisionAuditFailureRollsBackProofCounterRevisionAndConclusion()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.EddEvidenceIntegrationTest",
+          "tests": "26",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:32:23.227Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "16.105",
+          "cases": [
+            "exactReplayDoesNotIncrementRevisionOrStoreTwice()",
+            "uploadInvalidatesEarlierReportProofAndDoesNotOpenTrading()",
+            "auditorAndUnassignedOperatorHaveNoContentAccess()",
+            "readQuotaIsPersistedAndCustomerStillHasNoContentEndpoint()",
+            "readAuditFailureDoesNotReleaseContentOrConsumeQuota()",
+            "separateEncryptionPreservesOriginalAndRemovesTrailingPayloadFromView()",
+            "submissionAuditFailureRollsBackCipherAndCaseRevision()",
+            "authenticatedCustomerSubmitsOnlyRequestedEvidenceAndRemainsBlocked()",
+            "actualHttpUploadAndPrivateAttachmentHaveNoCacheAndNoOriginalFilename()",
+            "oldAssessmentCannotAcceptFileAndCustomerSeesStaleRequest()",
+            "enabledCustomerWithoutReviewCaseCannotBeAskedForEvidence()",
+            "requestAlonePreventsBypassingUnreviewedMaterialsWithIdentityClosure()",
+            "newDeclarationWithoutAssessmentInvalidatesRequest()",
+            "malformedAndOversizedHttpBodyAreRejectedWithoutSaving()",
+            "requestedAndReceivedLimitsDoNotPermitUnlimitedCollection()",
+            "revokedAndForeignCustomerSessionsCannotWrite()",
+            "immutableRequestsAndFilesRejectUpdateDeleteTruncate()",
+            "independentApproverMustGiveCorrectReasonAndBeDifferentPerson()",
+            "concurrentDuplicateSubmissionHasOneFileAndOneRevisionChange()",
+            "actualRequestApiRequiresOperatorAndBindsRequestKey()",
+            "expiredRequestIsNeverAcceptedOrDeleted()",
+            "metadataAccessAlsoRequiresFreshMfaAndNeverHasOriginalBytes()",
+            "revokedAndStaleMfaNeverReturnsImage()",
+            "requestKeyCannotBeReusedForDifferentPurposeAndPendingPurposeIsUnique()",
+            "requestAuditFailureRollsBackRequestAndRetryKeyRemainsUsable()",
+            "unrelatedCustomerCannotSubmitOrEnumerateRequest()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.ExitRescissionIntegrationTest",
+          "tests": "42",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:33:01.274Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "39.721",
+          "cases": [
+            "expiredRequestIsReadableWithoutRevivingItsDecisionAuthority()",
+            "actualCddClearanceThenIndependentWithdrawalPermitsOrders()",
+            "staleMfaInvalidSessionAndBadPageDoNotProvideOriginal()",
+            "decisionAuditFailurePreservesHoldAndProofThenSameProofRetries()",
+            "withdrawalRemovesOnlyExitHoldAndPreservesOriginalApprovedRecord()",
+            "sameFactsAndKeyReplayButChangedReasonOrCheckerConflicts()",
+            "copiedCipherCannotReturnReasonOrCreateViews()",
+            "databaseGuardSerializesDirectConcurrentApprovals()",
+            "anotherBusinessKindCannotAuthorizeWithdrawal()",
+            "noPersonalViewsMeansNoOptionsAndMakerViewsCannotSubstitute()",
+            "newDeclarationBlocksStaleDecisionButHistoryRemainsReadable()",
+            "withdrawalPreservesMoneyAndReopensOnlyFutureAdmissionAfterAllChecks()",
+            "designatedThirdPersonReadsOriginalOnlyThroughAuditedCorrectionPurpose()",
+            "auditFailureReturnsNoReasonAndRollsBackViews()",
+            "makerOrCheckerVersionChangeInvalidatesRequest()",
+            "oldElevenKindSchemaAndLegacyPermanentIndexAreRejected()",
+            "newEvidenceAfterSignatureInvalidatesWithdrawalWithoutConsumingProof()",
+            "checkerVersionAndOldSessionViewsCannotBeReused()",
+            "identicalContentUsesOneSetOfPagesDespiteDifferentSnapshotIds()",
+            "decisionOutcomeCanBeReadAfterResponseLossWithoutReapplyingIt()",
+            "rejectionPreservesHoldAndAllowsNewCorrectionRequest()",
+            "generalTradingRestrictionStillAppliesAfterWithdrawal()",
+            "actualHttpIndependentWithdrawalAndCustomerSafeStatus()",
+            "newExitRequiresNewReferralAndOldWithdrawalReplayCannotClearIt()",
+            "currentExitParticipantsCannotReviewTheirOwnOriginalDecision()",
+            "auditFailureRollsBackProposalSnapshotCipherAndBinding()",
+            "reasonIsAbsentFromMetadataCipherAndAudit()",
+            "customerVersionChangeInvalidatesAlreadySignedWithdrawal()",
+            "bothDifferentBundlesRequireLastPartialPage()",
+            "outsiderCannotSelfAssignCorrectionToReadPrivateOriginalReason()",
+            "oldViewAloneCannotAuthorizeNewOptions()",
+            "rejectedOrUnapprovedExitCannotBeWithdrawn()",
+            "withdrawalNeverRemovesReportingDutyOrGrantsReportingPlaintextAccess()",
+            "customerAndAuditorCannotUseCorrectionRoutes()",
+            "concurrentApprovalAndRejectionCommitExactlyOneDecision()",
+            "concurrentSameKeyProducesOneRequest()",
+            "allNewRecordsRejectUpdateDeleteAndTruncate()",
+            "originalReviewerWhoIsNotDesignatedCannotReadWithdrawalReason()",
+            "receiptFromDifferentSessionCannotAuthorizeWithdrawal()",
+            "oppositeDecisionCannotUseApprovalProof()",
+            "differentOriginalAndCurrentContentRequireBothCompleteSets()",
+            "rescissionCannotBeDuplicatedByDirectDatabaseInsertion()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.ReportingFactsTest",
+          "tests": "10",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.933Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.004",
+          "cases": [
+            "noConclusionCannotBecomeDecision()",
+            "[1] reason = null",
+            "[2] reason = \"\"",
+            "[3] reason = \" \"",
+            "[4] reason = \"\\t\"",
+            "[5] reason = \"사유\\n줄\"",
+            "[6] reason = \"사유‮역전\"",
+            "[7] reason = \"사유​숨김\"",
+            "normalizesOuterWhitespaceWithoutDroppingReason()",
+            "reasonHasExplicitTwoThousandCharacterBoundary()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.ReportingInternalCheckTest",
+          "tests": "3",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.944Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.001",
+          "cases": [
+            "[1] nanos = -1",
+            "[2] nanos = 0",
+            "[3] nanos = 1"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.EddIntegrationTest",
+          "tests": "35",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:32:39.569Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "21.462",
+          "cases": [
+            "freshnessLostAfterOptionsCannotBeRestoredByOldSignature()",
+            "proposalKeyIsBoundToExactCurrentBodyAndOnePendingReport()",
+            "rejectionPreservesHoldAndAllowsNewReport()",
+            "caseAuditFailureRollsBackIdentityAndAssessmentTogether()",
+            "proposalAuditFailureRollsBackReportAndApprovalBinding()",
+            "freshSignedReverificationAndIndependentSignatureCloseOnlyMismatch()",
+            "invalidClosureLifetimeAndRetentionFindingLifetimeAreRejected()",
+            "invalidOriginOrMissingUserVerificationNeverConsumesBusinessDecision()",
+            "requesterRoleVersionChangeInvalidatesPendingReport()",
+            "currentKycFreshnessStillRequiredForClosure()",
+            "awaitingEvidenceApprovalDoesNotPretendToFinishEdd()",
+            "immutableReportAndDecisionRejectMutation()",
+            "samePersonDifferentApproverAccountCannotSelfApprove()",
+            "complianceReferralRecordsConclusionWithoutOpeningTrading()",
+            "approvalProofCannotAuthorizeRejectionOrDifferentPayload()",
+            "roleAndEddProofsAreNotInterchangeable()",
+            "disclosureChangeAfterOptionsInvalidatesSignature()",
+            "closedCaseReopensOnNewVerificationFact()",
+            "customerAndAuditorCannotWriteAndResponsesContainOnlyBoundEvidence()",
+            "reviewCreatesCaseAndNewDeclarationCannotRemoveHold()",
+            "expiredImmutableReportCannotIssueOptions()",
+            "historicalAmlRiskCannotBeErasedByLaterCleanScreening()",
+            "concurrentApprovalAndRejectionHaveExactlyOneConclusion()",
+            "sessionRevocationAndStaleMfaPreventApproval()",
+            "approvalAuditFailureRollsBackCaseDecisionChallengeAndCounter()",
+            "oldApprovalSchemaFailsWithoutModifyingExistingHistory()",
+            "ordinaryVerifiedCustomerDoesNotNeedEddCase()",
+            "proofCannotBeReplayedAfterCommittedDecision()",
+            "completeApprovalHttpUsesStoredPayloadAndActualSignature()",
+            "closedDispositionExpiresWithoutBackgroundWorker()",
+            "historicalPepCannotBeErasedByNoPepRedeclaration()",
+            "newAssessmentInvalidatesOldReportAndDoesNotBlockNewProposal()",
+            "[1] sameKey = true",
+            "[2] sameKey = false",
+            "oldOrUnverifiedAssessmentCannotBeClosedByHuman()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.ReportingFollowupFactsTest",
+          "tests": "15",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.937Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.006",
+          "cases": [
+            "normalizationAndMicrosecondsDoNotInventNewTime()",
+            "receiptNeedsReferenceButUnknownAndRejectionMayHaveNoReference()",
+            "[1] outcome = OUTCOME_UNKNOWN",
+            "[2] outcome = REJECTION_OBSERVED",
+            "[3] outcome = RECEIPT_REFERENCE_OBSERVED",
+            "lengthAndControlBoundariesAreExplicit()",
+            "[1] notes = null",
+            "[2] notes = \"\"",
+            "[3] notes = \" \"",
+            "[4] notes = \"\\t\"",
+            "[5] notes = \"안\\n쪽\"",
+            "[6] notes = \"안‮쪽\"",
+            "[7] notes = \"안​쪽\"",
+            "missingOutcomeAndReferenceAreRejected()",
+            "missingFutureAndPreEpochTimeAreRejected()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.WealthFactsTest",
+          "tests": "30",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:36:40.293Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.007",
+          "cases": [
+            "missingCoverageAndOutOfPeriodMovementsRemainExplicit()",
+            "movementListIsDefensivelyCopiedAndImmutable()",
+            "aggregateOverflowIsRejectedBeforePersistence()",
+            "futureDatesAndPrematureDocumentAreNotHidden()",
+            "newLoanIncreasesAssetsAndLiabilitiesTogetherWithoutCreatingWealth()",
+            "[1] amount = \"0\"",
+            "[2] amount = \"-1\"",
+            "[3] amount = \"0.0000000001\"",
+            "[4] amount = \"1E+22\"",
+            "[5] amount = \"792281625142643375935.43950336\"",
+            "emptyMovementStatementCanDescribeUnchangedPeriodButNotProveOpeningOrigin()",
+            "[1] kind = CONSUMPTION",
+            "[2] kind = INVESTMENT_NET_LOSS",
+            "[1] kind = EMPLOYMENT_NET_INCOME",
+            "[2] kind = BUSINESS_NET_PROFIT",
+            "[3] kind = INVESTMENT_NET_GAIN",
+            "[4] kind = INHERITANCE_NET_RECEIVED",
+            "[5] kind = GIFT_NET_RECEIVED",
+            "negativeNetWorthIsValidAndNotSilentlyClampedToZero()",
+            "missingComponentsAndInvalidPeriodsAreRejected()",
+            "duplicatesOrReorderedTimelineAreRejectedInsteadOfDeduplicatedOrSorted()",
+            "currencyMismatchSuppressesEveryAggregateInsteadOfGuessingRate()",
+            "[1] kind = VALUATION_INCREASE",
+            "[2] kind = VALUATION_DECREASE",
+            "normalizedNamesAmountsAndCurrencyAreEqualWithoutLosingNinthDecimal()",
+            "[1] kind = LOAN_PROCEEDS",
+            "[2] kind = ASSET_SALE_GROSS",
+            "[3] kind = OTHER",
+            "assetsMinusLiabilitiesAndNetChangesExplainClosingWealth()",
+            "moreThanTwelveMovementsIsRejected()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.EvidenceImageTest",
+          "tests": "14",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.625Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.299",
+          "cases": [
+            "[1] width = 0",
+            "[2] width = 4097",
+            "[3] width = 100000",
+            "[4] width = 2000000000",
+            "totalPixelsHaveIndependentLimit()",
+            "truncatedPngIsRejectedAndPermitIsReleased()",
+            "trailingBytesAreNotReturnedAsReviewImage()",
+            "exactInputLimitCanBeReadAndEmptyInputCannot()",
+            "boundedReadDoesNotTrustAvailableOrDeclaredLength()",
+            "[1] content = \"<svg/>\"",
+            "[2] content = \"%PDF-1.7\"",
+            "[3] content = \"GIF89a\"",
+            "[4] content = \"\"",
+            "[5] content = \"<html>자료</html>\""
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.AmlSourceProjectionTest",
+          "tests": "11",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.596Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.011",
+          "cases": [
+            "scoresArePreservedWithoutThresholdClassification()",
+            "projectionHasIndependentMutableContainers()",
+            "emptyWarningsAreDifferentFromAbsentWarnings()",
+            "captureRequiresBusinessTransaction()",
+            "propertiesUseExplicitNameAliasBirthDateCitizenshipAllowlist()",
+            "noCandidateReviewStatusIsInvented()",
+            "ambiguousArrayTypesBecomeNullRatherThanCoercedNames()",
+            "missingAmlRemainsMissingInsteadOfInventingClearResult()",
+            "emptyAmlArrayIsPreserved()",
+            "unknownObjectInScalarSlotIsNotCopied()",
+            "identityAndScreenedDataNeverCopyDocumentNumbersOrImages()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.ReportingSupervisionIntegrationTest",
+          "tests": "24",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:36:16.489Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "23.804",
+          "cases": [
+            "emptyFilteredPageStillAdvancesThenFreshScanFindsLaterApproval()",
+            "newDeclarationAndDisabledCustomerDoNotHidePastReportingDuty()",
+            "oneUnavailablePersonIsVisibleButNotOrphaned()",
+            "[1] outcome = OUTCOME_UNKNOWN",
+            "[2] outcome = REJECTION_OBSERVED",
+            "[3] outcome = RECEIPT_REFERENCE_OBSERVED",
+            "httpApproverGetsNoStoreMetadataWhileOtherRolesAndAnonymousAreDenied()",
+            "metadataCannotSeizeHealthyWorkOrWriteFollowup()",
+            "[1] how = \"disabled\"",
+            "[2] how = \"expired\"",
+            "[3] how = \"recovery\"",
+            "[4] how = \"role\"",
+            "[5] how = \"identity\"",
+            "[1] how = \"disabled\"",
+            "[2] how = \"expired\"",
+            "[3] how = \"recovery\"",
+            "[4] how = \"role\"",
+            "handoffUpdatesCurrentPeopleButPreservesOriginalTargetAndFinancialHold()",
+            "pendingRejectedAndNoReportDoNotBecomeReportingDuty()",
+            "staleRevokedAndForeignSessionCannotReadSupervision()",
+            "staleCustodianMfaDoesNotPretendAuthorityIsLost()",
+            "malformedAndFutureCursorAreRejected()",
+            "failedAuditReturnsNoListAndSuccessAuditContainsNoReportText()",
+            "unrelatedApproverSeesHealthyAssignedDutyButGetsNoOriginalContent()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.ReportingReviewIntegrationTest",
+          "tests": "37",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:35:53.115Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "23.136",
+          "cases": [
+            "newCaseConclusionInvalidatesOldReportingReview()",
+            "oldEightKindSchemaFailsWithoutTransformingExistingHistory()",
+            "newEvidenceAfterSignatureRejectsDecisionWithoutConsumingProof()",
+            "makersInspectionCannotReplaceCheckersOwnReceipt()",
+            "changedCheckerVersionInvalidatesOptionsAndOldReceipts()",
+            "newDeclarationMakesOldReferralUnusableButHistoryStaysReadable()",
+            "unauthorizedCustomerAndAuditorCannotReadAnyReviewEndpoint()",
+            "realHttpProposalInspectionOptionsAndBoundSignatureUseStoredFacts()",
+            "receiptFromAnotherSessionIsNotUsable()",
+            "sameKeyReplaysExactTargetAndFactsButChangedReasonConflicts()",
+            "oldReceiptCannotAuthorizeDecision()",
+            "actualApproveRejectRaceCommitsExactlyOneDecision()",
+            "everyFrozenPageIsRequiredIncludingFinalPartialPage()",
+            "staleMfaCannotReadOrDecide()",
+            "sameHumanDifferentAccountsCannotBeMakerAndChecker()",
+            "decisionAuditFailureRollsBackProofAndDecisionThenRetrySucceeds()",
+            "signatureForDifferentBusinessKindCannotApproveReportingReview()",
+            "expiredRequestIsReadableButCannotIssueNewDecision()",
+            "awaitingEvidenceDecisionIsNotReportingReferral()",
+            "reportReviewBlocksOldSimpleIdentityClosureAfterReassessment()",
+            "anotherOperatorsAssignedReviewIsNotVisibleEvenWithCorrectRole()",
+            "requesterCannotApproveByChangingRole()",
+            "rejectionPreservesReasonAndAllowsNewRequest()",
+            "unapprovedOrNonReferralCannotCreateReview()",
+            "copiedCipherFromAnotherReviewFailsWithoutPlaintextOrReceipt()",
+            "changedMakerVersionInvalidatesBoundRequest()",
+            "oppositeDecisionCannotUseApprovalSignature()",
+            "proposalAuditFailureRollsBackCipherAndBinding()",
+            "newTablesRejectAllMutationStatements()",
+            "[1] conclusion = REPORT_REQUIRED",
+            "[2] conclusion = NO_REPORT_ON_CURRENT_FACTS",
+            "oneLiveRequestAndOneApprovedDecisionPerReferral()",
+            "inspectionAuditFailureRollsBackReceiptAndReturnsNoReason()",
+            "simultaneousSameKeyCreatesOneReview()",
+            "noPageInspectionCannotIssueApprovalOptions()",
+            "auditAndGeneralDossierDoNotCopyDecisionOrReason()",
+            "actualAssignedListsAndMetadataNeverIncludeRationaleOrConclusion()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.RelationshipExitIntegrationTest",
+          "tests": "44",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:34:07.886Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "27.637",
+          "cases": [
+            "customerHttpStatusOmitsInternalReasonAndOtherIdentities()",
+            "newEvidenceAfterSignatureRejectsDecisionWithoutConsumingProof()",
+            "makersInspectionCannotReplaceCheckersOwnReceipt()",
+            "changedCheckerVersionInvalidatesOptionsAndOldReceipts()",
+            "newDeclarationMakesOldReferralUnusableButHistoryStaysReadable()",
+            "approvedExitInitiatesWithoutMarkingClosedOrChangingOriginalCase()",
+            "unauthorizedCustomerAndAuditorCannotReadAnyReviewEndpoint()",
+            "existingReservationReplayAndCancellationSurviveWhileNewOrderIsDenied()",
+            "oneLiveRequestAndOneApprovedDecisionPerCustomer()",
+            "signatureForDifferentBusinessKindCannotApproveExitReview()",
+            "realHttpProposalInspectionOptionsAndBoundSignatureUseStoredFacts()",
+            "receiptFromAnotherSessionIsNotUsable()",
+            "reportingAndExitJudgmentsUseIndependentDecisionsAndNeitherErasesOther()",
+            "sameKeyReplaysExactTargetAndFactsButChangedReasonConflicts()",
+            "oldReceiptCannotAuthorizeDecision()",
+            "actualApproveRejectRaceCommitsExactlyOneDecision()",
+            "assignedMetadataNeverIncludesRationaleOrUnableJudgment()",
+            "everyFrozenPageIsRequiredIncludingFinalPartialPage()",
+            "oldTenKindSchemaFailsWithoutTransformingExistingHistory()",
+            "staleMfaCannotReadOrDecide()",
+            "awaitingEvidenceDecisionIsNotExitReferral()",
+            "sameHumanDifferentAccountsCannotBeMakerAndChecker()",
+            "decisionAuditFailureRollsBackProofAndDecisionThenRetrySucceeds()",
+            "changedCustomerVersionInvalidatesSignatureWithoutConsumingIt()",
+            "expiredRequestIsReadableButCannotIssueNewDecision()",
+            "rejectionAddsNoExitHoldAfterActualCddClearance()",
+            "anotherOperatorsAssignedReviewIsNotVisibleEvenWithCorrectRole()",
+            "newCaseConclusionInvalidatesOldExitReview()",
+            "requesterCannotApproveByChangingRole()",
+            "rejectionPreservesReasonAndAllowsNewRequest()",
+            "explicitUnableJudgmentIsRequiredInsteadOfTreatingAnyRiskAsTermination()",
+            "unapprovedOrNonReferralCannotCreateReview()",
+            "commonReferralVerifierRequiresBusinessTransaction()",
+            "copiedCipherFromAnotherReviewFailsWithoutPlaintextOrReceipt()",
+            "changedMakerVersionInvalidatesBoundRequest()",
+            "oppositeDecisionCannotUseApprovalSignature()",
+            "proposalAuditFailureRollsBackCipherAndBinding()",
+            "newTablesRejectAllMutationStatements()",
+            "laterActualCddAndEddClearanceCannotUndoApprovedExit()",
+            "inspectionAuditFailureRollsBackReceiptAndReturnsNoReason()",
+            "simultaneousSameKeyCreatesOneReview()",
+            "noPageInspectionCannotIssueApprovalOptions()",
+            "customerStatusAuditFailureDoesNotReturnState()",
+            "auditAndGeneralDossierDoNotCopyDecisionOrReason()"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.kyc.AddressReviewIntegrationTest",
+          "tests": "42",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:48.606Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "26.797",
+          "cases": [
+            "differentHashCannotConsumeValidSignature()",
+            "expiredViewIsRejectedEvenWithFreshMfa()",
+            "alteredObservationAfterOptionsDoesNotConsumeProof()",
+            "approvedAddressReviewCannotBypassEvidenceHoldOnStandardCustomer()",
+            "anotherEvidenceReceiptCannotSubstituteForReviewedImage()",
+            "expiredImmutableReviewCannotIssueOptions()",
+            "completeHttpReviewUsesStoredPayloadAndOwnObservation()",
+            "sameRequestKeyCannotBeReboundToAnotherView()",
+            "allowedFrontendCanReadReceiptHeaderAndForeignOriginCannot()",
+            "newDeclarationInvalidatesOptionsAndOldReceipt()",
+            "factsAreEncryptedAndOnlyIndependentInspectionReturnsThem()",
+            "auditorSeesMetadataButCannotReadFactsAndCustomerHasNoAdminAccess()",
+            "negativeObservationCanBeIndependentlyConfirmedWithoutOpeningTrading()",
+            "newSignedAssessmentCannotReuseOldDocumentReview()",
+            "viewAuditFailureRollsBackNewReceipt()",
+            "customerKycChangeCannotLeaveOldReviewExecutable()",
+            "rejectionRequiresNoInventedObservationAndPreservesHold()",
+            "contextAuditFailureDoesNotReturnDeclaredPersonalData()",
+            "requesterVersionChangeInvalidatesPendingReview()",
+            "independentTypedObservationAndSignatureApproveOnlyContentReview()",
+            "missingReceiptAndAnotherPersonsReceiptCannotAuthorizeReview()",
+            "existingEddSignatureCannotApproveAddressReviewOrBeConsumedThere()",
+            "immutableViewsReportsAndDecisionsRejectMutation()",
+            "proposalAuditFailureRollsBackCipherBindingAndReview()",
+            "previousFiveKindSchemaFailsWithoutRewritingAnyHistory()",
+            "newEvidenceInvalidatesPendingReviewAndRequiresFreshView()",
+            "approverMustSubmitIndependentMatchingFields()",
+            "requestKeyBindsExactObservationAndCurrentFacts()",
+            "[1] badOrigin = true",
+            "[2] badOrigin = false",
+            "contextExposesOnlyNameAndAddressAfterOwnedFreshView()",
+            "concurrentApprovalAndRejectionCommitOneConclusion()",
+            "inspectionAuditFailureNeverReturnsPrivateFacts()",
+            "oldSessionCannotReadCustomerContextOrApprove()",
+            "sourceOfFundsEvidenceIsNotProcessedAsAddress()",
+            "otherEddNamespaceCannotConsumeAddressSignature()",
+            "decisionAuditFailureRollsBackChallengeCounterDecisionAndRevision()",
+            "samePersonDifferentAccountCannotIndependentlyInspect()",
+            "approvalProofCannotAuthorizeRejectionOrReplay()",
+            "httpViewReceiptEnablesOnlyMinimalAuditedContextAndInspection()",
+            "[1] same = true",
+            "[2] same = false"
+          ]
+        },
+        {
+          "name": "dustin.cex.domains.edd.RelationshipExitFactsTest",
+          "tests": "7",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-24T04:30:43.929Z",
+          "hostname": "Dustins-MacBook-Pro.local",
+          "time": "0.004",
+          "cases": [
+            "unableJudgmentCannotBeOmittedOrSubstitutedByRisk()",
+            "[1] rationale = null",
+            "[2] rationale = \"\"",
+            "[3] rationale = \" \"",
+            "[4] rationale = \"안\\n쪽\"",
+            "[5] rationale = \"안‮쪽\"",
+            "normalizationLengthBoundaryAndSafePrinting()"
+          ]
+        }
+      ]
+    }
+  ],
+  "intermediate_resolution": "집중 43개·확대 49개·격리 보강 전 전체 681개 모두 통과. READ COMMITTED를 명시하고 지원하지 않는 격리의 승인 효과 거부 1개를 추가한 뒤 집중 50개와 최종 전체 682개를 재검증했다. 중간 수치는 최종 합계에 더하지 않는다. 주문 생성자와 철회 서비스의 설명 주석을 한국어로 정리·보강했고 이후 빌드/회귀를 실행했다.",
+  "focused_verification": {
+    "container": "cex-edd-26805081d793",
+    "exit": 0,
+    "tests": {
+      "tests": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "container_removed": true,
+    "suites": [
+      {
+        "name": "dustin.cex.domains.edd.ExitRescissionFactsTest",
+        "tests": "7",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-24T04:39:49.701Z",
+        "hostname": "Dustins-MacBook-Pro.local",
+        "time": "0.027",
+        "cases": [
+          "rescissionJudgmentMustBeExplicit()",
+          "[1] rationale = null",
+          "[2] rationale = \"\"",
+          "[3] rationale = \" \"",
+          "[4] rationale = \"안\\n쪽\"",
+          "[5] rationale = \"안‮쪽\"",
+          "normalizationLengthBoundaryAndSafePrinting()"
+        ]
+      },
+      {
+        "name": "dustin.cex.domains.kyc.ExitRescissionIntegrationTest",
+        "tests": "43",
+        "skipped": "0",
+        "failures": "0",
+        "errors": "0",
+        "timestamp": "2026-10-24T04:39:54.427Z",
+        "hostname": "Dustins-MacBook-Pro.local",
+        "time": "42.061",
+        "cases": [
+          "expiredRequestIsReadableWithoutRevivingItsDecisionAuthority()",
+          "actualCddClearanceThenIndependentWithdrawalPermitsOrders()",
+          "staleMfaInvalidSessionAndBadPageDoNotProvideOriginal()",
+          "unsupportedIsolationCannotApplyExitOrRescissionEffects()",
+          "decisionAuditFailurePreservesHoldAndProofThenSameProofRetries()",
+          "withdrawalRemovesOnlyExitHoldAndPreservesOriginalApprovedRecord()",
+          "sameFactsAndKeyReplayButChangedReasonOrCheckerConflicts()",
+          "copiedCipherCannotReturnReasonOrCreateViews()",
+          "databaseGuardSerializesDirectConcurrentApprovals()",
+          "anotherBusinessKindCannotAuthorizeWithdrawal()",
+          "noPersonalViewsMeansNoOptionsAndMakerViewsCannotSubstitute()",
+          "newDeclarationBlocksStaleDecisionButHistoryRemainsReadable()",
+          "withdrawalPreservesMoneyAndReopensOnlyFutureAdmissionAfterAllChecks()",
+          "designatedThirdPersonReadsOriginalOnlyThroughAuditedCorrectionPurpose()",
+          "auditFailureReturnsNoReasonAndRollsBackViews()",
+          "makerOrCheckerVersionChangeInvalidatesRequest()",
+          "oldElevenKindSchemaAndLegacyPermanentIndexAreRejected()",
+          "newEvidenceAfterSignatureInvalidatesWithdrawalWithoutConsumingProof()",
+          "checkerVersionAndOldSessionViewsCannotBeReused()",
+          "identicalContentUsesOneSetOfPagesDespiteDifferentSnapshotIds()",
+          "decisionOutcomeCanBeReadAfterResponseLossWithoutReapplyingIt()",
+          "rejectionPreservesHoldAndAllowsNewCorrectionRequest()",
+          "generalTradingRestrictionStillAppliesAfterWithdrawal()",
+          "actualHttpIndependentWithdrawalAndCustomerSafeStatus()",
+          "newExitRequiresNewReferralAndOldWithdrawalReplayCannotClearIt()",
+          "currentExitParticipantsCannotReviewTheirOwnOriginalDecision()",
+          "auditFailureRollsBackProposalSnapshotCipherAndBinding()",
+          "reasonIsAbsentFromMetadataCipherAndAudit()",
+          "customerVersionChangeInvalidatesAlreadySignedWithdrawal()",
+          "bothDifferentBundlesRequireLastPartialPage()",
+          "outsiderCannotSelfAssignCorrectionToReadPrivateOriginalReason()",
+          "oldViewAloneCannotAuthorizeNewOptions()",
+          "rejectedOrUnapprovedExitCannotBeWithdrawn()",
+          "withdrawalNeverRemovesReportingDutyOrGrantsReportingPlaintextAccess()",
+          "customerAndAuditorCannotUseCorrectionRoutes()",
+          "concurrentApprovalAndRejectionCommitExactlyOneDecision()",
+          "concurrentSameKeyProducesOneRequest()",
+          "allNewRecordsRejectUpdateDeleteAndTruncate()",
+          "originalReviewerWhoIsNotDesignatedCannotReadWithdrawalReason()",
+          "receiptFromDifferentSessionCannotAuthorizeWithdrawal()",
+          "oppositeDecisionCannotUseApprovalProof()",
+          "differentOriginalAndCurrentContentRequireBothCompleteSets()",
+          "rescissionCannotBeDuplicatedByDirectDatabaseInsertion()"
+        ]
+      }
+    ]
+  },
+  "focused_runner": {
+    "command": [
+      "python3",
+      "/tmp/verify-rescission-focused.py"
+    ],
+    "temporary_copy_of": "scripts/verify_edd.py",
+    "source_sha256": "71174b14ef9336b5318831bfda5b771f9ff1183728f9debf4162f0e498609e80",
+    "selection": [
+      "*ExitRescissionIntegrationTest",
+      "*ExitRescissionFactsTest"
+    ],
+    "same_isolation_contract": true
+  },
+  "warnings": [
+    "기존 deprecated/unchecked 컴파일 경고",
+    "테스트 JVM 클래스 공유/도구 경고"
+  ],
+  "limits": [
+    "종료 개시 차단만 철회하며 실제 최종 종료된 계약의 재개·자산 반환·고객 이의 접수/통지/기한 전체는 미완료",
+    "원래 참여자의 현재 OPERATOR가 요청해야 한다. 둘 다 부재하거나 역할이 없으면 새 인계/고립 복구 경로가 없어 진행 불가",
+    "세 인물·10분 요청·5분 본인 전체 제공·일일 10회는 자체 정책이며 법정 인원/시간 요구 아님",
+    "현재 평가·사건 CLOSED는 EDD 사건이며 고객 관계 최종 종료 아님. 직원 판단·자료 일치가 외부 사실 진위/법적 요건 자동 인증 아님",
+    "철회 뒤에도 KYC/CDD/EDD·일반 거래 제한·계정 상태 검사 유지, STR 확정 필요/후속·원장/예약 보존",
+    "새 12종 승인 제약/세 표/뷰/함수 필요. 옛 11종·영구 승인 인덱스는 거부, 기존 금융/보안 이력 자동 변환·삭제·폴백 없음",
+    "원래 승인과 철회 효과는 READ COMMITTED 전제. 직접 SQL 경합/격리 테스트는 DB 제약 검사이며 실제 MFA 승인 절차를 대신하지 않음",
+    "옛 인덱스 이름 표본은 롤백 트랜잭션 내 비유일 이름 표본이며 옛 영구 유일 제약 전체 재현이나 역사 삭제 아님",
+    "실제 PostgreSQL 예약/원장/MVC·소프트웨어 실제 서명을 사용하지만 엔진 HTTP·Kafka·Didit 생성·수수료 설정은 대역. 실물키/실제 엔진 WAL·기관 검증과 구분",
+    "신규 JVM 강제 종료 시나리오 0개. 기존 15개 프로세스와 구분. JMH 컴파일만 수행하며 새 성능 수치 없음",
+    "키 격리/KMS·슈퍼유저 침해·운영 수용량·외부 백업/복제·기관 제출·법정 기산점·조직/ISMS/신고/외부 심사는 별도",
+    "의존성 222개 알려진 OSV 조회/체크섬 차단 검증이며 전체 OS/JDK/컨테이너 취약점 없음으로 주장하지 않음",
+    "엔진/프론트 변경·기존 DB/저널 변환·서버 재시작·운영 배포 없음. 봇 0명"
+  ]
+}
