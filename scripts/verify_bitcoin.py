@@ -104,35 +104,56 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "confirmed_confirmations":rpc("gettransaction",[confirmed,True,True],"cex_watch")["confirmations"],
             "conflicted_confirmations":rpc("gettransaction",[conflicted,True,True],"cex_watch")["confirmations"]}
 
-        # 애플리케이션의 계정/감사 이력도 서버 전체를 격리한다. 기존 개발 DB에 접속하지 않는다.
-        database="cex-bitcoin-"+uuid4().hex[:12]
-        subprocess.run([docker,"run","--detach","--rm","--name",database,"--publish","127.0.0.1::5432",
-            "--tmpfs","/var/lib/postgresql/data","-e","POSTGRES_USER=root","-e","POSTGRES_PASSWORD=1234",
-            "-e","POSTGRES_DB=cex_test","postgres:16"],check=True,stdout=subprocess.DEVNULL)
-        deadline=time.monotonic()+45
-        while subprocess.run([docker,"exec",database,"pg_isready","-h","127.0.0.1","-U","root","-d","cex_test"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
-            if time.monotonic()>deadline:raise RuntimeError("격리 PostgreSQL 시작 실패")
-            time.sleep(.2)
-        db_address=subprocess.check_output([docker,"port",database,"5432/tcp"],text=True).strip()
-        env={k:v for k,v in os.environ.items() if not k.startswith(("BITCOIN_","CEX_BITCOIN_TEST_","CDD_","EDD_","DIDIT_","SPRING_MAIL_","CUSTOMER_MAIL_"))}
-        env.update(CEX_TEST_DATABASE_URL="jdbc:postgresql://"+db_address+"/cex_test",
-            JWT_SECRET="isolated-process-jwt-secret-at-least-32-bytes",ENGINE_SERVICE_TOKEN="isolated-engine-service-token-32-bytes",
-            SPRING_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:1",BOT_BOT_COUNT="0",ORDER_DISPATCH_ENABLED="false",ENGINE_HTTP_URL="http://127.0.0.1:1")
-        env.update(CEX_BITCOIN_TEST_URL="http://127.0.0.1:"+str(rpc_port),CEX_BITCOIN_TEST_USER=credentials["username"],
-            CEX_BITCOIN_TEST_PASSWORD=credentials["password"],
-            CEX_BITCOIN_TEST_CONFIRMED_TX=confirmed,CEX_BITCOIN_TEST_CONFLICTED_TX=conflicted,
-            CEX_BITCOIN_TEST_UNCONFIRMED_TX=unconfirmed,CEX_BITCOIN_TEST_COINBASE_TX=coinbase,
-            CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_ADDRESS=watch)
-        env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
-        started=time.time()
-        with (ARTIFACTS/"bitcoin.log").open("w") as log:
-            completed=subprocess.run(["./gradlew","test","--tests","*BitcoinCoreClientTest","--tests","*BitcoinCoreIntegrationTest",
-                "--tests","*LimitedResponseBodyTest","--tests","*BitcoinDepositAddressIntegrationTest","--tests","*BitcoinDepositReaderTest","--tests","*BitcoinDepositReaderIntegrationTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
-        result["exit"]=completed.returncode
-        suites=[ET.parse(p).getroot() for p in (ROOT/"build/test-results/test").glob("TEST-*.xml") if p.stat().st_mtime>=started]
-        result["tests"]={k:sum(int(s.attrib.get(k,0)) for s in suites) for k in ["tests","failures","errors","skipped"]}
-        result["cases"]=[{"class":s.attrib["name"],"name":t.attrib["name"]} for s in suites for t in s.findall("testcase")]
-        if completed.returncode or not suites or any(result["tests"][k] for k in ["failures","errors","skipped"]):raise RuntimeError("비트코인 검증 실패: .local/bitcoin.log 확인")
+        groups={
+            "addresses":["*BitcoinCoreClientTest","*BitcoinCoreIntegrationTest","*LimitedResponseBodyTest",
+                "*BitcoinDepositAddressIntegrationTest","*BitcoinDepositReaderTest","*BitcoinDepositReaderIntegrationTest"],
+            "observations":["*BitcoinObservationIntegrationTest"],
+        }
+        result["groups"]=[]
+        for group,patterns in groups.items():
+            result["exit"]=None
+            database="cex-bitcoin-"+uuid4().hex[:12]
+            group_result={"group":group,"database":database,"selection":patterns}
+            result["groups"].append(group_result)
+            try:
+                subprocess.run([docker,"run","--detach","--rm","--name",database,"--publish","127.0.0.1::5432",
+                    "--tmpfs","/var/lib/postgresql/data","-e","POSTGRES_USER=root","-e","POSTGRES_PASSWORD=1234",
+                    "-e","POSTGRES_DB=cex_test","postgres:16"],check=True,stdout=subprocess.DEVNULL)
+                deadline=time.monotonic()+45
+                while subprocess.run([docker,"exec",database,"pg_isready","-h","127.0.0.1","-U","root","-d","cex_test"],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
+                    if time.monotonic()>deadline:raise RuntimeError("격리 PostgreSQL 시작 실패")
+                    time.sleep(.2)
+                db_address=subprocess.check_output([docker,"port",database,"5432/tcp"],text=True).strip()
+                env={k:v for k,v in os.environ.items() if not k.startswith(("BITCOIN_","CEX_BITCOIN_TEST_","CDD_","EDD_","DIDIT_","SPRING_MAIL_","CUSTOMER_MAIL_"))}
+                env.update(CEX_TEST_DATABASE_URL="jdbc:postgresql://"+db_address+"/cex_test",
+                    JWT_SECRET="isolated-process-jwt-secret-at-least-32-bytes",ENGINE_SERVICE_TOKEN="isolated-engine-service-token-32-bytes",
+                    SPRING_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:1",BOT_BOT_COUNT="0",ORDER_DISPATCH_ENABLED="false",ENGINE_HTTP_URL="http://127.0.0.1:1")
+                env.update(CEX_BITCOIN_TEST_URL="http://127.0.0.1:"+str(rpc_port),CEX_BITCOIN_TEST_USER=credentials["username"],
+                    CEX_BITCOIN_TEST_PASSWORD=credentials["password"],
+                    CEX_BITCOIN_TEST_CONFIRMED_TX=confirmed,CEX_BITCOIN_TEST_CONFLICTED_TX=conflicted,
+                    CEX_BITCOIN_TEST_UNCONFIRMED_TX=unconfirmed,CEX_BITCOIN_TEST_COINBASE_TX=coinbase,
+                    CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_ADDRESS=watch)
+                env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
+                command=["./gradlew","test"]
+                for pattern in patterns:command.extend(["--tests",pattern])
+                command.extend(["--rerun-tasks","bootJar","operatorAdminJar","--console=plain"])
+                started=time.time()
+                log_name="bitcoin.log" if group=="addresses" else "bitcoin-"+group+".log"
+                with (ARTIFACTS/log_name).open("w") as log:
+                    completed=subprocess.run(command,cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+                group_result["exit"]=completed.returncode
+                suites=[ET.parse(p).getroot() for p in (ROOT/"build/test-results/test").glob("TEST-*.xml") if p.stat().st_mtime>=started]
+                group_result["tests"]={k:sum(int(s.attrib.get(k,0)) for s in suites) for k in ["tests","failures","errors","skipped"]}
+                group_result["cases"]=[{"class":s.attrib["name"],"name":t.attrib["name"]} for s in suites for t in s.findall("testcase")]
+                result["exit"]=completed.returncode
+                if completed.returncode or not suites or any(group_result["tests"][k] for k in ["failures","errors","skipped"]):raise RuntimeError("비트코인 검증 실패: .local/"+log_name+" 확인")
+            finally:
+                group_result["database_removed"]=subprocess.run([docker,"rm","--force",database],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
+                database=None
+        result["tests"]={k:sum(g["tests"][k] for g in result["groups"]) for k in ["tests","failures","errors","skipped"]}
+        result["cases"]=[case for group in result["groups"] for case in group["cases"]]
+        result["database_removed"]=all(g["database_removed"] for g in result["groups"])
+        result["exit"]=0
     finally:
         if database is not None:
             result["database_removed"]=subprocess.run([docker,"rm","--force",database],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
@@ -143,4 +164,4 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                 except subprocess.TimeoutExpired:daemon.kill();daemon.wait(timeout=5)
             result["node_stopped"]=daemon.poll() is not None
         (ARTIFACTS/"bitcoin.json").write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n")
-print(json.dumps({k:v for k,v in result.items() if k!="cases"},ensure_ascii=False,indent=2))
+print(json.dumps({k:v for k,v in result.items() if k not in ("cases","groups")},ensure_ascii=False,indent=2))
