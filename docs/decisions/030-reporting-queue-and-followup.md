@@ -104,16 +104,16 @@ read는 원래 payload 해시와 결정 상태를 확인한다. APPROVED를 확�
 출처: [ReportingFollowupService.java](../../src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java#L65)
 
 ```java
-var items=batch.origins().stream().map(origin->{Instant target=origin.decidedAt().plusSeconds(86400);
-    return new Item(origin.payload().id(),origin.payload().userId(),origin.decidedAt(),target,!target.isAfter(Instant.now()),DEADLINE,"FOLLOW_UP_REQUIRED",latest(origin));}).toList();
-Cursor next=batch.more()?new Cursor(batch.lastDecision(),batch.lastReview()):null;
+Instant observed=Instant.now();
+var items=batch.origins().stream().map(origin->{var check=InternalCheck.at(origin.decidedAt(),observed);
+    return new Item(origin.payload().id(),origin.payload().userId(),origin.decidedAt(),check.targetAt(),check.overdue(),DEADLINE,"FOLLOW_UP_REQUIRED",latest(origin));}).toList();
 ```
 
 plusSeconds(86400)는 시간대나 영업일과 무관한 24시간이다. 내부 승인 시각의 고정 목표로만 표시하며 새 관찰이나 직원의 occurredAt 입력으로 재설정하지 않는다. 실제 보고책임자의 결정이 더 이전일 수 있으므로 이 값이 법정 기산점이나 제출 기한이라는 뜻은 아니다. 법정 날짜는 계산하지 않고 확인 필요로 둔다.
 
 ### 같은 키에 다른 관찰을 넣지 않기
 
-출처: [ReportingFollowupService.java](../../src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java#L76)
+출처: [ReportingFollowupService.java](../../src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java#L84)
 
 ```java
 var prior=jdbc.queryForList("SELECT id FROM reporting_followups WHERE actor_id=? AND request_key=?",actor,key);
@@ -126,7 +126,7 @@ if(jdbc.queryForObject("SELECT count(*) FROM reporting_followups WHERE review_id
 
 ### 암호화·감사를 함께 확정
 
-출처: [ReportingFollowupService.java](../../src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java#L82)
+출처: [ReportingFollowupService.java](../../src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java#L90)
 
 ```java
 String hash=verifier.digest(json.valueToTree(p));byte[] cipher=crypto.encrypt(context(p),json.writeValueAsBytes(value));
@@ -139,7 +139,7 @@ audit.record(actor,"REPORTING_FOLLOWUP_RECORDED","reporting-followup:"+id,"SUCCE
 
 ### 상세 메모도 검증한 후 제공
 
-출처: [ReportingFollowupService.java](../../src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java#L111)
+출처: [ReportingFollowupService.java](../../src/main/java/dustin/cex/domains/edd/ReportingFollowupService.java#L120)
 
 ```java
     var value=json.readValue(crypto.decrypt(p.evidenceKeyId(),context(p),cipher),Facts.class).validated();
@@ -257,3 +257,6 @@ macOS·Temurin 21·실행기 소유 PostgreSQL/Kafka와 임시 DB를 사용한�
 ## 2026-10-24 후속 배정 인계
 
 [031](031-reporting-custody-and-orphan-recovery.md)에서 최초 두 인물의 배정과 승인된 후속 인계를 하나의 현재 권한으로 계산한다. 위 최초 030의 원래 두 계정 설명·9종 승인 유지·검증 수치는 당시 기준이다. 현재 코드 발췌의 목록 SQL과 상세 검사는 현재 후속 담당자를 사용하며 새 열 번째 STR_CUSTODY 스키마가 필요하다. 인계가 원래 보고 필요·시각·24시간 목표·법정 의무를 바꾸지 않는다. 기존 내부 보고 역사 API와 새 담당자의 별도 원래 근거 제공 경로도 구분한다.
+
+
+2026-10-24 후속: [032의 원문 없는 전사 점검](032-reporting-supervision.md)이 실제 확정 보고 필요의 정상 배정·한 명/두 명의 권한 공백을 승인 역할에 제공한다. 이 문서 최초 시점의 전사 감독 미완료 범위 중 해당 메타데이터 점검을 보완한 것이다. 미승인/만료 검토·전체 회부 감독·상향 보고/알림·법정 기한/실제 제출은 여전히 별도다.

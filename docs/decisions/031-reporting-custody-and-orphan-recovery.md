@@ -247,3 +247,6 @@ macOS·Temurin 21·실행기 소유 PostgreSQL/Kafka와 별도 임시 DB를 사�
 - [`7b8e8f2`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/7b8e8f2f919ed4e5a564b1065b6be2b928fc3a83): 보고 후속 권한의 독립 인계·고립 발견/복구·논리 세대·결과 재확인과 신규 테스트 45개.
 
 [030 제출 대기와 관찰](030-reporting-queue-and-followup.md), [029 원래 보고 판단](029-confidential-reporting-review.md), [공통 EDD 진행 기록](../../../docs/roadmap/edd-case-review.md)을 함께 읽는다.
+
+
+2026-10-24 후속: [032의 원문 없는 전사 점검](032-reporting-supervision.md)이 실제 확정 보고 필요의 정상 배정·한 명/두 명의 권한 공백을 승인 역할에 제공한다. 이 문서 최초 시점의 전사 감독 미완료 범위 중 해당 메타데이터 점검을 보완한 것이다. 미승인/만료 검토·전체 회부 감독·상향 보고/알림·법정 기한/실제 제출은 여전히 별도다.
