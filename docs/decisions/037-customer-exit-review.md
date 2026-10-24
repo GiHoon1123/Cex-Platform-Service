@@ -69,7 +69,7 @@ NFC 정규화와 strip으로 같은 의미의 입력을 정리한다. CRLF는 LF
 
 ### 원래 접수의 멱등 재조회
 
-[CustomerExitReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerExitReviewService.java#L59)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerExitReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerExitReviewService.java#L61)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 var old=jdbc.queryForList("SELECT * FROM customer_exit_review_requests WHERE user_id=? AND request_key=?",actor,key);
@@ -84,7 +84,7 @@ if(!old.isEmpty()) {
 
 ### 암호화 접수와 감사를 함께 확정하기
 
-[CustomerExitReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerExitReviewService.java#L69)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerExitReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerExitReviewService.java#L71)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 UUID id=UUID.randomUUID();String mac=mac(actor,exit,value.rationale());byte[] cipher=crypto.encrypt(context(id,actor,exit,mac),value.rationale().getBytes(StandardCharsets.UTF_8));
@@ -101,14 +101,14 @@ audit.record(actor,"CUSTOMER_EXIT_REVIEW_RECEIVED","customer-review:"+id,"SUCCES
 
 ```java
 public Inspection inspect(long actor,UUID sid,UUID id) {
-    return attempt(actor,()->tx.execute(t->{var row=row(id);UUID exit=(UUID)row.get("exit_id");var original=assigned(actor,sid,exit);long user=((Number)row.get("user_id")).longValue();
-        if(original.payload().userId()!=user)throw new IllegalStateException("고객 재검토 대상 검증 실패");String mac=(String)row.get("content_mac");
+    return attempt(actor,()->tx.execute(t->{var row=row(id);UUID exit=(UUID)row.get("exit_id");var state=assigned(actor,sid,id);long user=((Number)row.get("user_id")).longValue();
+        if(state.userId()!=user)throw new IllegalStateException("고객 재검토 대상 검증 실패");String mac=(String)row.get("content_mac");
         byte[] plain=crypto.decrypt((String)row.get("evidence_key_id"),context(id,user,exit,mac),(byte[])row.get("reason_cipher"));
         String value=new Submission(new String(plain,StandardCharsets.UTF_8)).validated().rationale();
         if(!fingerprints.keyId().equals(row.get("fingerprint_key_id"))||!mac.equals(mac(user,exit,value)))throw new IllegalStateException("고객 사유 무결성 검증 실패");
         // 후속 기록에 필요한 본인 세션의 제공 사실도 감사와 함께 확정한다.
         var viewer=users.findById(actor).orElseThrow();
-        jdbc.update("INSERT INTO customer_exit_review_views(id,request_id,actor_id,actor_person,actor_version,session_id) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),id,actor,viewer.getOperatorPersonId(),viewer.getVersion(),sid);
+        jdbc.update("INSERT INTO customer_exit_review_views(id,request_id,actor_id,actor_person,actor_version,session_id,custody_generation,custody_stamp) VALUES(?,?,?,?,?,?,?,?)",UUID.randomUUID(),id,actor,viewer.getOperatorPersonId(),viewer.getVersion(),sid,state.generation(),state.stamp());
         // 원문을 먼저 해독해도 감사가 실패하면 호출자에게 반환하지 않는다. 제공을 금융 승인 영수증으로 쓰지 않는다.
         audit.record(actor,"CUSTOMER_EXIT_REVIEW_VIEWED","customer-review:"+id,"SUCCESS","CUSTOMER_REASON_ONLY");return new Inspection(receipt(row),value);
     }));
@@ -197,3 +197,6 @@ CREATE TABLE IF NOT EXISTS customer_exit_review_requests (
 
 
 039 이후 현재 inspect 예제는 인물·버전·세션별 불변 제공 영수증도 감사와 함께 기록한다. 과거 037의 실행 수치와 증적은 당시 기록으로 보존하며 후속 동작은 [039 비공개 처리 기록](039-customer-review-notes.md)을 따른다.
+
+
+041 이후 현재 원문/후속 접근은 승인된 현재 고객 업무 배정으로 검사한다. 제공 영수증은 배정 세대와 stamp에도 결합하며 옛 세대 재사용을 거부한다. 원래 종료별 담당자 목록을 제거하고 요청별 현재 배정 컨텍스트로 전환했다. 과거 실행·증적은 당시 기록으로 보존하고 [041](041-customer-work-transfer.md)을 함께 읽는다.

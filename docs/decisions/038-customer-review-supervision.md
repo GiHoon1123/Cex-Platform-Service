@@ -4,7 +4,7 @@
 
 ## 문제와 구현 범위
 
-GET /api/admin/compliance/customer-review-supervision. 현재 APPROVER와 최근 MFA를 필터·서비스에서 확인한다. afterReceived·afterRequest를 함께 주거나 생략하며 시각/UUID로 최대 25개를 순회한다. 모든 고객 요청은 원래 종료가 철회되거나 고객이 비활성화돼도 보존한다. 원래 두 인물의 현재 자격·서버 열람 감사의 최근 시각을 제공하지만 원문 권한·인계·금융 결정을 부여하지 않는다.
+GET /api/admin/compliance/customer-review-supervision. 현재 APPROVER와 최근 MFA를 필터·서비스에서 확인한다. afterReceived·afterRequest를 함께 주거나 생략하며 시각/UUID로 최대 25개를 순회한다. 모든 고객 요청은 원래 종료가 철회되거나 고객이 비활성화돼도 보존한다. 현재 배정된 두 인물의 자격·서버 열람 감사의 최근 시각을 제공하지만 원문 권한·인계·금융 결정을 부여하지 않는다.
 
 ## 기존 제품과 공식 근거
 
@@ -22,7 +22,7 @@ GET /api/admin/compliance/customer-review-supervision. 현재 APPROVER와 최근
 
 ### 시각과 UUID로 제한 순회
 
-[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L39)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
+[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L40)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
 
 ```java
 var candidates=after==null?jdbc.queryForList("SELECT id,user_id,exit_id,created_at FROM customer_exit_review_requests ORDER BY created_at,id LIMIT 25"):
@@ -33,7 +33,7 @@ var candidates=after==null?jdbc.queryForList("SELECT id,user_id,exit_id,created_
 
 ### 제공 기록과 현재 담당자만 표시
 
-[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L46)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
+[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L47)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
 
 ```java
 Timestamp viewed=jdbc.queryForObject("SELECT max(occurred_at) FROM security_audit WHERE action='CUSTOMER_EXIT_REVIEW_VIEWED' AND outcome='SUCCESS' AND target=?",Timestamp.class,"customer-review:"+id);
@@ -44,7 +44,7 @@ items.add(new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toIns
 
 ### 감사 실패 시 목록 반환 차단
 
-[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L50)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
+[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L51)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
 
 ```java
 audit.record(actor,"CUSTOMER_REVIEW_SUPERVISION_READ","operator:"+actor,"SUCCESS","METADATA_ONLY");
@@ -86,3 +86,6 @@ Spring 트랜잭션 콜백에서 감사가 성공한 뒤 응답 값을 반환한
 - [`f6b4b29`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/f6b4b292ac03659a755d4dc3242b798cef04dddb): 고객 재검토 요청의 원문 없는 전사 점검와 관련 회귀.
 
 [038 확정 증적](../reference/customer-review-supervision-verification-2026-10-24.json), [037 고객 접수](037-customer-exit-review.md), [공통 진행 기록](../../../docs/roadmap/edd-case-review.md).
+
+
+041 이후 이 목록은 승인된 현재 고객 업무 배정의 인물로 공백을 계산한다. 마지막 열람 감사 시각은 과거 인물/세대의 기록도 포함하며 새 담당자가 읽었다는 뜻은 아니다. 과거 038의 실행·증적은 보존하고 [041](041-customer-work-transfer.md)을 따른다.

@@ -53,8 +53,8 @@ audit.record(actor,"CUSTOMER_REVIEW_NOTE_RECORDED","customer-note:"+id,"SUCCESS"
 
 ```java
 void requirePersonalView(long actor,UUID sid,UUID id) {
-    transaction();var u=users.findById(actor).orElseThrow();
-    long count=jdbc.queryForObject("SELECT count(*) FROM customer_exit_review_views WHERE request_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND provided_at>clock_timestamp()-interval '5 minutes'",Long.class,id,actor,u.getOperatorPersonId(),u.getVersion(),sid);
+    transaction();var u=users.findById(actor).orElseThrow();var state=custody.current(id);
+    long count=jdbc.queryForObject("SELECT count(*) FROM customer_exit_review_views WHERE request_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND custody_generation=? AND custody_stamp=? AND provided_at>clock_timestamp()-interval '5 minutes'",Long.class,id,actor,u.getOperatorPersonId(),u.getVersion(),sid,state.generation(),state.stamp());
     if(count==0)throw denied(HttpStatus.CONFLICT);
 }
 ```
@@ -103,3 +103,6 @@ void requirePersonalView(long actor,UUID sid,UUID id) {
 - [`fd138bf`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/fd138bf781d204f9039ad2aa7c431ba3d35ce64e): 고객 재검토의 비공개 처리 기록과 본인 제공 근거와 관련 회귀.
 
 [039 확정 증적](../reference/customer-review-notes-verification-2026-10-24.json), [038 감독](038-customer-review-supervision.md), [037 접수](037-customer-exit-review.md).
+
+
+041 이후 현재 원문/후속 접근은 승인된 현재 고객 업무 배정으로 검사한다. 제공 영수증은 배정 세대와 stamp에도 결합하며 옛 세대 재사용을 거부한다. 원래 종료별 담당자 목록을 제거하고 요청별 현재 배정 컨텍스트로 전환했다. 과거 실행·증적은 당시 기록으로 보존하고 [041](041-customer-work-transfer.md)을 함께 읽는다.
