@@ -91,3 +91,7 @@ CREATE TABLE IF NOT EXISTS customer_recovery_key_changes (
 );
 DROP TRIGGER IF EXISTS customer_recovery_key_change_no_change ON customer_recovery_key_changes;
 CREATE TRIGGER customer_recovery_key_change_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_recovery_key_changes FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 본인 이력의 복합 커서와 한 복구에 속한 변경 수 조회를 각각 제한된 범위로 읽는다.
+CREATE INDEX IF NOT EXISTS customer_recovery_history ON customer_recovery_events(user_id,created_at,id);
+CREATE INDEX IF NOT EXISTS customer_recovery_key_source ON customer_recovery_key_changes(event_id,user_id);

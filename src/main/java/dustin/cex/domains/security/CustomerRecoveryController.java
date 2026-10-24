@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/auth/customer-recovery")
 public class CustomerRecoveryController {
     private final CustomerRecoveryService service;
-    public CustomerRecoveryController(CustomerRecoveryService service){this.service=service;}
+    private final CustomerRecoveryHistory history;
+    public CustomerRecoveryController(CustomerRecoveryService service,CustomerRecoveryHistory history){this.service=service;this.history=history;}
     public record Password(String currentPassword){@Override public String toString(){return "Password[비밀번호 생략]";}}
     public record Recovery(String currentPassword,String recoveryCode){@Override public String toString(){return "Recovery[인증 자료 생략]";}}
     @GetMapping("/status")public CustomerRecoveryService.Status status(@RequestAttribute long userId,@RequestAttribute UUID sessionId){return service.status(userId,sessionId);}
@@ -16,4 +17,6 @@ public class CustomerRecoveryController {
     @PostMapping("/code")public CustomerRecoveryService.Code code(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestBody CustomerRecoveryService.Proof proof){return service.replaceCode(userId,sessionId,proof);}
     @PostMapping("/register/options")public CustomerRecoveryService.Options recoveryOptions(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestBody Recovery input){return service.recoveryOptions(userId,sessionId,input.currentPassword(),input.recoveryCode());}
     @PostMapping("/register")public CustomerRecoveryService.Code recover(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestBody CustomerRecoveryService.Proof proof){return service.recover(userId,sessionId,proof);}
+    @GetMapping("/changes")public CustomerRecoveryHistory.Page changes(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestParam(required=false) java.time.Instant afterAt,@RequestParam(required=false) UUID afterId){return history.own(userId,sessionId,afterAt==null&&afterId==null?null:new CustomerRecoveryHistory.Cursor(afterAt,afterId));}
+
 }

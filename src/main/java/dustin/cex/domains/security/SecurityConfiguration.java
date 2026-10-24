@@ -128,7 +128,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/auth/customer-mfa/register/options","/api/auth/customer-mfa/register",
                     "/api/auth/customer-mfa/authenticate/options","/api/auth/customer-mfa/authenticate").authenticated()
                 // 코드 관리는 현재 고객 서명을, 분실 키 복구는 비밀번호 대기 세션과 저장 코드를 서비스에서 요구한다.
-                .requestMatchers(HttpMethod.GET,"/api/auth/customer-recovery/status").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.GET,"/api/auth/customer-recovery/status","/api/auth/customer-recovery/changes").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.POST,"/api/auth/customer-recovery/code/options","/api/auth/customer-recovery/code").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.POST,"/api/auth/customer-recovery/register/options","/api/auth/customer-recovery/register").authenticated()
                 .requestMatchers(HttpMethod.GET,"/api/auth/customer-mfa/credentials","/api/auth/customer-mfa/changes").access(audited(audit,sessions,"CUSTOMER"))

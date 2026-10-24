@@ -16,34 +16,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** 실제 두 소프트웨어 인증기와 격리 DB/SMTPS로 복구·재사용·동시 실행·실패 원자성을 확인한다. */
-class CustomerRecoveryIntegrationTest extends CustomerMailTestSupport {
-    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean dustin.cex.domains.cdd.CddCrypto crypto;
-    @Autowired CustomerRecoveryService recovery;
-    @Autowired CustomerMfaKeyChanges keyChanges;
-    @Autowired CustomerMfaService mfa;
-    @Autowired CustomerEmailVerification email;
-    @Autowired CustomerMailRetryService retries;
-    final Map<String,Long> counters=new HashMap<>();
-    final String password="security-test-password";
-    OperatorMfaService.Options option(CustomerRecoveryService.Options o){return new OperatorMfaService.Options(o.challengeId(),o.publicKey());}
-    void suppress(){for(int i=0;i<30;i++){var lease=outbox.claim();if(lease==null)return;outbox.finish(lease,"SUPPRESSED");}fail("격리 예약 정리 초과");}
-    void pending(){var r=auth.signin(new SigninRequest(customer.getEmail(),password));sid=UUID.fromString(jwt.verifyAccessToken(r.getAccessToken()).get("sid",String.class));customerAccess=r.getAccessToken();}
-    void login(SoftwareAuthenticator key) throws Exception {
-        pending();var o=mfa.authenticationOptions(customer.getId(),sid);
-        var v=mfa.authenticate(customer.getId(),sid,o.challengeId(),key.assertion(new OperatorMfaService.Options(o.challengeId(),o.publicKey()),"http://localhost:3003",true,counters.merge(key.id(),1L,Long::sum),null));
-        sid=UUID.fromString(jwt.verifyAccessToken(v.accessToken()).get("sid",String.class));customerAccess=v.accessToken();
-    }
-    SoftwareAuthenticator initial() throws Exception {
-        counters.clear();var e=email.request(customer.getId(),sid,UUID.randomUUID());UUID job=jdbc.queryForObject("SELECT id FROM customer_mail_jobs WHERE reference_id=?",UUID.class,e.challengeId());String token=outbox.open(job).token();suppress();email.confirm(customer.getId(),sid,e.challengeId(),token);
-        var key=new SoftwareAuthenticator();var o=mfa.registrationOptions(customer.getId(),sid,password);mfa.register(customer.getId(),sid,o.challengeId(),key.registration(new OperatorMfaService.Options(o.challengeId(),o.publicKey()),"http://localhost:3003",true));login(key);suppress();return key;
-    }
-    CustomerRecoveryService.Proof signed(CustomerRecoveryService.Options o,SoftwareAuthenticator key) throws Exception {
-        return new CustomerRecoveryService.Proof(o.challengeId(),key.assertion(option(o),"http://localhost:3003",true,counters.merge(key.id(),1L,Long::sum),null));
-    }
-    CustomerRecoveryService.Code issue(SoftwareAuthenticator key) throws Exception {return recovery.replaceCode(customer.getId(),sid,signed(recovery.codeOptions(customer.getId(),sid,password),key));}
-    CustomerRecoveryService.Proof registration(CustomerRecoveryService.Options o,SoftwareAuthenticator key) throws Exception {return new CustomerRecoveryService.Proof(o.challengeId(),key.registration(option(o),"http://localhost:3003",true));}
-    long events(){return jdbc.queryForObject("SELECT count(*) FROM customer_recovery_events WHERE user_id=?",Long.class,customer.getId());}
-    long keyCount(){return jdbc.queryForObject("SELECT count(*) FROM user_credentials c JOIN user_entities u ON u.id=c.user_entity_user_id WHERE u.name=?",Long.class,customer.getId().toString());}
+class CustomerRecoveryIntegrationTest extends CustomerRecoveryTestSupport {
     @Test void signedCodeIsReturnedOnceAndOnlySaltedHashIsStored() throws Exception {
         var key=initial();assertFalse(recovery.status(customer.getId(),sid).configured());var code=issue(key);assertTrue(code.recoveryCode().matches("[A-Za-z0-9_-]{43}"));assertFalse(code.requiresLogin());assertTrue(recovery.status(customer.getId(),sid).configured());
         String hash=jdbc.queryForObject("SELECT code_hash FROM customer_recovery_codes WHERE user_id=?",String.class,customer.getId());assertTrue(hash.startsWith("$argon2"));assertTrue(passwords.verify(code.recoveryCode(),hash));assertFalse(code.toString().contains(code.recoveryCode()));
