@@ -62,7 +62,7 @@ ObjectReader는 이 통신에만 적용하는 해독 설정이다. TypeScript의
 
 거래를 조회한 지갑의 기준 블록까지 같은지 확인한다. 조회 전후 tip만 비교하면 체인이 바뀌었다가 원래 tip로 돌아온 사이에 읽은 결과를 놓칠 수 있다. nullable 블록/높이는 뒤에서 관찰 상태에 따라 명시적으로 결정한다.
 
-출처: [BitcoinDepositReader.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReader.java#L83), 현재 소스의 부분 발췌.
+출처: [BitcoinAmounts.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinAmounts.java#L13), 079에서 두 노드 판독 업무가 공유하는 현재 소스의 부분 발췌.
 
 ```java
             BigDecimal value=node.decimalValue();
