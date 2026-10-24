@@ -69,7 +69,7 @@
 
 공개 근거와 관측 시각을 받아 고정24시간 기한을 계산하고 토큰 없는 알림을 예약한다. 같은 종류/근거는 같은 예약으로 제한한다. 사용자 입력 문구를 매개변수로 받지 않는다.
 
-출처: [CustomerSmtpTransport.java](../../src/main/java/dustin/cex/domains/mail/CustomerSmtpTransport.java#L29), 현재 소스의 부분 발췌.
+출처: [CustomerSmtpTransport.java](../../src/main/java/dustin/cex/domains/mail/CustomerSmtpTransport.java#L32), 현재 소스의 부분 발췌.
 
 ```java
             else{

@@ -29,20 +29,21 @@ CustomerSessionPolicy의 사용자 잠금 안에서 재확인→새 해시 저�
 
 ## 실제 코드와 이해에 필요한 원리
 
-출처: [CustomerPasswordChange.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordChange.java#L39), 현재 소스의 부분 발췌.
+출처: [CustomerPasswordChange.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordChange.java#L40), 현재 소스의 부분 발췌.
 
 ```java
                 // 현재 세션도 남기지 않는다. 갱신/로그인이 같은 사용자 잠금을 사용하므로 옛 자격으로 새 세션을 만들지 못한다.
                 tokens.revokeAllByUserId(actor,LocalDateTime.now());UUID id=UUID.randomUUID();
                 jdbc.update("INSERT INTO customer_password_changes(id,user_id,session_id) VALUES(?,?,?)",id,actor,sid);
                 Instant at=jdbc.queryForObject("SELECT changed_at FROM customer_password_changes WHERE id=?",Timestamp.class,id).toInstant();
+                notice.reserve(actor,id,at);
                 audit.record(actor,"CUSTOMER_PASSWORD_CHANGED","password-change:"+id,"SUCCESS","ALL_SESSIONS_REVOKED");
                 return new Outcome(new Receipt(id,at,true),null);
 ```
 
-같은 트랜잭션에 해시·세션 회수·불변 변경 행·감사가 참여한다. 마지막 감사/DB 커밋이 실패하면 새 비밀번호만 적용하거나 토큰만 회수하는 반쪽 결과를 반환하지 않는다.
+061 연결 뒤 현재 발췌다. 같은 트랜잭션에 해시·세션 회수·불변 변경 행·보안 통지 예약·감사가 참여한다. 마지막 감사/DB 커밋이 실패하면 새 비밀번호만 적용하거나 토큰만 회수하는 반쪽 결과를 반환하지 않는다.
 
-출처: [CustomerPasswordChange.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordChange.java#L34), 현재 소스의 부분 발췌.
+출처: [CustomerPasswordChange.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordChange.java#L35), 현재 소스의 부분 발췌.
 
 ```java
                     // 사용자 잠금 안에서 실패까지 커밋한다. 밖에서 예외로 변환해 실패 집계가 롤백되지 않게 한다.
