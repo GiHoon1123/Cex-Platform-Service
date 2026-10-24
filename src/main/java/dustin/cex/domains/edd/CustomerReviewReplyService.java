@@ -1,5 +1,7 @@
 package dustin.cex.domains.edd;
 
+import dustin.cex.domains.mail.*;
+
 import dustin.cex.domains.cdd.CddCrypto;
 import dustin.cex.domains.security.AuditService;
 import java.time.*;
@@ -21,9 +23,10 @@ public class CustomerReviewReplyService {
     public enum Status { EXIT_INITIATION_ACTIVE, EXIT_INITIATION_RESCINDED }
     public record Reply(UUID id,Status status,String message,Instant observedAt) {}
     public record Payload(UUID id,UUID requestId,long userId,long actorId,long sequence,UUID noteId,long noteSequence,Status status,UUID basisId,String message,Instant observedAt) {}
+    private final CustomerServiceMail mail;
     private final JdbcTemplate jdbc;private final CustomerExitReviewService requests;private final CustomerReviewNoteService notes;
     private final CddCrypto fingerprints;private final ObjectMapper json;private final AuditService audit;private final TransactionTemplate tx;
-    public CustomerReviewReplyService(JdbcTemplate jdbc,CustomerExitReviewService requests,CustomerReviewNoteService notes,CddCrypto fingerprints,ObjectMapper json,AuditService audit,PlatformTransactionManager manager){this.jdbc=jdbc;this.requests=requests;this.notes=notes;this.fingerprints=fingerprints;this.json=json;this.audit=audit;tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);}
+    public CustomerReviewReplyService(JdbcTemplate jdbc,CustomerExitReviewService requests,CustomerReviewNoteService notes,CddCrypto fingerprints,ObjectMapper json,AuditService audit,PlatformTransactionManager manager,CustomerServiceMail mail){this.mail=mail;this.jdbc=jdbc;this.requests=requests;this.notes=notes;this.fingerprints=fingerprints;this.json=json;this.audit=audit;tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);}
     @Transactional(propagation=Propagation.NEVER)
     public Reply record(long actor,UUID sid,UUID request,UUID key,UUID latestNote){return attempt(actor,()->tx.execute(t->{
         var origin=requests.workRequest(actor,sid,request);long user=((Number)origin.get("user_id")).longValue();if(key==null||latestNote==null)throw denied(HttpStatus.BAD_REQUEST);
@@ -44,6 +47,8 @@ public class CustomerReviewReplyService {
         long sequence=jdbc.queryForObject("SELECT coalesce(max(sequence),0)+1 FROM customer_exit_review_replies WHERE request_id=?",Long.class,request);UUID id=UUID.randomUUID();
         var payload=new Payload(id,request,user,actor,sequence,note.id(),note.sequence(),status,basis,message(status),Instant.now().truncatedTo(ChronoUnit.MICROS));String raw=json.writeValueAsString(payload);
         jdbc.update("INSERT INTO customer_exit_review_replies(id,request_id,sequence,actor_id,request_key,note_id,note_sequence,payload,content_mac,fingerprint_key_id) VALUES(?,?,?,?,?,?,?,?,?,?)",id,request,sequence,actor,key,note.id(),note.sequence(),raw,mac(raw),fingerprints.keyId());
+        // 공개 사실과 출력 예약은 함께 확정한다. 외부 SMTP는 이 트랜잭션에서 호출하지 않는다.
+        mail.reserve(user,CustomerMailOutbox.Kind.STATUS_NOTICE,id,payload.observedAt());
         audit.record(actor,"CUSTOMER_REVIEW_REPLY_RECORDED","customer-reply:"+id,"SUCCESS","STATUS_OBSERVED_ONLY");return safe(payload);
     }));}
     public List<Reply> own(long actor,UUID sid,UUID request,int page){return attempt(actor,()->tx.execute(t->{requests.own(actor,sid,request);var result=list(request,actor,page);audit.record(actor,"CUSTOMER_REVIEW_REPLIES_OWN","customer-review:"+request,"SUCCESS","PUBLIC_STATUS_ONLY");return result;}));}

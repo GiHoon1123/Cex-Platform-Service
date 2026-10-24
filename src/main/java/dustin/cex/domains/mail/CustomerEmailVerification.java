@@ -24,13 +24,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class CustomerEmailVerification {
     public record Receipt(UUID challengeId,Instant expiresAt) {}
     public record Status(boolean verified) {}
+    private final CustomerMailRecipientPolicy recipients;
     private final JdbcTemplate jdbc;
     private final CddCrypto crypto;
     private final CustomerSessionPolicy sessions;
     private final CustomerMailOutbox outbox;
     private final AuditService audit;
     private final TransactionTemplate tx;
-    public CustomerEmailVerification(JdbcTemplate jdbc,CddCrypto crypto,CustomerSessionPolicy sessions,CustomerMailOutbox outbox,AuditService audit,PlatformTransactionManager manager){this.jdbc=jdbc;this.crypto=crypto;this.sessions=sessions;this.outbox=outbox;this.audit=audit;tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);}
+    public CustomerEmailVerification(JdbcTemplate jdbc,CddCrypto crypto,CustomerSessionPolicy sessions,CustomerMailOutbox outbox,AuditService audit,PlatformTransactionManager manager,CustomerMailRecipientPolicy recipients){this.recipients=recipients;this.jdbc=jdbc;this.crypto=crypto;this.sessions=sessions;this.outbox=outbox;this.audit=audit;tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);}
 
     @Transactional(propagation=Propagation.NEVER)
     public Receipt request(long actor,UUID sid,UUID key){return attempt(actor,()->tx.execute(t->{
@@ -68,8 +69,8 @@ public class CustomerEmailVerification {
     }));}
     public Status status(long actor,UUID sid){return attempt(actor,()->tx.execute(t->{var user=sessions.require(actor,sid);var result=new Status(verified(user));audit.record(actor,"CUSTOMER_EMAIL_STATUS","customer:"+actor,"SUCCESS","OWN_STATUS");return result;}));}
     /** 현재 User의 주소와 완전히 같은 지문만 검증 사실로 인정한다. 주소 변경은 자동으로 미검증이 된다. */
-    public boolean verified(User user){return jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_email_confirmations WHERE user_id=? AND email_mac=? AND key_id=?)",Boolean.class,user.getId(),addressMac(user.getEmail()),crypto.keyId());}
-    public String addressMac(String email){return crypto.fingerprint("customer-email-exact-v1",email);}
+    public boolean verified(User user){return recipients.verified(user);}
+    public String addressMac(String email){return recipients.addressMac(email);}
     private Receipt receipt(Map<String,Object> row){return new Receipt((UUID)row.get("id"),((Timestamp)row.get("expires_at")).toInstant());}
     private void validateAddress(String value){try{var a=new InternetAddress(value,true);a.validate();if(!a.getAddress().equals(value)||value.codePoints().anyMatch(Character::isISOControl))throw new IllegalArgumentException();}catch(Exception e){throw denied(HttpStatus.BAD_REQUEST);}}
     private String digest(UUID id,String token){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest((id+":"+token).getBytes(StandardCharsets.UTF_8)));}catch(NoSuchAlgorithmException e){throw new IllegalStateException("토큰 해시 알고리즘이 없습니다");}}

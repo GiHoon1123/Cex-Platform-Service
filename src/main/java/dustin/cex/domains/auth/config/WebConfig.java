@@ -11,7 +11,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${operator.webauthn.origin:http://localhost:3003}") private String operatorOrigin;
     @Override public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**").allowedOrigins(java.util.stream.Stream.of(origin,operatorOrigin).distinct().toArray(String[]::new))
-            .allowedMethods("GET","POST","DELETE","OPTIONS")
+            // 이메일 수신 선택은 PUT으로 갱신한다. 메서드 허용 뒤에도 각 API의 세션/역할 검사는 유지한다.
+            .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
             .allowedHeaders("Authorization","Content-Type","Idempotency-Key")
             // 허용한 프론트 출처가 열람 영수증을 읽어 검토 요청에 연결할 수 있게 이 헤더만 공개한다.
             .exposedHeaders("X-Evidence-View-Id");

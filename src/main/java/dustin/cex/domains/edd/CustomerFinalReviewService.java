@@ -1,5 +1,7 @@
 package dustin.cex.domains.edd;
 
+import dustin.cex.domains.mail.*;
+
 import dustin.cex.domains.auth.model.entity.*;
 import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.cdd.CddCrypto;
@@ -37,13 +39,15 @@ public class CustomerFinalReviewService {
     public record Inspection(Request request,Explanation explanation,CustomerExitReviewService.Inspection customerReason,CustomerReviewNoteService.Inspection note) {
         @Override public String toString(){return "Inspection[고객 사유·내부 기록·공개 예정 문구 생략]";}
     }
+    private final CustomerServiceMail mail;
     private final JdbcTemplate jdbc;private final UserRepository users;private final OperatorSessionPolicy sessions;
     private final CustomerWorkCustody custody;private final CustomerExitReviewService requests;private final CustomerReviewNoteService notes;
     private final EvidenceCrypto crypto;private final CddCrypto cdd;private final ObjectMapper json;
     private final DiditWebhookVerifier verifier;private final OperatorMfaService mfa;private final AuditService audit;private final TransactionTemplate tx;
     public CustomerFinalReviewService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy sessions,CustomerWorkCustody custody,
             CustomerExitReviewService requests,CustomerReviewNoteService notes,EvidenceCrypto crypto,CddCrypto cdd,ObjectMapper json,
-            DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,PlatformTransactionManager manager) {
+            DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,PlatformTransactionManager manager,CustomerServiceMail mail) {
+        this.mail=mail;
         this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.custody=custody;this.requests=requests;this.notes=notes;
         this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
@@ -86,6 +90,8 @@ public class CustomerFinalReviewService {
         // 실제 인증기 카운터·증명 소모·최종 결정·감사를 모두 같은 트랜잭션에 확정한다.
         mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.CUSTOMER_REVIEW_FINAL,id,hash,approve,proof);
         jdbc.update("INSERT INTO customer_review_final_decisions(request_id,review_id,approver_id,approver_person,approved) VALUES(?,?,?,?,?)",id,r.payload().reviewId(),actor,r.payload().checker().person(),approve);
+        // 승인된 결과만 예약한다. 거절/초안/내부 메모는 외부 알림을 만들지 않는다.
+        if(approve){var decided=jdbc.queryForObject("SELECT decided_at FROM customer_review_final_decisions WHERE request_id=?",Timestamp.class,id);mail.reserve(r.payload().userId(),CustomerMailOutbox.Kind.FINAL_NOTICE,id,decided.toInstant());}
         audit.record(actor,"CUSTOMER_FINAL_DECIDED","customer-final:"+id,"SUCCESS",approve?"APPROVED":"REJECTED");return read(id);
     }));}
     public record FinalReceipt(UUID finalId,UUID reviewId,CustomerReviewReplyService.Status observedStatus,UUID basisId,String explanation,Instant decidedAt,Instant acknowledgedAt){
