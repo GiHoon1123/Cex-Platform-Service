@@ -11,15 +11,13 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
- * Refresh Token Repository
- * Refresh Token Repository
+ * 회수 가능한 영속 세션과 갱신 토큰 해시를 조회한다.
  */
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
     
     /**
      * 토큰 해시로 Refresh Token 조회
-     * Find refresh token by token hash
      */
     Optional<RefreshToken> findByTokenHash(String tokenHash);
     @Query("select t.userId from RefreshToken t where t.tokenHash = :hash")
@@ -32,15 +30,19 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     
     /**
      * 사용자의 모든 Refresh Token 무효화
-     * Revoke all refresh tokens for a user
      */
     @Modifying
     @Query("UPDATE RefreshToken rt SET rt.revoked = true, rt.updatedAt = :now WHERE rt.userId = :userId AND rt.revoked = false")
     void revokeAllByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
     
+    // 비밀번호 단계의 고객 재로그인은 기존 서명 완료 세션을 끊지 않고 이전 대기 세션만 교체한다.
+    // 호출자는 사용자 행을 잠가 발급·등록·인증과의 순서를 직렬화해야 한다.
+    @Modifying
+    @Query("UPDATE RefreshToken rt SET rt.revoked=true,rt.updatedAt=:now WHERE rt.userId=:userId AND rt.revoked=false AND (rt.mfaVerifiedAt IS NULL OR rt.mfaCredentialFingerprint IS NULL)")
+    void revokePendingByUserId(@Param("userId") Long userId,@Param("now") LocalDateTime now);
+
     /**
      * 사용자의 유효한 Refresh Token 개수 조회
-     * Count valid refresh tokens for a user
      */
     @Query("SELECT COUNT(rt) FROM RefreshToken rt WHERE rt.userId = :userId AND rt.revoked = false AND rt.expiresAt > :now")
     long countValidByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now);

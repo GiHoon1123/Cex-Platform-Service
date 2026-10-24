@@ -60,7 +60,7 @@ public class RefreshToken {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
     
-    // 운영 세션은 보안키 검증 시각을 서버에 보관한다. JWT의 주장만으로 권한을 높이지 않는다.
+    // 고객·운영 세션의 서명 검증 시각을 서버에 보관한다. JWT의 주장만으로 권한을 높이지 않는다.
     private LocalDateTime mfaVerifiedAt;
 
     // 세션을 인증한 공개키 지문이다. 분실 키를 폐기할 때 다른 키로 인증했는지 확인한다.

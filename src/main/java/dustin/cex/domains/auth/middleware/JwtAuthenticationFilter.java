@@ -32,8 +32,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 long userId=Long.parseLong(claims.getSubject()); UUID sid=UUID.fromString(claims.get("sid",String.class));
                 var user=sessions.authenticate(userId,sid);
                 var auth=UsernamePasswordAuthenticationToken.authenticated(userId,null,
-                    List.of(new SimpleGrantedAuthority("ROLE_"+(user.getRole()==dustin.cex.domains.auth.model.entity.UserRole.CUSTOMER || sessions.hasOperatorMfa(sid)
-                        ? user.getRole().name() : "MFA_PENDING"))));
+                    List.of(new SimpleGrantedAuthority("ROLE_"+((user.getRole()==dustin.cex.domains.auth.model.entity.UserRole.CUSTOMER
+                        ? sessions.hasCustomerMfa(userId,sid) : sessions.hasOperatorMfa(sid)) ? user.getRole().name() : "MFA_PENDING"))));
                 SecurityContextHolder.getContext().setAuthentication(auth);
                 req.setAttribute("userId",userId);req.setAttribute("sessionId",sid);
             } catch(io.jsonwebtoken.JwtException | IllegalArgumentException failure) {

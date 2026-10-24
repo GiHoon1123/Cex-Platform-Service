@@ -12,8 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class SessionService {
     private final UserRepository users;
     private final RefreshTokenRepository tokens;
-    public SessionService(UserRepository users,RefreshTokenRepository tokens) { this.users=users;this.tokens=tokens; }
-    // 고객 세션에는 적용하지 않는다. 운영 역할과 인증 수준은 각각 현재 서버 상태로 확인한다.
+    private final CustomerMfaPolicy customerMfa;
+    public SessionService(UserRepository users,RefreshTokenRepository tokens,CustomerMfaPolicy customerMfa) { this.users=users;this.tokens=tokens;this.customerMfa=customerMfa; }
+    @Transactional(readOnly=true)
+    public boolean hasCustomerMfa(long userId,UUID sessionId){
+        return customerMfa.satisfied(userId,tokens.findBySessionId(sessionId).orElseThrow());
+    }
+    // 다음 메서드는 고객 세션에는 적용하지 않는다. 운영 역할과 인증 수준은 각각 현재 서버 상태로 확인한다.
     @Transactional(readOnly=true)
     public boolean hasOperatorMfa(UUID sessionId) {
         var session=tokens.findBySessionId(sessionId).orElseThrow();
