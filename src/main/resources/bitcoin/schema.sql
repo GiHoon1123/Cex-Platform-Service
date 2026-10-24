@@ -56,3 +56,60 @@ CREATE TRIGGER bitcoin_head_fresh_source BEFORE INSERT OR UPDATE ON bitcoin_obse
 DROP TRIGGER IF EXISTS bitcoin_head_no_delete ON bitcoin_observation_heads;
 CREATE TRIGGER bitcoin_head_no_delete BEFORE DELETE OR TRUNCATE ON bitcoin_observation_heads
  FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 반복하는 주소 목록은 불변 원본 하나를 공유한다. 주소가 추가된 다음 조회는 새로운 목록 원본을 만든다.
+CREATE TABLE IF NOT EXISTS bitcoin_scan_registries (
+ id bigserial PRIMARY KEY,network varchar(32) NOT NULL CHECK(network IN ('bitcoin-regtest','bitcoin-mainnet')),
+ wallet varchar(64) NOT NULL,digest varchar(64) NOT NULL CHECK(digest ~ '^[0-9a-f]{64}$'),
+ addresses jsonb NOT NULL CHECK(jsonb_typeof(addresses)='array' AND jsonb_array_length(addresses)>0),
+ recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(network,wallet,digest),UNIQUE(id,network,wallet)
+);
+DROP TRIGGER IF EXISTS bitcoin_registry_no_change ON bitcoin_scan_registries;
+CREATE TRIGGER bitcoin_registry_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_scan_registries
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+CREATE TABLE IF NOT EXISTS bitcoin_block_scans (
+ id bigserial PRIMARY KEY,network varchar(32) NOT NULL,wallet varchar(64) NOT NULL,
+ previous_scan_id bigint,height bigint NOT NULL CHECK(height>=0),
+ block_hash varchar(64) NOT NULL CHECK(block_hash ~ '^[0-9a-f]{64}$'),parent_hash varchar(64),
+ tip_hash varchar(64) NOT NULL CHECK(tip_hash ~ '^[0-9a-f]{64}$'),tip_height bigint NOT NULL CHECK(tip_height>=height),
+ registry_id bigint NOT NULL,received jsonb NOT NULL CHECK(jsonb_typeof(received)='array'),
+ created_txid bigint NOT NULL DEFAULT txid_current(),recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ UNIQUE(id,network,wallet),
+ FOREIGN KEY(registry_id,network,wallet) REFERENCES bitcoin_scan_registries(id,network,wallet),
+ FOREIGN KEY(previous_scan_id,network,wallet) REFERENCES bitcoin_block_scans(id,network,wallet),
+ CHECK((height=0 AND parent_hash IS NULL AND previous_scan_id IS NULL)
+   OR(height>0 AND parent_hash IS NOT NULL AND parent_hash ~ '^[0-9a-f]{64}$' AND previous_scan_id IS NOT NULL))
+);
+DROP TRIGGER IF EXISTS bitcoin_scan_no_change ON bitcoin_block_scans;
+CREATE TRIGGER bitcoin_scan_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_block_scans
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+CREATE TABLE IF NOT EXISTS bitcoin_scan_heads (
+ network varchar(32) NOT NULL,wallet varchar(64) NOT NULL,scan_id bigint NOT NULL,
+ PRIMARY KEY(network,wallet),FOREIGN KEY(scan_id,network,wallet) REFERENCES bitcoin_block_scans(id,network,wallet)
+);
+-- 완료 원본과 같은 트랜잭션에서만 한 블록 전진한다. 오래된 원본 재활성/건너뛰기/다른 지갑 연결은 금지한다.
+CREATE OR REPLACE FUNCTION bitcoin_scan_head_require_complete() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE current_scan bitcoin_block_scans%ROWTYPE; previous_scan bitcoin_block_scans%ROWTYPE;
+BEGIN
+ SELECT * INTO current_scan FROM bitcoin_block_scans WHERE id=NEW.scan_id AND network=NEW.network AND wallet=NEW.wallet;
+ IF NOT FOUND OR current_scan.created_txid<>txid_current() THEN RAISE EXCEPTION '진행 위치는 새 완료 원본과 함께 확정해야 합니다'; END IF;
+ IF TG_OP='INSERT' THEN
+  IF current_scan.height<>0 OR current_scan.previous_scan_id IS NOT NULL THEN RAISE EXCEPTION '최초 조회는 첫 블록에서 시작해야 합니다'; END IF;
+ ELSE
+  SELECT * INTO previous_scan FROM bitcoin_block_scans WHERE id=OLD.scan_id;
+  IF NEW.network<>OLD.network OR NEW.wallet<>OLD.wallet OR NEW.scan_id<=OLD.scan_id
+     OR current_scan.previous_scan_id IS DISTINCT FROM OLD.scan_id OR current_scan.height<>previous_scan.height+1
+     OR current_scan.parent_hash IS DISTINCT FROM previous_scan.block_hash THEN
+   RAISE EXCEPTION '진행 위치는 같은 체인의 바로 다음 완료 블록이어야 합니다';
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_scan_head_complete ON bitcoin_scan_heads;
+CREATE TRIGGER bitcoin_scan_head_complete BEFORE INSERT OR UPDATE ON bitcoin_scan_heads
+ FOR EACH ROW EXECUTE FUNCTION bitcoin_scan_head_require_complete();
+DROP TRIGGER IF EXISTS bitcoin_scan_head_no_delete ON bitcoin_scan_heads;
+CREATE TRIGGER bitcoin_scan_head_no_delete BEFORE DELETE OR TRUNCATE ON bitcoin_scan_heads
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
