@@ -1,0 +1,33 @@
+{
+  "cycle": 54,
+  "implementation_commit": "b3d3cbc9a630aebff1dae386374b09773d1b06c0",
+  "verification": {
+    "mail": {
+      "container": "cex-mail-e7435df4e83b",
+      "exit": 0,
+      "tests": {
+        "tests": 33,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "existing_customer": {
+      "container": "cex-edd-eaf16e935788",
+      "exit": 0,
+      "tests": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "initial_failure": {
+      "tests": 55,
+      "failures": 32,
+      "cause": "혼합 Spring 컨텍스트의 JPA 재생성과 보존 보안 이력 충돌"
+    }
+  }
+}
