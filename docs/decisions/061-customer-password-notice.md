@@ -45,11 +45,12 @@
         // 보안 통지는 현재 검증 주소와 실제 변경 사실에만 결합한다. 계정 중지는 이 안내를 숨기지 않는다.
         if(p.kind()==Kind.PASSWORD_CHANGED)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_password_changes WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
         if(p.kind()==Kind.MFA_CHANGED)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_mfa_key_changes WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
+        if(p.kind()==Kind.ACCOUNT_RECOVERY)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_recovery_events WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
         if(!u.isAuthenticationAllowed())return false;
         if(p.kind()==Kind.EMAIL_VERIFICATION)return true;
 ```
 
-065 이후 키 변경 보안 통지에도 같은 현재 주소/계정 중지 정책을 적용한 현재 발췌다. PASSWORD_CHANGED 분기는 본인 실제 변경·현재 검증 주소를 재확인한다. 계정 활성 검사는 그 아래에 있어 중지 계정의 보안 경고를 숨기지 않는다. 기존 일반 알림은 다음 활성/수신 선택 검사를 계속 통과해야 한다.
+065 이후 키 변경, 069 이후 계정 복구 보안 통지에도 같은 현재 주소/계정 중지 정책을 적용한 현재 발췌다. PASSWORD_CHANGED 분기는 본인 실제 변경·현재 검증 주소를 재확인한다. 계정 활성 검사는 그 아래에 있어 중지 계정의 보안 경고를 숨기지 않는다. 기존 일반 알림은 다음 활성/수신 선택 검사를 계속 통과해야 한다.
 
 출처: [CustomerPasswordHistory.java](../../src/main/java/dustin/cex/domains/account/CustomerPasswordHistory.java#L23), 현재 소스의 부분 발췌.
 

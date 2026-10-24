@@ -155,3 +155,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [066. 비밀번호 변경 내용에 결합한 일회 패스키 서명](decisions/066-customer-password-authorization.md)
 
 - [067. 최초 패스키 등록을 현재 세션의 최근 이메일 확인에 결합](decisions/067-customer-enrollment-email.md)
+
+- [069. 사전 복구 코드와 현재 비밀번호로 분실 패스키 복구](decisions/069-customer-saved-code-recovery.md)

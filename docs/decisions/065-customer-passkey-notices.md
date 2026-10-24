@@ -35,8 +35,7 @@
 ```java
     @Transactional(propagation=Propagation.MANDATORY)
     public UUID append(long actor,UUID sid,Kind kind,String fingerprint){
-        UUID id=UUID.randomUUID();
-        jdbc.update("INSERT INTO customer_mfa_key_changes(id,user_id,session_id,kind,credential_fingerprint) VALUES(?,?,?,?,?)",id,actor,sid,kind.name(),fingerprint);
+        UUID id=record(actor,sid,kind,fingerprint);
         notice.reserve(actor,id);
         return id;
     }
@@ -100,3 +99,7 @@
 
 - [구현 19df3d0](https://github.com/GiHoon1123/Cex-Platform-Service/commit/19df3d0d7f7a31e6cf3a46dc21d2e7b4ff75b5d0)
 - [격리 실행 증적](../reference/065-customer-passkey-notices-verification-2026-10-25.json)
+
+069 이후 분실 복구로 여러 키를 교체할 때는 별도 복구 원본과 각 변경을 연결하고 보안 통지 한 건으로 모은다. 일반 추가/폐기의 위 `append` 계약은 유지한다.
+
+[069 사전 코드 복구](069-customer-saved-code-recovery.md)는 현재 비밀번호와 사전에 보관한 코드가 있는 고객의 모든 패스키 분실을 처리한다. 비밀번호까지 분실하거나 사전 코드를 만들지 않은 경우의 복구는 아직 후속이다. 이 문서의 과거 실행 수치는 당시 검증으로 보존한다.
