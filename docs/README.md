@@ -139,3 +139,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [058. 메일 워커 격리와 실제 프로세스 종료·복원](decisions/058-customer-mail-worker-recovery.md)
 
 - [059. 본인 세션 기록 조회·회수와 갱신 경쟁 제어](decisions/059-customer-session-control.md)
+
+- [060. 현재 비밀번호 재확인과 전체 세션 회수의 원자적 변경](decisions/060-customer-password-change.md)
