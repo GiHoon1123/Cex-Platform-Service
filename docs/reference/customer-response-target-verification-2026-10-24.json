@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-24",
+  "implementation_commit": "4b1d005a6aa956d4a123409513f8f974396de9a8",
+  "junit": {
+    "tests": 34,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "report": {
+    "container": "cex-edd-fb17b3e1c3b8",
+    "exit": 0,
+    "tests": {
+      "tests": 34,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "container_removed": true,
+    "suites": [
+      {
+        "class": "dustin.cex.domains.kyc.CustomerResponseTargetIntegrationTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "custodyTransferDoesNotResetOriginalTarget()",
+          "actualPublicReplyIsResponseButNotFinalResolution()",
+          "laterFinalApprovalAndCustomerAckDoNotResetFirstPublicTime()",
+          "reasonViewAndInternalNoteDoNotCountAsPublicResponse()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerWorkQueueIntegrationTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "auditFailureReturnsNoMetadataOrReadReceipt()",
+          "httpRequiresCurrentOperatorAndReturnsNoStore()",
+          "noNoteAndNoReplyRemainDiscoverableWithoutInventedCompletion()",
+          "withdrawalAndDisabledCustomerDoNotHideAssignedHistory()",
+          "newNoteNeedsReplyAndReadingDoesNotClearIndicator()",
+          "staleRevokedAndForeignSessionsCannotRead()",
+          "normalTransferMovesDiscoveryOnlyAfterApproval()",
+          "bothCurrentPeopleSeeMinimalMetadataWithoutCompletingAnything()",
+          "malformedCursorsAreRejected()",
+          "orphanRecoveryMakesWorkDiscoverableWithoutGivingRequesterBody()",
+          "twentySixRealReceiptsAdvanceAcrossEmptyFilteredPageForWorkAndOrphans()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "[5] how = \"identity\""
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerReviewResponseTargetTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "observationBeforeReceiptRequiresTimeReview()",
+          "oldLateResponseDoesNotBecomeTimelyAfterAnotherResponse()",
+          "beforeTargetIsWaiting()",
+          "missingRequiredTimesAreRejected()",
+          "earliestStatusReplyWinsEvenAfterLaterFinal()",
+          "afterTargetIsOverdue()",
+          "eventBeforeReceiptRequiresTimeReview()",
+          "exactOpenTargetIsOverdue()",
+          "responseOneNanosecondLateRemainsLate()",
+          "weekendsAndTimezoneDoNotPauseCalendarTarget()",
+          "futureEventRequiresTimeReview()",
+          "responseExactlyAtTargetMeetsGoal()",
+          "finalApprovalCountsWithoutStatusReply()",
+          "earliestFinalApprovalWinsOverLaterStatus()"
+        ],
+        "failed_cases": []
+      }
+    ],
+    "actual_xml_totals": {
+      "tests": 34,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "command": [
+    "python3",
+    "/tmp/verify-cycle47.py"
+  ],
+  "code_excerpts": [
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewResponseTarget.java",
+      "first_line": 12,
+      "snippet": "public static Assessment assess(Instant received,Instant firstStatusReply,Instant finalDecided,Instant observed) {\n    if(received==null||observed==null)throw new IllegalArgumentException(\"접수·관측 시각이 필요합니다\");\n    // 내부 메모·직원 열람·고객 확인은 공개 답변이 아니다. 실제 공개 회신/최종 승인 중 먼저 확정된 시각만 쓴다.\n    Instant first=firstStatusReply==null?finalDecided:finalDecided==null?firstStatusReply:\n        (firstStatusReply.isBefore(finalDecided)?firstStatusReply:finalDecided);\n    Instant target=received.plus(Duration.ofHours(24));\n    // 시계 역행이나 서로 다른 호스트 시각 오차를 성공으로 보정하지 않는다. 운영자가 시각 근거를 확인해야 한다.\n    if(observed.isBefore(received)||(first!=null&&(first.isBefore(received)||first.isAfter(observed))))\n        return new Assessment(POLICY,target,first,State.TIME_REVIEW_REQUIRED);\n    State state=first==null?(observed.isBefore(target)?State.WAITING:State.OVERDUE):\n        (first.isAfter(target)?State.RESPONDED_LATE:State.RESPONDED_ON_TIME);\n    return new Assessment(POLICY,target,first,state);\n}"
+    }
+  ],
+  "new_dependencies": 0,
+  "approval_kind_count": 14,
+  "limits": [
+    "실제 PostgreSQL/암호 서명/감사/MVC와 공통 외부 연계 대역을 구분",
+    "법정 기한/외부 통지·기관/조직·실물키·운영/인증 심사와 구분",
+    "기존 DB 변환·서버 재시작·배포 없음, 봇0명, 엔진/프론트 변경 없음"
+  ],
+  "warnings": [
+    "기존 deprecated/unchecked/JVM 클래스 공유 경고"
+  ]
+}

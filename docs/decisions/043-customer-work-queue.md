@@ -59,15 +59,16 @@ if(!state.contains(person))continue;
 var progress=jdbc.queryForMap("""
     SELECT (SELECT coalesce(max(sequence),0) FROM customer_exit_review_notes WHERE request_id=?) AS note_sequence,
     (SELECT coalesce(max(note_sequence),0) FROM customer_exit_review_replies WHERE request_id=?) AS reply_sequence,
+    (SELECT min((payload::jsonb->>'observedAt')::timestamptz) FROM customer_exit_review_replies WHERE request_id=?) AS first_reply_at,
     d.request_id AS final_id,d.decided_at,a.acknowledged_at
     FROM (SELECT 1) seed LEFT JOIN customer_review_final_decisions d ON d.review_id=? AND d.approved
     LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id
-    """,id,id,id);
+    """,id,id,id,id);
 long note=((Number)progress.get("note_sequence")).longValue(),reply=((Number)progress.get("reply_sequence")).longValue();
 if(reply>note)throw new IllegalStateException("회신의 내부 기록 근거가 존재하지 않습니다");
 UUID finalId=(UUID)progress.get("final_id");
 // 최종 답변은 과거 관측 회신과 다른 지표다. 과거 상태 회신과 승인/고객 확인을 따로 제공한다.
-items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at"))));
+items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply_at")),instant(progress.get("decided_at")),Instant.now())));
 ```
 
 max(sequence)와 max(note_sequence)를 하나의 SQL 관측에서 읽는다. 회신 건수나 기록 시각 대신 040이 실제 서명/보존한 내부 기록 순번을 비교한다. 새 내부 기록이 회신보다 앞서면 hasUnreflectedNote가 true다. note=reply=0은 아직 내부 기록과 회신이 없다는 뜻이며 업무 완료를 뜻하지 않는다.
@@ -129,3 +130,6 @@ return new Page(items,next,rows.size(),observed,SEMANTICS);
 
 
 046 이후 현재 목록은 `finalReviewId`·`finalDecidedAt`·`customerAcknowledgedAt`도 구분한다. 승인된 최종 답변이 최신 내부 근거를 다루면 hasUnreflectedNote는 false이며, latestReplyNoteSequence는040의 과거 관측 회신 근거를 그대로 뜻한다. 최종 답변 확정은 고객의 명시적 확인이나 외부 통지 이행이 아니다. [046 실제 구현](046-customer-final-receipt.md)을 따르며 당시043 실행 증적은 보존한다.
+
+
+047 이후 현재 목록에는 responseTarget도 있다. 원래 접수부터 최초 공개 응답의 자체24시간 목표를 평가하며 내부 열람/메모·인계·고객 확인으로 시각을 바꾸지 않는다. [047 계산·경계 검증](047-customer-response-target.md)을 따르고043 당시 실행 증적은 보존한다.
