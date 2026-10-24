@@ -83,6 +83,9 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits/*/approve/options","/api/admin/compliance/relationship-exits/*/reject/options",
                     "/api/admin/compliance/relationship-exits/*/approve","/api/admin/compliance/relationship-exits/*/reject").access(audited(audit,sessions,"APPROVER"))
                 // 고객 업무 인계는 별도 목적의 보안키 승인으로만 확정한다.
+                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/customer-final-requests/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-review-requests/*/final-proposals").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-final-requests/*/inspect").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/customer-review-work","/api/admin/compliance/customer-review-orphans","/api/admin/compliance/customer-review-requests/*/custody","/api/admin/compliance/customer-custody-requests/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-custody-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-custody-requests/*/inspect","/api/admin/compliance/customer-custody-requests/*/approve/options","/api/admin/compliance/customer-custody-requests/*/reject/options","/api/admin/compliance/customer-custody-requests/*/approve","/api/admin/compliance/customer-custody-requests/*/reject").access(audited(audit,sessions,"APPROVER"))
