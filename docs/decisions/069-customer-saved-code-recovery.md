@@ -176,3 +176,5 @@ DROP TRIGGER IF EXISTS customer_recovery_key_change_no_change ON customer_recove
 
 - [구현 0528fd8](https://github.com/GiHoon1123/Cex-Platform-Service/commit/0528fd8a73e5d8305f7e6cdc40fa61795d719e10)
 - [격리 실행 증적](../reference/069-customer-saved-code-recovery-verification-2026-10-25.json)
+
+070에서 실제 등록/서명 fixture를 [CustomerRecoveryTestSupport.java](../../src/test/java/dustin/cex/domains/kyc/CustomerRecoveryTestSupport.java)로 추출해 복구 이력 회귀와 공유한다. 제품 검증기를 가짜로 바꾸지 않았으며 기존 복구23개도 재실행한다.

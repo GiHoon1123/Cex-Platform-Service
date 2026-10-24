@@ -1,0 +1,178 @@
+{
+  "cycle": 70,
+  "implementation_commit": "6db28a13d5bb6cf7ce1e6e4b9520d73d0e62bf98",
+  "verification": {
+    "exit": 0,
+    "groups": [
+      {
+        "group": "recovery",
+        "container": "cex-account-fd2da7f6ed74",
+        "selection": [
+          "*CustomerRecoveryIntegrationTest"
+        ],
+        "exit": 0,
+        "tests": {
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "replacingCodeInvalidatesPreviousWithoutRevealingNewOnStatus()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "codeManagementHttpSignsExactPurposeAndNeverReReadsSecret()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "signedCodeIsReturnedOnceAndOnlySaltedHashIsStored()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "fiveInvalidCodesAreDurableAndThenRateLimited()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "simultaneousRecoveryConsumesCodeOnce()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "expiredAndPreviousSessionChallengeCannotRecover()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "invalidCodePasswordAndForeignSessionsPreserveExistingKey()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "validRecoveryReplacesLostKeysRevokesEverySessionAndRequiresActualNewKeyLogin()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "multiKeyRecoveryKeepsAllFactsButSendsOneAggregateWarning()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "recoveryKeyFactWithoutSourceCannotCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "exhaustedRecoveryWarningCannotUseOperatorAdditionalRetry()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "newKeyMustHaveCorrectOriginAndUserVerification()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "recoveryAuditFailureRestoresKeysCodeChallengeSessionsAndNotices()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "changedAddressSuppressesReservedRecoveryWarning()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "securityMailContainsNoRecoverySecretAndIgnoresServiceOptOut()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "httpEnforcesStrongCodeManagementAndAllowsOnlyScopedPendingRecovery()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "codeReservationFailureRollsBackSignatureAndGeneration()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "loginSignatureCannotIssueCodeAndOptionsCannotBeReplayed()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "recoveryFactsCannotBeChangedOrErased()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "infrastructureFailureDoesNotSpendVerificationBudget()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "disabledAccountCannotRecoverButAlreadyReservedWarningStillSends()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "codeIssuanceNeedsCurrentPasswordAndFreshExistingKey()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryIntegrationTest",
+            "name": "unenrolledCustomerCannotCreateRecoveryOrUseItToEnroll()"
+          }
+        ],
+        "container_removed": true
+      },
+      {
+        "group": "recovery-history",
+        "container": "cex-account-174644a9c9f8",
+        "selection": [
+          "*CustomerRecoveryHistoryIntegrationTest"
+        ],
+        "exit": 0,
+        "tests": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "auditFailurePreventsSuccessfulHistoryResponse()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "confirmedRecoveryIncludesLinkedKeyCountAfterNewKeyLogin()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "httpReturnsOnlyOwnPublicFactsWithoutRequiringFreshSignature()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "pendingForeignAndOperatorSessionsCannotReadHistory()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "sameTimestampPagesHaveNoDuplicatesOrOmissions()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "invalidCursorIsRejectedAndAudited()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "anotherCustomersFactsAreNeverIncluded()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "emptyHistoryIsAvailableWithoutCreatingRecoveryState()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.CustomerRecoveryHistoryIntegrationTest",
+            "name": "exactlyOnePageHasNoEmptyNextRequest()"
+          }
+        ],
+        "container_removed": true
+      }
+    ],
+    "tests": {
+      "tests": 32,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "execution": "recovery23 plus final history9; initial history9 excluded from duplicate count"
+  }
+}
