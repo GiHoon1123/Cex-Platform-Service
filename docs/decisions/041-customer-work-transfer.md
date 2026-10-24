@@ -6,7 +6,7 @@
 
 고객 요청은 원래 종료 개시의 두 인물에게만 열려 있었다. 담당자 교대가 있어도 정상 인계 경로가 없었고 이전 인물의 원문 권한을 회수할 수 없었다. 원래 금융 결정의 작성자를 바꾸거나 일반 운영자에게 원문을 공개하는 방식은 쓰지 않는다.
 
-현재 배정은 접수별 0세대의 실제 기초 인물과 승인된 고객 업무 인계의 최대 논리 세대에서 계산한다. 인계 요청·제공·결정 세 표를 추가하고 13번째 CUSTOMER_REVIEW_CUSTODY 서명을 사용한다. 현재 단계의 mode는 TRANSFER이며 정상 담당자만 요청할 수 있다. 두 인물 모두 부재인 건의 복구는 다음 단계다.
+현재 배정은 접수별 0세대의 실제 기초 인물과 승인된 고객 업무 인계의 최대 논리 세대에서 계산한다. 인계 요청·제공·결정 세 표를 추가하고 13번째 CUSTOMER_REVIEW_CUSTODY 서명을 사용한다. 041 구현 당시 mode는 TRANSFER이며 정상 담당자만 요청했다. 현재는 [042 복구](042-customer-work-recovery.md)에서 두 인물 모두 부재인 RECOVERY를 서버가 결정하며 기존 두 계정 버전도 승인 근거에 고정한다.
 
 ## 기존 제품과 공식 근거
 
@@ -69,7 +69,7 @@ TreeSet은 중복을 제거하며 식별자 순서로 정렬한다. 실제 DB �
 
 ### 원래 담당자와 새 대상에게서 독립된 승인
 
-[CustomerWorkCustodyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkCustodyService.java#L103)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerWorkCustodyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkCustodyService.java#L117)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 if(maker==null||!maker.isAuthenticationAllowed()||!Set.of(UserRole.OPERATOR,UserRole.APPROVER).contains(maker.getRole())||maker.getVersion()!=p.requesterVersion()||!p.requesterPerson().equals(maker.getOperatorPersonId())
@@ -80,7 +80,7 @@ if(maker==null||!maker.isAuthenticationAllowed()||!Set.of(UserRole.OPERATOR,User
 
 ### 업무별 서명·단일 세대 결정·감사의 원자성
 
-[CustomerWorkCustodyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkCustodyService.java#L86)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerWorkCustodyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkCustodyService.java#L100)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 var r=read(id);var actorUser=check(actor,sid,r,hash,true);var p=r.payload();mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.CUSTOMER_REVIEW_CUSTODY,id,hash,approve,proof);
