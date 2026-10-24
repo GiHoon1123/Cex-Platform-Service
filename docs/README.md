@@ -119,3 +119,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [048. 고객 후속 운영 점검 customer-review-attention](decisions/048-customer-review-attention.md): 실제 코드·판단·테스트·실행 한계.
 
 - [049. 고객 후속 운영 점검 customer-final-notices](decisions/049-customer-final-notices.md): 실제 코드·판단·테스트·실행 한계.
+
+- [050. 고객 후속 운영 점검 customer-periodic-updates](decisions/050-customer-periodic-updates.md): 실제 코드·판단·테스트·실행 한계.

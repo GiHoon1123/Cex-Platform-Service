@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-24",
+  "implementation_commit": "fd7b9b88b20ef7028738929995581b4761f78d6c",
+  "junit": {
+    "tests": 33,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "report": {
+    "container": "cex-edd-e6e4525dbe40",
+    "exit": 0,
+    "tests": {
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "container_removed": true,
+    "suites": [
+      {
+        "class": "dustin.cex.domains.kyc.CustomerReviewUpdateTargetTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "finalWithoutStatusReplyIsClosed()",
+          "finalBeforeLastReplyRequiresReview()",
+          "invalidInputsAreRejected()",
+          "futurePublicTimeRequiresReview()",
+          "waitingBeforeBoundary()",
+          "exactBoundaryIsOverdue()",
+          "reversedLogicalTimelineRequiresReview()",
+          "finalApprovalStopsCurrentTimerButPreservesPastGaps()",
+          "newOverdueDoesNotChangePastGapCount()",
+          "updateMovesOnlyNextTarget()",
+          "unansweredUsesReceiptAnchor()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerWorkQueueIntegrationTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "auditFailureReturnsNoMetadataOrReadReceipt()",
+          "httpRequiresCurrentOperatorAndReturnsNoStore()",
+          "noNoteAndNoReplyRemainDiscoverableWithoutInventedCompletion()",
+          "withdrawalAndDisabledCustomerDoNotHideAssignedHistory()",
+          "newNoteNeedsReplyAndReadingDoesNotClearIndicator()",
+          "staleRevokedAndForeignSessionsCannotRead()",
+          "normalTransferMovesDiscoveryOnlyAfterApproval()",
+          "bothCurrentPeopleSeeMinimalMetadataWithoutCompletingAnything()",
+          "malformedCursorsAreRejected()",
+          "orphanRecoveryMakesWorkDiscoverableWithoutGivingRequesterBody()",
+          "twentySixRealReceiptsAdvanceAcrossEmptyFilteredPageForWorkAndOrphans()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "[5] how = \"identity\""
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerUpdateTimelineIntegrationTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "privateQueueIncludesSameActualAssessment()",
+          "sqlDetectsFinalBeforeLogicalReply()",
+          "noteAndViewDoNotRestartPublicTimer()",
+          "actualPublishedReplyStartsNextTarget()",
+          "realSqlGapCountPersistsAfterLaterReply()",
+          "finalAndAckKeepClosedTimerAndHistory()"
+        ],
+        "failed_cases": []
+      }
+    ],
+    "actual_xml_totals": {
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "command": [
+    "python3",
+    "/tmp/verify-cycle50.py"
+  ],
+  "code_excerpts": [
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewUpdateTarget.java",
+      "first_line": 10,
+      "snippet": "public static Assessment assess(Instant received,Instant latestPublic,Instant finalized,long gaps,boolean invalidOrder,Instant observed){\n    if(received==null||observed==null||gaps<0)throw new IllegalArgumentException(\"후속 회신의 시각·간격 근거가 필요합니다\");\n    Instant anchor=latestPublic==null?received:latestPublic,target=anchor.plus(Duration.ofHours(24));\n    boolean invalid=invalidOrder||observed.isBefore(received)||anchor.isBefore(received)||anchor.isAfter(observed)\n        ||(finalized!=null&&(finalized.isBefore(anchor)||finalized.isAfter(observed)));\n    return new Assessment(POLICY,latestPublic,target,invalid?State.TIME_REVIEW_REQUIRED:finalized!=null?State.CLOSED:observed.isBefore(target)?State.WAITING:State.OVERDUE,gaps);\n}"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewUpdateTimeline.java",
+      "first_line": 15,
+      "snippet": "var row=jdbc.queryForMap(\"\"\"\n    WITH events AS (\n        SELECT 0 AS kind,0::bigint AS sequence,?::timestamptz AS occurred\n        UNION ALL SELECT 1,sequence,(payload::jsonb->>'observedAt')::timestamptz FROM customer_exit_review_replies WHERE request_id=?\n        UNION ALL SELECT 2,0,?::timestamptz WHERE ?::timestamptz IS NOT NULL\n    ), gaps AS (SELECT kind,occurred,occurred-lag(occurred) OVER(ORDER BY kind,sequence) AS elapsed FROM events)\n    SELECT max(occurred) FILTER(WHERE kind=1) AS latest_public,\n        count(*) FILTER(WHERE elapsed>interval '24 hours') AS breached,\n        coalesce(bool_or(elapsed<interval '0 seconds'),false) AS reversed\n    FROM gaps\n    \"\"\",Timestamp.from(received),review,finalized==null?null:Timestamp.from(finalized),finalized==null?null:Timestamp.from(finalized));\nvar latest=(Timestamp)row.get(\"latest_public\");\nreturn CustomerReviewUpdateTarget.assess(received,latest==null?null:latest.toInstant(),finalized,((Number)row.get(\"breached\")).longValue(),Boolean.TRUE.equals(row.get(\"reversed\")),observed);"
+    }
+  ],
+  "new_dependencies": 0,
+  "approval_kind_count": 14,
+  "limits": [
+    "실제 PostgreSQL/암호 서명/감사/MVC와 공통 외부 연계 대역을 구분",
+    "법정 기한/외부 통지·기관/조직·실물키·운영/인증 심사와 구분",
+    "기존 DB 변환·서버 재시작·배포 없음, 봇0명, 엔진/프론트 변경 없음"
+  ],
+  "warnings": [
+    "기존 deprecated/unchecked/JVM 클래스 공유 경고"
+  ]
+}
