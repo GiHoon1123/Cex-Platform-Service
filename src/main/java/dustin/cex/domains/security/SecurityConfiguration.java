@@ -34,6 +34,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/market/**","/ws/market/BTC/USDT").permitAll()
                 .requestMatchers("/swagger-ui/**","/swagger-ui.html","/api-docs/**","/v3/api-docs/**").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/kyc/webhook").permitAll()
+                .requestMatchers(HttpMethod.POST,"/api/customer/email/challenges","/api/customer/email/confirmations").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.GET,"/api/customer/email").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.POST,"/api/kyc/session","/api/kyc/sessions/*/reconcile","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/kyc/session","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/kyc/customers/*","/api/admin/kyc/customer-profiles/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))

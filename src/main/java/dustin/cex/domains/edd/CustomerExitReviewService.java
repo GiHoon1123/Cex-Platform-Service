@@ -40,14 +40,14 @@ public class CustomerExitReviewService {
         @Override public String toString(){return "Inspection[고객 사유 생략]";}
     }
     private final CustomerWorkCustody custody;
-    private final JdbcTemplate jdbc;private final UserRepository users;private final RefreshTokenRepository tokens;
+    private final JdbcTemplate jdbc;private final UserRepository users;private final CustomerSessionPolicy customerSessions;
     private final OperatorSessionPolicy sessions;private final RelationshipExitService exits;private final EvidenceCrypto crypto;
     private final CddCrypto fingerprints;private final ObjectMapper json;private final AuditService audit;private final TransactionTemplate tx;
-    public CustomerExitReviewService(JdbcTemplate jdbc,UserRepository users,RefreshTokenRepository tokens,
+    public CustomerExitReviewService(JdbcTemplate jdbc,UserRepository users,CustomerSessionPolicy customerSessions,
             OperatorSessionPolicy sessions,RelationshipExitService exits,EvidenceCrypto crypto,CddCrypto fingerprints,
             ObjectMapper json,AuditService audit,PlatformTransactionManager manager,CustomerWorkCustody custody) {
         this.custody=custody;
-        this.jdbc=jdbc;this.users=users;this.tokens=tokens;this.sessions=sessions;this.exits=exits;this.crypto=crypto;
+        this.jdbc=jdbc;this.users=users;this.customerSessions=customerSessions;this.sessions=sessions;this.exits=exits;this.crypto=crypto;
         this.fingerprints=fingerprints;this.json=json;this.audit=audit;tx=new TransactionTemplate(manager);
         tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
@@ -109,8 +109,7 @@ public class CustomerExitReviewService {
     private void transaction(){if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("고객 후속 업무에는 트랜잭션이 필요합니다");}
     /** 같은 도메인의 고객 목록도 이 세션/현재 계정 검사와 사용자 잠금을 재사용한다. */
     void customer(long actor,UUID sid) {
-        var owner=users.lockById(actor).orElse(null);var token=sid==null?null:tokens.findBySessionId(sid).orElse(null);
-        if(owner==null||owner.getRole()!=UserRole.CUSTOMER||!owner.isAuthenticationAllowed()||token==null||token.getUserId()!=actor||token.getRevoked()||!token.getExpiresAt().isAfter(LocalDateTime.now()))throw denied(HttpStatus.FORBIDDEN);
+        customerSessions.require(actor,sid);
     }
     private CustomerWorkCustody.State assigned(long actor,UUID sid,UUID id) {
         var state=custody.current(id);var people=custody.lock(state,actor);var person=people.get(actor);sessions.requireFresh(person,sid,UserRole.OPERATOR,UserRole.APPROVER);
