@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
     config=data/"bitcoin.conf"
     config.write_text("\n".join(["regtest=1","server=1","listen=0","networkactive=0","dnsseed=0","discover=0",
         "walletbroadcast=0","printtoconsole=0","rpcauth="+credentials["rpcauth"],"rpcwhitelistdefault=0",
-        "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getnewaddress,getaddressinfo",
+        "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getnewaddress,getaddressinfo,gettransaction,getblockheader,getblockhash",
         "[regtest]","rpcbind=127.0.0.1","rpcallowip=127.0.0.1","rpcport="+str(rpc_port)])+"\n")
     config.chmod(0o600)
     daemon=None
@@ -40,11 +40,11 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
     def rpc(method,params=(),wallet=None):
         cookie=(data/"regtest/.cookie").read_text().strip()
         url="http://127.0.0.1:"+str(rpc_port)+(('/wallet/'+wallet) if wallet else "/")
-        request=urllib.request.Request(url,json.dumps({"jsonrpc":"2.0","id":"fixture","method":method,"params":list(params)}).encode(),
+        request=urllib.request.Request(url,json.dumps({"jsonrpc":"2.0","id":"fixture","method":method,"params":params if isinstance(params,dict) else list(params)}).encode(),
             {"Authorization":"Basic "+base64.b64encode(cookie.encode()).decode(),"Content-Type":"application/json"})
         with urllib.request.urlopen(request,timeout=10) as response:
             body=json.load(response)
-        if "error" in body:raise RuntimeError("격리 노드 준비 실패: "+method)
+        if "error" in body:raise RuntimeError("격리 노드 준비 실패: "+method+" 오류 코드 "+str(body["error"]["code"]))
         return body["result"]
     try:
         with (ARTIFACTS/"bitcoin-node-start.log").open("w") as node_log:
@@ -71,6 +71,39 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
         assert rpc("getconnectioncount")==0
         assert not rpc("getwalletinfo",[],"cex_watch")["private_keys_enabled"]
         result["node_version"]=rpc("getnetworkinfo")["version"]
+        # 실제 로컬 체인 수신/확정/수수료 대체 충돌/재조직을 만든다. 개인키 RPC는 이 시험 준비 프로세스만 사용한다.
+        # 개별 준비 호출도 제한 시간 안에 끝나도록 작은 묶음으로 생성한다. 시간 초과한 생성 명령을 재시도하지 않는다.
+        for _ in range(10):rpc("generatetoaddress",[10,mining])
+        watch=rpc("getnewaddress",[],"cex_watch")
+        def broadcast(txid):
+            # 자동 전파는 끈 채 시험 프로세스가 서명된 공개 거래만 로컬 mempool에 명시적으로 넣는다.
+            raw=rpc("gettransaction",[txid,True],"fixture_keys")["hex"]
+            assert rpc("sendrawtransaction",[raw])==txid
+        def send(amount):
+            txid=rpc("sendtoaddress",{"address":watch,"amount":amount,"fee_rate":20,"replaceable":True},"fixture_keys")
+            broadcast(txid)
+            return txid
+        confirmed=send("0.12345678");rpc("generatetoaddress",[1,mining])
+        conflicted=send("0.23456789")
+        replacement=rpc("bumpfee",[conflicted,{"fee_rate":40}],"fixture_keys")["txid"]
+        broadcast(replacement)
+        rpc("generatetoaddress",[1,mining])
+        coinbase_block=rpc("generatetoaddress",[1,watch])[0]
+        coinbase=rpc("getblock",[coinbase_block,1])["tx"][0]
+        reorg=send("0.34567891");orphan_block=rpc("generatetoaddress",[1,mining])[0]
+        before_reorg=rpc("gettransaction",[reorg,True,True],"cex_watch")["confirmations"]
+        rpc("invalidateblock",[orphan_block])
+        after_reorg=rpc("gettransaction",[reorg,True,True],"cex_watch")["confirmations"]
+        assert before_reorg>0 and after_reorg==0
+        unconfirmed=send("0.45678912")
+        deadline=time.monotonic()+10
+        while rpc("getwalletinfo",[],"cex_watch")["lastprocessedblock"]["hash"]!=rpc("getbestblockhash"):
+            if time.monotonic()>deadline:raise RuntimeError("관찰 지갑의 블록 반영 대기 실패")
+            time.sleep(.1)
+        result["chain_scenarios"]={"reorg_before_confirmations":before_reorg,"reorg_after_confirmations":after_reorg,
+            "confirmed_confirmations":rpc("gettransaction",[confirmed,True,True],"cex_watch")["confirmations"],
+            "conflicted_confirmations":rpc("gettransaction",[conflicted,True,True],"cex_watch")["confirmations"]}
+
         # 애플리케이션의 계정/감사 이력도 서버 전체를 격리한다. 기존 개발 DB에 접속하지 않는다.
         database="cex-bitcoin-"+uuid4().hex[:12]
         subprocess.run([docker,"run","--detach","--rm","--name",database,"--publish","127.0.0.1::5432",
@@ -86,12 +119,15 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             JWT_SECRET="isolated-process-jwt-secret-at-least-32-bytes",ENGINE_SERVICE_TOKEN="isolated-engine-service-token-32-bytes",
             SPRING_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:1",BOT_BOT_COUNT="0",ORDER_DISPATCH_ENABLED="false",ENGINE_HTTP_URL="http://127.0.0.1:1")
         env.update(CEX_BITCOIN_TEST_URL="http://127.0.0.1:"+str(rpc_port),CEX_BITCOIN_TEST_USER=credentials["username"],
-            CEX_BITCOIN_TEST_PASSWORD=credentials["password"])
+            CEX_BITCOIN_TEST_PASSWORD=credentials["password"],
+            CEX_BITCOIN_TEST_CONFIRMED_TX=confirmed,CEX_BITCOIN_TEST_CONFLICTED_TX=conflicted,
+            CEX_BITCOIN_TEST_UNCONFIRMED_TX=unconfirmed,CEX_BITCOIN_TEST_COINBASE_TX=coinbase,
+            CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_ADDRESS=watch)
         env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
         started=time.time()
         with (ARTIFACTS/"bitcoin.log").open("w") as log:
             completed=subprocess.run(["./gradlew","test","--tests","*BitcoinCoreClientTest","--tests","*BitcoinCoreIntegrationTest",
-                "--tests","*LimitedResponseBodyTest","--tests","*BitcoinDepositAddressIntegrationTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+                "--tests","*LimitedResponseBodyTest","--tests","*BitcoinDepositAddressIntegrationTest","--tests","*BitcoinDepositReaderTest","--tests","*BitcoinDepositReaderIntegrationTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
         result["exit"]=completed.returncode
         suites=[ET.parse(p).getroot() for p in (ROOT/"build/test-results/test").glob("TEST-*.xml") if p.stat().st_mtime>=started]
         result["tests"]={k:sum(int(s.attrib.get(k,0)) for s in suites) for k in ["tests","failures","errors","skipped"]}
