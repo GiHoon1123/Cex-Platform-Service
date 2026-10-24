@@ -3,7 +3,6 @@ package dustin.cex.domains.edd;
 import dustin.cex.domains.auth.model.entity.*;
 import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.cdd.CddCrypto;
-import dustin.cex.domains.cdd.EddService;
 import dustin.cex.domains.kyc.DiditWebhookVerifier;
 import dustin.cex.domains.security.*;
 import java.sql.Timestamp;
@@ -47,19 +46,19 @@ public class ReportingReviewService {
         @Override public String toString() {return "Inspection[비공개 판단 생략]";}
     }
     public record Confirmation(Review review,boolean approve,OperatorMfaService.Options authentication) {}
-    private final ReportingCustody custody;
+    private final ReportingCustody custody;private final ComplianceReferralBasis referrals;
     private final JdbcTemplate jdbc;private final UserRepository users;private final OperatorSessionPolicy sessions;
     private final EvidenceCrypto crypto;private final CddCrypto cdd;private final ObjectMapper json;
     private final DiditWebhookVerifier verifier;private final OperatorMfaService mfa;private final AuditService audit;private final EddDossier dossiers;private final TransactionTemplate tx;
     public ReportingReviewService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy sessions,EvidenceCrypto crypto,CddCrypto cdd,
-            ObjectMapper json,DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,EddDossier dossiers,PlatformTransactionManager manager,ReportingCustody custody) {
-        this.custody=custody;this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;this.dossiers=dossiers;tx=new TransactionTemplate(manager);
+            ObjectMapper json,DiditWebhookVerifier verifier,OperatorMfaService mfa,AuditService audit,EddDossier dossiers,PlatformTransactionManager manager,ReportingCustody custody,ComplianceReferralBasis referrals) {
+        this.referrals=referrals;this.custody=custody;this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.crypto=crypto;this.cdd=cdd;this.json=json;this.verifier=verifier;this.mfa=mfa;this.audit=audit;this.dossiers=dossiers;tx=new TransactionTemplate(manager);
     }
     /** 요청자는 현재 회부를 선택하고 별도 승인자를 지정한다. 역할만 있으면 모든 사건을 읽는 경로는 제공하지 않는다. */
     public Review propose(long actor,UUID sid,UUID referral,long checker,UUID key,Facts supplied) {
         return attempt(actor,()->tx.execute(s->{
             if(referral==null||key==null||supplied==null)throw denied(HttpStatus.BAD_REQUEST);
-            var reference=referral(referral);var locked=lock(actor,checker,reference.user());var maker=locked.get(actor);var reviewer=locked.get(checker);
+            var reference=referrals.read(referral);var locked=lock(actor,checker,reference.user());var maker=locked.get(actor);var reviewer=locked.get(checker);
             sessions.requireFresh(maker,sid,UserRole.OPERATOR);customer(locked.get(reference.user()));
             if(reviewer==null||reviewer.getRole()!=UserRole.APPROVER||!reviewer.isAuthenticationAllowed()||reviewer.getOperatorPersonId()==null
                 ||actor==checker||maker.getOperatorPersonId().equals(reviewer.getOperatorPersonId()))throw denied(HttpStatus.FORBIDDEN);
@@ -70,7 +69,7 @@ public class ReportingReviewService {
                 if(!p.referralId().equals(referral)||p.checkerId()!=checker||!p.factsMac().equals(mac))throw denied(HttpStatus.CONFLICT);
                 audit.record(actor,"COMPLIANCE_REVIEW_REPLAYED","compliance-review:"+p.id(),"SUCCESS","ASSIGNED_ONLY");return r;
             }
-            long revision=current(reference);
+            long revision=referrals.current(reference);
             // 한 회부의 미결 또는 승인된 판단을 중복 생성하지 않는다. 반려·만료 후에는 새 요청을 남길 수 있다.
             if(jdbc.queryForObject("SELECT count(*) FROM compliance_reviews r LEFT JOIN compliance_review_decisions d ON d.review_id=r.id WHERE r.referral_id=? AND (d.approved=true OR (d.review_id IS NULL AND r.expires_at>clock_timestamp()))",Long.class,referral)>0)throw denied(HttpStatus.CONFLICT);
             if(jdbc.queryForObject("SELECT count(*) FROM compliance_reviews WHERE user_id=? AND created_at>clock_timestamp()-interval '1 day'",Long.class,reference.user())>=10)throw denied(HttpStatus.TOO_MANY_REQUESTS);
@@ -172,7 +171,7 @@ public class ReportingReviewService {
         // 사용자 잠금 뒤 상태를 다시 읽어 승인/반려 경합에서 한 결정만 확정한다.
         if(!read(p.id()).status().equals("PENDING")||!r.payloadHash().equals(hash)||!POLICY.equals(p.policy())||!ASSURANCE.equals(p.assurance())
             ||!crypto.keyId().equals(p.evidenceKeyId())||!cdd.keyId().equals(p.cddKeyId()))throw denied(HttpStatus.CONFLICT);
-        var origin=referral(p.referralId());long revision=current(origin);
+        var origin=referrals.read(p.referralId());long revision=referrals.current(origin);
         if(revision!=p.caseRevision()||!origin.hash().equals(p.referralHash())||!origin.dossier().equals(p.dossier())||!origin.assessment().equals(p.assessmentId()))throw denied(HttpStatus.CONFLICT);
         facts(r);
         long viewed=jdbc.queryForObject("SELECT count(DISTINCT page) FROM compliance_review_views WHERE review_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND payload_hash=? AND page>=0 AND page<? AND viewed_at>clock_timestamp()-interval '5 minutes'",Long.class,p.id(),actor,checker.getOperatorPersonId(),checker.getVersion(),sid,hash,p.dossier().pageCount());
@@ -182,21 +181,6 @@ public class ReportingReviewService {
         var person=locked.get(actor);sessions.requireFresh(person,sid,UserRole.OPERATOR,UserRole.APPROVER);var p=r.payload();
         if((actor==p.requesterId()&&p.requesterPerson().equals(person.getOperatorPersonId()))||(actor==p.checkerId()&&p.checkerPerson().equals(person.getOperatorPersonId())))return person;
         throw denied(HttpStatus.NOT_FOUND);
-    }
-    private record Referral(long user,UUID caseId,UUID assessment,long revision,String hash,EddDossier.Summary dossier) {}
-    private Referral referral(UUID id) {
-        var rows=jdbc.queryForList("SELECT r.payload,r.payload_hash FROM edd_reports r JOIN edd_decisions d ON d.report_id=r.id AND d.approved=true WHERE r.id=?",id);
-        if(rows.isEmpty())throw denied(HttpStatus.NOT_FOUND);var row=rows.getFirst();String raw=(String)row.get("payload");
-        if(!verifier.digest(json.readTree(raw)).equals(row.get("payload_hash")))throw new IllegalStateException("회부 근거 무결성 검증 실패");
-        var p=json.readValue(raw,EddService.Payload.class);
-        if(!EddService.REVIEW_POLICY.equals(p.reviewPolicy())||p.finding()!=EddService.Finding.COMPLIANCE_ESCALATION||!p.id().equals(id))throw denied(HttpStatus.CONFLICT);
-        return new Referral(p.userId(),p.caseId(),p.assessmentId(),p.caseRevision(),(String)row.get("payload_hash"),p.dossier());
-    }
-    private long current(Referral r) {
-        var rows=jdbc.queryForList("SELECT c.revision,c.state,c.latest_assessment,p.assessment_id FROM edd_cases c JOIN cdd_profiles p ON p.user_id=c.user_id WHERE c.id=? AND c.user_id=? FOR UPDATE OF c",r.caseId(),r.user());
-        if(rows.isEmpty())throw denied(HttpStatus.CONFLICT);var row=rows.getFirst();long revision=((Number)row.get("revision")).longValue();
-        if(!"REFERRED".equals(row.get("state"))||revision!=r.revision()+1||!r.assessment().equals(row.get("latest_assessment"))||!r.assessment().equals(row.get("assessment_id")))throw denied(HttpStatus.CONFLICT);
-        dossiers.verify(r.dossier(),r.caseId(),r.user());if(!r.dossier().digest().equals(dossiers.liveDigest(r.caseId(),r.user())))throw denied(HttpStatus.CONFLICT);return revision;
     }
     private Facts facts(Review r) {
         var p=r.payload();try {

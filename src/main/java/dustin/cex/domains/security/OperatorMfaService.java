@@ -188,8 +188,8 @@ public class OperatorMfaService {
             return null;
         });
     }
-    /** 현재 구현된 열 업무만 구분한다. 임의 명령 이름이나 동적 실행기를 받지 않는다. */
-    public enum ApprovalKind { ROLE, MFA_RECOVERY, ACCESS_REVIEW, TRADING_RESTRICTION, EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY }
+    /** 현재 구현된 열한 업무만 구분한다. 임의 명령 이름이나 동적 실행기를 받지 않는다. */
+    public enum ApprovalKind { ROLE, MFA_RECOVERY, ACCESS_REVIEW, TRADING_RESTRICTION, EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT }
     public void bindApproval(ApprovalKind kind,UUID id,long requester,long version,String hash,Instant expires) {
         requireBusinessTransaction();
         jdbc.update("INSERT INTO operator_approval_bindings(kind,request_id,requester_id,requester_version,payload_hash,expires_at) VALUES(?,?,?,?,?,?)",

@@ -69,6 +69,13 @@ public class SecurityConfiguration {
                     "/api/admin/compliance/custody-requests/*/reject/options","/api/admin/compliance/custody-requests/*/approve","/api/admin/compliance/custody-requests/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/reporting-queue","/api/admin/compliance/reviews/*/followups").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews/*/followups","/api/admin/compliance/followups/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                // 관계 종료 개시도 별도 목적의 독립 승인이다. 보고 원문 권한과 합치지 않는다.
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/relationship-exits").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits/*/approve/options","/api/admin/compliance/relationship-exits/*/reject/options",
+                    "/api/admin/compliance/relationship-exits/*/approve","/api/admin/compliance/relationship-exits/*/reject").access(audited(audit,sessions,"APPROVER"))
+                .requestMatchers(HttpMethod.GET,"/api/customer/relationship").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/reviews").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/reviews/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
