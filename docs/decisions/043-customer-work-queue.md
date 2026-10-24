@@ -41,7 +41,7 @@ note=reply=0이면 아직 내부 기록과 회신이 없는 접수다. note>repl
 
 ### 원래 작성자 대신 현재 배정으로 목록 구성
 
-[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L43)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L44)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 UUID id=(UUID)row.get("id");var state=custody.current(id);
@@ -56,17 +56,25 @@ if(!state.contains(person))continue;
 [CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L47)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
-var progress=jdbc.queryForMap("SELECT (SELECT coalesce(max(sequence),0) FROM customer_exit_review_notes WHERE request_id=?) AS note_sequence,(SELECT coalesce(max(note_sequence),0) FROM customer_exit_review_replies WHERE request_id=?) AS reply_sequence",id,id);
+var progress=jdbc.queryForMap("""
+    SELECT (SELECT coalesce(max(sequence),0) FROM customer_exit_review_notes WHERE request_id=?) AS note_sequence,
+    (SELECT coalesce(max(note_sequence),0) FROM customer_exit_review_replies WHERE request_id=?) AS reply_sequence,
+    d.request_id AS final_id,d.decided_at,a.acknowledged_at
+    FROM (SELECT 1) seed LEFT JOIN customer_review_final_decisions d ON d.review_id=? AND d.approved
+    LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id
+    """,id,id,id);
 long note=((Number)progress.get("note_sequence")).longValue(),reply=((Number)progress.get("reply_sequence")).longValue();
 if(reply>note)throw new IllegalStateException("회신의 내부 기록 근거가 존재하지 않습니다");
-items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply));
+UUID finalId=(UUID)progress.get("final_id");
+// 최종 답변은 과거 관측 회신과 다른 지표다. 과거 상태 회신과 승인/고객 확인을 따로 제공한다.
+items.add(new Item(id,state.userId(),((Timestamp)row.get("created_at")).toInstant(),state.generation(),note,reply,reply>0,note>reply&&finalId==null,finalId,instant(progress.get("decided_at")),instant(progress.get("acknowledged_at"))));
 ```
 
 max(sequence)와 max(note_sequence)를 하나의 SQL 관측에서 읽는다. 회신 건수나 기록 시각 대신 040이 실제 서명/보존한 내부 기록 순번을 비교한다. 새 내부 기록이 회신보다 앞서면 hasUnreflectedNote가 true다. note=reply=0은 아직 내부 기록과 회신이 없다는 뜻이며 업무 완료를 뜻하지 않는다.
 
 ### 빈 필터 페이지도 순회를 계속
 
-[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L53)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L62)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 var last=rows.isEmpty()?null:rows.getLast();Cursor next=rows.size()==25?new Cursor(((Timestamp)last.get("created_at")).toInstant(),(UUID)last.get("id")):null;
@@ -118,3 +126,6 @@ return new Page(items,next,rows.size(),observed,SEMANTICS);
 - [`88db669`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/88db6696ac9fd096476d8f6a5d16350ccff84652): 현재 담당 업무 발견과 내부 기록 대비 회신 점검와 관련 회귀.
 
 [043 확정 증적](../reference/customer-work-queue-verification-2026-10-24.json), [041 인계](041-customer-work-transfer.md), [042 복구](042-customer-work-recovery.md), [039 내부 기록](039-customer-review-notes.md), [040 공개 회신](040-customer-review-replies.md).
+
+
+046 이후 현재 목록은 `finalReviewId`·`finalDecidedAt`·`customerAcknowledgedAt`도 구분한다. 승인된 최종 답변이 최신 내부 근거를 다루면 hasUnreflectedNote는 false이며, latestReplyNoteSequence는040의 과거 관측 회신 근거를 그대로 뜻한다. 최종 답변 확정은 고객의 명시적 확인이나 외부 통지 이행이 아니다. [046 실제 구현](046-customer-final-receipt.md)을 따르며 당시043 실행 증적은 보존한다.

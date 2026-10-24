@@ -93,3 +93,6 @@ POST `/api/admin/compliance/customer-final-requests/{id}/approve/options`, `/rej
 - [`d723413`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/d723413eb587012ac28d3a4bf50d5d189bb35dcb): 구현과 관련 회귀.
 
 [확정 증적](../reference/customer-final-approval-verification-2026-10-24.json), [043 담당 업무](043-customer-work-queue.md), [040 관측 회신](040-customer-review-replies.md).
+
+
+현재 고객 결과 조회·명시적 확인과 운영 목록 반영은 [046 구현](046-customer-final-receipt.md)을 따른다. 이 문서의 실행 결과는 당시 단계로 보존한다.

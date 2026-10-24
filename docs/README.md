@@ -111,3 +111,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [044. 고객 최종 답변 customer-final-draft](decisions/044-customer-final-draft.md): 실제 코드·판단·테스트·실행 한계.
 
 - [045. 고객 최종 답변 customer-final-approval](decisions/045-customer-final-approval.md): 실제 코드·판단·테스트·실행 한계.
+
+- [046. 고객 최종 답변 customer-final-receipt](decisions/046-customer-final-receipt.md): 실제 코드·판단·테스트·실행 한계.
