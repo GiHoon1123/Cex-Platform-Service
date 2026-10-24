@@ -37,6 +37,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/customer/email/challenges","/api/customer/email/confirmations").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/customer/email","/api/customer/email/preferences").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.PUT,"/api/customer/email/preferences").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/operations/customer-mail","/api/admin/operations/customer-mail/*","/api/admin/operations/customer-mail/*/attempts").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/kyc/session","/api/kyc/sessions/*/reconcile","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/kyc/session","/api/kyc/customer-profile").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/kyc/customers/*","/api/admin/kyc/customer-profiles/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))

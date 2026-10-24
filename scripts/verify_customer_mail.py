@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT.parent / ".local"
 DOCKER = shutil.which("docker") or "/usr/local/bin/docker"
 GROUPS = {
-    "mail": ["*CustomerMailOutboxIntegrationTest", "*CustomerEmailVerificationIntegrationTest", "*CustomerSmtpTransportTest"],
+    "mail": ["*CustomerMailOutboxIntegrationTest", "*CustomerEmailVerificationIntegrationTest", "*CustomerSmtpTransportTest", "*CustomerMailOperationsIntegrationTest"],
     "notices": ["*CustomerServiceMailIntegrationTest"],
 }
 result = {"groups": [], "exit": None}

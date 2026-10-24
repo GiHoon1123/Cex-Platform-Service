@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS customer_mail_jobs (
  content_mac varchar(64) NOT NULL,key_id varchar(64) NOT NULL,
  expires_at timestamptz NOT NULL,created_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(kind,reference_id)
 );
+-- 운영 목록의 시각/식별자 순회에 사용한다. 암호문 표를 읽거나 큐 행을 잠그지 않는다.
+CREATE INDEX IF NOT EXISTS customer_mail_candidate_order ON customer_mail_jobs(created_at,id);
 CREATE TABLE IF NOT EXISTS customer_mail_payloads (job_id uuid PRIMARY KEY REFERENCES customer_mail_jobs(id),payload_cipher bytea NOT NULL);
 CREATE TABLE IF NOT EXISTS customer_mail_delivery (
  job_id uuid PRIMARY KEY REFERENCES customer_mail_jobs(id),status varchar(24) NOT NULL CHECK(status IN ('PENDING','SENDING','RETRY','SMTP_ACCEPTED','SUPPRESSED','EXHAUSTED')),
