@@ -133,3 +133,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [055. 검증 주소의 선택형 고객 회신·최종 승인 메일](decisions/055-customer-service-mail.md)
 
 - [056. 메일 실패·적체를 원문 없이 점검하는 운영 조회](decisions/056-customer-mail-operations.md)
+
+- [057. 소진된 서비스 알림의 한 번뿐인 독립 재시도 승인](decisions/057-customer-mail-retry-approval.md)

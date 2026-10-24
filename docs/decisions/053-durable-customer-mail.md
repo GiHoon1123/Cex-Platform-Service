@@ -23,13 +23,13 @@
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CustomerMailOutbox.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java#L46), 현재 소스의 부분 발췌.
+출처: [CustomerMailOutbox.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java#L47), 현재 소스의 부분 발췌.
 
 ```java
     public Lease claim(){return tx.execute(t->{
-        crypto.requireConfigured();var rows=jdbc.queryForList("SELECT d.job_id,d.attempts FROM customer_mail_delivery d JOIN customer_mail_jobs j ON j.id=d.job_id WHERE d.next_attempt_at<=clock_timestamp() AND (d.status IN ('PENDING','RETRY') OR (d.status='SENDING' AND d.lease_until<clock_timestamp())) ORDER BY j.created_at,j.id LIMIT 1 FOR UPDATE OF d SKIP LOCKED");
+        crypto.requireConfigured();var rows=jdbc.queryForList("SELECT d.job_id,d.attempts,coalesce(g.max_attempts,5) attempt_limit FROM customer_mail_delivery d JOIN customer_mail_jobs j ON j.id=d.job_id LEFT JOIN customer_mail_retry_grants g ON g.job_id=d.job_id WHERE d.next_attempt_at<=clock_timestamp() AND (d.status IN ('PENDING','RETRY') OR (d.status='SENDING' AND d.lease_until<clock_timestamp())) ORDER BY j.created_at,j.id LIMIT 1 FOR UPDATE OF d SKIP LOCKED");
         if(rows.isEmpty())return null;var row=rows.getFirst();UUID id=(UUID)row.get("job_id");int attempt=((Number)row.get("attempts")).intValue();UUID lease=UUID.randomUUID();
-        if(attempt>=5){jdbc.update("UPDATE customer_mail_delivery SET status='EXHAUSTED',last_reason='LEASE_EXHAUSTED',lease_id=NULL,lease_until=NULL WHERE job_id=?",id);event(id,lease,attempt,"RESULT","EXHAUSTED");audit.record(null,"CUSTOMER_MAIL_EXHAUSTED","mail:"+id,"SUCCESS","LEASE_EXHAUSTED");return null;}
+        if(attempt>=((Number)row.get("attempt_limit")).intValue()){jdbc.update("UPDATE customer_mail_delivery SET status='EXHAUSTED',last_reason='LEASE_EXHAUSTED',lease_id=NULL,lease_until=NULL WHERE job_id=?",id);event(id,lease,attempt,"RESULT","EXHAUSTED");audit.record(null,"CUSTOMER_MAIL_EXHAUSTED","mail:"+id,"SUCCESS","LEASE_EXHAUSTED");return null;}
         jdbc.update("UPDATE customer_mail_delivery SET status='SENDING',attempts=attempts+1,lease_id=?,lease_until=clock_timestamp()+interval '60 seconds' WHERE job_id=?",lease,id);
         event(id,lease,attempt+1,"CLAIMED","CLAIMED");audit.record(null,"CUSTOMER_MAIL_CLAIMED","mail:"+id,"SUCCESS","LEASED");return new Lease(id,lease,attempt+1);
     });}
@@ -89,3 +89,5 @@ TransactionTemplate.execute는 콜백 반환/예외 시 커밋/롤백한다. Typ
 
 - [구현 96d22a7](https://github.com/GiHoon1123/Cex-Platform-Service/commit/96d22a71c1c99a6792c2e8731f1f99df9d620e86)
 - [격리 실행 증적](../reference/053-durable-customer-mail-verification-2026-10-24.json)
+
+2026-10-24 현재 claim 발췌는 [057 제한적 추가 예산](057-customer-mail-retry-approval.md)을 포함한다. 기본5회는 유지하며 승인된 서비스 알림만 누적10회까지 허용한다.053 당시 테스트15개 결과는 그대로 보존한다.
