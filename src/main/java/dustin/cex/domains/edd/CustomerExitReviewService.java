@@ -39,12 +39,14 @@ public class CustomerExitReviewService {
     public record Inspection(Receipt receipt,String rationale) {
         @Override public String toString(){return "Inspection[고객 사유 생략]";}
     }
+    private final CustomerWorkCustody custody;
     private final JdbcTemplate jdbc;private final UserRepository users;private final RefreshTokenRepository tokens;
     private final OperatorSessionPolicy sessions;private final RelationshipExitService exits;private final EvidenceCrypto crypto;
     private final CddCrypto fingerprints;private final ObjectMapper json;private final AuditService audit;private final TransactionTemplate tx;
     public CustomerExitReviewService(JdbcTemplate jdbc,UserRepository users,RefreshTokenRepository tokens,
             OperatorSessionPolicy sessions,RelationshipExitService exits,EvidenceCrypto crypto,CddCrypto fingerprints,
-            ObjectMapper json,AuditService audit,PlatformTransactionManager manager) {
+            ObjectMapper json,AuditService audit,PlatformTransactionManager manager,CustomerWorkCustody custody) {
+        this.custody=custody;
         this.jdbc=jdbc;this.users=users;this.tokens=tokens;this.sessions=sessions;this.exits=exits;this.crypto=crypto;
         this.fingerprints=fingerprints;this.json=json;this.audit=audit;tx=new TransactionTemplate(manager);
         tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
@@ -80,32 +82,28 @@ public class CustomerExitReviewService {
         return attempt(actor,()->tx.execute(t->{customer(actor,sid);page(page);var rows=jdbc.queryForList("SELECT id,created_at FROM customer_exit_review_requests WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 25 OFFSET ?",actor,page*25);
             audit.record(actor,"CUSTOMER_EXIT_REVIEWS_LISTED","customer:"+actor,"SUCCESS","RECEIPT_ONLY");return rows.stream().map(this::receipt).toList();}));
     }
-    public List<Receipt> assignedList(long actor,UUID sid,UUID exit,int page) {
-        return attempt(actor,()->tx.execute(t->{assigned(actor,sid,exit);page(page);var rows=jdbc.queryForList("SELECT id,created_at FROM customer_exit_review_requests WHERE exit_id=? ORDER BY created_at DESC,id DESC LIMIT 25 OFFSET ?",exit,page*25);
-            audit.record(actor,"CUSTOMER_EXIT_REVIEWS_ASSIGNED","relationship-exit:"+exit,"SUCCESS","RECEIPT_ONLY");return rows.stream().map(this::receipt).toList();}));
-    }
+    public record WorkContext(Receipt receipt,CustomerWorkCustody.State assignment) {}
+    public WorkContext assignedContext(long actor,UUID sid,UUID id){return attempt(actor,()->tx.execute(t->{var r=workRequest(actor,sid,id);audit.record(actor,"CUSTOMER_EXIT_REVIEW_CONTEXT","customer-review:"+id,"SUCCESS","CURRENT_ASSIGNMENT");return new WorkContext(receipt(r),custody.current(id));}));}
     public Inspection inspect(long actor,UUID sid,UUID id) {
-        return attempt(actor,()->tx.execute(t->{var row=row(id);UUID exit=(UUID)row.get("exit_id");var original=assigned(actor,sid,exit);long user=((Number)row.get("user_id")).longValue();
-            if(original.payload().userId()!=user)throw new IllegalStateException("고객 재검토 대상 검증 실패");String mac=(String)row.get("content_mac");
+        return attempt(actor,()->tx.execute(t->{var row=row(id);UUID exit=(UUID)row.get("exit_id");var state=assigned(actor,sid,id);long user=((Number)row.get("user_id")).longValue();
+            if(state.userId()!=user)throw new IllegalStateException("고객 재검토 대상 검증 실패");String mac=(String)row.get("content_mac");
             byte[] plain=crypto.decrypt((String)row.get("evidence_key_id"),context(id,user,exit,mac),(byte[])row.get("reason_cipher"));
             String value=new Submission(new String(plain,StandardCharsets.UTF_8)).validated().rationale();
             if(!fingerprints.keyId().equals(row.get("fingerprint_key_id"))||!mac.equals(mac(user,exit,value)))throw new IllegalStateException("고객 사유 무결성 검증 실패");
             // 후속 기록에 필요한 본인 세션의 제공 사실도 감사와 함께 확정한다.
             var viewer=users.findById(actor).orElseThrow();
-            jdbc.update("INSERT INTO customer_exit_review_views(id,request_id,actor_id,actor_person,actor_version,session_id) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),id,actor,viewer.getOperatorPersonId(),viewer.getVersion(),sid);
+            jdbc.update("INSERT INTO customer_exit_review_views(id,request_id,actor_id,actor_person,actor_version,session_id,custody_generation,custody_stamp) VALUES(?,?,?,?,?,?,?,?)",UUID.randomUUID(),id,actor,viewer.getOperatorPersonId(),viewer.getVersion(),sid,state.generation(),state.stamp());
             // 원문을 먼저 해독해도 감사가 실패하면 호출자에게 반환하지 않는다. 제공을 금융 승인 영수증으로 쓰지 않는다.
             audit.record(actor,"CUSTOMER_EXIT_REVIEW_VIEWED","customer-review:"+id,"SUCCESS","CUSTOMER_REASON_ONLY");return new Inspection(receipt(row),value);
         }));
     }
     /** 후속 쓰기는 고객·행위자 잠금의 같은 순서를 사용한다. 호출자는 실제 트랜잭션 안에 있어야 한다. */
     Map<String,Object> workRequest(long actor,UUID sid,UUID id) {
-        transaction();var result=row(id);long user=((Number)result.get("user_id")).longValue();
-        java.util.stream.LongStream.of(actor,user).distinct().sorted().forEach(value->users.lockById(value).orElseThrow(()->denied(HttpStatus.NOT_FOUND)));
-        assigned(actor,sid,(UUID)result.get("exit_id"));return result;
+        transaction();var result=row(id);assigned(actor,sid,id);return result;
     }
     void requirePersonalView(long actor,UUID sid,UUID id) {
-        transaction();var u=users.findById(actor).orElseThrow();
-        long count=jdbc.queryForObject("SELECT count(*) FROM customer_exit_review_views WHERE request_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND provided_at>clock_timestamp()-interval '5 minutes'",Long.class,id,actor,u.getOperatorPersonId(),u.getVersion(),sid);
+        transaction();var u=users.findById(actor).orElseThrow();var state=custody.current(id);
+        long count=jdbc.queryForObject("SELECT count(*) FROM customer_exit_review_views WHERE request_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND custody_generation=? AND custody_stamp=? AND provided_at>clock_timestamp()-interval '5 minutes'",Long.class,id,actor,u.getOperatorPersonId(),u.getVersion(),sid,state.generation(),state.stamp());
         if(count==0)throw denied(HttpStatus.CONFLICT);
     }
     private void transaction(){if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("고객 후속 업무에는 트랜잭션이 필요합니다");}
@@ -113,9 +111,9 @@ public class CustomerExitReviewService {
         var owner=users.lockById(actor).orElse(null);var token=sid==null?null:tokens.findBySessionId(sid).orElse(null);
         if(owner==null||owner.getRole()!=UserRole.CUSTOMER||!owner.isAuthenticationAllowed()||token==null||token.getUserId()!=actor||token.getRevoked()||!token.getExpiresAt().isAfter(LocalDateTime.now()))throw denied(HttpStatus.FORBIDDEN);
     }
-    private RelationshipExitService.Review assigned(long actor,UUID sid,UUID exit) {
-        var person=users.lockById(actor).orElse(null);sessions.requireFresh(person,sid,UserRole.OPERATOR,UserRole.APPROVER);var original=exits.approvedOrigin(exit);var p=original.payload();
-        if(!((actor==p.requesterId()&&person.getOperatorPersonId().equals(p.requesterPerson()))||(actor==p.checkerId()&&person.getOperatorPersonId().equals(p.checkerPerson()))))throw denied(HttpStatus.NOT_FOUND);return original;
+    private CustomerWorkCustody.State assigned(long actor,UUID sid,UUID id) {
+        var state=custody.current(id);var people=custody.lock(state,actor);var person=people.get(actor);sessions.requireFresh(person,sid,UserRole.OPERATOR,UserRole.APPROVER);
+        if(!state.contains(person))throw denied(HttpStatus.NOT_FOUND);return state;
     }
     private Map<String,Object> row(UUID id) {var rows=jdbc.queryForList("SELECT * FROM customer_exit_review_requests WHERE id=?",id);if(rows.isEmpty())throw denied(HttpStatus.NOT_FOUND);return rows.getFirst();}
     private Receipt receipt(Map<String,Object> row){return new Receipt((UUID)row.get("id"),((Timestamp)row.get("created_at")).toInstant(),"RECEIVED");}

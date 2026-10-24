@@ -82,10 +82,14 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/relationship-exits/*/approve/options","/api/admin/compliance/relationship-exits/*/reject/options",
                     "/api/admin/compliance/relationship-exits/*/approve","/api/admin/compliance/relationship-exits/*/reject").access(audited(audit,sessions,"APPROVER"))
+                // 고객 업무 인계는 별도 목적의 보안키 승인으로만 확정한다.
+                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/customer-review-requests/*/custody","/api/admin/compliance/customer-custody-requests/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-custody-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-custody-requests/*/inspect","/api/admin/compliance/customer-custody-requests/*/approve/options","/api/admin/compliance/customer-custody-requests/*/reject/options","/api/admin/compliance/customer-custody-requests/*/approve","/api/admin/compliance/customer-custody-requests/*/reject").access(audited(audit,sessions,"APPROVER"))
                 // 고객 사유는 현재 종료 대상에만 접수하고 원문은 지정 운영 인물에게만 제공한다.
                 .requestMatchers(HttpMethod.POST,"/api/customer/relationship/review-requests").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/customer/relationship/review-requests","/api/customer/relationship/review-requests/*","/api/customer/relationship/review-requests/*/replies").access(audited(audit,sessions,"CUSTOMER"))
-                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/relationship-exits/*/review-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/compliance/customer-review-requests/*/context").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/compliance/customer-review-requests/*/notes","/api/admin/compliance/customer-review-requests/*/replies").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-review-requests/*/notes","/api/admin/compliance/customer-review-notes/*/inspect","/api/admin/compliance/customer-review-requests/*/replies").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/compliance/customer-review-requests/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))

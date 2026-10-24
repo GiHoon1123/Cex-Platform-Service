@@ -13,8 +13,9 @@ CREATE TRIGGER customer_exit_review_no_change BEFORE UPDATE OR DELETE OR TRUNCAT
 -- 열람 사실은 당시 인물·버전·세션과 함께 보존한다. 과거 일반 감사를 새 영수증으로 추측해 채우지 않는다.
 CREATE TABLE IF NOT EXISTS customer_exit_review_views (
  id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES customer_exit_review_requests(id),actor_id bigint NOT NULL REFERENCES users(id),
- actor_person uuid NOT NULL,actor_version bigint NOT NULL,session_id uuid NOT NULL,provided_at timestamptz NOT NULL DEFAULT clock_timestamp()
+ actor_person uuid NOT NULL,actor_version bigint NOT NULL,session_id uuid NOT NULL,custody_generation bigint NOT NULL,custody_stamp varchar(64) NOT NULL,provided_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='customer_exit_review_views'::regclass AND attname='custody_generation' AND NOT attisdropped) OR NOT EXISTS(SELECT 1 FROM pg_attribute WHERE attrelid='customer_exit_review_views'::regclass AND attname='custody_stamp' AND NOT attisdropped) THEN RAISE EXCEPTION '현재 배정에 결합한 고객 제공 스키마가 필요합니다'; END IF; END $$;
 CREATE INDEX IF NOT EXISTS customer_review_personal_view ON customer_exit_review_views(request_id,actor_id,session_id,provided_at);
 CREATE TABLE IF NOT EXISTS customer_exit_review_notes (
  id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES customer_exit_review_requests(id),sequence bigint NOT NULL CHECK(sequence>0),

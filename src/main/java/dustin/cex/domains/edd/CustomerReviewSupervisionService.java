@@ -26,9 +26,10 @@ public class CustomerReviewSupervisionService {
         public Page {items=List.copyOf(items);}
     }
     private final JdbcTemplate jdbc;private final UserRepository users;private final OperatorSessionPolicy sessions;
-    private final RelationshipExitService exits;private final AuditService audit;private final TransactionTemplate tx;
+    private final RelationshipExitService exits;private final CustomerWorkCustody custody;private final AuditService audit;private final TransactionTemplate tx;
     public CustomerReviewSupervisionService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy sessions,
-            RelationshipExitService exits,AuditService audit,PlatformTransactionManager manager) {
+            RelationshipExitService exits,AuditService audit,PlatformTransactionManager manager,CustomerWorkCustody custody) {
+        this.custody=custody;
         this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.exits=exits;this.audit=audit;tx=new TransactionTemplate(manager);
     }
     public Page queue(long actor,UUID sid,Cursor after) {
@@ -42,7 +43,7 @@ public class CustomerReviewSupervisionService {
             for(var row:candidates) {
                 UUID id=(UUID)row.get("id");var original=exits.approvedOrigin((UUID)row.get("exit_id"));var p=original.payload();
                 if(p.userId()!=((Number)row.get("user_id")).longValue())throw new IllegalStateException("고객 재검토 대상 검증 실패");
-                var members=List.of(member(p.requesterId(),p.requesterPerson()),member(p.checkerId(),p.checkerPerson()));
+                var state=custody.current(id);var members=state.members().stream().map(m->member(m.id(),m.person())).toList();
                 Timestamp viewed=jdbc.queryForObject("SELECT max(occurred_at) FROM security_audit WHERE action='CUSTOMER_EXIT_REVIEW_VIEWED' AND outcome='SUCCESS' AND target=?",Timestamp.class,"customer-review:"+id);
                 items.add(new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available)));
             }

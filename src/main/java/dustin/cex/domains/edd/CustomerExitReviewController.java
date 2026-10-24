@@ -16,8 +16,8 @@ public class CustomerExitReviewController {
     public List<CustomerExitReviewService.Receipt> ownList(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestParam(defaultValue="0") int page){return service.ownList(userId,sessionId,page);}
     @GetMapping("/api/customer/relationship/review-requests/{id}")
     public CustomerExitReviewService.Receipt own(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable UUID id){return service.own(userId,sessionId,id);}
-    @GetMapping("/api/admin/compliance/relationship-exits/{exit}/review-requests")
-    public List<CustomerExitReviewService.Receipt> assigned(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable UUID exit,@RequestParam(defaultValue="0") int page){return service.assignedList(userId,sessionId,exit,page);}
+    @GetMapping("/api/admin/compliance/customer-review-requests/{id}/context")
+    public CustomerExitReviewService.WorkContext assigned(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable UUID id){return service.assignedContext(userId,sessionId,id);}
     @PostMapping("/api/admin/compliance/customer-review-requests/{id}/inspect")
     public CustomerExitReviewService.Inspection inspect(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable UUID id){return service.inspect(userId,sessionId,id);}
 }
