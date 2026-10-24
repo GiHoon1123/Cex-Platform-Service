@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-24",
+  "implementation_commit": "9dbcbe402b72bf38c7b92edcdbd0d8d435102854",
+  "junit": {
+    "tests": 59,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "report": {
+    "container": "cex-edd-aca11e2eaf58",
+    "exit": 0,
+    "tests": {
+      "tests": 59,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "container_removed": true,
+    "suites": [
+      {
+        "class": "dustin.cex.domains.kyc.CustomerReviewSupervisionIntegrationTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "httpNoStoreRoleAndCursorBoundaries()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "twentySixRealReceiptsSpanTwoPagesWithoutLosingHistory()",
+          "successfulViewIsVisibleButDoesNotHideOrCompleteRequest()",
+          "staleRevokedAndForeignSessionsCannotRead()",
+          "auditFailureReturnsNoMetadata()",
+          "malformedCursorsAreRejected()",
+          "viewAuditFailureDoesNotPretendReasonWasProvided()",
+          "missingOriginalPeopleAreVisibleWithoutGrantingTakeover()",
+          "supervisorSeesUnviewedRequestButCannotReadReason()",
+          "withdrawalAndDisabledCustomerDoNotEraseOutstandingRequest()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerResponseTargetIntegrationTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "custodyTransferDoesNotResetOriginalTarget()",
+          "actualPublicReplyIsResponseButNotFinalResolution()",
+          "laterFinalApprovalAndCustomerAckDoNotResetFirstPublicTime()",
+          "reasonViewAndInternalNoteDoNotCountAsPublicResponse()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerWorkQueueIntegrationTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "auditFailureReturnsNoMetadataOrReadReceipt()",
+          "httpRequiresCurrentOperatorAndReturnsNoStore()",
+          "noNoteAndNoReplyRemainDiscoverableWithoutInventedCompletion()",
+          "withdrawalAndDisabledCustomerDoNotHideAssignedHistory()",
+          "newNoteNeedsReplyAndReadingDoesNotClearIndicator()",
+          "staleRevokedAndForeignSessionsCannotRead()",
+          "normalTransferMovesDiscoveryOnlyAfterApproval()",
+          "bothCurrentPeopleSeeMinimalMetadataWithoutCompletingAnything()",
+          "malformedCursorsAreRejected()",
+          "orphanRecoveryMakesWorkDiscoverableWithoutGivingRequesterBody()",
+          "twentySixRealReceiptsAdvanceAcrossEmptyFilteredPageForWorkAndOrphans()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "[5] how = \"identity\""
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerReviewResponseTargetTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "observationBeforeReceiptRequiresTimeReview()",
+          "oldLateResponseDoesNotBecomeTimelyAfterAnotherResponse()",
+          "beforeTargetIsWaiting()",
+          "missingRequiredTimesAreRejected()",
+          "earliestStatusReplyWinsEvenAfterLaterFinal()",
+          "afterTargetIsOverdue()",
+          "eventBeforeReceiptRequiresTimeReview()",
+          "exactOpenTargetIsOverdue()",
+          "responseOneNanosecondLateRemainsLate()",
+          "weekendsAndTimezoneDoNotPauseCalendarTarget()",
+          "futureEventRequiresTimeReview()",
+          "responseExactlyAtTargetMeetsGoal()",
+          "finalApprovalCountsWithoutStatusReply()",
+          "earliestFinalApprovalWinsOverLaterStatus()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerReviewAttentionIntegrationTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "timelyStatusResponseIsNotFinalButNeedsNoImmediateAttention()",
+          "twentySixRealRequestsAdvanceAcrossEmptyAttentionPage()",
+          "httpAttentionUsesApproverAndNoStore()",
+          "rolesAndFreshSessionAreRequired()",
+          "approvedButUnacknowledgedAnswerIsVisibleWithoutPrivateText()",
+          "auditFailureReturnsNoAttentionMetadata()",
+          "explicitCustomerAckRemovesAttentionButKeepsFullHistory()",
+          "overdueAndClockReviewNeedAttentionButResolvedLateHistoryDoesNot()",
+          "invalidCursorIsRejected()",
+          "transferredWorkUsesCurrentPeopleAndPreservesResponseTarget()",
+          "orphanedUnfinishedWorkNeedsAttentionEvenAfterTimelyResponse()"
+        ],
+        "failed_cases": []
+      }
+    ],
+    "actual_xml_totals": {
+      "tests": 59,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "command": [
+    "python3",
+    "/tmp/verify-cycle48.py"
+  ],
+  "code_excerpts": [
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java",
+      "first_line": 24,
+      "snippet": "public boolean requiresAttention(){return responseTarget.state()==CustomerReviewResponseTarget.State.OVERDUE||responseTarget.state()==CustomerReviewResponseTarget.State.TIME_REVIEW_REQUIRED||(finalReviewId!=null&&customerAcknowledgedAt==null)||(orphaned&&finalReviewId==null);}"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java",
+      "first_line": 37,
+      "snippet": "public Page attention(long actor,UUID sid,Cursor after){\n    // 전체 감독과 같은 관측/커서를 쓰되 지금 조치할 건만 고른다. 과거 지연 이력은 전체 목록에 남는다.\n    return scan(actor,sid,after,true);\n}"
+    }
+  ],
+  "new_dependencies": 0,
+  "approval_kind_count": 14,
+  "limits": [
+    "실제 PostgreSQL/암호 서명/감사/MVC와 공통 외부 연계 대역을 구분",
+    "법정 기한/외부 통지·기관/조직·실물키·운영/인증 심사와 구분",
+    "기존 DB 변환·서버 재시작·배포 없음, 봇0명, 엔진/프론트 변경 없음"
+  ],
+  "warnings": [
+    "기존 deprecated/unchecked/JVM 클래스 공유 경고"
+  ]
+}

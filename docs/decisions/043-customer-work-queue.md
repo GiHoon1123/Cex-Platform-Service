@@ -75,7 +75,7 @@ max(sequence)와 max(note_sequence)를 하나의 SQL 관측에서 읽는다. 회
 
 ### 빈 필터 페이지도 순회를 계속
 
-[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L62)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerWorkQueueService.java](../../src/main/java/dustin/cex/domains/edd/CustomerWorkQueueService.java#L63)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 var last=rows.isEmpty()?null:rows.getLast();Cursor next=rows.size()==25?new Cursor(((Timestamp)last.get("created_at")).toInstant(),(UUID)last.get("id")):null;

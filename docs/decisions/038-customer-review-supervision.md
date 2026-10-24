@@ -22,7 +22,7 @@ GET /api/admin/compliance/customer-review-supervision. 현재 APPROVER와 최근
 
 ### 시각과 UUID로 제한 순회
 
-[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L40)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
+[CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L46)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
 
 ```java
 var candidates=after==null?jdbc.queryForList("SELECT id,user_id,exit_id,created_at FROM customer_exit_review_requests ORDER BY created_at,id LIMIT 25"):
@@ -37,7 +37,15 @@ var candidates=after==null?jdbc.queryForList("SELECT id,user_id,exit_id,created_
 
 ```java
 Timestamp viewed=jdbc.queryForObject("SELECT max(occurred_at) FROM security_audit WHERE action='CUSTOMER_EXIT_REVIEW_VIEWED' AND outcome='SUCCESS' AND target=?",Timestamp.class,"customer-review:"+id);
-items.add(new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available)));
+var progress=jdbc.queryForMap("""
+    SELECT (SELECT min((payload::jsonb->>'observedAt')::timestamptz) FROM customer_exit_review_replies WHERE request_id=?) AS first_reply,
+    d.request_id,d.decided_at,a.acknowledged_at FROM (SELECT 1) seed
+    LEFT JOIN customer_review_final_decisions d ON d.review_id=? AND d.approved
+    LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id
+    """,id,id);
+var assessment=CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply")),instant(progress.get("decided_at")),Instant.now());
+var item=new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available),assessment,(UUID)progress.get("request_id"),instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")));
+if(!attentionOnly||item.requiresAttention())items.add(item);
 ```
 
 사유 원문이나 암호문을 읽지 않고 성공한 열람 감사의 마지막 시각만 읽는다. 담당자 자격은 현재 역할·인물·사용 가능 여부이며 최근 MFA가 오래됐다는 이유로 인물이 사라졌다고 표시하지 않는다.
@@ -47,7 +55,7 @@ items.add(new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toIns
 [CustomerReviewSupervisionService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java#L51)의 현재 부분 발췌다. 주변 의존성과 트랜잭션이 필요하며 독립 실행 예제가 아니다.
 
 ```java
-audit.record(actor,"CUSTOMER_REVIEW_SUPERVISION_READ","operator:"+actor,"SUCCESS","METADATA_ONLY");
+audit.record(actor,attentionOnly?"CUSTOMER_REVIEW_ATTENTION_READ":"CUSTOMER_REVIEW_SUPERVISION_READ","operator:"+actor,"SUCCESS","METADATA_ONLY");
 return new Page(items,next,candidates.size(),observed,SEMANTICS);
 ```
 
@@ -89,3 +97,6 @@ Spring 트랜잭션 콜백에서 감사가 성공한 뒤 응답 값을 반환한
 
 
 041 이후 이 목록은 승인된 현재 고객 업무 배정의 인물로 공백을 계산한다. 마지막 열람 감사 시각은 과거 인물/세대의 기록도 포함하며 새 담당자가 읽었다는 뜻은 아니다. 과거 038의 실행·증적은 보존하고 [041](041-customer-work-transfer.md)을 따른다.
+
+
+048 이후 현재 전사 감독은 최초 공개 응답 목표·최종 승인·고객 확인도 구분한다. 별도 attention 경로는 미응답 지연/시각 이상/미확인 최종 결과/담당자 공백만 고르고, 빈 필터 페이지의 커서는 유지한다. [048 구현](048-customer-review-attention.md)을 따르며038 당시 회귀/증적은 보존한다.
