@@ -106,6 +106,9 @@ public Inspection inspect(long actor,UUID sid,UUID id) {
         byte[] plain=crypto.decrypt((String)row.get("evidence_key_id"),context(id,user,exit,mac),(byte[])row.get("reason_cipher"));
         String value=new Submission(new String(plain,StandardCharsets.UTF_8)).validated().rationale();
         if(!fingerprints.keyId().equals(row.get("fingerprint_key_id"))||!mac.equals(mac(user,exit,value)))throw new IllegalStateException("고객 사유 무결성 검증 실패");
+        // 후속 기록에 필요한 본인 세션의 제공 사실도 감사와 함께 확정한다.
+        var viewer=users.findById(actor).orElseThrow();
+        jdbc.update("INSERT INTO customer_exit_review_views(id,request_id,actor_id,actor_person,actor_version,session_id) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),id,actor,viewer.getOperatorPersonId(),viewer.getVersion(),sid);
         // 원문을 먼저 해독해도 감사가 실패하면 호출자에게 반환하지 않는다. 제공을 금융 승인 영수증으로 쓰지 않는다.
         audit.record(actor,"CUSTOMER_EXIT_REVIEW_VIEWED","customer-review:"+id,"SUCCESS","CUSTOMER_REASON_ONLY");return new Inspection(receipt(row),value);
     }));
@@ -191,3 +194,6 @@ CREATE TABLE IF NOT EXISTS customer_exit_review_requests (
 - [`adc8acb`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/adc8acb16a32a99a4ac769a8b3c7dd11bfc9723b): 고객 종료 개시 재검토 요청 접수와 감사 열람와 관련 회귀.
 
 [037 확정 증적](../reference/customer-exit-review-verification-2026-10-24.json), [036 미결 점검](036-exit-approval-supervision.md), [035 활성 종료 점검](035-exit-supervision.md), [034 독립 철회](034-exit-rescission.md).
+
+
+039 이후 현재 inspect 예제는 인물·버전·세션별 불변 제공 영수증도 감사와 함께 기록한다. 과거 037의 실행 수치와 증적은 당시 기록으로 보존하며 후속 동작은 [039 비공개 처리 기록](039-customer-review-notes.md)을 따른다.

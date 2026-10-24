@@ -97,3 +97,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [037. 고객 종료 개시 재검토 요청 접수와 감사 열람](decisions/037-customer-exit-review.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
 
 - [038. 고객 재검토 요청의 원문 없는 전사 점검](decisions/038-customer-review-supervision.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
+
+- [039. 고객 재검토의 비공개 처리 기록과 본인 제공 근거](decisions/039-customer-review-notes.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
