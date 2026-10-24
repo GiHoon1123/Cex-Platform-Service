@@ -42,7 +42,7 @@ RPC 응답은 JSON-RPC2.0·요청 ID·result 존재와 error 부재를 확인한
 
 ## 관련 코드와 문법
 
-출처: [BitcoinCoreClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinCoreClient.java#L27), 현재 소스의 부분 발췌.
+출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L30), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
 
 ```java
         var chain=call("getblockchaininfo",List.of());
@@ -50,22 +50,22 @@ RPC 응답은 JSON-RPC2.0·요청 ID·result 존재와 error 부재를 확인한
         var wallet=call("getwalletinfo",List.of());
         if(!text(wallet,"walletname").equals(settings.wallet)||!isFalse(wallet,"private_keys_enabled")
                 ||!isTrue(wallet,"descriptors")||!isFalse(wallet,"scanning"))throw unavailable();
-        var generated=call("getnewaddress",List.of(allocation.toString(),"bech32"));
-        if(!generated.isString()||generated.asString().length()>100)throw unavailable();
-        String address=generated.asString();
+        return new Ready(chain,wallet);
+    }
+    JsonNode call(String method,List<?> params){return call(method,params,65536);}
 ```
 
 var는 초기화한 표현식의 정적 타입을 Java 컴파일러가 추론한다. TypeScript와 달리 실행 시 동적 타입으로 바뀌지 않는다. boolean 필드는 실제 JSON 불리언이어야 하며, 누락/문자열 값을 false로 추측하지 않는다. 네트워크나 지갑 검증 실패는 주소 파생 이전에 중단한다.
 
-출처: [BitcoinCoreClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinCoreClient.java#L50), 현재 소스의 부분 발췌.
+출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L47), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
 
 ```java
-            var pending=http.sendAsync(request,info->new LimitedResponseBody(65536));
+            var pending=http.sendAsync(request,info->new LimitedResponseBody(limit));
             try{
                 // 헤더 도착과 구분해 본문 전체에도 제한 시간을 적용한다.
                 var response=pending.get(5,TimeUnit.SECONDS);
                 if(response.statusCode()!=200)throw unavailable();
-                var body=json.readTree(response.body());
+                var body=tree.readTree(response.body());
                 if(body==null||!body.isObject()||!text(body,"jsonrpc").equals("2.0")||!text(body,"id").equals(id)
                         ||body.has("error")||!body.has("result")||body.path("result").isNull())throw unavailable();
                 return body.path("result");
@@ -145,3 +145,5 @@ python3 scripts/verify_kyc.py
 - [공통 수신기 선행 커밋 be93cd8](https://github.com/GiHoon1123/Cex-Platform-Service/commit/be93cd8)
 
 후속 구현: [074 고객 주소 영속 연결](074-customer-bitcoin-deposit-address.md). 073의 API 미구현 설명은 해당 사이클 시점이며, 현재 발급/조회는 074를 따른다. 입금 감지·잔액 반영은 여전히 미완료다.
+
+077 현행 기준: 노드 전송/기본 준비 확인은 BitcoinRpcClient로 분리했다. 주소 파생은 BitcoinCoreClient, 거래 출력 관찰은 [077 기록](077-bitcoin-deposit-observation.md)을 따른다. 주소용64KiB 제한과 별도로 거래 원문/해독 결과용32MiB 제한을 사용한다.

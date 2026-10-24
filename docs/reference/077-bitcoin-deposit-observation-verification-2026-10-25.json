@@ -1,0 +1,329 @@
+{
+  "cycle": 77,
+  "implementation_commit": "48f6fedea4025f5b2df236dfcc0f887a3346b0c8",
+  "verification": {
+    "bitcoin": {
+      "network": "regtest",
+      "exit": 0,
+      "node_stopped": true,
+      "node_version": 310100,
+      "chain_scenarios": {
+        "reorg_before_confirmations": 1,
+        "reorg_after_confirmations": 0,
+        "confirmed_confirmations": 3,
+        "conflicted_confirmations": -2
+      },
+      "tests": {
+        "tests": 41,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderTest",
+          "name": "decodedTransactionOutputAndReceiveDetailsMustAgree()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderTest",
+          "name": "confirmedOutputHasExactAmountAndExplicitCanonicalPosition()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderTest",
+          "name": "conflictingDepthCanonicalHashAndMovingTipAreRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderTest",
+          "name": "laggingWalletCannotGiveApparentlyCurrentObservation()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderTest",
+          "name": "largeSatoshiAmountsNeverPassThroughDoubleRounding()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderTest",
+          "name": "unconfirmedAndConflictedAreNeverGivenCanonicalBlock()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderTest",
+          "name": "invalidIdentifierAndOuterTransactionDoNotContactNode()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderTest",
+          "name": "unsupportedPrecisionNegativeAndSupplyOverflowAreRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "watchOnlyWalletDerivesDistinctNativeAddresses()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "wrongNetworkAndPrivateKeyWalletAreRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "nodeCredentialsCannotSignExportImportOrTransfer()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "overflowCancelsAndLateSignalsCannotTurnFailureIntoSuccess()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "exactLimitIsAccepted()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "invalidLimitIsRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderIntegrationTest",
+          "name": "actualUnconfirmedReceiveHasNoCanonicalBlock()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderIntegrationTest",
+          "name": "realFeeReplacementIsConflictedAndNeverPresentedAsConfirmed()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderIntegrationTest",
+          "name": "invalidatedBlockReceiveIsReadAgainAsUnconfirmed()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderIntegrationTest",
+          "name": "realCoinbaseIsMarkedSeparatelyFromOrdinaryDeposit()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinDepositReaderIntegrationTest",
+          "name": "realConfirmedReceiveMatchesDecodedOutputAndCanonicalBlock()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "validResponsePreservesNetworkAndScript()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "readinessFailureDoesNotAllocate()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "nodeCallsCannotHoldDatabaseTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "mismatchedReplyErrorAndUnownedScriptFailClosed()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "emptyConfigurationDisablesCallsAndPartialOrRemotePlaintextConfigurationFails()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "fullBodyHasDeadline()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "oversizedAndRedirectResponsesAreNotFollowedOrRetried()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "staleProviderConfirmationCannotCreateAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "concurrentRealDerivationsPublishOnlyOneOwnerAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "expiredIdentityAndStaleProviderConfirmationCannotCreateAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "auditFailureRollsBackAddressAndNeverReturnsSuccess()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "ownershipIsImmutableAndCannotBeTruncated()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "restrictionDuringRealDerivationPreventsOwnershipCommit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "unverifiedCustomerIsRejectedBeforeNode()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "logoutDuringRealDerivationPreventsOwnershipCommit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "eligibleCustomerGetsOneDurableAddressAndReusesWithoutNode()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "nodeFailureLeavesNoOwnershipAndOuterTransactionIsRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "anotherCustomerAddressCollisionNeverChangesItsOwner()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "strangersOperatorsAndAnonymousCannotReadOrIssue()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "getWithoutAddressDoesNotCreateOne()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "existingAddressCannotBypassCurrentRestriction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "actualHttpPostPersistsBeforeReturningAndDoesNotChooseCallerUser()"
+        }
+      ],
+      "database_removed": true
+    },
+    "http_startup": {
+      "exit": 0,
+      "tests": {
+        "tests": 29,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+          "name": "존재하지 않는 runId로 updateCompletedStep 호출 시 예외 없이 스킵"
+        },
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+          "name": "parseFailedUserIds: 잘못된 JSON이면 빈 리스트 반환"
+        },
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+          "name": "failRun 시 failedUserIds null/빈 리스트면 JSON 미설정, NPE 없음"
+        },
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+          "name": "런 실패 시 FAILED + failedUserIds 저장"
+        },
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+          "name": "런 시작 -> 단계 업데이트 -> 완료 시 SUCCESS 저장"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "allEngineCommandsCarryServiceIdentity()"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[1] timeout = 0"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[2] timeout = -1"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[1] status = 200"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[2] status = 202"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[3] status = 201"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[4] status = 400"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[5] status = 500"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[6] status = 503"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "receivedRequestWithoutResponseTimesOutWithoutResubmitting()"
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[1] defect = \"{}\""
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[2] defect = \"wrong-order\""
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[3] defect = \"wrong-user\""
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[4] defect = \"numeric-id\""
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[5] defect = \"missing-time\""
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[6] defect = \"invalid-time\""
+        },
+        {
+          "class": "dustin.cex.shared.http.EngineHttpClientTest",
+          "name": "[7] defect = \"wrong-state\""
+        },
+        {
+          "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+          "name": "준비 이벤트를 반복 발행해도 잔액 변경 요청이 없다"
+        },
+        {
+          "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+          "name": "플랫폼 컨텍스트를 다시 만들어도 기존 잔액을 재입금하지 않는다"
+        },
+        {
+          "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+          "name": "플랫폼 준비 이벤트는 기존 잔액을 엔진에 입금하지 않는다"
+        },
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+          "name": "recordFailure 후 getFailuresByDate로 조회"
+        },
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+          "name": "recordFailure 시 errorMessage null이어도 예외 없음"
+        },
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+          "name": "1·2·4단계 실패 기록 시 userId null 허용"
+        },
+        {
+          "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+          "name": "실패 기록 없는 날짜 조회 시 빈 리스트"
+        }
+      ]
+    },
+    "unique_tests": 70,
+    "new_reader_tests": 13,
+    "setup_failures": [
+      "First 100-block mining RPC exceeded fixture ten-second timeout; no Java tests ran; node stopped",
+      "Second fixture did not explicitly broadcast offline-created regtest transactions; gettransaction returned -5; no Java tests ran; node stopped"
+    ],
+    "jackson_api": "Compiled from \"JsonNodeFeature.java\"\npublic final class tools.jackson.databind.cfg.JsonNodeFeature extends java.lang.Enum<tools.jackson.databind.cfg.JsonNodeFeature> implements tools.jackson.databind.cfg.DatatypeFeature {\n  public static final tools.jackson.databind.cfg.JsonNodeFeature READ_NULL_PROPERTIES;\n  public static final tools.jackson.databind.cfg.JsonNodeFeature WRITE_NULL_PROPERTIES;\n  public static final tools.jackson.databind.cfg.JsonNodeFeature WRITE_PROPERTIES_SORTED;\n  public static final tools.jackson.databind.cfg.JsonNodeFeature STRIP_TRAILING_BIGDECIMAL_ZEROES;\n  public static final tools.jackson.databind.cfg.JsonNodeFeature FAIL_ON_NAN_TO_BIG_DECIMAL_COERCION;\n  public static final tools.jackson.databind.cfg.JsonNodeFeature USE_BIG_DECIMAL_FOR_FLOATS;\n  public static tools.jackson.databind.cfg.JsonNodeFeature[] values();\n  public static tools.jackson.databind.cfg.JsonNodeFeature valueOf(java.lang.String);\n  public boolean enabledByDefault();\n  public boolean enabledIn(int);\n  public int getMask();\n  public int featureIndex();\n  static {};\n}\n",
+    "limits": [
+      "Read-only node observation only; no discovery scheduler, persistent observation, ledger credit, or mainnet operation",
+      "No new dependency audit, throughput benchmark, or production signing isolation"
+    ]
+  }
+}
