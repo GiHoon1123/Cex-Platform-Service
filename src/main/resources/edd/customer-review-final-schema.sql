@@ -25,3 +25,11 @@ DROP TRIGGER IF EXISTS customer_review_final_view_no_change ON customer_review_f
 CREATE TRIGGER customer_review_final_view_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_review_final_views FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
 DROP TRIGGER IF EXISTS customer_review_final_decision_no_change ON customer_review_final_decisions;
 CREATE TRIGGER customer_review_final_decision_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_review_final_decisions FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 고객의 명시적 확인은 서버 제공·외부 통지·권리 포기와 구분한다. 같은 결과에는 영수증 하나만 보존한다.
+CREATE TABLE IF NOT EXISTS customer_review_final_acknowledgments (
+ id uuid PRIMARY KEY,final_id uuid NOT NULL UNIQUE REFERENCES customer_review_final_decisions(request_id),
+ user_id bigint NOT NULL REFERENCES users(id),request_key uuid NOT NULL,acknowledged_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(user_id,request_key)
+);
+DROP TRIGGER IF EXISTS customer_review_final_ack_no_change ON customer_review_final_acknowledgments;
+CREATE TRIGGER customer_review_final_ack_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_review_final_acknowledgments FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

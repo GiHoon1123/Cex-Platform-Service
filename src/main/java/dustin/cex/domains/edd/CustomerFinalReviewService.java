@@ -88,6 +88,34 @@ public class CustomerFinalReviewService {
         jdbc.update("INSERT INTO customer_review_final_decisions(request_id,review_id,approver_id,approver_person,approved) VALUES(?,?,?,?,?)",id,r.payload().reviewId(),actor,r.payload().checker().person(),approve);
         audit.record(actor,"CUSTOMER_FINAL_DECIDED","customer-final:"+id,"SUCCESS",approve?"APPROVED":"REJECTED");return read(id);
     }));}
+    public record FinalReceipt(UUID finalId,UUID reviewId,CustomerReviewReplyService.Status observedStatus,UUID basisId,String explanation,Instant decidedAt,Instant acknowledgedAt){
+        @Override public String toString(){return "FinalReceipt[고객 공개 문구 생략]";}
+    }
+    public record Acknowledgment(UUID id,UUID finalId,Instant acknowledgedAt) {}
+    public FinalReceipt ownFinal(long actor,UUID sid,UUID review){return attempt(actor,()->tx.execute(t->{
+        requests.own(actor,sid,review);var result=approvedReceipt(actor,review);
+        // 제공 감사가 실패하면 문구를 반환하지 않는다. 이 GET으로 고객 확인 영수증을 만들지 않는다.
+        audit.record(actor,"CUSTOMER_FINAL_PROVIDED","customer-review:"+review,"SUCCESS","SERVER_PROVIDED_ONLY");return result;
+    }));}
+    @Transactional(propagation=Propagation.NEVER)
+    public Acknowledgment acknowledge(long actor,UUID sid,UUID review,UUID expectedFinal,UUID key){return attempt(actor,()->tx.execute(t->{
+        requests.own(actor,sid,review);if(expectedFinal==null||key==null)throw denied(HttpStatus.BAD_REQUEST);var result=approvedReceipt(actor,review);
+        if(!result.finalId().equals(expectedFinal))throw denied(HttpStatus.CONFLICT);
+        var old=jdbc.queryForList("SELECT * FROM customer_review_final_acknowledgments WHERE user_id=? AND request_key=?",actor,key);
+        if(!old.isEmpty()){var prior=ack(old.getFirst());if(!prior.finalId().equals(expectedFinal))throw denied(HttpStatus.CONFLICT);audit.record(actor,"CUSTOMER_FINAL_ACK_REPLAYED","customer-final:"+expectedFinal,"SUCCESS","SAME_ACK");return prior;}
+        if(result.acknowledgedAt()!=null)throw denied(HttpStatus.CONFLICT);
+        UUID id=UUID.randomUUID();jdbc.update("INSERT INTO customer_review_final_acknowledgments(id,final_id,user_id,request_key) VALUES(?,?,?,?)",id,expectedFinal,actor,key);
+        audit.record(actor,"CUSTOMER_FINAL_ACKNOWLEDGED","customer-final:"+expectedFinal,"SUCCESS","EXPLICIT_ACTION_NOT_WAIVER");
+        return ack(jdbc.queryForMap("SELECT * FROM customer_review_final_acknowledgments WHERE id=?",id));
+    }));}
+    /** 확정 후 계정/배정이 달라져도 당시 승인 문구와 상태를 보존한다. 현재 거래 허용을 추측하지 않는다. */
+    private FinalReceipt approvedReceipt(long user,UUID review){
+        var rows=jdbc.queryForList("SELECT d.request_id,d.decided_at,a.acknowledged_at FROM customer_review_final_decisions d LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id AND a.user_id=? WHERE d.review_id=? AND d.approved",user,review);
+        if(rows.size()!=1)throw denied(HttpStatus.NOT_FOUND);var row=rows.getFirst();var r=read((UUID)row.get("request_id"));var p=r.payload();
+        if(!r.status().equals("APPROVED")||p.userId()!=user||!p.reviewId().equals(review))throw new IllegalStateException("고객 최종 결과 연결 검증 실패");
+        return new FinalReceipt(p.id(),review,p.basis().status(),p.basis().decisionId(),decrypt(r).text(),((Timestamp)row.get("decided_at")).toInstant(),row.get("acknowledged_at")==null?null:((Timestamp)row.get("acknowledged_at")).toInstant());
+    }
+    private Acknowledgment ack(Map<String,Object> row){return new Acknowledgment((UUID)row.get("id"),(UUID)row.get("final_id"),((Timestamp)row.get("acknowledged_at")).toInstant());}
     public Request status(long actor,UUID sid,UUID id){return attempt(actor,()->tx.execute(t->{var r=read(id);var p=r.payload();var state=custody.current(p.reviewId());var viewer=custody.lock(state,actor).get(actor);sessions.requireFresh(viewer,sid,UserRole.OPERATOR,UserRole.APPROVER);
         if(!state.contains(viewer)&&!(actor==p.requester().id()&&p.requester().person().equals(viewer.getOperatorPersonId())))throw denied(HttpStatus.NOT_FOUND);
         audit.record(actor,"CUSTOMER_FINAL_STATUS","customer-final:"+id,"SUCCESS","METADATA_ONLY");return r;
