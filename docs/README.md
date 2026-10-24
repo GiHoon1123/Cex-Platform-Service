@@ -105,3 +105,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [041. 고객 후속 업무의 독립 인계 승인](decisions/041-customer-work-transfer.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
 
 - [042. 고객 업무 담당자 공백의 독립 복구](decisions/042-customer-work-recovery.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
+
+- [043. 현재 담당 업무 발견과 내부 기록 대비 회신 점검](decisions/043-customer-work-queue.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
