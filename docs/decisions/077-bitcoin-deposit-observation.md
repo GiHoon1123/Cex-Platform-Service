@@ -127,3 +127,5 @@ macOS arm64·Temurin21·Core31.1·PostgreSQL16 환경이다. 기존 deprecated/u
 - [격리 실행 증적](../reference/077-bitcoin-deposit-observation-verification-2026-10-25.json)
 
 - [전송·십진수 해독 분리 fbf7203](https://github.com/GiHoon1123/Cex-Platform-Service/commit/fbf7203)
+
+후속 [078 불변 관찰 저장](078-durable-bitcoin-observations.md)에서 관찰/현재 포인터/감사를 같은 TX로 확정했다. 077의 미저장 설명은 해당 사이클 시점이다. 자동 발견·금융 적립은 여전히 후속이다.

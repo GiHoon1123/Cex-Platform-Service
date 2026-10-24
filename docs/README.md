@@ -171,3 +171,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [076. 미사용 잔액 증감 경로 제거와 정산 시험 의존성 수정](decisions/076-remove-retired-balance-sync.md)
 
 - [077. 실제 거래 출력과 기준 블록을 대조하는 BTC 입금 관찰](decisions/077-bitcoin-deposit-observation.md)
+
+- [078. 동시 조회가 역전되지 않는 불변 BTC 관찰 이력](decisions/078-durable-bitcoin-observations.md)
