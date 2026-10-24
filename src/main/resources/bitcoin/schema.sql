@@ -113,3 +113,56 @@ CREATE TRIGGER bitcoin_scan_head_complete BEFORE INSERT OR UPDATE ON bitcoin_sca
 DROP TRIGGER IF EXISTS bitcoin_scan_head_no_delete ON bitcoin_scan_heads;
 CREATE TRIGGER bitcoin_scan_head_no_delete BEFORE DELETE OR TRUNCATE ON bitcoin_scan_heads
  FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 출력 하나는 네트워크/거래 ID/출력 번호로 식별한다. 블록 이동/재조회로 입금 ID를 새로 만들지 않는다.
+CREATE TABLE IF NOT EXISTS bitcoin_deposit_receipts (
+ id uuid PRIMARY KEY,network varchar(32) NOT NULL CHECK(network IN ('bitcoin-regtest','bitcoin-mainnet')),
+ txid varchar(64) NOT NULL CHECK(txid ~ '^[0-9a-f]{64}$'),vout integer NOT NULL CHECK(vout>=0),
+ address_id uuid NOT NULL REFERENCES bitcoin_deposit_addresses(id),user_id bigint NOT NULL REFERENCES users(id),
+ asset varchar(8) NOT NULL CHECK(asset='BTC'),amount numeric NOT NULL CHECK(amount>0 AND amount<=21000000 AND scale(amount)<=8),
+ first_scan_id bigint NOT NULL REFERENCES bitcoin_block_scans(id),recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ UNIQUE(network,txid,vout)
+);
+CREATE INDEX IF NOT EXISTS bitcoin_receipt_customer ON bitcoin_deposit_receipts(user_id,recorded_at,id);
+CREATE INDEX IF NOT EXISTS bitcoin_receipt_first_scan ON bitcoin_deposit_receipts(first_scan_id);
+CREATE OR REPLACE FUNCTION bitcoin_receipt_require_output() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM bitcoin_block_scans s CROSS JOIN LATERAL jsonb_array_elements(s.received) o
+   JOIN bitcoin_deposit_addresses a ON a.id=(o->>'addressId')::uuid AND a.network=s.network AND a.wallet=s.wallet
+   WHERE s.id=NEW.first_scan_id AND s.network=NEW.network AND a.id=NEW.address_id AND a.user_id=NEW.user_id
+     AND o->>'txid'=NEW.txid AND (o->>'vout')::integer=NEW.vout AND (o->>'amount')::numeric=NEW.amount) THEN
+  RAISE EXCEPTION '입금은 완료 블록의 같은 고객 출력과 정확한 금액을 참조해야 합니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_receipt_source ON bitcoin_deposit_receipts;
+CREATE TRIGGER bitcoin_receipt_source BEFORE INSERT ON bitcoin_deposit_receipts FOR EACH ROW EXECUTE FUNCTION bitcoin_receipt_require_output();
+DROP TRIGGER IF EXISTS bitcoin_receipt_no_change ON bitcoin_deposit_receipts;
+CREATE TRIGGER bitcoin_receipt_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_deposit_receipts
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+CREATE TABLE IF NOT EXISTS bitcoin_scan_receipt_projections (
+ scan_id bigint PRIMARY KEY REFERENCES bitcoin_block_scans(id),output_count integer NOT NULL CHECK(output_count>=0),
+ new_count integer NOT NULL CHECK(new_count>=0 AND new_count<=output_count),
+ recorded_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+CREATE OR REPLACE FUNCTION bitcoin_projection_require_receipts() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE outputs integer;
+BEGIN
+ SELECT count(*) INTO outputs FROM bitcoin_block_scans s CROSS JOIN LATERAL jsonb_array_elements(s.received) o
+  WHERE s.id=NEW.scan_id AND (o->>'amount')::numeric>0;
+ IF outputs<>NEW.output_count OR NEW.new_count<>(SELECT count(*) FROM bitcoin_deposit_receipts WHERE first_scan_id=NEW.scan_id) OR EXISTS(
+  SELECT 1 FROM bitcoin_block_scans s CROSS JOIN LATERAL jsonb_array_elements(s.received) o
+   WHERE s.id=NEW.scan_id AND (o->>'amount')::numeric>0 AND NOT EXISTS(
+    SELECT 1 FROM bitcoin_deposit_receipts r WHERE r.network=s.network AND r.txid=o->>'txid'
+      AND r.vout=(o->>'vout')::integer AND r.address_id=(o->>'addressId')::uuid AND r.amount=(o->>'amount')::numeric)) THEN
+  RAISE EXCEPTION '양수 출력의 입금 원본을 모두 식별한 뒤에만 완료할 수 있습니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_projection_complete ON bitcoin_scan_receipt_projections;
+CREATE TRIGGER bitcoin_projection_complete BEFORE INSERT ON bitcoin_scan_receipt_projections
+ FOR EACH ROW EXECUTE FUNCTION bitcoin_projection_require_receipts();
+DROP TRIGGER IF EXISTS bitcoin_projection_no_change ON bitcoin_scan_receipt_projections;
+CREATE TRIGGER bitcoin_projection_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_scan_receipt_projections
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
