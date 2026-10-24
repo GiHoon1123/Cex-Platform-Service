@@ -90,10 +90,25 @@ public class CustomerExitReviewService {
             byte[] plain=crypto.decrypt((String)row.get("evidence_key_id"),context(id,user,exit,mac),(byte[])row.get("reason_cipher"));
             String value=new Submission(new String(plain,StandardCharsets.UTF_8)).validated().rationale();
             if(!fingerprints.keyId().equals(row.get("fingerprint_key_id"))||!mac.equals(mac(user,exit,value)))throw new IllegalStateException("고객 사유 무결성 검증 실패");
+            // 후속 기록에 필요한 본인 세션의 제공 사실도 감사와 함께 확정한다.
+            var viewer=users.findById(actor).orElseThrow();
+            jdbc.update("INSERT INTO customer_exit_review_views(id,request_id,actor_id,actor_person,actor_version,session_id) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),id,actor,viewer.getOperatorPersonId(),viewer.getVersion(),sid);
             // 원문을 먼저 해독해도 감사가 실패하면 호출자에게 반환하지 않는다. 제공을 금융 승인 영수증으로 쓰지 않는다.
             audit.record(actor,"CUSTOMER_EXIT_REVIEW_VIEWED","customer-review:"+id,"SUCCESS","CUSTOMER_REASON_ONLY");return new Inspection(receipt(row),value);
         }));
     }
+    /** 후속 쓰기는 고객·행위자 잠금의 같은 순서를 사용한다. 호출자는 실제 트랜잭션 안에 있어야 한다. */
+    Map<String,Object> workRequest(long actor,UUID sid,UUID id) {
+        transaction();var result=row(id);long user=((Number)result.get("user_id")).longValue();
+        java.util.stream.LongStream.of(actor,user).distinct().sorted().forEach(value->users.lockById(value).orElseThrow(()->denied(HttpStatus.NOT_FOUND)));
+        assigned(actor,sid,(UUID)result.get("exit_id"));return result;
+    }
+    void requirePersonalView(long actor,UUID sid,UUID id) {
+        transaction();var u=users.findById(actor).orElseThrow();
+        long count=jdbc.queryForObject("SELECT count(*) FROM customer_exit_review_views WHERE request_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND provided_at>clock_timestamp()-interval '5 minutes'",Long.class,id,actor,u.getOperatorPersonId(),u.getVersion(),sid);
+        if(count==0)throw denied(HttpStatus.CONFLICT);
+    }
+    private void transaction(){if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("고객 후속 업무에는 트랜잭션이 필요합니다");}
     private void customer(long actor,UUID sid) {
         var owner=users.lockById(actor).orElse(null);var token=sid==null?null:tokens.findBySessionId(sid).orElse(null);
         if(owner==null||owner.getRole()!=UserRole.CUSTOMER||!owner.isAuthenticationAllowed()||token==null||token.getUserId()!=actor||token.getRevoked()||!token.getExpiresAt().isAfter(LocalDateTime.now()))throw denied(HttpStatus.FORBIDDEN);
