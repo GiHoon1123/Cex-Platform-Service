@@ -122,3 +122,6 @@ CREATE TABLE IF NOT EXISTS operator_authorization_challenges (
  FOREIGN KEY(kind,request_id) REFERENCES operator_approval_bindings(kind,request_id)
 );
 CREATE INDEX IF NOT EXISTS operator_authorization_challenge_session ON operator_authorization_challenges(session_id);
+
+-- 원문을 읽지 않고 제공 이력의 마지막 시각만 조회하는 경로를 지원한다.
+CREATE INDEX IF NOT EXISTS customer_exit_review_view_audit ON security_audit(target,occurred_at) WHERE action='CUSTOMER_EXIT_REVIEW_VIEWED' AND outcome='SUCCESS';
