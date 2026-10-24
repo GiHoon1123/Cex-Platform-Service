@@ -122,11 +122,11 @@ TransactionTemplate 콜백 안에서 업무별 증명을 검증하고 불변 결
 
 ### 원래 신규 주문 경로의 추가 차단 근거
 
-출처: [TradingAccessPolicy.java](../../src/main/java/dustin/cex/domains/security/TradingAccessPolicy.java#L20)
+출처: [CustomerFinancialEligibility.java](../../src/main/java/dustin/cex/domains/security/CustomerFinancialEligibility.java#L19), 074에서 신규 주문과 주소 공개가 공유하도록 추출한 현재 코드.
 
 ```java
-// 관계 종료 개시 결정은 일반 거래 제한 해제나 고객의 새 신고와 독립된 차단 근거다.
-|| Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_active_exits WHERE user_id=?)",Boolean.class,userId))
+// 종료 개시 결정은 일반 제한 해제와 독립된 차단 근거다. 외부 공급사의 최신 확인도 필요하다.
+return !Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_active_exits WHERE user_id=?)",Boolean.class,id))
 ```
 
 EXISTS는 승인된 종료 개시 결정의 존재를 확인한다. 신규 예약과 같은 고객 행 잠금 뒤 수행하는 SQL이므로 승인과 주문 접수의 순서를 정한다. 종료 판정을 엔진으로 보내거나 코어의 메모리 상태를 읽지 않는다. 일반 거래 제한 플래그를 해제해도 이 결정은 남는다.

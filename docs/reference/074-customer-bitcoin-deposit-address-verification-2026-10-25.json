@@ -1,0 +1,165 @@
+{
+  "cycle": 74,
+  "implementation_commit": "42c86c344ebf06df0df73759fd936ad8872a322c",
+  "verification": {
+    "bitcoin": {
+      "network": "regtest",
+      "exit": 0,
+      "node_stopped": true,
+      "node_version": 310100,
+      "tests": {
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "watchOnlyWalletDerivesDistinctNativeAddresses()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "wrongNetworkAndPrivateKeyWalletAreRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "nodeCredentialsCannotSignExportImportOrTransfer()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "overflowCancelsAndLateSignalsCannotTurnFailureIntoSuccess()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "exactLimitIsAccepted()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "invalidLimitIsRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "validResponsePreservesNetworkAndScript()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "readinessFailureDoesNotAllocate()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "nodeCallsCannotHoldDatabaseTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "mismatchedReplyErrorAndUnownedScriptFailClosed()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "emptyConfigurationDisablesCallsAndPartialOrRemotePlaintextConfigurationFails()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "fullBodyHasDeadline()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "oversizedAndRedirectResponsesAreNotFollowedOrRetried()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "staleProviderConfirmationCannotCreateAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "concurrentRealDerivationsPublishOnlyOneOwnerAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "expiredIdentityAndStaleProviderConfirmationCannotCreateAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "auditFailureRollsBackAddressAndNeverReturnsSuccess()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "ownershipIsImmutableAndCannotBeTruncated()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "restrictionDuringRealDerivationPreventsOwnershipCommit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "unverifiedCustomerIsRejectedBeforeNode()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "logoutDuringRealDerivationPreventsOwnershipCommit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "eligibleCustomerGetsOneDurableAddressAndReusesWithoutNode()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "nodeFailureLeavesNoOwnershipAndOuterTransactionIsRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "anotherCustomerAddressCollisionNeverChangesItsOwner()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "strangersOperatorsAndAnonymousCannotReadOrIssue()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "getWithoutAddressDoesNotCreateOne()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "existingAddressCannotBypassCurrentRestriction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositAddressIntegrationTest",
+          "name": "actualHttpPostPersistsBeforeReturningAndDoesNotChooseCallerUser()"
+        }
+      ],
+      "database_removed": true
+    },
+    "kyc": {
+      "container": "cex-kyc-df6e18ad104c",
+      "exit": 0,
+      "tests": {
+        "tests": 150,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "platform-security": {
+      "container": "cex-security-9b543bcd318b",
+      "exit": 0,
+      "tests": {
+        "tests": 41,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "unique_tests": 219,
+    "new_address_tests": 15,
+    "product_jars": [
+      "bootJar",
+      "operatorAdminJar"
+    ],
+    "limits": [
+      "No deposit detection, ledger credit, withdrawal, or mainnet operation",
+      "No new throughput benchmark or dependency audit"
+    ]
+  }
+}

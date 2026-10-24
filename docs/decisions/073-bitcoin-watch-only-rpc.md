@@ -143,3 +143,5 @@ python3 scripts/verify_kyc.py
 - [격리 실행 증적](../reference/073-bitcoin-watch-only-rpc-verification-2026-10-25.json)
 
 - [공통 수신기 선행 커밋 be93cd8](https://github.com/GiHoon1123/Cex-Platform-Service/commit/be93cd8)
+
+후속 구현: [074 고객 주소 영속 연결](074-customer-bitcoin-deposit-address.md). 073의 API 미구현 설명은 해당 사이클 시점이며, 현재 발급/조회는 074를 따른다. 입금 감지·잔액 반영은 여전히 미완료다.
