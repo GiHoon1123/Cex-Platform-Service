@@ -15,7 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
 class BitcoinCoreClientTest {
     static final JsonMapper JSON=JsonMapper.builder().build();
     static final String PASSWORD="isolated-bitcoin-password-at-least-32-bytes";
-    HttpServer server;BitcoinCoreClient client;String mode="NORMAL";AtomicInteger allocations=new AtomicInteger();
+    HttpServer server;BitcoinCoreClient client;BitcoinRpcClient rpc;String mode="NORMAL";AtomicInteger allocations=new AtomicInteger();
     CountDownLatch release=new CountDownLatch(1);ExecutorService executor;
     @BeforeEach void start()throws Exception{
         server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);executor=Executors.newVirtualThreadPerTaskExecutor();server.setExecutor(executor);
@@ -39,9 +39,10 @@ class BitcoinCoreClientTest {
             }catch(Exception|AssertionError failure){try{exchange.sendResponseHeaders(500,-1);}catch(Exception ignored){}}
             finally{exchange.close();}
         });server.start();
-        client=new BitcoinCoreClient(new BitcoinSettings("http://127.0.0.1:"+server.getAddress().getPort(),"addresses",PASSWORD,"watch","REGTEST"),JSON);
+        var setting=new BitcoinSettings("http://127.0.0.1:"+server.getAddress().getPort(),"addresses",PASSWORD,"watch","REGTEST");
+        rpc=new BitcoinRpcClient(setting,JSON);client=new BitcoinCoreClient(setting,rpc);
     }
-    @AfterEach void stop(){release.countDown();client.close();server.stop(0);executor.shutdownNow();}
+    @AfterEach void stop(){release.countDown();rpc.close();server.stop(0);executor.shutdownNow();}
     @Test void validResponsePreservesNetworkAndScript(){assertEquals("0014"+"ab".repeat(20),client.derive(UUID.randomUUID()).scriptPubKey());assertEquals(1,allocations.get());}
     @Test void readinessFailureDoesNotAllocate(){
         for(String failure:List.of("CHAIN","IBD","PRIVATE","LEGACY","SCANNING")){mode=failure;assertUnavailable();}
@@ -56,8 +57,8 @@ class BitcoinCoreClientTest {
         finally{TransactionSynchronizationManager.setActualTransactionActive(false);}
     }
     @Test void emptyConfigurationDisablesCallsAndPartialOrRemotePlaintextConfigurationFails(){
-        var absent=new BitcoinCoreClient(new BitcoinSettings("","","","","REGTEST"),JSON);
-        try{assertEquals(503,assertThrows(ResponseStatusException.class,()->absent.derive(UUID.randomUUID())).getStatusCode().value());}finally{absent.close();}
+        var absentSettings=new BitcoinSettings("","","","","REGTEST");var absentRpc=new BitcoinRpcClient(absentSettings,JSON);var absent=new BitcoinCoreClient(absentSettings,absentRpc);
+        try{assertEquals(503,assertThrows(ResponseStatusException.class,()->absent.derive(UUID.randomUUID())).getStatusCode().value());}finally{absentRpc.close();}
         for(String url:List.of("http://example.test","http://127.0.0.1:1/wallet/other","http://user:password@127.0.0.1:1","http://127.0.0.1:1/?secret=x"))
             assertThrows(IllegalArgumentException.class,()->new BitcoinSettings(url,"addresses",PASSWORD,"watch","REGTEST"));
         assertFalse(assertThrows(IllegalArgumentException.class,()->new BitcoinSettings("http://invalid secret", "addresses",PASSWORD,"watch","REGTEST")).getMessage().contains("invalid secret"));

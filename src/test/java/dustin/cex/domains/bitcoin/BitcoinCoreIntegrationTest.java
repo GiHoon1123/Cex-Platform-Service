@@ -15,25 +15,25 @@ import tools.jackson.databind.json.JsonMapper;
 class BitcoinCoreIntegrationTest {
     private BitcoinSettings settings(String wallet,String network){return new BitcoinSettings(System.getenv("CEX_BITCOIN_TEST_URL"),System.getenv("CEX_BITCOIN_TEST_USER"),System.getenv("CEX_BITCOIN_TEST_PASSWORD"),wallet,network);}
     @Test void watchOnlyWalletDerivesDistinctNativeAddresses(){
-        var client=new BitcoinCoreClient(settings("cex_watch","REGTEST"),JsonMapper.builder().build());
+        var setting=settings("cex_watch","REGTEST");var rpc=new BitcoinRpcClient(setting,JsonMapper.builder().build());var client=new BitcoinCoreClient(setting,rpc);
         try{
             var first=client.derive(UUID.randomUUID());var second=client.derive(UUID.randomUUID());
             assertEquals("bitcoin-regtest",first.network());assertTrue(first.address().startsWith("bcrt1q"));
             assertNotEquals(first.address(),second.address());assertNotEquals(first.scriptPubKey(),second.scriptPubKey());
             assertTrue(first.scriptPubKey().matches("0014[0-9a-f]{40}"));
-        }finally{client.close();}
+        }finally{rpc.close();}
     }
     @Test void wrongNetworkAndPrivateKeyWalletAreRejected(){
         for(var setting:List.of(settings("cex_watch","MAINNET"),settings("fixture_keys","REGTEST"))){
-            var client=new BitcoinCoreClient(setting,JsonMapper.builder().build());
+            var rpc=new BitcoinRpcClient(setting,JsonMapper.builder().build());var client=new BitcoinCoreClient(setting,rpc);
             try{assertEquals(503,assertThrows(ResponseStatusException.class,()->client.derive(UUID.randomUUID())).getStatusCode().value());}
-            finally{client.close();}
+            finally{rpc.close();}
         }
     }
     @Test void nodeCredentialsCannotSignExportImportOrTransfer()throws Exception{
         try(var http=HttpClient.newHttpClient()){
             String auth=System.getenv("CEX_BITCOIN_TEST_USER")+":"+System.getenv("CEX_BITCOIN_TEST_PASSWORD");
-            for(String method:List.of("sendtoaddress","signrawtransactionwithwallet","listdescriptors","importdescriptors","dumpprivkey","createwallet")){
+            for(String method:List.of("sendtoaddress","sendrawtransaction","bumpfee","invalidateblock","signrawtransactionwithwallet","listdescriptors","importdescriptors","dumpprivkey","createwallet")){
                 var request=HttpRequest.newBuilder(URI.create(System.getenv("CEX_BITCOIN_TEST_URL")+"/wallet/cex_watch"))
                     .header("Authorization","Basic "+Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8)))
                     .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\""+method+"\",\"params\":[]}")).build();
