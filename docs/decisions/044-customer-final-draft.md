@@ -24,7 +24,7 @@
 
 ### 초안의 불변 근거
 
-[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L33)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L35)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 public record Payload(UUID id,UUID reviewId,long userId,long customerVersion,Person requester,Person checker,
@@ -36,7 +36,7 @@ public record Payload(UUID id,UUID reviewId,long userId,long customerVersion,Per
 
 ### 문구 암호화와 승인 결합의 원자성
 
-[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L67)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L71)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 String raw=json.writeValueAsString(payload),hash=verifier.digest(json.readTree(raw));byte[] cipher=crypto.encrypt(cipherContext(payload),explanation.text().getBytes(StandardCharsets.UTF_8));

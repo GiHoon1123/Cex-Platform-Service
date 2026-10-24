@@ -26,7 +26,7 @@
 
 ### 승인된 답변만 고객 본인에게 제공
 
-[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L95)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L101)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 public FinalReceipt ownFinal(long actor,UUID sid,UUID review){return attempt(actor,()->tx.execute(t->{
@@ -40,7 +40,7 @@ public FinalReceipt ownFinal(long actor,UUID sid,UUID review){return attempt(act
 
 ### 명시적 본인 확인을 별도 보존
 
-[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L101)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L107)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 public Acknowledgment acknowledge(long actor,UUID sid,UUID review,UUID expectedFinal,UUID key){return attempt(actor,()->tx.execute(t->{

@@ -23,7 +23,7 @@
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CustomerMailOutbox.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java#L45), 현재 소스의 부분 발췌.
+출처: [CustomerMailOutbox.java](../../src/main/java/dustin/cex/domains/mail/CustomerMailOutbox.java#L46), 현재 소스의 부분 발췌.
 
 ```java
     public Lease claim(){return tx.execute(t->{
@@ -69,21 +69,21 @@ TransactionTemplate.execute는 콜백 반환/예외 시 커밋/롤백한다. Typ
 
 [CustomerMailOutboxIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/CustomerMailOutboxIntegrationTest.java)
 
-- `encryptedQueueDoesNotExposeAddressOrToken`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `producerRollbackLeavesNoDeliverableJob`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `duplicateBusinessReferenceReplaysButChangedPayloadFails`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `actualSmtpsAcceptsFixedTemplateAndStableMessageId`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `accountDisableSuppressesBeforeAnySmtp`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `changedRecipientSuppressesBeforeAnySmtp`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `concurrentClaimHasOneOwner`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `expiredLeaseCanBeReclaimedButOldOwnerCannotOverwrite`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `smtpResultAuditFailureRollsBackAndSameLeaseCanRetry`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `retryStopsAtFiveClaimsWithoutFalseSuccess`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `immutableJobsAndAttemptsRejectUpdateDeleteTruncate`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `expiredClaimAfterActualSmtpCanDuplicateSameMessageId`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `activeOrRecentPayloadCannotBePurged`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `terminalExpiredPayloadCanBePurgedWithoutDeletingAuditOrJob`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `purgeAuditFailureRestoresCiphertext`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
+- `encryptedQueueDoesNotExposeAddressOrToken`: 메타데이터·toString에 주소/토큰이 없고 암호문을 정상 복호화한다.
+- `producerRollbackLeavesNoDeliverableJob`: 업무 예외로 롤백하면 발송 가능한 예약이0건이다.
+- `duplicateBusinessReferenceReplaysButChangedPayloadFails`: 같은 근거/본문은 같은 예약 ID, 변경한 토큰은 충돌한다.
+- `actualSmtpsAcceptsFixedTemplateAndStableMessageId`: 로컬 SMTPS가 고정 링크·토큰·원래 Message-ID를 실제 수신하고 SMTP_ACCEPTED를 남긴다.
+- `accountDisableSuppressesBeforeAnySmtp`: 계정을 중지하면 발송은0건이고 SUPPRESSED다.
+- `changedRecipientSuppressesBeforeAnySmtp`: 예약 후 주소 변경은 발송0건·SUPPRESSED다.
+- `concurrentClaimHasOneOwner`: 두 워커가 동시에 시도해도 임대 소유자는 한 명이다.
+- `expiredLeaseCanBeReclaimedButOldOwnerCannotOverwrite`: 임대 만료 후 새 소유자가 생기며 이전 결과는 현재 상태를 덮어쓰지 않는다.
+- `smtpResultAuditFailureRollsBackAndSameLeaseCanRetry`: 결과 감사 실패는 상태 변경을 롤백하고 같은 임대로 재확정할 수 있다.
+- `retryStopsAtFiveClaimsWithoutFalseSuccess`: 다섯 번 결과 불명 뒤 EXHAUSTED가 되고 성공으로 표시하지 않는다.
+- `immutableJobsAndAttemptsRejectUpdateDeleteTruncate`: 예약과 시도의 UPDATE/DELETE/TRUNCATE를 DB가 거부한다.
+- `expiredClaimAfterActualSmtpCanDuplicateSameMessageId`: 실제 SMTP 접수 뒤 임대 만료는 같은 Message-ID의 두 메일을 만들 수 있음을 확인한다.
+- `activeOrRecentPayloadCannotBePurged`: 진행 중 또는 최근 만료 암호문은 삭제할 수 없다.
+- `terminalExpiredPayloadCanBePurgedWithoutDeletingAuditOrJob`: 종료·만료 후 하루가 지난 암호문만 삭제되고 원래 예약/상태는 남는다.
+- `purgeAuditFailureRestoresCiphertext`: 삭제 감사 실패는 암호문 삭제도 롤백한다.
 
 ## 관련 커밋과 증적
 

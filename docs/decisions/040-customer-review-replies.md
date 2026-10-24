@@ -38,7 +38,7 @@
 
 ### 본인 제공과 실제 최신 내부 근거
 
-[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L35)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L38)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 requests.requirePersonalView(actor,sid,request);var note=notes.currentBasis(request,latestNote);
@@ -48,7 +48,7 @@ requests.requirePersonalView(actor,sid,request);var note=notes.currentBasis(requ
 
 ### 직원이 입력하지 않은 상태를 서버가 계산
 
-[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L38)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L41)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM relationship_active_exits WHERE review_id=? AND user_id=?)",Boolean.class,exit,user))){status=Status.EXIT_INITIATION_ACTIVE;basis=exit;}
@@ -62,11 +62,13 @@ else {
 
 ### 당시 상태·근거를 보존하고 감사와 확정
 
-[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L45)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L48)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 var payload=new Payload(id,request,user,actor,sequence,note.id(),note.sequence(),status,basis,message(status),Instant.now().truncatedTo(ChronoUnit.MICROS));String raw=json.writeValueAsString(payload);
 jdbc.update("INSERT INTO customer_exit_review_replies(id,request_id,sequence,actor_id,request_key,note_id,note_sequence,payload,content_mac,fingerprint_key_id) VALUES(?,?,?,?,?,?,?,?,?,?)",id,request,sequence,actor,key,note.id(),note.sequence(),raw,mac(raw),fingerprints.keyId());
+// 공개 사실과 출력 예약은 함께 확정한다. 외부 SMTP는 이 트랜잭션에서 호출하지 않는다.
+mail.reserve(user,CustomerMailOutbox.Kind.STATUS_NOTICE,id,payload.observedAt());
 audit.record(actor,"CUSTOMER_REVIEW_REPLY_RECORDED","customer-reply:"+id,"SUCCESS","STATUS_OBSERVED_ONLY");return safe(payload);
 ```
 
@@ -74,7 +76,7 @@ Java record인 Payload는 런타임 값이다. 요청·고객·행위자·논리
 
 ### 공개 회신의 허용 목록
 
-[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L53)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerReviewReplyService.java](../../src/main/java/dustin/cex/domains/edd/CustomerReviewReplyService.java#L58)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 // 조회 때 최신 문구로 바꾸지 않는다. 실제 회신 당시 서명한 문구를 그대로 제공한다.
@@ -149,3 +151,5 @@ CREATE TABLE IF NOT EXISTS customer_exit_review_replies (
 - [`44b41ee`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/44b41ee02432dbe2cacfc5561958b1f0d5433a6b): 고객용 상태 회신과 당시 안내 문구 보존와 관련 회귀.
 
 [040 확정 증적](../reference/customer-review-replies-verification-2026-10-24.json), [039 내부 관찰](039-customer-review-notes.md), [038 전사 점검](038-customer-review-supervision.md), [037 고객 접수](037-customer-exit-review.md).
+
+2026-10-24 현재 발췌는 메일 예약 연결을 포함한다. 당시 검증 수치는 원래 실행 기준이며 현재 메일 검증은 [055 기록](055-customer-service-mail.md)을 따른다.

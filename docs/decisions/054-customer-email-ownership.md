@@ -40,7 +40,7 @@ CustomerSessionPolicy는 기존 고객 재검토의 계정 잠금·CUSTOMER·활
 
 User를 반환하되 트랜잭션 안에서만 사용한다. HTTP 필터만 믿지 않고 직접 서비스 호출에서도 현재 계정과 세션을 검사한다. TypeScript 타입 선언과 달리 User의 JPA 잠금은 DB 트랜잭션 종료까지 유지된다.
 
-출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L48), 현재 소스의 부분 발췌.
+출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L49), 현재 소스의 부분 발췌.
 
 ```java
         UUID id=UUID.randomUUID();byte[] bytes=new byte[32];new SecureRandom().nextBytes(bytes);String token=Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -52,7 +52,7 @@ User를 반환하되 트랜잭션 안에서만 사용한다. HTTP 필터만 믿�
 
 SecureRandom은 추측하기 어려운 난수를 만들고 URL-safe Base64는 메일 링크에 담을 문자열을 만든다. digest는 challengeId와 토큰을 묶는다. 도전/메일 예약/필수 감사는 한 트랜잭션이므로 어느 하나 실패하면 모두 롤백한다.
 
-출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L61), 현재 소스의 부분 발췌.
+출처: [CustomerEmailVerification.java](../../src/main/java/dustin/cex/domains/mail/CustomerEmailVerification.java#L62), 현재 소스의 부분 발췌.
 
 ```java
         if(!MessageDigest.isEqual(digest(id,token).getBytes(StandardCharsets.US_ASCII),((String)row.get("token_hash")).getBytes(StandardCharsets.US_ASCII))){audit.denied(actor,"CUSTOMER_EMAIL_CHECK","email-check:"+id,"WRONG_TOKEN");throw denied(HttpStatus.FORBIDDEN);}
@@ -83,26 +83,28 @@ SecureRandom은 추측하기 어려운 난수를 만들고 URL-safe Base64는 �
 
 [CustomerEmailVerificationIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/CustomerEmailVerificationIntegrationTest.java)
 
-- `onlyHashedTokenAndEncryptedMailAreStored`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `sameKeyReturnsSameReceiptAndOneMail`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `tokenReceivedByActualSmtpConfirmsOnceWithoutChangingUserVersion`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `wrongTokenAndForeignSessionDoNotVerify`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `wrongTokenAfterConsumptionStillFails`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `changedAddressInvalidatesChallengeAndVerification`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `disabledAccountCannotConfirm`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `expiredChallengeCannotConfirm`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `verificationAuditFailureRollsBackTokenConsumption`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `requestAuditFailureRollsBackChallengeAndMail`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `newRequestWithinCooldownIsRejectedButReplayWorks`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `fifthWrongTokenLimitsFurtherAttempts`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `concurrentConfirmationHasOneEffect`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `httpNeverReturnsTokenAndGetDoesNotConsume`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `anonymousAndOperatorCannotRequestVerification`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `ownershipRecordsAreImmutable`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `hourlyLimitUsesHistoricalRequestsWithoutRewritingThem`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
-- `concurrentNewRequestsReserveOnlyOneMail`: 아래 테스트 파일에서 해당 이름의 시나리오·기대 결과를 확인한다.
+- `onlyHashedTokenAndEncryptedMailAreStored`: 검증 표에는64자 해시만 있고 수신 주소·원문 토큰·응답 노출은 없다.
+- `sameKeyReturnsSameReceiptAndOneMail`: 같은 요청 키는 같은 접수증을 반환하고 메일 예약은1건이다.
+- `tokenReceivedByActualSmtpConfirmsOnceWithoutChangingUserVersion`: 실제 SMTPS로 받은 토큰을 두 번 확인해도 확인 기록은1건이고 User 버전은 바뀌지 않는다.
+- `wrongTokenAndForeignSessionDoNotVerify`: 틀린 토큰·다른 인물 세션은 확인에 실패한다.
+- `wrongTokenAfterConsumptionStillFails`: 이미 소모한 뒤에도 다른 토큰으로는 확인할 수 없다.
+- `changedAddressInvalidatesChallengeAndVerification`: 현재 주소를 바꾸면 옛 확인 근거와 토큰을 적용할 수 없다.
+- `disabledAccountCannotConfirm`: 중지된 계정은 올바른 토큰으로도 확인할 수 없다.
+- `expiredChallengeCannotConfirm`: 기한이 지난 도전은410이며 확인 기록을 만들지 않는다.
+- `verificationAuditFailureRollsBackTokenConsumption`: 확인 감사 실패는 토큰 소모를 복구하며 같은 토큰으로 재시도할 수 있다.
+- `requestAuditFailureRollsBackChallengeAndMail`: 접수 감사 실패는 도전과 메일 예약을 함께 롤백한다.
+- `newRequestWithinCooldownIsRejectedButReplayWorks`: 60초 안의 새 요청은429, 원래 키 재전송은 원래 접수다.
+- `fifthWrongTokenLimitsFurtherAttempts`: 잘못된 토큰5회 뒤에는 올바른 토큰도 한도 창 동안429다.
+- `concurrentConfirmationHasOneEffect`: 동시 두 확인 호출은 모두 기존 사실을 얻되 확인 행은1건이다.
+- `httpNeverReturnsTokenAndGetDoesNotConsume`: HTTP 접수는 토큰을 반환하지 않고 GET은 확인 효과가 없으며 인증된 POST만 확인한다.
+- `anonymousAndOperatorCannotRequestVerification`: 익명은401, 운영자는403으로 본인 고객 이메일 접수를 막는다.
+- `ownershipRecordsAreImmutable`: 확인 도전/소모 기록의 UPDATE/DELETE/TRUNCATE를 거부한다.
+- `hourlyLimitUsesHistoricalRequestsWithoutRewritingThem`: 과거 접수3건을 추가한 표본에서 새 요청은429이며 원본 이력을 수정하지 않는다.
+- `concurrentNewRequestsReserveOnlyOneMail`: 동시 새 요청 두 개 중 하나만 성공하고 예약은1건이다.
 
 ## 관련 커밋과 증적
 
 - [구현 b3d3cbc](https://github.com/GiHoon1123/Cex-Platform-Service/commit/b3d3cbc9a630aebff1dae386374b09773d1b06c0)
 - [격리 실행 증적](../reference/054-customer-email-ownership-verification-2026-10-24.json)
+
+2026-10-24 현재 확인 테스트는055의 로그 비노출 회귀1개를 더해19개다. 당시054의18개 결과는 유지하며 컨트롤러 중복 검증 제거와 현재 실행은 [055](055-customer-service-mail.md)를 따른다.

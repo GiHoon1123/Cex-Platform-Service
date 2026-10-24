@@ -24,7 +24,7 @@
 
 ### 본인 검토 뒤 업무별 옵션
 
-[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L79)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L83)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 public Confirmation options(long actor,UUID sid,UUID id,String hash,boolean approve){return attempt(actor,()->tx.execute(t->{
@@ -37,7 +37,7 @@ public Confirmation options(long actor,UUID sid,UUID id,String hash,boolean appr
 
 ### 판단·증명 소모·감사의 단일 커밋
 
-[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L84)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
+[CustomerFinalReviewService.java](../../src/main/java/dustin/cex/domains/edd/CustomerFinalReviewService.java#L88)의 현재 부분 발췌다. 독립 실행 예제가 아니며 주변 의존성·트랜잭션이 필요하다.
 
 ```java
 public Request decide(long actor,UUID sid,UUID id,String hash,boolean approve,OperatorMfaService.AuthorizationProof proof){return attempt(actor,()->tx.execute(t->{
@@ -45,6 +45,8 @@ public Request decide(long actor,UUID sid,UUID id,String hash,boolean approve,Op
     // 실제 인증기 카운터·증명 소모·최종 결정·감사를 모두 같은 트랜잭션에 확정한다.
     mfa.authorizeApproval(actor,sid,OperatorMfaService.ApprovalKind.CUSTOMER_REVIEW_FINAL,id,hash,approve,proof);
     jdbc.update("INSERT INTO customer_review_final_decisions(request_id,review_id,approver_id,approver_person,approved) VALUES(?,?,?,?,?)",id,r.payload().reviewId(),actor,r.payload().checker().person(),approve);
+    // 승인된 결과만 예약한다. 거절/초안/내부 메모는 외부 알림을 만들지 않는다.
+    if(approve){var decided=jdbc.queryForObject("SELECT decided_at FROM customer_review_final_decisions WHERE request_id=?",Timestamp.class,id);mail.reserve(r.payload().userId(),CustomerMailOutbox.Kind.FINAL_NOTICE,id,decided.toInstant());}
     audit.record(actor,"CUSTOMER_FINAL_DECIDED","customer-final:"+id,"SUCCESS",approve?"APPROVED":"REJECTED");return read(id);
 }));}
 ```
@@ -96,3 +98,5 @@ POST `/api/admin/compliance/customer-final-requests/{id}/approve/options`, `/rej
 
 
 현재 고객 결과 조회·명시적 확인과 운영 목록 반영은 [046 구현](046-customer-final-receipt.md)을 따른다. 이 문서의 실행 결과는 당시 단계로 보존한다.
+
+2026-10-24 현재 발췌는 메일 예약 연결을 포함한다. 당시 검증 수치는 원래 실행 기준이며 현재 메일 검증은 [055 기록](055-customer-service-mail.md)을 따른다.
