@@ -10,7 +10,8 @@ import tools.jackson.databind.JsonNode;
 public class CustomerMfaController {
     private final CustomerMfaService service;
     private final CustomerDeviceService devices;
-    public CustomerMfaController(CustomerMfaService service,CustomerDeviceService devices){this.service=service;this.devices=devices;}
+    private final CustomerMfaHistory history;
+    public CustomerMfaController(CustomerMfaService service,CustomerDeviceService devices,CustomerMfaHistory history){this.service=service;this.devices=devices;this.history=history;}
     // 비밀번호/인증 자료를 기본 검증 오류나 record 출력에 복사하지 않는다. 실제 검증은 서비스가 수행한다.
     public record Enrollment(String currentPassword){@Override public String toString(){return "Enrollment[비밀번호 생략]";}}
     public record Proof(UUID challengeId,JsonNode publicKey){@Override public String toString(){return "Proof[인증 자료 생략]";}}
@@ -20,4 +21,5 @@ public class CustomerMfaController {
     @PostMapping("/authenticate")public CustomerMfaService.Verified authenticate(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestBody Proof input){return service.authenticate(userId,sessionId,input.challengeId(),input.publicKey());}
     @GetMapping("/credentials")public java.util.List<CustomerDeviceService.Device> devices(@RequestAttribute long userId,@RequestAttribute UUID sessionId){return devices.own(userId,sessionId);}
     @DeleteMapping("/credentials/{fingerprint}")public void revoke(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@PathVariable String fingerprint){devices.revoke(userId,sessionId,fingerprint);}
+    @GetMapping("/changes")public CustomerMfaHistory.Page changes(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestParam(required=false) java.time.Instant afterAt,@RequestParam(required=false) UUID afterId){return history.own(userId,sessionId,afterAt==null&&afterId==null?null:new CustomerMfaHistory.Cursor(afterAt,afterId));}
 }

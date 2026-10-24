@@ -15,7 +15,7 @@ import tools.jackson.databind.ObjectMapper;
 /** 업무와 함께 메일을 영속 예약한다. 외부 SMTP 전달은 업무 트랜잭션·고객 잠금 밖에서 수행한다. */
 @Service
 public class CustomerMailOutbox {
-    public enum Kind { EMAIL_VERIFICATION, STATUS_NOTICE, FINAL_NOTICE, PASSWORD_CHANGED }
+    public enum Kind { EMAIL_VERIFICATION, STATUS_NOTICE, FINAL_NOTICE, PASSWORD_CHANGED, MFA_CHANGED }
     public record Payload(String policy,UUID id,long userId,Kind kind,UUID reference,String email,String token,Instant expiresAt){@Override public String toString(){return "Payload[수신 주소·토큰 생략]";}}
     public record Lease(UUID id,UUID token,int attempt) {}
     public record State(UUID id,String status,int attempts,String reason) {}
@@ -59,6 +59,7 @@ public class CustomerMailOutbox {
         if(!p.expiresAt().isAfter(Instant.now())||u==null||u.getRole()!=UserRole.CUSTOMER||!p.email().equals(u.getEmail()))return false;
         // 보안 통지는 현재 검증 주소와 실제 변경 사실에만 결합한다. 계정 중지는 이 안내를 숨기지 않는다.
         if(p.kind()==Kind.PASSWORD_CHANGED)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_password_changes WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
+        if(p.kind()==Kind.MFA_CHANGED)return recipients.verified(u)&&jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_mfa_key_changes WHERE id=? AND user_id=?)",Boolean.class,p.reference(),p.userId());
         if(!u.isAuthenticationAllowed())return false;
         if(p.kind()==Kind.EMAIL_VERIFICATION)return true;
         // 예약 근거와 현재 수신 선택을 발송 직전에 재검사한다. SMTP 동안 고객/금융 잠금은 잡지 않는다.

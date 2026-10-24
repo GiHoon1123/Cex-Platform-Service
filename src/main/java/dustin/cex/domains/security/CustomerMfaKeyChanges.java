@@ -10,11 +10,13 @@ import org.springframework.transaction.annotation.*;
 public class CustomerMfaKeyChanges {
     public enum Kind { ADDED, REVOKED }
     private final JdbcTemplate jdbc;
-    public CustomerMfaKeyChanges(JdbcTemplate jdbc){this.jdbc=jdbc;}
+    private final CustomerMfaNotice notice;
+    public CustomerMfaKeyChanges(JdbcTemplate jdbc,CustomerMfaNotice notice){this.jdbc=jdbc;this.notice=notice;}
     @Transactional(propagation=Propagation.MANDATORY)
     public UUID append(long actor,UUID sid,Kind kind,String fingerprint){
         UUID id=UUID.randomUUID();
         jdbc.update("INSERT INTO customer_mfa_key_changes(id,user_id,session_id,kind,credential_fingerprint) VALUES(?,?,?,?,?)",id,actor,sid,kind.name(),fingerprint);
+        notice.reserve(actor,id);
         return id;
     }
 }
