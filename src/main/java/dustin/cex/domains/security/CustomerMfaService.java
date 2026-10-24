@@ -18,7 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.*;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 고객 최초 패스키 등록과 비밀번호 이후의 서명 인증을 처리한다. 운영자 등록 권한을 받지 않는다. */
+/** 고객 패스키의 최초/예비 등록과 비밀번호 이후 서명 인증을 처리한다. 운영자 등록 권한을 받지 않는다. */
 @Service
 @Transactional(propagation=Propagation.NEVER)
 public class CustomerMfaService {
@@ -32,13 +32,14 @@ public class CustomerMfaService {
     private final AuditService audit;
     private final TransactionTemplate tx;
     private final WebAuthnVerifier verifier;
+    private final CustomerMfaKeyChanges changes;
     private final JsonMapper json=JsonMapper.builder().addModule(new WebauthnJacksonModule()).build();
     public CustomerMfaService(JdbcTemplate jdbc,UserRepository users,RefreshTokenRepository tokens,PasswordService passwords,
             JwtService jwt,CustomerMfaPolicy policy,CustomerMailRecipientPolicy recipients,AuditService audit,
-            PlatformTransactionManager manager,@Value("${customer.webauthn.rp-id:localhost}")String rp,
+            PlatformTransactionManager manager,CustomerMfaKeyChanges changes,@Value("${customer.webauthn.rp-id:localhost}")String rp,
             @Value("${customer.webauthn.origin:http://localhost:3003}")String origin){
         this.jdbc=jdbc;this.users=users;this.tokens=tokens;this.passwords=passwords;this.jwt=jwt;
-        this.policy=policy;this.recipients=recipients;this.audit=audit;tx=new TransactionTemplate(manager);
+        this.changes=changes;this.policy=policy;this.recipients=recipients;this.audit=audit;tx=new TransactionTemplate(manager);
         tx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
         verifier=new WebAuthnVerifier(jdbc,rp,origin,"CEX 고객 인증");
     }
@@ -47,7 +48,7 @@ public class CustomerMfaService {
     public record Verified(String accessToken,String refreshToken){@Override public String toString(){return "Verified[토큰 생략]";}}
     public Options registrationOptions(long actor,UUID sid,String currentPassword){
         return operation(actor,()->{
-            var user=lock(actor,sid);requireFirstRegistration(user);
+            var user=lock(actor,sid);requireRegistration(user,sid);
             if(!passwords.verify(currentPassword,user.getPasswordHash()))throw denied();
             // 확인한 정확한 주소도 챌린지에 묶는다. 등록 도중 주소가 바뀌면 새로 시작해야 한다.
             return challenge(actor,sid,"REGISTER",verifier.creation(actor),recipients.addressMac(user.getEmail()));
@@ -55,11 +56,13 @@ public class CustomerMfaService {
     }
     public Enrolled register(long actor,UUID sid,UUID id,JsonNode publicKey){
         return operation(actor,()->{
-            var user=lock(actor,sid);requireFirstRegistration(user);
+            var user=lock(actor,sid);requireRegistration(user,sid);
             var stored=consume(actor,sid,id,"REGISTER");
             if(!recipients.addressMac(user.getEmail()).equals(stored.emailMac()))throw denied();
-            var key=verifier.register(stored.options(),publicKey);UUID event=UUID.randomUUID();
-            jdbc.update("INSERT INTO customer_mfa_enrollments(id,user_id,credential_fingerprint) VALUES(?,?,?)",event,actor,OperatorMfaService.sha256Hex(key.getCredentialId().toBase64UrlString()));
+            boolean first=!policy.required(actor);var key=verifier.register(stored.options(),publicKey);
+            String fingerprint=OperatorMfaService.sha256Hex(key.getCredentialId().toBase64UrlString());
+            UUID event=changes.append(actor,sid,CustomerMfaKeyChanges.Kind.ADDED,fingerprint);
+            if(first)jdbc.update("INSERT INTO customer_mfa_enrollments(id,user_id,credential_fingerprint) VALUES(?,?,?)",event,actor,fingerprint);
             // 등록 자체를 로그인 서명으로 간주하지 않는다. 모든 기존 세션을 회수하고 별도로 인증한다.
             tokens.revokeAllByUserId(actor,LocalDateTime.now());
             audit.record(actor,"CUSTOMER_MFA_REGISTER","customer-mfa:"+event,"SUCCESS","ALL_SESSIONS_REVOKED");
@@ -86,8 +89,13 @@ public class CustomerMfaService {
             return new Verified(jwt.generateAccessToken(actor,session.getSessionId()),raw);
         });
     }
-    private void requireFirstRegistration(User user){
-        if(policy.required(user.getId())||!verifier.keys(user.getId()).isEmpty()||!recipients.verified(user))throw denied();
+    private void requireRegistration(User user,UUID sid){
+        var keys=verifier.keys(user.getId());
+        if(keys.size()>=5||!recipients.verified(user))throw denied();
+        // 최초 등록에는 현재 비밀번호/확인 주소를, 예비 키에는 추가로 살아 있는 기존 키의 최근 서명을 요구한다.
+        if(policy.required(user.getId())){
+            if(!policy.fresh(user.getId(),tokens.findBySessionId(sid).orElseThrow()))throw denied();
+        }else if(!keys.isEmpty())throw denied();
     }
     private User lock(long actor,UUID sid){
         // 이 경로만 비밀번호 단계의 대기 세션을 받는다. 고객/운영 업무 서비스의 검증 수준 검사를 우회하지 않는다.

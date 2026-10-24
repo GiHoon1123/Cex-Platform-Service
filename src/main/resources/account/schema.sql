@@ -22,3 +22,14 @@ CREATE TABLE IF NOT EXISTS customer_mfa_challenges (
  CHECK((purpose='REGISTER' AND email_mac IS NOT NULL) OR (purpose='AUTHENTICATE' AND email_mac IS NULL))
 );
 CREATE INDEX IF NOT EXISTS customer_mfa_challenge_session ON customer_mfa_challenges(session_id);
+
+-- 공개키를 실제 폐기한 뒤에도 누가 어느 키를 추가/폐기했는지 원본 사실은 보존한다.
+CREATE TABLE IF NOT EXISTS customer_mfa_key_changes (
+ id uuid PRIMARY KEY,user_id bigint NOT NULL REFERENCES users(id),session_id uuid NOT NULL,
+ kind varchar(16) NOT NULL CHECK(kind IN ('ADDED','REVOKED')),
+ credential_fingerprint varchar(64) NOT NULL CHECK(credential_fingerprint ~ '^[0-9a-f]{64}$'),
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX IF NOT EXISTS customer_mfa_key_change_history ON customer_mfa_key_changes(user_id,created_at,id);
+DROP TRIGGER IF EXISTS customer_mfa_key_change_no_change ON customer_mfa_key_changes;
+CREATE TRIGGER customer_mfa_key_change_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON customer_mfa_key_changes FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

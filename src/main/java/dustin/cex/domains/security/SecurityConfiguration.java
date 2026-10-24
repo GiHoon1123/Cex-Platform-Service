@@ -127,6 +127,8 @@ public class SecurityConfiguration {
                 // 비밀번호 단계의 고객 대기 세션도 서명 검증은 할 수 있다. 역할·실제 등록 자격은 서비스가 확인한다.
                 .requestMatchers(HttpMethod.POST,"/api/auth/customer-mfa/register/options","/api/auth/customer-mfa/register",
                     "/api/auth/customer-mfa/authenticate/options","/api/auth/customer-mfa/authenticate").authenticated()
+                .requestMatchers(HttpMethod.GET,"/api/auth/customer-mfa/credentials").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.DELETE,"/api/auth/customer-mfa/credentials/*").access(audited(audit,sessions,"CUSTOMER"))
                 // 미검증 운영 세션도 보안키 등록·인증은 할 수 있지만 고객·운영 업무 권한은 없다.
                 .requestMatchers(HttpMethod.POST,"/api/auth/operator-mfa/register/options","/api/auth/operator-mfa/register",
                     "/api/auth/operator-mfa/authenticate/options","/api/auth/operator-mfa/authenticate").authenticated()

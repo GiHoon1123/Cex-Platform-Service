@@ -14,6 +14,10 @@ public class CustomerMfaPolicy {
         // 공개키를 모두 잃어도 등록 사실을 삭제해 비밀번호 인증으로 돌아가지 않는다.
         return jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_mfa_enrollments WHERE user_id=?)",Boolean.class,actor);
     }
+    public boolean fresh(long actor,RefreshToken session){
+        return session!=null&&session.hasVerifiedMfa()&&session.getMfaVerifiedAt().plusMinutes(5).isAfter(LocalDateTime.now())&&satisfied(actor,session);
+    }
+    // 이 메서드는 다중 인증 수준만 검사한다. 계정/세션의 소유·회수·기한은 호출자가 먼저 확인한다.
     public boolean satisfied(long actor,RefreshToken session){
         if(!required(actor))return true;
         if(session==null||session.getUserId()!=actor||!session.hasVerifiedMfa()
