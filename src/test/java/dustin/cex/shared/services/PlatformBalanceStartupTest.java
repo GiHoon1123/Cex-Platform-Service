@@ -1,13 +1,7 @@
 package dustin.cex.shared.services;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -64,10 +58,7 @@ class PlatformBalanceStartupTest {
                 102L, "SOL", BigDecimal.ZERO, new BigDecimal("2.75"));
 
         engineHttpClient = mock(EngineHttpClient.class);
-        // 기존 버그가 있으면 이 호출은 성공한다. 통신 실패 덕분에 중복 적립이
-        // 우연히 차단되는 테스트가 되지 않도록 성공 응답을 준비한다.
-        when(engineHttpClient.syncBalance(anyLong(), anyString(), any(BigDecimal.class)))
-                .thenReturn(true);
+
     }
 
     @AfterEach
@@ -83,7 +74,7 @@ class PlatformBalanceStartupTest {
 
             // DB 잔액이 그대로인 것만 검사하면 엔진 메모리만 늘어나는 버그를 놓친다.
             // 엔진 클라이언트에 요청 자체가 없었다는 조건을 함께 검증한다.
-            assertNoBalanceDeltaSent();
+            assertNoFinancialCommandSent();
             assertPersistedBalancesUnchanged();
         }
     }
@@ -96,7 +87,7 @@ class PlatformBalanceStartupTest {
                 publishReadyEvent(context);
             }
 
-            assertNoBalanceDeltaSent();
+            assertNoFinancialCommandSent();
             assertPersistedBalancesUnchanged();
         }
     }
@@ -112,7 +103,7 @@ class PlatformBalanceStartupTest {
             }
         }
 
-        assertNoBalanceDeltaSent();
+        assertNoFinancialCommandSent();
         assertPersistedBalancesUnchanged();
     }
 
@@ -132,12 +123,11 @@ class PlatformBalanceStartupTest {
                 new SpringApplication(), new String[0], context, Duration.ZERO));
     }
 
-    private void assertNoBalanceDeltaSent() {
-        // Spring은 등록한 클라이언트의 @PostConstruct도 호출한다.
-        // 객체 전체 상호작용이 아니라 금융 효과를 만드는 메서드가 호출되지
-        // 않았는지 검사해야 클라이언트 초기화와 실제 입금을 혼동하지 않는다.
-        verify(engineHttpClient, never()).syncBalance(
-                anyLong(), anyString(), any(BigDecimal.class));
+    private void assertNoFinancialCommandSent() {
+        // Spring의 생성 후 초기화만 허용한다. 현재/미래의 금융 명령 호출은 모두 거부한다.
+        // 삭제한 메서드 이름에 의존하지 않아도 시작 훅이 어떤 명령을 추가하는지 검출한다.
+        assertThat(org.mockito.Mockito.mockingDetails(engineHttpClient).getInvocations())
+                .allSatisfy(call -> assertThat(call.getMethod().getName()).isEqualTo("init"));
     }
 
     private void assertPersistedBalancesUnchanged() {
