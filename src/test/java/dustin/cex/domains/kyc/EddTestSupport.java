@@ -42,6 +42,7 @@ abstract class EddTestSupport {
     static final UUID APP=UUID.fromString("11111111-2222-3333-4444-555555555555"),WORKFLOW=UUID.fromString("66666666-7777-8888-9999-000000000000");
     static final String SECRET="isolated-edd-webhook-secret-at-least-32-bytes";
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r) {
+        r.add("customer-mail.dispatch-enabled",()->false);
         r.add("edd.evidence-key",()->"AwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         r.add("spring.datasource.url",()->System.getenv("CEX_TEST_DATABASE_URL"));r.add("spring.datasource.driver-class-name",()->"org.postgresql.Driver");
         r.add("spring.datasource.username",()->"root");r.add("spring.datasource.password",()->"1234");
