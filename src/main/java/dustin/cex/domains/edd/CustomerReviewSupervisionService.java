@@ -19,17 +19,19 @@ public class CustomerReviewSupervisionService {
     public static final String SEMANTICS="REFRESH_FROM_START_NOT_A_DURABLE_CHECKPOINT";
     public record Cursor(Instant receivedAt,UUID requestId) {}
     public record Member(long id,boolean available) {}
-    public record Item(UUID requestId,long userId,UUID exitId,Instant receivedAt,Instant latestViewRecordedAt,List<Member> members,boolean orphaned,CustomerReviewResponseTarget.Assessment responseTarget,UUID finalReviewId,Instant finalDecidedAt,Instant customerAcknowledgedAt) {
+    public record Item(UUID requestId,long userId,UUID exitId,Instant receivedAt,Instant latestViewRecordedAt,List<Member> members,boolean orphaned,CustomerReviewResponseTarget.Assessment responseTarget,UUID finalReviewId,Instant finalDecidedAt,Instant customerAcknowledgedAt,CustomerReviewUpdateTarget.Assessment updateTarget,CustomerReviewCompletionTarget.Assessment completionReview) {
         public Item {members=List.copyOf(members);}
-        public boolean requiresAttention(){return responseTarget.state()==CustomerReviewResponseTarget.State.OVERDUE||responseTarget.state()==CustomerReviewResponseTarget.State.TIME_REVIEW_REQUIRED||(finalReviewId!=null&&customerAcknowledgedAt==null)||(orphaned&&finalReviewId==null);}
+        public boolean requiresAttention(){return updateTarget.state()==CustomerReviewUpdateTarget.State.OVERDUE||updateTarget.state()==CustomerReviewUpdateTarget.State.TIME_REVIEW_REQUIRED||completionReview.state()==CustomerReviewCompletionTarget.State.OPEN_REVIEW_DUE||completionReview.state()==CustomerReviewCompletionTarget.State.TIME_REVIEW_REQUIRED||responseTarget.state()==CustomerReviewResponseTarget.State.OVERDUE||responseTarget.state()==CustomerReviewResponseTarget.State.TIME_REVIEW_REQUIRED||(finalReviewId!=null&&customerAcknowledgedAt==null)||(orphaned&&finalReviewId==null);}
     }
     public record Page(List<Item> items,Cursor next,int scanned,Instant observedAt,String semantics) {
         public Page {items=List.copyOf(items);}
     }
+    private final CustomerReviewUpdateTimeline updates;
     private final JdbcTemplate jdbc;private final UserRepository users;private final OperatorSessionPolicy sessions;
     private final RelationshipExitService exits;private final CustomerWorkCustody custody;private final AuditService audit;private final TransactionTemplate tx;
     public CustomerReviewSupervisionService(JdbcTemplate jdbc,UserRepository users,OperatorSessionPolicy sessions,
-            RelationshipExitService exits,AuditService audit,PlatformTransactionManager manager,CustomerWorkCustody custody) {
+            RelationshipExitService exits,AuditService audit,PlatformTransactionManager manager,CustomerWorkCustody custody,CustomerReviewUpdateTimeline updates) {
+        this.updates=updates;
         this.custody=custody;
         this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.exits=exits;this.audit=audit;tx=new TransactionTemplate(manager);
     }
@@ -58,7 +60,7 @@ public class CustomerReviewSupervisionService {
                     LEFT JOIN customer_review_final_acknowledgments a ON a.final_id=d.request_id
                     """,id,id);
                 var assessment=CustomerReviewResponseTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("first_reply")),instant(progress.get("decided_at")),Instant.now());
-                var item=new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available),assessment,(UUID)progress.get("request_id"),instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")));
+                var item=new Item(id,p.userId(),p.id(),((Timestamp)row.get("created_at")).toInstant(),viewed==null?null:viewed.toInstant(),members,members.stream().noneMatch(Member::available),assessment,(UUID)progress.get("request_id"),instant(progress.get("decided_at")),instant(progress.get("acknowledged_at")),updates.assess(id,((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()),CustomerReviewCompletionTarget.assess(((Timestamp)row.get("created_at")).toInstant(),instant(progress.get("decided_at")),Instant.now()));
                 if(!attentionOnly||item.requiresAttention())items.add(item);
             }
             var last=candidates.isEmpty()?null:candidates.getLast();Cursor next=candidates.size()==25?new Cursor(((Timestamp)last.get("created_at")).toInstant(),(UUID)last.get("id")):null;
