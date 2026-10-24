@@ -92,10 +92,10 @@ public class CustomerMfaService {
     private void requireRegistration(User user,UUID sid){
         var keys=verifier.keys(user.getId());
         if(keys.size()>=5||!recipients.verified(user))throw denied();
-        // 최초 등록에는 현재 비밀번호/확인 주소를, 예비 키에는 추가로 살아 있는 기존 키의 최근 서명을 요구한다.
+        // 최초 등록에는 이번 세션의 최근 이메일 확인/현재 비밀번호를, 예비 키에는 살아 있는 기존 키의 최근 서명을 요구한다.
         if(policy.required(user.getId())){
             if(!policy.fresh(user.getId(),tokens.findBySessionId(sid).orElseThrow()))throw denied();
-        }else if(!keys.isEmpty())throw denied();
+        }else if(!keys.isEmpty()||!recipients.recentlyVerified(user,sid))throw denied();
     }
     private User lock(long actor,UUID sid){
         // 이 경로만 비밀번호 단계의 대기 세션을 받는다. 고객/운영 업무 서비스의 검증 수준 검사를 우회하지 않는다.

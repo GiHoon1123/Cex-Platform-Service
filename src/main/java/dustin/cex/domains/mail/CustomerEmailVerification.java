@@ -23,7 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class CustomerEmailVerification {
     public record Receipt(UUID challengeId,Instant expiresAt) {}
-    public record Status(boolean verified) {}
+    public record Status(boolean verified,boolean recentlyVerified) {}
     private final CustomerMailRecipientPolicy recipients;
     private final JdbcTemplate jdbc;
     private final CddCrypto crypto;
@@ -40,7 +40,6 @@ public class CustomerEmailVerification {
         var old=jdbc.queryForList("SELECT id,expires_at,email_mac,key_id FROM customer_email_challenges WHERE user_id=? AND request_key=?",actor,key);
         // 응답 유실 재전송은 새 토큰이나 새 메일을 만들지 않는다. 주소가 달라졌다면 같은 키를 재사용할 수 없다.
         if(!old.isEmpty()){var row=old.getFirst();if(!address.equals(row.get("email_mac"))||!crypto.keyId().equals(row.get("key_id")))throw denied(HttpStatus.CONFLICT);return receipt(row);}
-        if(verified(user))throw denied(HttpStatus.CONFLICT);
         String rate=crypto.fingerprint("customer-email-rate-v1",user.getEmail().toLowerCase(Locale.ROOT));
         // 계정 잠금은 동일 고객을, 이 주소별 트랜잭션 잠금은 대소문자 별칭 계정의 발송 경쟁을 제한한다.
         // 해시 충돌은 불필요한 직렬화만 늘린다. 이 잠금은 Java 메일 접수에만 있고 Rust 코어와 무관하다.
@@ -62,12 +61,14 @@ public class CustomerEmailVerification {
         if(!MessageDigest.isEqual(digest(id,token).getBytes(StandardCharsets.US_ASCII),((String)row.get("token_hash")).getBytes(StandardCharsets.US_ASCII))){audit.denied(actor,"CUSTOMER_EMAIL_CHECK","email-check:"+id,"WRONG_TOKEN");throw denied(HttpStatus.FORBIDDEN);}
         if(!crypto.keyId().equals(row.get("key_id"))||!addressMac(user.getEmail()).equals(row.get("email_mac")))throw denied(HttpStatus.CONFLICT);
         // 소모된 토큰의 같은 요청은 기존 사실만 반환한다. 새 검증 효과나 다른 주소에 대한 권한은 만들지 않는다.
-        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_email_confirmations WHERE challenge_id=?)",Boolean.class,id))return new Status(true);
+        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM customer_email_confirmations WHERE challenge_id=?)",Boolean.class,id))return new Status(true,recipients.recentlyVerified(user,sid));
         if(!((Timestamp)row.get("expires_at")).toInstant().isAfter(Instant.now()))throw denied(HttpStatus.GONE);
         jdbc.update("INSERT INTO customer_email_confirmations(challenge_id,user_id,email_mac,key_id) VALUES(?,?,?,?)",id,actor,row.get("email_mac"),crypto.keyId());
-        audit.record(actor,"CUSTOMER_EMAIL_VERIFIED","email-check:"+id,"SUCCESS","CURRENT_ADDRESS_ONLY");return new Status(true);
+        // 실제 토큰을 확인한 현재 세션을 불변 사실로 남긴다. 소비된 토큰의 재호출로 이 결합을 갱신하지 않는다.
+        jdbc.update("INSERT INTO customer_email_confirmation_sessions(challenge_id,session_id) VALUES(?,?)",id,sid);
+        audit.record(actor,"CUSTOMER_EMAIL_VERIFIED","email-check:"+id,"SUCCESS","CURRENT_ADDRESS_ONLY");return new Status(true,recipients.recentlyVerified(user,sid));
     }));}
-    public Status status(long actor,UUID sid){return attempt(actor,()->tx.execute(t->{var user=sessions.require(actor,sid);var result=new Status(verified(user));audit.record(actor,"CUSTOMER_EMAIL_STATUS","customer:"+actor,"SUCCESS","OWN_STATUS");return result;}));}
+    public Status status(long actor,UUID sid){return attempt(actor,()->tx.execute(t->{var user=sessions.require(actor,sid);var result=new Status(verified(user),recipients.recentlyVerified(user,sid));audit.record(actor,"CUSTOMER_EMAIL_STATUS","customer:"+actor,"SUCCESS","OWN_STATUS");return result;}));}
     /** 현재 User의 주소와 완전히 같은 지문만 검증 사실로 인정한다. 주소 변경은 자동으로 미검증이 된다. */
     public boolean verified(User user){return recipients.verified(user);}
     public String addressMac(String email){return recipients.addressMac(email);}
