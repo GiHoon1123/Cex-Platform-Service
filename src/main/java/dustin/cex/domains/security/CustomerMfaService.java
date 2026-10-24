@@ -121,10 +121,11 @@ public class CustomerMfaService {
         if(rows.size()!=1)throw denied();jdbc.update("UPDATE customer_mfa_challenges SET consumed=true WHERE id=?",id);
         return new Stored((String)rows.getFirst().get("options"),(String)rows.getFirst().get("email_mac"));
     }
+    // 서버의 키 설정·저장 장애는 고객의 실패 횟수에 넣지 않고 원래 오류로 전파한다.
     private <T>T operation(long actor,java.util.function.Supplier<T> work){
         return tx.execute(status->{
             try{return work.get();}
-            catch(ResponseStatusException e){audit.denied(actor,"CUSTOMER_MFA","customer:"+actor,e.getStatusCode().value()==429?"RATE_LIMITED":"VERIFICATION_DENIED");throw e;}
+            catch(ResponseStatusException e){if(e.getStatusCode().is4xxClientError())audit.denied(actor,"CUSTOMER_MFA","customer:"+actor,e.getStatusCode().value()==429?"RATE_LIMITED":"VERIFICATION_DENIED");throw e;}
             catch(IllegalArgumentException|tools.jackson.core.JacksonException|com.webauthn4j.verifier.exception.VerificationException|com.webauthn4j.converter.exception.DataConversionException e){
                 // 실패는 사용자 잠금 안에서 별도 확정한다. DB/감사 장애를 인증 오류로 감추지 않는다.
                 audit.denied(actor,"CUSTOMER_MFA","customer:"+actor,"VERIFICATION_DENIED");throw denied();

@@ -18,4 +18,5 @@ public class CustomerAccountController {
 
     @GetMapping("/password-changes") public CustomerPasswordHistory.Page history(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestParam(required=false) java.time.Instant afterAt,@RequestParam(required=false) UUID afterId){return history.own(userId,sessionId,afterAt==null&&afterId==null?null:new CustomerPasswordHistory.Cursor(afterAt,afterId));}
 
+    @PostMapping("/password/options") public dustin.cex.domains.security.CustomerPasswordAuthorization.Options passwordOptions(@RequestAttribute long userId,@RequestAttribute UUID sessionId,@RequestBody CustomerPasswordChange.Input body){return passwords.options(userId,sessionId,body);}
 }
