@@ -9,7 +9,7 @@ CREATE INDEX IF NOT EXISTS customer_mail_candidate_order ON customer_mail_jobs(c
 CREATE TABLE IF NOT EXISTS customer_mail_payloads (job_id uuid PRIMARY KEY REFERENCES customer_mail_jobs(id),payload_cipher bytea NOT NULL);
 CREATE TABLE IF NOT EXISTS customer_mail_delivery (
  job_id uuid PRIMARY KEY REFERENCES customer_mail_jobs(id),status varchar(24) NOT NULL CHECK(status IN ('PENDING','SENDING','RETRY','SMTP_ACCEPTED','SUPPRESSED','EXHAUSTED')),
- attempts integer NOT NULL DEFAULT 0 CHECK(attempts BETWEEN 0 AND 5),lease_id uuid,lease_until timestamptz,
+ attempts integer NOT NULL DEFAULT 0 CHECK(attempts BETWEEN 0 AND 10),lease_id uuid,lease_until timestamptz,
  next_attempt_at timestamptz NOT NULL DEFAULT clock_timestamp(),last_reason varchar(32) NOT NULL DEFAULT 'QUEUED'
 );
 CREATE INDEX IF NOT EXISTS customer_mail_due ON customer_mail_delivery(next_attempt_at,job_id) WHERE status IN ('PENDING','RETRY','SENDING');

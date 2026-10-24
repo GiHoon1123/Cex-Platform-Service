@@ -14,6 +14,7 @@ DOCKER = shutil.which("docker") or "/usr/local/bin/docker"
 GROUPS = {
     "mail": ["*CustomerMailOutboxIntegrationTest", "*CustomerEmailVerificationIntegrationTest", "*CustomerSmtpTransportTest", "*CustomerMailOperationsIntegrationTest"],
     "notices": ["*CustomerServiceMailIntegrationTest"],
+    "redrive": ["*CustomerMailRetryIntegrationTest"],
 }
 result = {"groups": [], "exit": None}
 ARTIFACTS.mkdir(exist_ok=True)

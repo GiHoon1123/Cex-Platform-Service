@@ -42,11 +42,12 @@ public class CustomerMailOutbox {
      * 잠긴 다른 예약은 건너뛰므로 여러 출력 워커가 같은 예약을 동시에 소유하지 않는다.
      * 반환 직후 트랜잭션을 끝낸다. SMTP 대기 중에는 DB 잠금을 유지하지 않는다.
      * 임대 만료는 미발송 증명이 아니므로 재시도에 중복 발송 가능성이 남는다.
+     * 기본 예산은5회다. 독립 승인된 서비스 알림만 누적10회까지 허용하며 횟수를 초기화하지 않는다.
      */
     public Lease claim(){return tx.execute(t->{
-        crypto.requireConfigured();var rows=jdbc.queryForList("SELECT d.job_id,d.attempts FROM customer_mail_delivery d JOIN customer_mail_jobs j ON j.id=d.job_id WHERE d.next_attempt_at<=clock_timestamp() AND (d.status IN ('PENDING','RETRY') OR (d.status='SENDING' AND d.lease_until<clock_timestamp())) ORDER BY j.created_at,j.id LIMIT 1 FOR UPDATE OF d SKIP LOCKED");
+        crypto.requireConfigured();var rows=jdbc.queryForList("SELECT d.job_id,d.attempts,coalesce(g.max_attempts,5) attempt_limit FROM customer_mail_delivery d JOIN customer_mail_jobs j ON j.id=d.job_id LEFT JOIN customer_mail_retry_grants g ON g.job_id=d.job_id WHERE d.next_attempt_at<=clock_timestamp() AND (d.status IN ('PENDING','RETRY') OR (d.status='SENDING' AND d.lease_until<clock_timestamp())) ORDER BY j.created_at,j.id LIMIT 1 FOR UPDATE OF d SKIP LOCKED");
         if(rows.isEmpty())return null;var row=rows.getFirst();UUID id=(UUID)row.get("job_id");int attempt=((Number)row.get("attempts")).intValue();UUID lease=UUID.randomUUID();
-        if(attempt>=5){jdbc.update("UPDATE customer_mail_delivery SET status='EXHAUSTED',last_reason='LEASE_EXHAUSTED',lease_id=NULL,lease_until=NULL WHERE job_id=?",id);event(id,lease,attempt,"RESULT","EXHAUSTED");audit.record(null,"CUSTOMER_MAIL_EXHAUSTED","mail:"+id,"SUCCESS","LEASE_EXHAUSTED");return null;}
+        if(attempt>=((Number)row.get("attempt_limit")).intValue()){jdbc.update("UPDATE customer_mail_delivery SET status='EXHAUSTED',last_reason='LEASE_EXHAUSTED',lease_id=NULL,lease_until=NULL WHERE job_id=?",id);event(id,lease,attempt,"RESULT","EXHAUSTED");audit.record(null,"CUSTOMER_MAIL_EXHAUSTED","mail:"+id,"SUCCESS","LEASE_EXHAUSTED");return null;}
         jdbc.update("UPDATE customer_mail_delivery SET status='SENDING',attempts=attempts+1,lease_id=?,lease_until=clock_timestamp()+interval '60 seconds' WHERE job_id=?",lease,id);
         event(id,lease,attempt+1,"CLAIMED","CLAIMED");audit.record(null,"CUSTOMER_MAIL_CLAIMED","mail:"+id,"SUCCESS","LEASED");return new Lease(id,lease,attempt+1);
     });}
@@ -68,12 +69,12 @@ public class CustomerMailOutbox {
 
     /** 이전 워커의 늦은 응답은 관측 이력만 남기고 새 임대의 현재 상태를 덮어쓰지 않는다. */
     public boolean finish(Lease lease,String result){return tx.execute(t->{
-        var rows=jdbc.queryForList("SELECT status,lease_id,lease_until,attempts FROM customer_mail_delivery WHERE job_id=? FOR UPDATE",lease.id());if(rows.isEmpty())throw new IllegalStateException("메일 예약이 없습니다");
+        var rows=jdbc.queryForList("SELECT status,lease_id,lease_until,attempts,coalesce((SELECT max_attempts FROM customer_mail_retry_grants WHERE job_id=customer_mail_delivery.job_id),5) attempt_limit FROM customer_mail_delivery WHERE job_id=? FOR UPDATE",lease.id());if(rows.isEmpty())throw new IllegalStateException("메일 예약이 없습니다");
         if(jdbc.queryForObject("SELECT count(*) FROM customer_mail_attempts WHERE job_id=? AND lease_id=? AND phase='RESULT'",Long.class,lease.id(),lease.token())>0)return false;
         var row=rows.getFirst();boolean current=((Number)row.get("attempts")).intValue()==lease.attempt()&&"SENDING".equals(row.get("status"))&&lease.token().equals(row.get("lease_id"))&&((Timestamp)row.get("lease_until")).toInstant().isAfter(Instant.now());
         if(!current){event(lease.id(),lease.token(),lease.attempt(),"RESULT","STALE_RESULT");audit.record(null,"CUSTOMER_MAIL_STALE_RESULT","mail:"+lease.id(),"SUCCESS","OBSERVED_ONLY");return false;}
-        String status=switch(result){case "SMTP_ACCEPTED"->"SMTP_ACCEPTED";case "SUPPRESSED"->"SUPPRESSED";case "SMTP_UNKNOWN"->lease.attempt()>=5?"EXHAUSTED":"RETRY";default->throw new IllegalArgumentException("알 수 없는 메일 결과");};
-        jdbc.update("UPDATE customer_mail_delivery SET status=?,last_reason=?,next_attempt_at=clock_timestamp()+(? * interval '1 second'),lease_id=NULL,lease_until=NULL WHERE job_id=?",status,result,Math.min(300,30*(1<<Math.min(lease.attempt()-1,4))),lease.id());
+        String status=switch(result){case "SMTP_ACCEPTED"->"SMTP_ACCEPTED";case "SUPPRESSED"->"SUPPRESSED";case "SMTP_UNKNOWN"->lease.attempt()>=((Number)row.get("attempt_limit")).intValue()?"EXHAUSTED":"RETRY";default->throw new IllegalArgumentException("알 수 없는 메일 결과");};
+        jdbc.update("UPDATE customer_mail_delivery SET status=?,last_reason=?,next_attempt_at=clock_timestamp()+(? * interval '1 second'),lease_id=NULL,lease_until=NULL WHERE job_id=?",status,result,Math.min(300,30*(1<<Math.min((lease.attempt()-1)%5,4))),lease.id());
         event(lease.id(),lease.token(),lease.attempt(),"RESULT",result);audit.record(null,"CUSTOMER_MAIL_RESULT","mail:"+lease.id(),"SUCCESS",status+":"+result);return true;
     });}
     /** 금융/감사 이력은 유지하고 종료·만료한 수신 주소/토큰의 암호문만 제한된 묶음으로 삭제한다. */
