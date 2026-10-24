@@ -95,3 +95,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [036. 미결·만료 종료와 철회 요청 점검](decisions/036-exit-approval-supervision.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
 
 - [037. 고객 종료 개시 재검토 요청 접수와 감사 열람](decisions/037-customer-exit-review.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.
+
+- [038. 고객 재검토 요청의 원문 없는 전사 점검](decisions/038-customer-review-supervision.md): 구현·공식 자료·선택 비용·실제 코드와 테스트.

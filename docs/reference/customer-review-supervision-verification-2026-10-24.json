@@ -1,0 +1,380 @@
+{
+  "checked_date": "2026-10-24",
+  "cycle": 38,
+  "implementation_commits": [
+    "f6b4b292ac03659a755d4dc3242b798cef04dddb"
+  ],
+  "scope": "고객 재검토 요청의 원문 없는 전사 점검",
+  "junit": {
+    "tests": 79,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "report": {
+    "container": "cex-edd-9526c5b07c40",
+    "exit": 0,
+    "tests": {
+      "tests": 79,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "container_removed": true,
+    "suites": [
+      {
+        "class": "dustin.cex.domains.kyc.ExitSupervisionIntegrationTest",
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "unrelatedApproverSeesActiveMetadataWithoutPrivateJudgmentOrAuthority()",
+          "staleRevokedAndForeignSessionCannotRead()",
+          "emptyFilteredPageAdvancesAndLaterActiveExitIsNotLost()",
+          "oldMfaDoesNotMeanStaffIdentityOrRoleHasDisappeared()",
+          "incompleteNegativeAndFutureCursorsAreRejected()",
+          "pendingRejectedAndRescindedApprovalsAreNotActive()",
+          "newCustomerDeclarationAndDisabledCustomerDoNotHideActiveExit()",
+          "auditFailureReturnsNoMetadataAndRetryDoesNotChangeHold()",
+          "httpRoleBoundaryNoStoreAndIncompleteCursor()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "[5] how = \"identity\""
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerReviewSupervisionIntegrationTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "httpNoStoreRoleAndCursorBoundaries()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\"",
+          "twentySixRealReceiptsSpanTwoPagesWithoutLosingHistory()",
+          "successfulViewIsVisibleButDoesNotHideOrCompleteRequest()",
+          "staleRevokedAndForeignSessionsCannotRead()",
+          "auditFailureReturnsNoMetadata()",
+          "malformedCursorsAreRejected()",
+          "viewAuditFailureDoesNotPretendReasonWasProvided()",
+          "missingOriginalPeopleAreVisibleWithoutGrantingTakeover()",
+          "supervisorSeesUnviewedRequestButCannotReadReason()",
+          "withdrawalAndDisabledCustomerDoNotEraseOutstandingRequest()"
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.ExitApprovalSupervisionIntegrationTest",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "sameUuidInBothBusinessKindsIsNotCollapsed()",
+          "revokedAndForeignSessionsCannotRead()",
+          "auditFailureReturnsNoListOrFinancialEffect()",
+          "finalizedExitAndRescissionRequestsLeavePendingQueue()",
+          "sameTimestampPaginationScansEveryRequestExactlyOnce()",
+          "versionChangedRequesterAndCheckerAreNotReportedAsMatching()",
+          "rejectedDecisionAlsoLeavesQueueWithoutCreatingEffect()",
+          "missingCursorPartsFutureAndNegativeTimesAreRejected()",
+          "originalPendingDecisionIsVisibleWithoutPrivateFactsOrDecisionAuthority()",
+          "expiredUndecidedRequestRemainsVisibleAndNeverBecomesAnApproval()",
+          "staleStaffMfaDoesNotInvalidateBoundIdentityVersion()",
+          "httpBoundaryNoStoreAndMalformedKind()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"recovery\"",
+          "[4] how = \"role\""
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.edd.CustomerExitReviewSubmissionTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "normalizeMultilineAndPreserveMeaningWithoutPrintingReason()",
+          "exactUtf16LengthLimitIsEnforced()",
+          "[1] value = null",
+          "[2] value = \"\"",
+          "[3] value = \" \"",
+          "[4] value = \"안�쪽\"",
+          "[5] value = \"안‮쪽\""
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerExitReviewIntegrationTest",
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "dailyLimitAllowsSupplementaryRequestsAndDoesNotBlockSameKeyReplay()",
+          "httpCustomerOperatorAuditorAndAnonymousBoundaries()",
+          "onlyCurrentOriginalParticipantsCanReadReasonAndAssignedReceipts()",
+          "oldKeyIsNotRetargetedToLaterExit()",
+          "immutableRecordAndAuditContainNoReasonPlaintext()",
+          "existingAmbientTransactionCannotChangeSubmissionIsolation()",
+          "[1] how = \"disabled\"",
+          "[2] how = \"expired\"",
+          "[3] how = \"revoked\"",
+          "[4] how = \"foreign\"",
+          "responseLossReplayAfterWithdrawalKeepsOldReceiptWithoutNewApplication()",
+          "httpEndToEndReceiptListAndDesignatedReasonInspection()",
+          "receivedRequestDoesNotRemoveConfidentialReportingDuty()",
+          "changedIdentityAndStaleMfaCannotProvideCustomerReason()",
+          "simultaneousSameKeyCreatesExactlyOneReceipt()",
+          "noCurrentApprovedExitCannotAcceptNewRequest()",
+          "auditFailureRollsBackReceiptAndSameKeyRetries()",
+          "customerCannotReadAnotherCustomersReceipt()",
+          "ciphertextCopiedToAnotherRequestFailsContextAuthentication()",
+          "failedViewAuditDoesNotReturnPlaintextAndRetrySucceeds()",
+          "customerRequestAndInspectionPreserveExistingFinancialReservation()",
+          "sameKeyReturnsSameReceiptButChangedReasonConflicts()",
+          "customerReceivesOnlyReceiptAndNoFinancialOrOriginalDecisionChanges()",
+          "badPagesAndNullInputsAreRejectedWithoutCreatingRequests()"
+        ],
+        "failed_cases": []
+      }
+    ],
+    "actual_xml_totals": {
+      "tests": 79,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "new_dependencies": 0,
+  "new_process_tests": 0,
+  "current_code_excerpts": [
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java",
+      "first_line": 39,
+      "sha256": "183dd50a1c15c78bdde379565956b62b7025700f764563640246a5c5adcf58c0"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java",
+      "first_line": 46,
+      "sha256": "db34bb11bcf950cb4ffed7a4a471808dfb8032c6e119a01ba51fbec72606015d"
+    },
+    {
+      "source": "src/main/java/dustin/cex/domains/edd/CustomerReviewSupervisionService.java",
+      "first_line": 50,
+      "sha256": "0ef27641381bfa42adc2f2c3acdbfdb9e0fe0931383fd5af0f467f22635edbbf"
+    }
+  ],
+  "commands": [
+    {
+      "command": [
+        "python3",
+        "/tmp/verify-cycle38.py"
+      ],
+      "exit": 0,
+      "runner_sha256": "93350823841f5ca35f8d9d8fdd2c5a5a2b6b041c258e548e3fd9b4c585448c2c"
+    }
+  ],
+  "limits": [
+    "선택한 회귀 범위이며 전체 제품 테스트 수와 구분",
+    "실제 PG/보안키 암호 서명/감사/MVC, Didit 생성/엔진 HTTP/Kafka 등 외부 연계는 공통 대역",
+    "운영 배포/기존 DB 변환/개발 서버 재시작 없음, 봇 0명",
+    "법적 기한/기관 제출/인증/조직/실물키/운영 검증과 구분",
+    "엔진/프론트 변경 없음"
+  ],
+  "warnings": [
+    "기존 deprecated/unchecked 컴파일 경고",
+    "테스트 JVM 클래스 공유/도구 경고"
+  ],
+  "official_sources": [
+    {
+      "url": "https://docs.adyen.com/risk-management/case-management",
+      "read_date": "2026-10-24",
+      "sha256": "d80056464f67076465870f282620c1afe7c56b5a0b3641995285b0619edf5138",
+      "bytes": 167178,
+      "retrieved": true
+    },
+    {
+      "url": "https://docs.stripe.com/disputes/api",
+      "read_date": "2026-10-24",
+      "sha256": "dfa8ca6a153b9cea235bf3d96598ea066124ece3503a90b43d2fe06ce1b58cde",
+      "bytes": 608949,
+      "retrieved": true
+    },
+    {
+      "url": "https://www.postgresql.org/docs/16/queries-limit.html",
+      "read_date": "2026-10-24",
+      "sha256": "0422addcf1349b3698ebba2282a139518eb046b04bc5a41913807159d3d80452",
+      "bytes": 17301,
+      "retrieved": true
+    },
+    {
+      "url": "https://law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1022860887",
+      "read_date": "2026-10-24",
+      "sha256": "2e2163f064b379ed80a10a7dff0978339a7d8845fcf501bcd2c7e3d1b449dd97",
+      "bytes": 21566,
+      "retrieved": true
+    },
+    {
+      "url": "https://static.upbit.com/terms/private_data.html",
+      "read_date": "2026-10-24",
+      "sha256": "d59c313430d257bd06bd27f00ee8b85c6ef87f5c8889cdb94765ca6bb3a91acc",
+      "bytes": 77676,
+      "retrieved": true
+    },
+    {
+      "url": "https://privacy.bithumb.com/ko/faq/",
+      "read_date": "2026-10-24",
+      "sha256": "77fc253f7e4c606ee62beda789175a46b91cfd92c10785d4e84c19ab3c62ebc2",
+      "bytes": 7005,
+      "retrieved": true
+    },
+    {
+      "url": "https://trading.securities.miraeasset.com/hki/hki3062/n18.do",
+      "read_date": "2026-10-24",
+      "sha256": "498c28ecc0352ac7ead665a1252a7076fb21f7b2c47dce5fc1fbd7492c7a6255",
+      "bytes": 54234,
+      "retrieved": true
+    },
+    {
+      "url": "https://securities.miraeasset.com/mw/mki/mki3062/n10.do",
+      "read_date": "2026-10-24",
+      "sha256": "db2d3e77c9b5a1774d78a4544b318114d1d578646bad5d2982934d980be2f634",
+      "bytes": 37164,
+      "retrieved": true
+    },
+    {
+      "url": "https://law.go.kr/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1020399353",
+      "read_date": "2026-10-24",
+      "sha256": "cf1e8f4cdc9e7cf08c253f5b75b53229cfbdc65f3f1021fd281aec4c5a2583b1",
+      "bytes": 13442,
+      "retrieved": true
+    },
+    {
+      "url": "https://developer.zendesk.com/api-reference/ticketing/tickets/ticket_comments/",
+      "read_date": "2026-10-24",
+      "retrieved": true,
+      "sha256": "5328b7cb4e46edbd1c6ede7008f84993b67d7e5c90d5afe3c67b483603b8f233",
+      "bytes": 1462593
+    },
+    {
+      "url": "https://developer.zendesk.com/api-reference/ticketing/tickets/ticket_audits/",
+      "read_date": "2026-10-24",
+      "retrieved": true,
+      "sha256": "863d0205a1bb64e433c11ba946a488812549048fc44121170df0ddf5914247a3",
+      "bytes": 1016046
+    }
+  ],
+  "official_source_limits": [
+    "삼성증권 민원 안내 본문 HTTP 502로 미확인",
+    "국내 법률/자체 정책/외국 제품 참고를 구분, 정확한 법정 기한/기관 절차/인원 수를 이 자료로 추정하지 않음"
+  ],
+  "intermediate_failure": {
+    "container": "cex-edd-814b92731784",
+    "exit": 1,
+    "container_removed": true,
+    "suites": [
+      {
+        "class": "dustin.cex.domains.kyc.ExitSupervisionIntegrationTest",
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "initializationError"
+        ],
+        "failed_cases": [
+          {
+            "name": "initializationError",
+            "message": "java.lang.IllegalStateException: ApplicationContext failure threshold (1) exceeded: skipping repeated attempt to load context for [WebMergedContextConfiguration@18a7c1f6 testClass = dustin.cex.domains.kyc.ExitSupervisionIntegrationTest, locations = [], classes = [dustin.cex.CexApplication], contextInitializerClasses = [], activeProfiles = [\"test\"], propertySourceDescriptors = [], propertySourceProperties = [\"org.springframework.boot.test.context.SpringBootTestContextBootstrapper=true\", \"server.port=0\"], contextCustomizers = [org.springframework.boot.webmvc.test.autoconfigure.WebDriverContextCustomizer@5bb51241, org.springframework.boot.web.server.context.SpringBootTestRandomPortContextCustomizer@74dbb1ee, org.springframework.boot.test.autoconfigure.OnFailureConditionReportContextCustomizerFactory$OnFailureConditionReportContextCustomizer@2caa5d7c, [ImportsContextCustomizer@446833f7 key = [org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration, org.springframework.boot.security.test.autoconfigure.webmvc.SecurityMockMvcAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcWebDriverAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcWebClientAutoConfiguration, org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcAutoConfiguration, org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration, org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration]], org.springframework.boot.test.context.PropertyMappingContextCustomizer@2d298995, org.springframework.boot.test.context.filter.ExcludeFilterContextCustomizer@a518813, org.springframework.boot.test.json.DuplicateJsonObjectContextCustomizerFactory$DuplicateJsonObjectContextCustomizer@1d75e7af, org.springframework.test.context.bean.override.BeanOverrideContextCustomizer@b1aea4aa, org.springframework.test.context.support.DynamicPropertiesContextCustomizer@3ffc7bac, org.springframework.boot.test.context.SpringBootTestAnnotation@bda1317c], resourceBasePath = \"src/main/webapp\", contextLoader = org.springframework.boot.test.context.SpringBootContextLoader, parent = null]"
+          }
+        ]
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerReviewSupervisionIntegrationTest",
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "initializationError"
+        ],
+        "failed_cases": [
+          {
+            "name": "initializationError",
+            "message": "java.lang.IllegalStateException: ApplicationContext failure threshold (1) exceeded: skipping repeated attempt to load context for [WebMergedContextConfiguration@5bb34437 testClass = dustin.cex.domains.kyc.CustomerReviewSupervisionIntegrationTest, locations = [], classes = [dustin.cex.CexApplication], contextInitializerClasses = [], activeProfiles = [\"test\"], propertySourceDescriptors = [], propertySourceProperties = [\"org.springframework.boot.test.context.SpringBootTestContextBootstrapper=true\", \"server.port=0\"], contextCustomizers = [org.springframework.boot.webmvc.test.autoconfigure.WebDriverContextCustomizer@5bb51241, org.springframework.boot.web.server.context.SpringBootTestRandomPortContextCustomizer@74dbb1ee, org.springframework.boot.test.autoconfigure.OnFailureConditionReportContextCustomizerFactory$OnFailureConditionReportContextCustomizer@2caa5d7c, [ImportsContextCustomizer@eebbe46 key = [org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration, org.springframework.boot.security.test.autoconfigure.webmvc.SecurityMockMvcAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcWebDriverAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcWebClientAutoConfiguration, org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcAutoConfiguration, org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration, org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration]], org.springframework.boot.test.context.PropertyMappingContextCustomizer@2d298995, org.springframework.boot.test.context.filter.ExcludeFilterContextCustomizer@a518813, org.springframework.boot.test.json.DuplicateJsonObjectContextCustomizerFactory$DuplicateJsonObjectContextCustomizer@1d75e7af, org.springframework.test.context.bean.override.BeanOverrideContextCustomizer@b1aea4aa, org.springframework.test.context.support.DynamicPropertiesContextCustomizer@3ffc7bac, org.springframework.boot.test.context.SpringBootTestAnnotation@bda1317c], resourceBasePath = \"src/main/webapp\", contextLoader = org.springframework.boot.test.context.SpringBootContextLoader, parent = null]"
+          }
+        ]
+      },
+      {
+        "class": "dustin.cex.domains.kyc.ExitApprovalSupervisionIntegrationTest",
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "initializationError"
+        ],
+        "failed_cases": [
+          {
+            "name": "initializationError",
+            "message": "java.lang.IllegalStateException: ApplicationContext failure threshold (1) exceeded: skipping repeated attempt to load context for [WebMergedContextConfiguration@30511454 testClass = dustin.cex.domains.kyc.ExitApprovalSupervisionIntegrationTest, locations = [], classes = [dustin.cex.CexApplication], contextInitializerClasses = [], activeProfiles = [\"test\"], propertySourceDescriptors = [], propertySourceProperties = [\"org.springframework.boot.test.context.SpringBootTestContextBootstrapper=true\", \"server.port=0\"], contextCustomizers = [org.springframework.boot.webmvc.test.autoconfigure.WebDriverContextCustomizer@5bb51241, org.springframework.boot.web.server.context.SpringBootTestRandomPortContextCustomizer@74dbb1ee, org.springframework.boot.test.autoconfigure.OnFailureConditionReportContextCustomizerFactory$OnFailureConditionReportContextCustomizer@2caa5d7c, [ImportsContextCustomizer@6f889214 key = [org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration, org.springframework.boot.security.test.autoconfigure.webmvc.SecurityMockMvcAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcWebDriverAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcWebClientAutoConfiguration, org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcAutoConfiguration, org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration, org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration]], org.springframework.boot.test.context.PropertyMappingContextCustomizer@2d298995, org.springframework.boot.test.context.filter.ExcludeFilterContextCustomizer@a518813, org.springframework.boot.test.json.DuplicateJsonObjectContextCustomizerFactory$DuplicateJsonObjectContextCustomizer@1d75e7af, org.springframework.test.context.bean.override.BeanOverrideContextCustomizer@b1aea4aa, org.springframework.test.context.support.DynamicPropertiesContextCustomizer@3ffc7bac, org.springframework.boot.test.context.SpringBootTestAnnotation@bda1317c], resourceBasePath = \"src/main/webapp\", contextLoader = org.springframework.boot.test.context.SpringBootContextLoader, parent = null]"
+          }
+        ]
+      },
+      {
+        "class": "dustin.cex.domains.edd.CustomerExitReviewSubmissionTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "normalizeMultilineAndPreserveMeaningWithoutPrintingReason()",
+          "exactUtf16LengthLimitIsEnforced()",
+          "[1] value = null",
+          "[2] value = \"\"",
+          "[3] value = \" \"",
+          "[4] value = \"안�쪽\"",
+          "[5] value = \"안‮쪽\""
+        ],
+        "failed_cases": []
+      },
+      {
+        "class": "dustin.cex.domains.kyc.CustomerExitReviewIntegrationTest",
+        "tests": 1,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "initializationError"
+        ],
+        "failed_cases": [
+          {
+            "name": "initializationError",
+            "message": "java.lang.IllegalStateException: Failed to load ApplicationContext for [WebMergedContextConfiguration@733fc5af testClass = dustin.cex.domains.kyc.CustomerExitReviewIntegrationTest, locations = [], classes = [dustin.cex.CexApplication], contextInitializerClasses = [], activeProfiles = [\"test\"], propertySourceDescriptors = [], propertySourceProperties = [\"org.springframework.boot.test.context.SpringBootTestContextBootstrapper=true\", \"server.port=0\"], contextCustomizers = [org.springframework.boot.webmvc.test.autoconfigure.WebDriverContextCustomizer@5bb51241, org.springframework.boot.web.server.context.SpringBootTestRandomPortContextCustomizer@74dbb1ee, org.springframework.boot.test.autoconfigure.OnFailureConditionReportContextCustomizerFactory$OnFailureConditionReportContextCustomizer@2caa5d7c, [ImportsContextCustomizer@513f965e key = [org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration, org.springframework.boot.security.test.autoconfigure.webmvc.SecurityMockMvcAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcWebDriverAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcWebClientAutoConfiguration, org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration, org.springframework.boot.webmvc.test.autoconfigure.MockMvcAutoConfiguration, org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration, org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration]], org.springframework.boot.test.context.PropertyMappingContextCustomizer@2d298995, org.springframework.boot.test.context.filter.ExcludeFilterContextCustomizer@a518813, org.springframework.boot.test.json.DuplicateJsonObjectContextCustomizerFactory$DuplicateJsonObjectContextCustomizer@1d75e7af, org.springframework.test.context.bean.override.BeanOverrideContextCustomizer@b1aea4aa, org.springframework.test.context.support.DynamicPropertiesContextCustomizer@3ffc7bac, org.springframework.boot.test.context.SpringBootTestAnnotation@bda1317c], resourceBasePath = \"src/main/webapp\", contextLoader = org.springframework.boot.test.context.SpringBootContextLoader, parent = null]"
+          }
+        ]
+      }
+    ],
+    "actual_xml_totals": {
+      "tests": 11,
+      "failures": 4,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "failure_resolution": "새 감사 인덱스를 KYC 쪽 스키마에서 준비해 감사 표가 생기기 전 애플리케이션 초기화가 실패했다. 감사 스키마의 표 생성 뒤로 인덱스를 옮겨 순서를 바로잡고 새 격리 DB에서 79개를 통과했다. 첫 실행의 초기화 실패 4개/순수 입력 7개와 실제 업무 검증을 구분한다."
+}
