@@ -1,0 +1,118 @@
+{
+  "cycle": 73,
+  "implementation_commit": "8591f38da8ab0937275b4a1c18467445ebf72d8d",
+  "verification": {
+    "bitcoin": {
+      "network": "regtest",
+      "exit": 0,
+      "node_stopped": true,
+      "node_version": 310100,
+      "tests": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "watchOnlyWalletDerivesDistinctNativeAddresses()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "wrongNetworkAndPrivateKeyWalletAreRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreIntegrationTest",
+          "name": "nodeCredentialsCannotSignExportImportOrTransfer()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "overflowCancelsAndLateSignalsCannotTurnFailureIntoSuccess()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "exactLimitIsAccepted()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.LimitedResponseBodyTest",
+          "name": "invalidLimitIsRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "validResponsePreservesNetworkAndScript()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "readinessFailureDoesNotAllocate()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "nodeCallsCannotHoldDatabaseTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "mismatchedReplyErrorAndUnownedScriptFailClosed()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "emptyConfigurationDisablesCallsAndPartialOrRemotePlaintextConfigurationFails()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "fullBodyHasDeadline()"
+        },
+        {
+          "class": "dustin.cex.domains.bitcoin.BitcoinCoreClientTest",
+          "name": "oversizedAndRedirectResponsesAreNotFollowedOrRetried()"
+        }
+      ]
+    },
+    "kyc": {
+      "container": "cex-kyc-6464dfb23b6e",
+      "exit": 0,
+      "tests": {
+        "tests": 150,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "download": {
+      "version": "Bitcoin Core daemon version v31.1.0 bitcoind",
+      "archive": "bitcoin-31.1-arm64-apple-darwin.tar.gz",
+      "source": "https://bitcoincore.org/bin/bitcoin-core-31.1/bitcoin-31.1-arm64-apple-darwin.tar.gz",
+      "sha256_expected": "16a097c09fbd7eb78b240ce1dae123663ea2e5e377cfd6a951e71e227e23cf2f",
+      "sha256_actual": "16a097c09fbd7eb78b240ce1dae123663ea2e5e377cfd6a951e71e227e23cf2f",
+      "signature_verification_exit": 0,
+      "valid_primary_fingerprints": [
+        "0AD83877C1F0CD1EE9BD660AD7CC770B81FD22A8",
+        "152812300785C96444D3334D17565732E08E5E41",
+        "5B286407E1EA6FE01CF9AF48BF131C2D0536F8AC",
+        "67AA5B46E7AF78053167FE343B8F814A784218F8",
+        "9EDAFF80E080659604F4A76B2EBB056FD847F8A7",
+        "A8FC55F3B04BA3146F3492E79303B33A305224CB",
+        "D1DBF2C4B96F2DEBF4C16654410108112E7EA81F",
+        "E61773CD6E01040E2F1BD78CE7E2984B6289C93A",
+        "E777299FC265DD04793070EB944D35F9AC3DB76A",
+        "ED9BDF7AD6A55E232E84524257FF9BDBCC301009",
+        "F4FC70F07310028424EFC20A8E4256593F177720"
+      ],
+      "valid_signatures": 11,
+      "key_source": "https://api.github.com/repos/bitcoin-core/guix.sigs/contents/builder-keys",
+      "binaries": {
+        "bitcoind": "d55c12b0b02001cc16b1481c4075361dcba193100a8143924abda911174c09ec",
+        "bitcoin-cli": "65bfd6d34406604fd149e3ef3875fdcf9d322e9602f33612d44d6fa3c07eee13"
+      },
+      "gpg_version": "gpg (GnuPG) 2.5.24"
+    },
+    "unique_tests": 163,
+    "product_jars": "bootJar and operatorAdminJar passed",
+    "limits": [
+      "No customer deposit address API or durable ownership binding yet",
+      "No deposit detection, credit, withdrawal, or mainnet operation",
+      "No new dependency or vulnerability audit in this cycle"
+    ]
+  }
+}
