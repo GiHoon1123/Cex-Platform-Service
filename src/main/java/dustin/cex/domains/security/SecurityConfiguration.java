@@ -36,6 +36,10 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/kyc/webhook").permitAll()
                 // 개인정보 검토는 지정된 POST 한 경로만 운영자·승인자에게 연다. 감사자의 최소 이력 조회 권한과 구분한다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/origin-transfer/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                // 감사자는 최소 이력만 읽고, 원본·메모 열람과 담당자 의견 작성은 역할별 정확한 경로로 구분한다.
+                .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/*/monitoring-assessments","/api/admin/deposits/BTC/*/monitoring-assessments/*/observations").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-assessments/*/inspect","/api/admin/deposits/BTC/*/monitoring-assessments/*/observations/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-assessments/*/observations").access(audited(audit,sessions,"OPERATOR"))
                 // 탐지 원본의 명시적 처리 요청도 현재 운영 업무다. 감사자에게 작업 생성 권한을 부여하지 않는다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))

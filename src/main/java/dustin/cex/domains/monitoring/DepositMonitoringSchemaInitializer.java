@@ -13,5 +13,5 @@ import org.springframework.stereotype.Component;
 public class DepositMonitoringSchemaInitializer {
     private final JdbcTemplate jdbc;
     public DepositMonitoringSchemaInitializer(JdbcTemplate jdbc){this.jdbc=jdbc;}
-    @PostConstruct void initialize()throws Exception{jdbc.execute(new ClassPathResource("monitoring/deposit-schema.sql").getContentAsString(StandardCharsets.UTF_8));}
+    @PostConstruct void initialize()throws Exception{jdbc.execute(new ClassPathResource("monitoring/deposit-schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("monitoring/investigation-schema.sql").getContentAsString(StandardCharsets.UTF_8));}
 }

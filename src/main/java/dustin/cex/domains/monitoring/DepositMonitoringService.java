@@ -55,13 +55,7 @@ public class DepositMonitoringService {
         long observed=((Number)jobs.getFirst().get("observed_cursor")).longValue();
         var anchor=jdbc.queryForMap("SELECT input_cursor,recognized_at FROM deposit_monitoring_inputs WHERE user_id=? AND input_cursor>? ORDER BY input_cursor LIMIT 1",claim.user(),observed);
         long cursor=((Number)anchor.get("input_cursor")).longValue();Instant reference=((Timestamp)anchor.get("recognized_at")).toInstant();
-        // 최근 입력부터 상한+1개를 읽는다. 시계가 뒤로 움직인 과거 입력도 읽어 불완전으로 판정하며 몰래 제외하지 않는다.
-        var rows=jdbc.queryForList("""
-            SELECT * FROM deposit_monitoring_inputs WHERE user_id=? AND input_cursor<=? AND recognized_at>=?
-             ORDER BY input_cursor DESC LIMIT 1001
-            """,claim.user(),cursor,Timestamp.from(reference.minusSeconds(86400)));
-        var inputs=new ArrayList<SmallDepositMonitoringPolicy.Input>();
-        for(var row:rows)inputs.add(input(row));Collections.reverse(inputs);
+        var inputs=DepositMonitoringInputs.read(jdbc,claim.user(),cursor,reference);
         String document=json.writeValueAsString(inputs),hash=sha(document);var result=SmallDepositMonitoringPolicy.assess(reference,inputs);
         var old=jdbc.queryForList("SELECT id,source_hash FROM deposit_monitoring_assessments WHERE user_id=? AND policy_id=? AND input_cursor=?",claim.user(),SmallDepositMonitoringPolicy.POLICY,cursor);
         UUID id;
@@ -82,9 +76,6 @@ public class DepositMonitoringService {
         }
         jdbc.update("UPDATE deposit_monitoring_jobs SET observed_cursor=?,target_cursor=greatest(target_cursor,?),lease_id=NULL,lease_until=NULL,updated_at=clock_timestamp() WHERE user_id=? AND lease_id=?",cursor,cursor,claim.user(),claim.lease());
         return Optional.of(new Assessment(id,claim.user(),cursor,reference,result,hash));
-    }
-    private static SmallDepositMonitoringPolicy.Input input(Map<String,Object> row){
-        return new SmallDepositMonitoringPolicy.Input(((Number)row.get("input_cursor")).longValue(),(String)row.get("operation_key"),(UUID)row.get("receipt_id"),(String)row.get("asset"),(String)row.get("network"),(String)row.get("txid"),((Timestamp)row.get("recognized_at")).toInstant(),(String)row.get("currency"),(String)row.get("valuation_policy"),(String)row.get("valuation_status"),row.get("price_attempt_id")==null?null:((Number)row.get("price_attempt_id")).longValue(),(java.math.BigDecimal)row.get("krw_value"));
     }
     private static String sha(String value){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));}catch(NoSuchAlgorithmException impossible){throw new IllegalStateException("모니터링 지문을 만들 수 없습니다");}}
 }
