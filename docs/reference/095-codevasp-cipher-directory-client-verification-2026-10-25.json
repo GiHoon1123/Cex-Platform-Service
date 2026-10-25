@@ -1,0 +1,116 @@
+{
+  "cycle": 95,
+  "implementation_commit": "cf4273ac326065fe4bbb24a0d0950db324882181",
+  "verification": {
+    "codevasp": {
+      "tests": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspSettingsTest",
+          "name": "publicKeyUsesCanonicalThirtyTwoByteBase64()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspSettingsTest",
+          "name": "partialUnsafeOrUnboundedConfigurationIsRejectedWithoutEcho()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspSettingsTest",
+          "name": "explicitHttpsAndPrivateComposeCipherAreAccepted()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspSettingsTest",
+          "name": "absentConfigurationIsDisabledAndHasNoDefaultLiveAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "absentSettingsNeverCallAnyDefaultProvider()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "alteredButWellFormedSignatureIsRejectedByGateway()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "gatewayErrorsHaveNoApplicationRetryOrRawBodyDisclosure()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "malformedDirectoryNeverBecomesPartialOrEmptySuccess()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "unavailableCounterpartyAndExpiredKeyArePreservedWithoutApprovingThem()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "redirectsAreNotFollowedAcrossSigningAndGatewayBoundaries()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "documentedUtcExpiryWithoutOffsetDoesNotUseJvmLocalTimezone()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "cipherAndGatewayBodiesAreBounded()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "emptySuccessfulDirectoryIsDifferentFromFailedCall()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "officialCipherAndGatewayContractPreservesRealSignatureAndTypedDirectory()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "ambientDatabaseTransactionCannotPerformProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "eachReadObtainsNewSigningMaterialInsteadOfReusingNonce()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "invalidCipherMaterialNeverReachesGateway()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "stalledCipherBodyHasAbsoluteDeadline()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "stalledGatewayBodyHasAbsoluteDeadline()"
+        }
+      ]
+    },
+    "platform_security": {
+      "container": "cex-security-a87c30d8d1dc",
+      "exit": 0,
+      "tests": {
+        "tests": 41,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "combined": {
+      "codevasp": 19,
+      "security": 41,
+      "executions": 60,
+      "unique": 60
+    },
+    "new_tests": 19,
+    "limits": [
+      "owned HTTP doubles and temporary JDK keys only; no official Cipher image or vendor account",
+      "directory membership/health is not licensing, origin verification or financial authorization",
+      "no customer PII encryption/transfer proof, worker/API activation or ledger mutation",
+      "no new dependency/Rust/BTC full regression/mainnet/performance/OSV run"
+    ]
+  }
+}
