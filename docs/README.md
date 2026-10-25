@@ -253,3 +253,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [118. 거래 탐지 원본과 암호화된 담당자 조사 의견 연결하기](decisions/118-verified-monitoring-evidence-and-analyst-observations.md)
 
 - [119. 준비된 입금 탐지 입력 사이의 불필요한 대기 없애기](decisions/119-drain-ready-deposit-monitoring-inputs.md)
+
+- [120. 반복 거래 탐지 신호를 고객별 조사 사건에 연결하기](decisions/120-group-monitoring-signals-into-customer-cases.md)

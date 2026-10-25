@@ -6,6 +6,8 @@
 
 후속 [118 원본 검증/담당자 의견](118-verified-monitoring-evidence-and-analyst-observations.md)은 당시 입력을 검증해 열람하고 암호화 의견·접근 증적·필수 감사를 연결한다. 사건 종결·금융 허가와 구분한다.
 
+후속 [120 고객별 조사 사건](120-group-monitoring-signals-into-customer-cases.md)은 새 검토 신호를 같은 고객의 사건에 묶고 기존 원본/의견으로 연결한다. 사건/연결 누락·감사 누락은 새 신호 확정을 막는다. 종결·금융 허가는 미완료다.
+
 ## 문제와 기존 동작
 
 110은 입금 인식 당시의 원화 참고값을 보존했고 115는 인가된 담당자가 이전거래 자료를 검토하도록 했다. 하지만 여러 입금 사이의 반복 패턴을 계산하는 거래 기반 탐지는 없었다. 고객 확인 조사 기능이 있다는 사실을 거래 모니터링 완료로 설명할 수 없었다.
@@ -62,7 +64,7 @@
 
 MANDATORY는 호출자의 실제 트랜잭션이 있어야 한다는 의미다. TypeScript 함수 호출 자체는 이런 원자성을 만들지 않는다. 여기서는 Spring 프록시와 같은 DB 트랜잭션이 계약을 적용한다. greatest는 새 알림이 기존 처리 목표·임대를 뒤로 돌리지 않도록 한다.
 
-출처: [DepositMonitoringService.java](../../src/main/java/dustin/cex/domains/monitoring/DepositMonitoringService.java#L35), 현재 소스의 부분 발췌.
+출처: [DepositMonitoringService.java](../../src/main/java/dustin/cex/domains/monitoring/DepositMonitoringService.java#L36), 현재 소스의 부분 발췌.
 
 ```java
         Claim claim=tx.execute(t->claim());if(claim==null)return Optional.empty();

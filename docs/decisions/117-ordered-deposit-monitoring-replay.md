@@ -31,7 +31,7 @@
 
 ## 구현과 관련 코드·문법
 
-출처: [DepositMonitoringService.java](../../src/main/java/dustin/cex/domains/monitoring/DepositMonitoringService.java#L55), 현재 소스의 부분 발췌.
+출처: [DepositMonitoringService.java](../../src/main/java/dustin/cex/domains/monitoring/DepositMonitoringService.java#L56), 현재 소스의 부분 발췌.
 
 ```java
         long observed=((Number)jobs.getFirst().get("observed_cursor")).longValue();
