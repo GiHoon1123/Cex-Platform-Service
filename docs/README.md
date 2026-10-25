@@ -191,3 +191,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [086. 수탁 지갑의 자산 사용을 새 고객 입금과 구분할 근거 남기기](decisions/086-bitcoin-wallet-debit-provenance.md)
 
 - [087. 확정 원장의 직접·연쇄 전체 비우기 차단하기](decisions/087-block-ledger-truncate.md)
+
+- [088. 검증된 고객 입금을 보류 자산 원장에 한 번만 반입하기](decisions/088-bitcoin-pending-asset-ledger.md)

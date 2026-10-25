@@ -28,7 +28,7 @@ PostgreSQL16 [TRUNCATE 문서](https://www.postgresql.org/docs/16/sql-truncate.h
 ## 구현과 관련 코드
 
 
-출처: [schema.sql](../../src/main/resources/ledger/schema.sql#L27), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/ledger/schema.sql#L35), 현재 소스의 부분 발췌.
 
 ```sql
 -- 전체 비우기는 행 삭제 트리거를 실행하지 않는다. 확정 원본 두 표의 문장 단위 비우기도 별도로 차단한다.

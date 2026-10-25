@@ -229,3 +229,5 @@ macOS·Java 21·Rust 1.91·PostgreSQL 16·Kafka 3.9.1에서 실행 소유 컨테
 - [대사 근거 보강 `1e15e62`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/1e15e62740d33b98bcf8c63a8f62ead199517d71)
 
 087 현행 보강: [확정 원장의 전체 비우기 차단](087-block-ledger-truncate.md)에서 행 수정/삭제 외에 직접 TRUNCATE/CASCADE를 차단했다. 당시011의 실행 결과는 그대로 두며 현재 최초 반입 없는 시험은 원장을 지우지 않고 처음부터 반입을 생략한다.
+
+088 현행 확장: [입금 보류 원장](088-bitcoin-pending-asset-ledger.md)에서 고객 PENDING/시스템 CUSTODY 계정을 추가했다. 원장 항목은 확정 원본이며 거래 가능한 AVAILABLE과 구분한다. 기존011의 주문 대사는 AVAILABLE/LOCKED 범위이고 수탁/입금 대사 전체 완료를 뜻하지 않는다.
