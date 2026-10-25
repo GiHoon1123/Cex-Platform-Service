@@ -190,4 +190,57 @@ class CodeVaspDepositSearchIntegrationTest {
     @Test void provenNonSendCanRetrySameRequestAfterIntervalWithoutPollingUnknownIdentity(){
         var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",61,"SUBMIT_NOT_SENT",31,null);var execution=execution(audit);var result=execution.refresh(search.id());assertEquals("SUBMIT",result.phase());assertEquals("SUBMIT_ACKNOWLEDGED",result.status());verify(transactions).submit(search.request());verify(transactions,never()).result(any());
     }
+    CodeVaspDepositSearchProcessing processing(){return new CodeVaspDepositSearchProcessing(directory,execution(audit),jdbc);}
+    @Test void automaticProcessingUsesReservedIdentityAndSkipsImmediateSecondCall(){
+        var search=searches.reserve(receipt.id());var processing=processing();var first=processing.processNext().orElseThrow();assertEquals(search.id(),first.searchId());assertEquals("SUBMIT_ACKNOWLEDGED",first.status());assertTrue(processing.processNext().isEmpty());verify(transactions,times(1)).submit(search.request());
+    }
+    @Test void automaticOldUnknownSubmissionCanPollWhileDirectoryRefreshHasFailed(){
+        var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",181,null,0,null);doThrow(new IllegalStateException("격리 목록 장애")).when(client).read();directory.refresh();when(transactions.result(search.id())).thenReturn(found(search.id()));
+        var result=processing().processNext().orElseThrow();assertEquals("FOUND",result.status());assertEquals("POLL",result.phase());verify(transactions,never()).submit(any());
+    }
+    @Test void automaticProvenNonSendWaitsForFreshDirectoryBeforeSubmittingAgain(){
+        var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",61,"SUBMIT_NOT_SENT",31,null);doThrow(new IllegalStateException("격리 목록 장애")).when(client).read();directory.refresh();var processing=processing();assertEquals(503,assertThrows(ResponseStatusException.class,processing::processNext).getStatusCode().value());verifyNoInteractions(transactions);
+        doAnswer(i->new CodeVaspDirectoryClient.Directory(Instant.now(),Instant.now(),List.of())).when(client).read();directory.refresh();assertEquals("SUBMIT_ACKNOWLEDGED",processing.processNext().orElseThrow().status());verify(transactions).submit(search.request());
+    }
+    @Test void automaticProcessingRetriesDueProcessingResultThenRespectsThirtySecondBackoff(){
+        var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",181,"SUBMIT_ACKNOWLEDGED",121,null);pastAttempt(search,"POLL",61,"PROCESSING",31,new CodeVaspTransactionClient.Result(search.id(),CodeVaspTransactionClient.Status.PROCESSING,null,List.of()));when(transactions.result(search.id())).thenReturn(new CodeVaspTransactionClient.Result(search.id(),CodeVaspTransactionClient.Status.PROCESSING,null,List.of()));var processing=processing();assertEquals("PROCESSING",processing.processNext().orElseThrow().status());assertTrue(processing.processNext().isEmpty());verify(transactions,times(1)).result(search.id());
+    }
+    @Test void completedOrUnresolvableTechnicalResultsAreNotPolledForever(){
+        for(var status:List.of(CodeVaspTransactionClient.Status.FOUND,CodeVaspTransactionClient.Status.NOT_FOUND,CodeVaspTransactionClient.Status.UNKNOWN_REQUEST,CodeVaspTransactionClient.Status.AMBIGUOUS)){
+            var seed=BitcoinDepositFixtures.seed(jdbc,json,receipt.owner(),Instant.now());var search=searches.reserve(seed.id());pastAttempt(search,"SUBMIT",181,"SUBMIT_ACKNOWLEDGED",121,null);pastAttempt(search,"POLL",61,status.name(),31,status==CodeVaspTransactionClient.Status.FOUND?found(search.id()):new CodeVaspTransactionClient.Result(search.id(),status,null,List.of()));assertEquals(status.name(),execution(audit).current(search.id()).status());
+        }assertTrue(processing().processNext().isEmpty());verifyNoInteractions(transactions);
+    }
+    @Test void automaticWindowExhaustionKeepsRunningEvidenceAndAllowsExplicitResolution(){
+        var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",901,null,0,null);var processing=processing();assertTrue(processing.processNext().isEmpty());assertEquals("RUNNING",execution(audit).current(search.id()).status());verifyNoInteractions(transactions);
+        when(transactions.result(search.id())).thenReturn(found(search.id()));assertEquals("FOUND",execution(audit).refresh(search.id()).status());verify(transactions,never()).submit(any());
+    }
+    @Test void automaticSelectionDoesNotCrossConfiguredSourceAuthority(){
+        var ours=searches.reserve(receipt.id());var otherDirectory=directory(new CodeVaspSettings("http://127.0.0.1:3","http://127.0.0.1:2","other-"+UUID.randomUUID(),key));otherDirectory.refresh();var otherSearches=new CodeVaspDepositSearches(otherDirectory,jdbc,audit,manager);var other=otherSearches.reserve(receipt.id());assertEquals(ours.id(),processing().processNext().orElseThrow().searchId());verify(transactions).submit(ours.request());verify(transactions,never()).submit(other.request());
+    }
+    @Test void concurrentAutomaticSelectorsHaveOnlyOneExternalSubmission()throws Exception{
+        var search=searches.reserve(receipt.id());var processing=processing();var entered=new CountDownLatch(1);var release=new CountDownLatch(1);doAnswer(i->{entered.countDown();assertTrue(release.await(5,TimeUnit.SECONDS));return null;}).when(transactions).submit(any());
+        try(var pool=Executors.newSingleThreadExecutor()){
+            var first=pool.submit(processing::processNext);try{assertTrue(entered.await(5,TimeUnit.SECONDS));assertTrue(processing.processNext().isEmpty());}finally{release.countDown();}assertEquals(search.id(),first.get(5,TimeUnit.SECONDS).orElseThrow().searchId());
+        }verify(transactions,times(1)).submit(any());
+    }
+    @Test void automaticSelectorCannotHoldCallerTransactionOverProviderIo(){
+        searches.reserve(receipt.id());var processing=processing();assertThrows(IllegalStateException.class,()->new TransactionTemplate(manager).execute(t->processing.processNext()));verifyNoInteractions(transactions);
+    }
+    @Test void automaticallyStartedOwnedWorkerPersistsRealDatabaseAttemptAndStops(){
+        var search=searches.reserve(receipt.id());var processing=processing();
+        try(var context=new org.springframework.context.annotation.AnnotationConfigApplicationContext()){
+            context.getEnvironment().setActiveProfiles("production");context.getEnvironment().getPropertySources().addFirst(new org.springframework.core.env.MapPropertySource("격리 자동 검색",Map.of("codevasp.processing.enabled","true")));
+            // 실제 표는 상위 격리 PG 컨텍스트가 준비했다. 자식 컨텍스트는 실행기 수명만 소유한다.
+            context.registerBean("codeVaspSchemaInitializer",Object.class,Object::new);context.registerBean(CodeVaspSettings.class,()->config);context.registerBean(CodeVaspDepositSearchProcessing.class,()->processing);context.register(CodeVaspDepositSearchWorker.class);context.refresh();
+            org.awaitility.Awaitility.await().atMost(java.time.Duration.ofSeconds(3)).untilAsserted(()->assertEquals("SUBMIT_ACKNOWLEDGED",execution(audit).current(search.id()).status()));
+        }verify(transactions,times(1)).submit(search.request());
+    }
+    @Test void heldNewSubmissionCannotBlockIndependentDuePollDuringDirectoryOutage(){
+        var known=searches.reserve(receipt.id());pastAttempt(known,"SUBMIT",181,"SUBMIT_ACKNOWLEDGED",31,null);
+        var another=BitcoinDepositFixtures.seed(jdbc,json,receipt.owner(),Instant.now());var fresh=directory.current();UUID waiting=UUID.randomUUID();
+        // 후보 정렬의 앞에 오는 오래된 미착수 원본을 새로 구성한다. 실제 원본의 생성 시각을 UPDATE하지 않는다.
+        jdbc.update("INSERT INTO codevasp_deposit_searches(id,receipt_id,source_id,directory_attempt_id,created_at) VALUES(?,?,?,?,clock_timestamp()-interval '61 seconds')",waiting,another.id(),fresh.sourceId(),fresh.attemptId());
+        doThrow(new IllegalStateException("격리 목록 장애")).when(client).read();directory.refresh();when(transactions.result(known.id())).thenReturn(found(known.id()));
+        assertEquals(known.id(),processing().processNext().orElseThrow().searchId());assertEquals("UNSTARTED",execution(audit).current(waiting).status());verify(transactions,never()).submit(any());
+    }
 }

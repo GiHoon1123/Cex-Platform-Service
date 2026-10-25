@@ -1,4 +1,4 @@
-"""노드 없이 소유 PostgreSQL에서 사업자 목록의 현재성·불변 원본·감사·동시성를 검증한다."""
+"""노드 없이 소유 PostgreSQL에서 입금 검색 예약·실행·자동 처리의 불변 원본·감사·동시성를 검증한다."""
 import json
 import os
 from pathlib import Path
@@ -39,10 +39,10 @@ try:
     ARTIFACTS.mkdir(exist_ok=True)
     started=time.time()
     with (ARTIFACTS/"codevasp-deposit-searches.log").open("w") as log:
-        completed=subprocess.run(["./gradlew","test","--tests","*CodeVaspDepositSearchIntegrationTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+        completed=subprocess.run(["./gradlew","test","--tests","*CodeVaspDepositSearchIntegrationTest","--tests","*CodeVaspDepositSearchWorkerTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
     result["exit"]=completed.returncode
     if completed.returncode:
-        raise RuntimeError("사업자 목록 회귀 실패: .local/codevasp-deposit-searches.log 확인")
+        raise RuntimeError("입금 검색 회귀 실패: .local/codevasp-deposit-searches.log 확인")
     suites=[ET.parse(path).getroot() for path in (ROOT/"build/test-results/test").glob("TEST-*.xml") if path.stat().st_mtime>=started]
     result["tests"]={key:sum(int(suite.attrib.get(key,0)) for suite in suites) for key in ["tests","failures","errors","skipped"]}
     result["cases"]=[{"class":case.attrib["classname"],"name":case.attrib["name"]} for suite in suites for case in suite.findall("testcase")]

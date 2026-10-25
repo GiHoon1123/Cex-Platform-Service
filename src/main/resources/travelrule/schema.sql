@@ -165,3 +165,7 @@ DROP TRIGGER IF EXISTS codevasp_search_result_immutable ON codevasp_search_resul
 CREATE TRIGGER codevasp_search_result_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_search_results FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
 DROP TRIGGER IF EXISTS codevasp_search_head_no_delete ON codevasp_search_heads;
 CREATE TRIGGER codevasp_search_head_no_delete BEFORE DELETE OR TRUNCATE ON codevasp_search_heads FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 실제 자동 후보 조회의 접속 주체 필터와 검색별 시작 이력 조회를 위한 인덱스다.
+CREATE INDEX IF NOT EXISTS codevasp_searches_source_created ON codevasp_deposit_searches(source_id,created_at,id);
+CREATE INDEX IF NOT EXISTS codevasp_search_attempts_search ON codevasp_search_attempts(search_id,id);
