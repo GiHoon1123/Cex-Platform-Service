@@ -49,6 +49,8 @@ class TradeSettlementFailureTest {
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.travelrule.CodeVaspSchemaInitializer codeVaspSchema;
     // 이 검증은 H2 정산 범위다. 실제 PG 가격 원본 스키마는 별도 격리 PG 시험에서 검증한다.
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.monitoring.DepositMonitoringSchemaInitializer monitoringSchema;
+    // 정산 기록 전용 H2 범위에는 입금 의도의 PG 스키마를 만들지 않는다. 실제 의도 제약은 별도 PG 시험이 검증한다.
+    @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.bitcoin.BitcoinCreditSchemaInitializer creditSchema;
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.valuation.BitcoinKrwPriceSchemaInitializer priceSchema;
 
     @Autowired
