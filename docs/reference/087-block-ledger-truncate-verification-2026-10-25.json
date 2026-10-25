@@ -1,0 +1,43 @@
+{
+  "cycle": 87,
+  "implementation_commit": "bc215f70200f58e6961cb162c256d76fcf042019",
+  "verification": {
+    "finance": {
+      "container": "cex-inbox-739b994e7484",
+      "exit": 0,
+      "tests": {
+        "tests": 180,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "market": {
+      "postgres": "cex-market-pg-3e8739b410",
+      "kafka": "cex-market-broker-894442c2ec",
+      "exit": 0,
+      "kafka_removed": true,
+      "postgres_removed": true
+    },
+    "unique_tests": 181,
+    "new_tests": 1,
+    "first_failures": [
+      {
+        "tests": 180,
+        "failed": 2,
+        "reason": "existing fixtures truncated committed ledger"
+      },
+      {
+        "tests": 180,
+        "failed": 1,
+        "reason": "same-line fixture truncate missed in first conversion"
+      }
+    ],
+    "limits": [
+      "PostgreSQL trigger does not protect against privileged DDL/trigger disable",
+      "no BTC node suite rerun; prior131 belongs cycle086",
+      "no mainnet/performance/OSV review"
+    ]
+  }
+}

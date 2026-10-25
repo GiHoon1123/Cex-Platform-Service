@@ -227,3 +227,5 @@ macOS·Java 21·Rust 1.91·PostgreSQL 16·Kafka 3.9.1에서 실행 소유 컨테
 - [플랫폼 원장·대사 `16c76bd`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/16c76bd493601be6d7515889b732fe805cd3e74c)
 - [실제 통합 검증 `80a97eb`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/80a97eb0ac164509ee3992ffe0b6e5c2a866555a)
 - [대사 근거 보강 `1e15e62`](https://github.com/GiHoon1123/Cex-Platform-Service/commit/1e15e62740d33b98bcf8c63a8f62ead199517d71)
+
+087 현행 보강: [확정 원장의 전체 비우기 차단](087-block-ledger-truncate.md)에서 행 수정/삭제 외에 직접 TRUNCATE/CASCADE를 차단했다. 당시011의 실행 결과는 그대로 두며 현재 최초 반입 없는 시험은 원장을 지우지 않고 처음부터 반입을 생략한다.

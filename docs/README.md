@@ -189,3 +189,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [085. 고객 입금의 출력과 확정·성숙도 조건 판단하기](decisions/085-bitcoin-deposit-chain-qualification.md)
 
 - [086. 수탁 지갑의 자산 사용을 새 고객 입금과 구분할 근거 남기기](decisions/086-bitcoin-wallet-debit-provenance.md)
+
+- [087. 확정 원장의 직접·연쇄 전체 비우기 차단하기](decisions/087-block-ledger-truncate.md)
