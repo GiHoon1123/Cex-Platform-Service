@@ -34,6 +34,7 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/market/**","/ws/market/BTC/USDT").permitAll()
                 .requestMatchers("/swagger-ui/**","/swagger-ui.html","/api-docs/**","/v3/api-docs/**").permitAll()
                 .requestMatchers(HttpMethod.POST,"/api/kyc/webhook").permitAll()
+                .requestMatchers(HttpMethod.GET,"/api/customer/deposits/BTC","/api/customer/deposits/BTC/*").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/customer/deposit-addresses/BTC").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.POST,"/api/customer/deposit-addresses/BTC").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.POST,"/api/customer/email/challenges","/api/customer/email/confirmations").access(audited(audit,sessions,"CUSTOMER"))

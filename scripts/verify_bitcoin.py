@@ -133,6 +133,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "ledger":["*OrderLedgerTest"],
             "pending-worker":["*BitcoinPendingDepositWorkerTest","*BitcoinPendingDepositWorkerIntegrationTest"],
             "pending-selection":["*BitcoinPendingSelectionIntegrationTest"],
+            "customer-deposits":["*CustomerBitcoinDepositsIntegrationTest"],
             "deposit-reconciliation":["*BitcoinDepositReconciliationTest","*BitcoinDepositReconciliationIntegrationTest"],
         }
         result["groups"]=[]
