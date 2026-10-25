@@ -6,8 +6,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 
-/** 신규 주문과 입금 주소 공개가 같은 현재 고객 확인 사실을 사용한다. 사용자 잠금은 호출자가 소유한다. */
+/** 신규 금융 권한이 현재 고객 확인과 입금 실행 후 체인 위험을 함께 확인한다. 고객 잠금은 호출자가 소유한다. */
 @Service
+@org.springframework.context.annotation.DependsOn("bitcoinCreditSchemaInitializer")
 public class CustomerFinancialEligibility {
     private final CddService cdd;
     private final JdbcTemplate jdbc;
@@ -24,6 +25,9 @@ public class CustomerFinancialEligibility {
                  WHERE p.user_id=? AND p.identity_status='VERIFIED' AND p.valid_until>clock_timestamp() AND a.environment='live'
                   AND EXISTS(SELECT 1 FROM kyc_reconciliations r WHERE r.attempt_id=a.id
                    AND r.fresh_at>clock_timestamp()-interval '15 minutes' AND r.fresh_at<=clock_timestamp()))
-                """,Boolean.class,id));
+                """,Boolean.class,id))
+            // 확정 수 감소/충돌/출력 불일치는 이미 실행 권한을 준 입금의 위험이다.
+            // 과거 금융 결과는 취소하지 않고 신규 금융 권한만 막는다. 단순 관찰 지연은 이 근거에 포함하지 않는다.
+            &&!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM bitcoin_credit_chain_risks WHERE user_id=?)",Boolean.class,id));
     }
 }

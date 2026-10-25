@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS bitcoin_credit_intents (
 CREATE OR REPLACE FUNCTION bitcoin_credit_intent_binding() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE b jsonb;
 BEGIN
+ -- 직접 SQL도 현재 근거를 읽기 전에 고객 잠금을 얻는다. 마지막 외래키 검사에서
+ -- 뒤늦게 대기하는 것만으로는 기다리는 동안 바뀐 고객/체인 사실을 재검증할 수 없다.
+ PERFORM id FROM users WHERE id=NEW.user_id FOR UPDATE;
  b:=NEW.basis::jsonb;
  IF COALESCE(NEW.created_txid<>txid_current() OR NEW.recorded_at>clock_timestamp()
   OR b->>'policy'<>NEW.policy_id OR(b->>'checkedAt')::timestamptz>NEW.recorded_at OR(b->>'checkedAt')::timestamptz<clock_timestamp()-interval '10 seconds'
@@ -35,6 +38,7 @@ BEGIN
     AND r.network=b->'funds'->>'network' AND addr.wallet=b->'funds'->>'wallet' AND r.txid=b->'funds'->>'txid' AND r.vout=(b->'funds'->>'vout')::integer
     AND u.enabled AND u.role='CUSTOMER' AND NOT u.trading_restricted AND u.version=(b->'identity'->>'userVersion')::bigint
     AND NOT EXISTS(SELECT 1 FROM relationship_active_exits e WHERE e.user_id=u.id)
+    AND NOT EXISTS(SELECT 1 FROM bitcoin_credit_chain_risks cr WHERE cr.user_id=u.id)
     AND cp.declaration_id=(b->'identity'->>'declarationId')::uuid AND cp.assessment_id=(b->'identity'->>'assessmentId')::uuid AND kp.active_attempt=(b->'identity'->>'kycAttemptId')::uuid
     AND ca.outcome='STANDARD' AND ca.policy_version='CDD_DOMESTIC_INDIVIDUAL_V1' AND ca.attempt_id=kp.active_attempt AND ca.status_digest=kp.status_digest
     AND ca.key_id=b->'identity'->>'keyId' AND cd.key_id=ca.key_id AND ca.identity_mac=b->'identity'->>'identityMac' AND cd.content_mac=b->'identity'->>'declarationMac'
