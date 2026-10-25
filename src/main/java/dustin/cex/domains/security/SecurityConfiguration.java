@@ -40,6 +40,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/*/monitoring-assessments","/api/admin/deposits/BTC/*/monitoring-assessments/*/observations").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-assessments/*/inspect","/api/admin/deposits/BTC/*/monitoring-assessments/*/observations/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-assessments/*/observations").access(audited(audit,sessions,"OPERATOR"))
+                // 거래 조사 사건은 자동 탐지에서만 생성한다. 현재 운영 역할에는 최소 목록·신호 이력 조회만 허용한다.
+                .requestMatchers(HttpMethod.GET,"/api/admin/monitoring-cases","/api/admin/monitoring-cases/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 // 탐지 원본의 명시적 처리 요청도 현재 운영 업무다. 감사자에게 작업 생성 권한을 부여하지 않는다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))

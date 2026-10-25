@@ -24,9 +24,10 @@ public class DepositMonitoringService {
     private final UserRepository users;
     private final ObjectMapper json;
     private final AuditService audit;
+    private final DepositMonitoringCases cases;
     private final TransactionTemplate tx;
-    public DepositMonitoringService(JdbcTemplate jdbc,UserRepository users,ObjectMapper json,AuditService audit,PlatformTransactionManager manager){
-        this.jdbc=jdbc;this.users=users;this.json=json;this.audit=audit;
+    public DepositMonitoringService(JdbcTemplate jdbc,UserRepository users,ObjectMapper json,AuditService audit,DepositMonitoringCases cases,PlatformTransactionManager manager){
+        this.jdbc=jdbc;this.users=users;this.json=json;this.audit=audit;this.cases=cases;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Optional<Assessment> processNext(){
@@ -66,6 +67,8 @@ public class DepositMonitoringService {
                  VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,id,claim.user(),cursor,SmallDepositMonitoringPolicy.POLICY,Timestamp.from(reference),result.outcome(),result.reason(),result.smallTransfers(),result.smallTotalKrw(),result.unknownTransfers(),inputs.size(),document,hash);
             jdbc.update("INSERT INTO deposit_monitoring_heads(user_id,assessment_id) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET assessment_id=excluded.assessment_id",claim.user(),id);
+            // 사건 연결 실패도 같은 평가 TX를 롤백한다. 원래 수탁 원장과 이전 순번의 확정 결과는 보존한다.
+            if("REVIEW_REQUIRED".equals(result.outcome()))cases.link(id);
             audit.record(null,"DEPOSIT_MONITORING_ASSESSED","monitoring-assessment:"+id,"SUCCESS","POLICY:"+SmallDepositMonitoringPolicy.POLICY+":OUTCOME:"+result.outcome()+":REASON:"+result.reason()+":SOURCE:"+hash);
         }else{
             // 같은 원장 위치는 같은 근거여야 한다. 중복 실행으로 새 결론을 덮거나 다른 원본을 정상화하지 않는다.
