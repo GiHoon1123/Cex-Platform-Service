@@ -122,7 +122,7 @@ TransactionTemplate 콜백 안에서 업무별 증명을 검증하고 불변 결
 
 ### 원래 신규 주문 경로의 추가 차단 근거
 
-출처: [CustomerFinancialEligibility.java](../../src/main/java/dustin/cex/domains/security/CustomerFinancialEligibility.java#L19), 074에서 신규 주문과 주소 공개가 공유하도록 추출한 현재 코드.
+출처: [CustomerFinancialEligibility.java](../../src/main/java/dustin/cex/domains/security/CustomerFinancialEligibility.java#L20), 074에서 신규 주문과 주소 공개가 공유하도록 추출한 현재 코드.
 
 ```java
 // 종료 개시 결정은 일반 제한 해제와 독립된 차단 근거다. 외부 공급사의 최신 확인도 필요하다.
