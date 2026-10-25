@@ -62,13 +62,19 @@ ObjectReader는 이 통신에만 적용하는 해독 설정이다. TypeScript의
 
 거래를 조회한 지갑의 기준 블록까지 같은지 확인한다. 조회 전후 tip만 비교하면 체인이 바뀌었다가 원래 tip로 돌아온 사이에 읽은 결과를 놓칠 수 있다. nullable 블록/높이는 뒤에서 관찰 상태에 따라 명시적으로 결정한다.
 
-출처: [BitcoinAmounts.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinAmounts.java#L13), 079에서 두 노드 판독 업무가 공유하는 현재 소스의 부분 발췌.
+출처: [BitcoinAmounts.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinAmounts.java#L13), 086의 공통 부호 검증을 반영한 현재 소스의 부분 발췌.
 
 ```java
+    static BigDecimal signedFromNode(tools.jackson.databind.JsonNode node){
+        // 실수 토큰은 전용 ObjectReader가 BigDecimal로 만든다. DoubleNode로 바뀌면 잘못된 정밀도를 추측하지 않는다.
+        if(!node.isNumber()||(!node.isIntegralNumber()&&!node.isBigDecimal()))throw unavailable();
+        try{
             BigDecimal value=node.decimalValue();
             // 거대한 지수/소수 자릿수를 먼저 거부한다. 범위 검사 전에 setScale로 큰 정수를 만들지 않는다.
-            if(value.signum()<0||value.compareTo(new BigDecimal("21000000"))>0||value.stripTrailingZeros().scale()>8)throw unavailable();
+            if(value.abs().compareTo(new BigDecimal("21000000"))>0||value.stripTrailingZeros().scale()>8)throw unavailable();
             return value.setScale(8,RoundingMode.UNNECESSARY);
+        }catch(ArithmeticException e){throw unavailable();}
+    }
 ```
 
 BigDecimal의 compareTo는 금액 비교이고 setScale의 UNNECESSARY는 반올림이 필요하면 실패시킨다. 범위와 실질 소수 자릿수를 먼저 확인하므로 극단적 지수의 배율 확장을 시작하지 않는다. BTC8자리 관찰과 엔진의 공통9자리 정산 계약을 구분한다.
@@ -129,3 +135,5 @@ macOS arm64·Temurin21·Core31.1·PostgreSQL16 환경이다. 기존 deprecated/u
 - [전송·십진수 해독 분리 fbf7203](https://github.com/GiHoon1123/Cex-Platform-Service/commit/fbf7203)
 
 후속 [078 불변 관찰 저장](078-durable-bitcoin-observations.md)에서 관찰/현재 포인터/감사를 같은 TX로 확정했다. 077의 미저장 설명은 해당 사이클 시점이다. 자동 발견·금융 적립은 여전히 후속이다.
+
+086 현행 기준: [지갑 자산 사용 근거](086-bitcoin-wallet-debit-provenance.md)를 별도로 저장한다. 수신액의 fromNode는 계속 음수를 거부하고 signedFromNode의 부호 허용은 fee 표지 해독에 사용한다.

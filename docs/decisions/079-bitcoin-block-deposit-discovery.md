@@ -66,16 +66,16 @@ Core의 표준 descriptor 문자열을 전달한다. 임의 자산/URL/노드 �
 
 출력 번호는 정수 범위를 먼저 검사한다. 같은 txid/vout을 두 번 반환하면 실패하며 금액을 합쳐 숨기지 않는다. 실제 수신 조건의 문자열 비교와 BTC 금액 파서를 함께 사용한다. 이 값만으로 고객 귀속/적립을 허용하지 않는다.
 
-출처: [BitcoinAmounts.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinAmounts.java#L9), 현재 소스의 부분 발췌.
+출처: [BitcoinAmounts.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinAmounts.java#L13), 086의 공통 부호 검증을 반영한 현재 소스의 부분 발췌.
 
 ```java
-    static BigDecimal fromNode(tools.jackson.databind.JsonNode node){
+    static BigDecimal signedFromNode(tools.jackson.databind.JsonNode node){
         // 실수 토큰은 전용 ObjectReader가 BigDecimal로 만든다. DoubleNode로 바뀌면 잘못된 정밀도를 추측하지 않는다.
         if(!node.isNumber()||(!node.isIntegralNumber()&&!node.isBigDecimal()))throw unavailable();
         try{
             BigDecimal value=node.decimalValue();
             // 거대한 지수/소수 자릿수를 먼저 거부한다. 범위 검사 전에 setScale로 큰 정수를 만들지 않는다.
-            if(value.signum()<0||value.compareTo(new BigDecimal("21000000"))>0||value.stripTrailingZeros().scale()>8)throw unavailable();
+            if(value.abs().compareTo(new BigDecimal("21000000"))>0||value.stripTrailingZeros().scale()>8)throw unavailable();
             return value.setScale(8,RoundingMode.UNNECESSARY);
         }catch(ArithmeticException e){throw unavailable();}
     }
@@ -132,3 +132,5 @@ macOS arm64/Temurin21/Core31.1/각 업무별 소유 PG16에서 실행했다. **�
 - [격리 실행 증적](../reference/079-bitcoin-block-deposit-discovery-verification-2026-10-25.json)
 
 - [공통 BTC 금액 해독 8e0595f](https://github.com/GiHoon1123/Cex-Platform-Service/commit/8e0595f)
+
+086 현행 기준: [지갑 자산 사용 근거](086-bitcoin-wallet-debit-provenance.md)를 별도로 저장한다. 수신액의 fromNode는 계속 음수를 거부하고 signedFromNode의 부호 허용은 fee 표지 해독에 사용한다.
