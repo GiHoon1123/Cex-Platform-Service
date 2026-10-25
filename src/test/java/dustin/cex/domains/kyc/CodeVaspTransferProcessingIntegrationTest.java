@@ -16,8 +16,8 @@ class CodeVaspTransferProcessingIntegrationTest extends CodeVaspTransferTestSupp
     @BeforeEach void scope(){
         // 금융 이력을 삭제하지 않고 각 시험의 접속 주체를 분리한다. 다른 시험의 FOUND 입금이 자동 선택되지 않는다.
         ownSettings=new CodeVaspSettings("http://127.0.0.1:1","http://127.0.0.1:2","automatic-"+UUID.randomUUID(),KEY);ownDirectory=new CodeVaspDirectoryService(ownSettings,directoryClient,jdbc,json,audit,manager);ownDirectory.refresh();ownSearches=new CodeVaspDepositSearches(ownDirectory,jdbc,audit,manager);target=ownSearches.reserve(receipt.id());found(target);
-        ownIntents=new CodeVaspTransferIntents(ownSearches,new CodeVaspDepositSearchExecution(ownSearches,transactions,jdbc,audit,json,manager),ownDirectory,policy(),users,eligibility,crypto,jdbc,json,audit,manager);ownExecution=new CodeVaspTransferExecution(ownIntents,transfers,crypto,jdbc,json,audit,manager);processing=new CodeVaspTransferProcessing(ownDirectory,ownIntents,ownExecution,jdbc,audit,manager);
-        when(transfers.exchange(any())).thenAnswer(call->{CodeVaspTransferDataClient.Request r=call.getArgument(0);var person=new CodeVaspTransferDataClient.Person(r.recipientName(),null,LocalDate.of(1990,1,1),List.of(r.query().beneficiaryAddress()));return new CodeVaspTransferDataClient.Result("NORMAL",null,new CodeVaspTransferDataClient.Data(r.query().requestId(),r.peer().entityId(),r.expectedAddressAmount(),person,person,"b".repeat(64)));});clearInvocations(directoryClient);
+        ownIntents=new CodeVaspTransferIntents(ownSearches,new CodeVaspDepositSearchExecution(ownSearches,transactions,jdbc,audit,json,manager),ownDirectory,policy(),users,eligibility,crypto,jdbc,json,audit,manager,purposes);ownExecution=new CodeVaspTransferExecution(ownIntents,transfers,crypto,jdbc,json,audit,manager);processing=new CodeVaspTransferProcessing(ownDirectory,ownIntents,ownExecution,jdbc,audit,manager);
+        doAnswer(call->{CodeVaspTransferDataClient.Request r=call.getArgument(0);var person=new CodeVaspTransferDataClient.Person(r.recipientName(),null,LocalDate.of(1990,1,1),List.of(r.query().beneficiaryAddress()));return new CodeVaspTransferDataClient.Result("NORMAL",null,new CodeVaspTransferDataClient.Data(r.query().requestId(),r.peer().entityId(),r.expectedAddressAmount(),person,person,"b".repeat(64)));}).when(transfers).exchange(any());clearInvocations(directoryClient);
     }
     Map<String,Object> job(){return jdbc.queryForMap("SELECT * FROM codevasp_transfer_jobs WHERE search_id=?",target.id());}
     void noMoreIo(){clearInvocations(transfers);}
@@ -39,4 +39,18 @@ class CodeVaspTransferProcessingIntegrationTest extends CodeVaspTransferTestSupp
     @Test void scheduleCannotClaimDoneWithoutReplyOrLoseItsSource(){jdbc.update("UPDATE users SET trading_restricted=true WHERE id=?",customer.getId());assertEquals("HELD",processing.processNext().orElseThrow().status());var failure=assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("UPDATE codevasp_transfer_jobs SET state='DONE',next_attempt_at=NULL WHERE search_id=?",target.id()));assertTrue(failure.getMostSpecificCause().getMessage().contains("수신 원본 없이 정보 교환 작업을 완료할 수 없습니다"));assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.execute("DELETE FROM codevasp_transfer_jobs WHERE search_id='"+target.id()+"'"));assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.execute("TRUNCATE codevasp_transfer_jobs"));assertEquals("HELD",job().get("state"));org.mockito.Mockito.verifyNoInteractions(transfers);}
     @Test void anotherConnectionAuthorityCannotClaimExistingJob(){jdbc.update("UPDATE users SET trading_restricted=true WHERE id=?",customer.getId());assertEquals("HELD",processing.processNext().orElseThrow().status());var other=new CodeVaspDirectoryService(new CodeVaspSettings("http://127.0.0.1:1","http://127.0.0.1:2","unrelated-"+UUID.randomUUID(),KEY),directoryClient,jdbc,json,audit,manager);assertTrue(new CodeVaspTransferProcessing(other,ownIntents,ownExecution,jdbc,audit,manager).processNext().isEmpty());assertEquals("HELD",job().get("state"));org.mockito.Mockito.verifyNoInteractions(transfers);}
 
+    /** 새 접속 주체로 미평가/소액 입금만 선택한다. 앞선 정상 입금의 자동 작업과 섞지 않는다. */
+    void purposeRestrictedReceipt(boolean valued){
+        if(valued)publishPrice("8100000.00000000");
+        else {doThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"격리 가격 부재")).when(priceClient).read();assertEquals("FAILED",prices.refresh().status());}
+        receipt=BitcoinDepositFixtures.seed(jdbc,json,customer.getId(),Instant.now());
+        BitcoinDepositFixtures.observe(jdbc,json,manager,qualification,receipt,false);pending.recognize(receipt.id());
+        clearInvocations(priceClient);scope();
+    }
+    @Test void smallReferenceRequiresReviewWithoutPrivateRequestOrAutomaticRetry(){
+        purposeRestrictedReceipt(true);var report=processing.processNext().orElseThrow();assertEquals("REVIEW_REQUIRED",report.status());assertEquals("CURRENT_CONDITIONS_NOT_MET",report.failureCode());assertNull(report.intentId());assertNull(job().get("next_attempt_at"));assertTrue(processing.processNext().isEmpty());org.mockito.Mockito.verifyNoInteractions(transfers,priceClient);
+    }
+    @Test void missingValuationRequiresReviewWithoutPrivateRequestOrAutomaticRetry(){
+        purposeRestrictedReceipt(false);var report=processing.processNext().orElseThrow();assertEquals("REVIEW_REQUIRED",report.status());assertNull(report.intentId());assertNull(job().get("next_attempt_at"));assertTrue(processing.processNext().isEmpty());org.mockito.Mockito.verifyNoInteractions(transfers,priceClient);
+    }
 }

@@ -24,11 +24,12 @@ try:
             raise RuntimeError("격리 PostgreSQL 시작 시간 초과")
         time.sleep(0.2)
     address=subprocess.check_output([DOCKER,"port",name,"5432/tcp"],text=True).strip()
-    env={k:v for k,v in os.environ.items() if not k.startswith(("CDD_","EDD_","DIDIT_","SPRING_MAIL_","CUSTOMER_MAIL_","BITCOIN_","CEX_BITCOIN_TEST_","CODEVASP_"))}
+    env={k:v for k,v in os.environ.items() if not k.startswith(("CDD_","EDD_","DIDIT_","SPRING_MAIL_","CUSTOMER_MAIL_","BITCOIN_","CEX_BITCOIN_TEST_","CODEVASP_","VALUATION_"))}
     env["JWT_SECRET"]="isolated-process-jwt-secret-at-least-32-bytes"
     env["ENGINE_SERVICE_TOKEN"]="isolated-engine-service-token-32-bytes"
     env["SPRING_KAFKA_BOOTSTRAP_SERVERS"]="127.0.0.1:1"
     env["BOT_BOT_COUNT"]="0"
+    env["SPRING_KAFKA_LISTENER_AUTO_STARTUP"]="false"
     env["ORDER_DISPATCH_ENABLED"]="false"
     env["ENGINE_HTTP_URL"]="http://127.0.0.1:1"
     env["CEX_TEST_DATABASE_URL"]="jdbc:postgresql://"+address+"/cex_test"
@@ -39,7 +40,7 @@ try:
     ARTIFACTS.mkdir(exist_ok=True)
     started=time.time()
     with (ARTIFACTS/"transfer-intents.log").open("w") as log:
-        completed=subprocess.run(["./gradlew","test","--tests","*CodeVaspTransferIntentIntegrationTest","--tests","*CodeVaspTransferExecutionIntegrationTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+        completed=subprocess.run(["./gradlew","test","--tests","*CodeVaspTransferIntentIntegrationTest","--tests","*CodeVaspTransferExecutionIntegrationTest","--tests","*CodeVaspTransferPurposeIntegrationTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
     result["exit"]=completed.returncode
     if completed.returncode:
         raise RuntimeError("정보 제공 의도 회귀 실패: .local/transfer-intents.log 확인")

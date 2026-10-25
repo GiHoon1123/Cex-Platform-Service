@@ -22,7 +22,7 @@ import tools.jackson.databind.ObjectMapper;
 public class CodeVaspTransferIntents {
     public record Intent(UUID id,UUID searchId,UUID receiptId,long userId,Instant createdAt){}
     // 전체 값은 암호문 안에만 둔다. DTO의 기본 문자열 출력으로 생일/신원 지문이 드러나지 않도록 막는다.
-    record Prepared(CodeVaspTransferDataClient.Request request,String dateOfBirth,String identityMac,long userVersion){
+    record Prepared(CodeVaspTransferDataClient.Request request,String dateOfBirth,String identityMac,long userVersion,CodeVaspTransferPurposePolicy.Purpose purpose){
         @Override public String toString(){return "PreparedTransfer[개인정보 생략]";}
     }
     // 실행 시작에서는 현재 자료를 새로 포착한다. 원래 의도의 의미와 현재 전송 근거를 별도로 보존한다.
@@ -40,9 +40,10 @@ public class CodeVaspTransferIntents {
     private final ObjectMapper json;
     private final AuditService audit;
     private final TransactionTemplate tx;
+    private final CodeVaspTransferPurposePolicy purposes;
     public CodeVaspTransferIntents(CodeVaspDepositSearches searches,CodeVaspDepositSearchExecution execution,CodeVaspDirectoryService directory,
-            CodeVaspCounterpartyPolicy policy,UserRepository users,CustomerFinancialEligibility eligibility,CddCrypto crypto,JdbcTemplate jdbc,ObjectMapper json,AuditService audit,PlatformTransactionManager manager){
-        this.searches=searches;this.execution=execution;this.directory=directory;this.policy=policy;this.users=users;this.eligibility=eligibility;this.crypto=crypto;this.jdbc=jdbc;this.json=json;this.audit=audit;
+            CodeVaspCounterpartyPolicy policy,UserRepository users,CustomerFinancialEligibility eligibility,CddCrypto crypto,JdbcTemplate jdbc,ObjectMapper json,AuditService audit,PlatformTransactionManager manager,CodeVaspTransferPurposePolicy purposes){
+        this.searches=searches;this.execution=execution;this.directory=directory;this.policy=policy;this.users=users;this.eligibility=eligibility;this.crypto=crypto;this.jdbc=jdbc;this.json=json;this.audit=audit;this.purposes=purposes;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     /** 같은 검색의 예약은 한 번만 남긴다. 기존 ID 반환은 과거 의도의 조회이며 현재 전송 허가가 아니다. */
@@ -62,12 +63,15 @@ public class CodeVaspTransferIntents {
                  VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,id,searchId,owner,search.receiptId(),basis.searchAttempt(),basis.directoryAttempt(),basis.decision(),basis.observation(),
                 basis.declaration(),basis.assessment(),basis.policyHash(),basis.prepared().request().peer().entityId(),basis.prepared().request().key().publicKey(),crypto.keyId(),crypto.encrypt(owner,id,prepared.getBytes(StandardCharsets.UTF_8)),crypto.fingerprint("codevasp-transfer-intent-v1",prepared));
+            purposes.record(id,basis.prepared().purpose());
             audit.record(null,"CODE_TRANSFER_INTENT_RESERVED","codevasp-transfer:"+id,"SUCCESS","SEARCH:"+searchId+":ATTEMPT:"+basis.searchAttempt());
             return load(id);
         });
     }
     /** 현재 자격/체인/검색/상대 정책을 하나의 짧은 TX에서 포착한다. 외부 통신은 하지 않는다. */
     private Basis capture(CodeVaspDepositSearches.Search search,dustin.cex.domains.auth.model.entity.User user,Map<String,Object> receipt){
+        // 목적·최소 금액 근거를 확인한 뒤에만 고객 신고 원문을 연다. 현재가로 당시 부재를 채우지 않는다.
+        var purpose=purposes.require(search.receiptId());
         long owner=user.getId();
         crypto.requireConfigured();if(!eligibility.permitted(user))throw held();
         var person=jdbc.queryForMap("""
@@ -100,7 +104,7 @@ public class CodeVaspTransferIntents {
         for(var output:outputs)if(search.request().beneficiaryAddress().equals(output.path("address").asString())&&output.path("amount").isNumber()&&output.path("amount").decimalValue().signum()>0)matches++;
         if(matches!=1)throw held();
         var request=new CodeVaspTransferDataClient.Request(search.request(),(java.math.BigDecimal)receipt.get("amount"),customer.fullName(),selected.peer(),selected.key());
-        return new Basis(new Prepared(request,customer.dateOfBirth().toString(),identity,user.getVersion()),origin.attemptId(),snapshot.attemptId(),((Number)chain.getFirst().get("decision_id")).longValue(),((Number)chain.getFirst().get("observation_id")).longValue(),declaration,(UUID)person.get("assessment_id"),selected.policyHash());
+        return new Basis(new Prepared(request,customer.dateOfBirth().toString(),identity,user.getVersion(),purpose),origin.attemptId(),snapshot.attemptId(),((Number)chain.getFirst().get("decision_id")).longValue(),((Number)chain.getFirst().get("observation_id")).longValue(),declaration,(UUID)person.get("assessment_id"),selected.policyHash());
     }
     /** 실행 시작 TX에서만 사용한다. 과거 의도는 해독/무결성을 검증하고 현재 고객·입금 의미와 대조한다. */
     @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
@@ -111,6 +115,7 @@ public class CodeVaspTransferIntents {
         if(!search.receiptId().equals(stored.get("receipt_id")))throw held();
         var receipt=jdbc.queryForMap("SELECT user_id,amount FROM bitcoin_deposit_receipts WHERE id=?",search.receiptId());
         if(((Number)receipt.get("user_id")).longValue()!=owner)throw held();
+        purposes.requireRecorded(intentId,search.receiptId());
         // 현재 주체/고객/체인/상대가 허용되지 않으면 과거 개인정보 봉인을 열지 않는다.
         var current=capture(search,user,receipt);
         if(!crypto.keyId().equals(stored.get("key_id")))throw held();
@@ -120,6 +125,15 @@ public class CodeVaspTransferIntents {
         // 과거 키는 이미 만료됐을 수 있어 현재용 요청 생성자로 역직렬화하지 않는다. 의도의 거래·수취인 의미만 정확히 대조한다.
         // 같은 상대의 현재 허용 정책/회전된 유효 키·새 체인 관찰은 실행의 새 근거에 남긴다.
         for(String field:List.of("dateOfBirth","identityMac"))if(!original.path(field).equals(fresh.path(field)))throw held();
+        // 목적의 금액도 JSON 노드 구현 클래스가 아닌 정확한 십진 값으로 비교한다.
+        // 일반 객체→JSON 트리 변환의 숫자 표현 차이를 실제 목적 변경으로 오인하지 않는다.
+        var sealedPurpose=original.path("purpose");var purpose=current.prepared().purpose();
+        if(!purpose.policy().equals(sealedPurpose.path("policy").asString())
+            ||!purpose.purpose().equals(sealedPurpose.path("purpose").asString())
+            ||!purpose.receiptId().toString().equals(sealedPurpose.path("receiptId").asString())
+            ||!purpose.referenceAt().toString().equals(sealedPurpose.path("referenceAt").asString())
+            ||!sealedPurpose.path("priceAttemptId").isIntegralNumber()||sealedPurpose.path("priceAttemptId").longValue()!=purpose.priceAttemptId()
+            ||!sealedPurpose.path("krwValue").isNumber()||sealedPurpose.path("krwValue").decimalValue().compareTo(purpose.krwValue())!=0)throw held();
         for(String field:List.of("query","recipientName"))if(!original.path("request").path(field).equals(fresh.path("request").path(field)))throw held();
         // 금융 금액은 JSON 노드의 구현 클래스나 부동소수점 비교로 판단하지 않는다.
         var amount=original.path("request").path("expectedAddressAmount");

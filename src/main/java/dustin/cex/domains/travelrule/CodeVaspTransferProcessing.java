@@ -34,7 +34,8 @@ public class CodeVaspTransferProcessing {
             intent=intents.reserve(claim.search()).id();var known=execution.current(intent);
             // 이미 확정한 수신/불명 원본은 읽어 일정만 회복한다. 같은 외부 PUT를 다시 하지 않는다.
             outcome=classify(Set.of("UNSTARTED","NOT_SENT").contains(known.status())?execution.execute(intent):known);
-        }catch(ResponseStatusException held){outcome=recover(claim,intent,new Outcome("HELD",switch(held.getStatusCode().value()){case 503->"CURRENT_SOURCE_UNAVAILABLE";case 404->"SOURCE_MISSING";default->"CURRENT_CONDITIONS_NOT_MET";}));}
+        }catch(CodeVaspTransferPurposePolicy.ReviewRequired review){outcome=recover(claim,intent,new Outcome("REVIEW_REQUIRED","CURRENT_CONDITIONS_NOT_MET"));}
+        catch(ResponseStatusException held){outcome=recover(claim,intent,new Outcome("HELD",switch(held.getStatusCode().value()){case 503->"CURRENT_SOURCE_UNAVAILABLE";case 404->"SOURCE_MISSING";default->"CURRENT_CONDITIONS_NOT_MET";}));}
         catch(RuntimeException failed){outcome=recover(claim,intent,new Outcome("HELD","LOCAL_FAILURE"));}
         UUID reference=intent;Outcome finished=outcome;
         // 최종 저장/감사 실패는 위의 외부 실패 처리로 다시 잡지 않는다. 임대만 남으면 만료 후 원본 상태를 읽어 회복한다.
