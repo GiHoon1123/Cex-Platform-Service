@@ -158,3 +158,7 @@ boolean 표시는 JDK HTTP 호출로 넘어가는 보수적 경계다. 이 뒤�
 
 - [구현 9caa2cf](https://github.com/GiHoon1123/Cex-Platform-Service/commit/9caa2cfd69c2518a4ef84c96806a83dec0ffbfec)
 - [격리 실행 증적](../reference/100-durable-deposit-search-execution-verification-2026-10-25.json)
+
+## 후속 자동 처리 시점
+
+[101](101-automatic-deposit-search-processing.md)에서 이미 예약된 검색의 전용 워커/후보 선택·자동 반복 제한을 연결했다. 위 자동 처리 미구현 설명은100의 시점이다. 실제 보류 입금의 자동 예약·정보 교환/운영 해결·금융 허가는 여전히 미완료다.

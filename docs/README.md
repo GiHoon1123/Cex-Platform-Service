@@ -215,3 +215,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [099. 입금 검색 요청 ID를 외부 접수 전에 영속 예약하기](decisions/099-durable-deposit-search-reservation.md)
 
 - [100. 입금 검색의 미전송·결과 불명을 구분하고 실행 이력 보존하기](decisions/100-durable-deposit-search-execution.md)
+
+- [101. 예약된 입금 검색을 독립 워커에서 제한적으로 자동 처리하기](decisions/101-automatic-deposit-search-processing.md)
