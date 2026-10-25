@@ -29,7 +29,27 @@ class BitcoinDepositMonitoringWorkerTest {
         var events=new CopyOnWriteArrayList<String>();var logger=(ch.qos.logback.classic.Logger)org.slf4j.LoggerFactory.getLogger(BitcoinDepositMonitoringWorker.class);
         var sink=new ch.qos.logback.core.AppenderBase<ch.qos.logback.classic.spi.ILoggingEvent>(){protected void append(ch.qos.logback.classic.spi.ILoggingEvent event){events.add(event.getFormattedMessage());}};sink.setContext(logger.getLoggerContext());sink.start();logger.addAppender(sink);
         var worker=new BitcoinDepositMonitoringWorker(configured(),service,true);
-        try{worker.start();await().atMost(Duration.ofSeconds(4)).until(()->calls.get()>=2);assertTrue(events.stream().noneMatch(x->x.contains("처리 재개")));assertTrue(events.stream().noneMatch(x->x.contains("격리 민감 원문")));doReturn(Optional.of(mock(DepositMonitoringService.Assessment.class))).when(service).processNext();await().atMost(Duration.ofSeconds(4)).until(()->events.stream().anyMatch(x->x.contains("처리 재개")));}
+        try{worker.start();await().atMost(Duration.ofSeconds(4)).until(()->calls.get()>=2);assertTrue(events.stream().noneMatch(x->x.contains("처리 재개")));assertTrue(events.stream().noneMatch(x->x.contains("격리 민감 원문")));doReturn(Optional.of(mock(DepositMonitoringService.Assessment.class)),Optional.empty()).when(service).processNext();await().atMost(Duration.ofSeconds(4)).until(()->events.stream().anyMatch(x->x.contains("처리 재개")));}
         finally{worker.stop();logger.detachAppender(sink);sink.stop();}
     }
+    @Test void readyInputsAreDrainedBeforeTheIdleDelay()throws Exception{
+        var service=mock(DepositMonitoringService.class);var calls=new AtomicInteger();var entered=new CountDownLatch(1);var empty=new CountDownLatch(1);var threads=new CopyOnWriteArrayList<String>();var result=mock(DepositMonitoringService.Assessment.class);
+        when(service.processNext()).thenAnswer(call->{int n=calls.incrementAndGet();threads.add(Thread.currentThread().getName());entered.countDown();if(n<=5)return Optional.of(result);empty.countDown();return Optional.empty();});
+        var worker=new BitcoinDepositMonitoringWorker(configured(),service,true);
+        try{worker.start();assertTrue(entered.await(3,TimeUnit.SECONDS));assertTrue(empty.await(2,TimeUnit.SECONDS),"준비된 다섯 입력 사이에 유휴 지연을 넣으면 안 된다");assertEquals(1,new HashSet<>(threads).size());assertTrue(threads.getFirst().startsWith("bitcoin-deposit-monitoring-"));}finally{worker.stop();}
+    }
+    @Test void shutdownStopsTheDrainBeforeTakingAnotherInput()throws Exception{
+        var service=mock(DepositMonitoringService.class);var calls=new AtomicInteger();var entered=new CountDownLatch(1);var release=new CountDownLatch(1);var result=mock(DepositMonitoringService.Assessment.class);
+        when(service.processNext()).thenAnswer(call->{calls.incrementAndGet();entered.countDown();try{release.await();}catch(InterruptedException ignored){/* 종료 인터럽트를 받은 뒤 현재 확정 결과를 반환하는 업무를 재현한다. */}return Optional.of(result);});
+        var worker=new BitcoinDepositMonitoringWorker(configured(),service,true);
+        try{worker.start();assertTrue(entered.await(3,TimeUnit.SECONDS));worker.stop();assertEquals(1,calls.get());}finally{release.countDown();worker.stop();}
+    }
+
+    @Test void failureDuringDrainKeepsTheIdleDelayBeforeRetry(){
+        var service=mock(DepositMonitoringService.class);var calls=new AtomicInteger();var failedAt=new AtomicLong();var retriedAt=new AtomicLong();var result=mock(DepositMonitoringService.Assessment.class);
+        when(service.processNext()).thenAnswer(call->{int n=calls.incrementAndGet();if(n<=2)return Optional.of(result);if(n==3){failedAt.set(System.nanoTime());throw new IllegalStateException("격리 중간 실패");}retriedAt.compareAndSet(0,System.nanoTime());return Optional.empty();});
+        var worker=new BitcoinDepositMonitoringWorker(configured(),service,true);
+        try{worker.start();await().atMost(Duration.ofSeconds(4)).until(()->retriedAt.get()!=0);assertNotEquals(0,failedAt.get());assertTrue(retriedAt.get()-failedAt.get()>=TimeUnit.SECONDS.toNanos(1));}finally{worker.stop();}
+    }
+
 }

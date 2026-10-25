@@ -34,9 +34,14 @@ public class BitcoinDepositMonitoringWorker {
         scheduler.initialize();active=true;scheduler.scheduleWithFixedDelay(this::tick,Duration.ofSeconds(1));
     }
     private void tick(){
-        var completed=service.processNext();
-        // 실패한 작업이 임대 만료를 기다리는 동안 빈 큐를 읽었다고 업무 복구를 선언하지 않는다.
-        if(failed&&completed.isPresent()){failed=false;log.info("입금 모니터링 처리 재개");}
+        // 전용 스레드에서 실제 준비된 입력을 한 트랜잭션씩 처리한다. 건마다 쉬거나 전체를 한 TX로 묶지 않는다.
+        // 작업이 없으면 빠져나가 기존 고정 지연을 적용한다. 종료 요청은 현재 처리 뒤 다음 입력을 가져오기 전에 확인한다.
+        while(active){
+            var completed=service.processNext();
+            if(completed.isEmpty())return;
+            // 실패한 작업의 임대 만료를 기다리는 빈 폴링만으로 업무 복구를 선언하지 않는다.
+            if(failed){failed=false;log.info("입금 모니터링 처리 재개");}
+        }
     }
     @PreDestroy synchronized void stop(){active=false;if(scheduler!=null){scheduler.shutdown();if(scheduler.getScheduledThreadPoolExecutor().isTerminated())scheduler=null;else log.error("입금 모니터링 종료 지연. 기존 작업이 남아 대체 실행기 생성을 차단합니다");}}
 }
