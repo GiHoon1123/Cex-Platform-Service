@@ -18,5 +18,6 @@ public class DepositMonitoringSchemaInitializer {
         jdbc.execute(new ClassPathResource("monitoring/deposit-schema.sql").getContentAsString(StandardCharsets.UTF_8));
         jdbc.execute(new ClassPathResource("monitoring/investigation-schema.sql").getContentAsString(StandardCharsets.UTF_8));
         jdbc.execute(new ClassPathResource("monitoring/case-schema.sql").getContentAsString(StandardCharsets.UTF_8));
+        jdbc.execute(new ClassPathResource("monitoring/case-review-schema.sql").getContentAsString(StandardCharsets.UTF_8));
     }
 }

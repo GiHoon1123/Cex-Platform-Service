@@ -94,7 +94,8 @@ public class OperatorMfaService {
         @Override public String toString() {return "AuthorizationProof[서명 생략]";}
     }
     /**
-     * 각 승인 서비스에서만 호출하는 내부 경로다. 요청 잠금 → 사용자 잠금 → 챌린지 잠금 순서를 지킨다.
+     * 각 승인 서비스에서만 호출하는 내부 경로다. 업무의 현재 상태·잠금을 확인한 뒤 사용자와 챌린지 순서를 지킨다.
+     * 요청이 불변인 업무도 관련 사용자 잠금 뒤 결정 상태를 다시 확인한다. 이미 확보한 사용자 잠금을 다른 순서로 새로 잡지 않는다.
      * 인증 옵션만 발급하며 세션의 MFA 시각이나 수명은 늘리지 않는다.
      */
     public Options approvalOptions(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve) {
@@ -136,7 +137,7 @@ public class OperatorMfaService {
         });
     }
     /** 현재 구현된 업무만 구분한다. 임의 명령 이름이나 동적 실행기를 받지 않는다. */
-    public enum ApprovalKind { ROLE, MFA_RECOVERY, ACCESS_REVIEW, TRADING_RESTRICTION, EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY }
+    public enum ApprovalKind { ROLE, MFA_RECOVERY, ACCESS_REVIEW, TRADING_RESTRICTION, EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW }
     public void bindApproval(ApprovalKind kind,UUID id,long requester,long version,String hash,Instant expires) {
         requireBusinessTransaction();
         jdbc.update("INSERT INTO operator_approval_bindings(kind,request_id,requester_id,requester_version,payload_hash,expires_at) VALUES(?,?,?,?,?,?)",

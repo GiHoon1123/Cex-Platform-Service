@@ -65,6 +65,8 @@ try:
         if completed.returncode:
             raise RuntimeError("승인 회귀 실패: "+str(proof/(group+".log")))
         assert counts["tests"]>0 and counts["failures"]==counts["errors"]==counts["skipped"]==0,counts
+        identities=[(case["class"],case["name"]) for case in result["groups"][-1]["cases"]]
+        assert len(identities)==len(set(identities))==counts["tests"],"메서드와 입력을 구분할 수 있는 시험 표시 이름이 필요합니다"
         print(group+": "+json.dumps(counts),flush=True)
     result["tests"]={key:sum(group["tests"][key] for group in result["groups"]) for key in ["tests","failures","errors","skipped"]}
     print(json.dumps(result,indent=2),flush=True)

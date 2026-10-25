@@ -40,6 +40,11 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/*/monitoring-assessments","/api/admin/deposits/BTC/*/monitoring-assessments/*/observations").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-assessments/*/inspect","/api/admin/deposits/BTC/*/monitoring-assessments/*/observations/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-assessments/*/observations").access(audited(audit,sessions,"OPERATOR"))
+                // 판단 방향과 사유는 지정 인물만 읽는다. 승인/반려는 승인자의 내용 결합 서명이 있어야 한다.
+                .requestMatchers(HttpMethod.GET,"/api/admin/monitoring/case-reviews","/api/admin/monitoring/case-reviews/context/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/monitoring/case-reviews").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/monitoring/case-reviews/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/monitoring/case-reviews/*/approve/options","/api/admin/monitoring/case-reviews/*/reject/options","/api/admin/monitoring/case-reviews/*/approve","/api/admin/monitoring/case-reviews/*/reject").access(audited(audit,sessions,"APPROVER"))
                 // 거래 조사 사건은 자동 탐지에서만 생성한다. 현재 운영 역할에는 최소 목록·신호 이력 조회만 허용한다.
                 .requestMatchers(HttpMethod.GET,"/api/admin/monitoring-cases","/api/admin/monitoring-cases/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 // 탐지 원본의 명시적 처리 요청도 현재 운영 업무다. 감사자에게 작업 생성 권한을 부여하지 않는다.
