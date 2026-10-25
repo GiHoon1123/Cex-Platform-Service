@@ -169,3 +169,49 @@ CREATE TRIGGER codevasp_search_head_no_delete BEFORE DELETE OR TRUNCATE ON codev
 -- 실제 자동 후보 조회의 접속 주체 필터와 검색별 시작 이력 조회를 위한 인덱스다.
 CREATE INDEX IF NOT EXISTS codevasp_searches_source_created ON codevasp_deposit_searches(source_id,created_at,id);
 CREATE INDEX IF NOT EXISTS codevasp_search_attempts_search ON codevasp_search_attempts(search_id,id);
+
+-- 개인정보 제공 의도는 고객 원문을 평문으로 보관하지 않는다. 과거 의도는 현재 전송 허가가 아니며 수정/삭제하지 않는다.
+CREATE TABLE IF NOT EXISTS codevasp_transfer_intents (
+ id uuid PRIMARY KEY,search_id uuid NOT NULL UNIQUE REFERENCES codevasp_deposit_searches(id),
+ user_id bigint NOT NULL REFERENCES users(id),receipt_id uuid NOT NULL REFERENCES bitcoin_deposit_receipts(id),
+ search_attempt_id bigint NOT NULL REFERENCES codevasp_search_attempts(id),directory_attempt_id bigint NOT NULL REFERENCES codevasp_directory_attempts(id),
+ decision_id bigint NOT NULL REFERENCES bitcoin_deposit_chain_decisions(id),observation_id bigint NOT NULL REFERENCES bitcoin_transaction_observations(id),
+ declaration_id uuid NOT NULL REFERENCES cdd_declarations(id),assessment_id uuid NOT NULL REFERENCES cdd_assessments(id),
+ policy_hash varchar(64) NOT NULL CHECK(policy_hash ~ '^[a-f0-9]{64}$'),peer_id varchar(128) NOT NULL,
+ peer_public_key varchar(44) NOT NULL CHECK(length(peer_public_key)=44 AND octet_length(decode(peer_public_key,'base64'))=32),
+ key_id varchar(64) NOT NULL CHECK(key_id ~ '^[a-f0-9]{64}$'),ciphertext bytea NOT NULL CHECK(octet_length(ciphertext) BETWEEN 28 AND 65536),
+ content_mac varchar(64) NOT NULL CHECK(content_mac ~ '^[a-f0-9]{64}$'),created_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+CREATE OR REPLACE FUNCTION codevasp_transfer_intent_source() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NEW.created_at>clock_timestamp() OR NOT EXISTS(
+  SELECT 1 FROM codevasp_deposit_searches s JOIN bitcoin_deposit_receipts b ON b.id=s.receipt_id
+   JOIN bitcoin_pending_deposits p ON p.receipt_id=b.id
+   JOIN codevasp_directory_sources src ON src.id=s.source_id
+   JOIN codevasp_search_heads sh ON sh.search_id=s.id AND sh.attempt_id=NEW.search_attempt_id
+   JOIN codevasp_search_results sr ON sr.attempt_id=sh.attempt_id AND sr.status='FOUND'
+   JOIN codevasp_directory_heads dh ON dh.source_id=s.source_id AND dh.attempt_id=NEW.directory_attempt_id
+   JOIN codevasp_directory_attempts da ON da.id=dh.attempt_id
+   JOIN codevasp_directory_results dr ON dr.attempt_id=da.id AND dr.status='SUCCESS'
+   JOIN bitcoin_deposit_chain_heads ch ON ch.receipt_id=b.id AND ch.decision_id=NEW.decision_id
+   JOIN bitcoin_deposit_chain_decisions cd ON cd.id=ch.decision_id AND cd.observation_id=NEW.observation_id
+   JOIN bitcoin_observation_heads oh ON oh.observation_id=cd.observation_id
+   JOIN bitcoin_transaction_observations o ON o.id=oh.observation_id AND o.coinbase=false
+   JOIN bitcoin_observation_wallet_debits wd ON wd.observation_id=o.id AND wd.wallet_debit=false
+   JOIN cdd_profiles cp ON cp.user_id=b.user_id AND cp.declaration_id=NEW.declaration_id AND cp.assessment_id=NEW.assessment_id
+   JOIN cdd_declarations decl ON decl.id=cp.declaration_id AND decl.user_id=cp.user_id AND decl.key_id=NEW.key_id
+   JOIN cdd_assessments ca ON ca.id=cp.assessment_id AND ca.declaration_id=decl.id AND ca.user_id=cp.user_id AND ca.key_id=NEW.key_id
+   WHERE s.id=NEW.search_id AND b.id=NEW.receipt_id AND b.user_id=NEW.user_id
+    AND (b.network='bitcoin-mainnet' OR src.api_origin ~ '^https?://(127[.]0[.]0[.]1|\[::1\])(:[0-9]+)?/$')
+    AND sr.payload::jsonb->>'entityId'=NEW.peer_id
+    AND sr.recorded_at<=clock_timestamp() AND sr.recorded_at>=clock_timestamp()-interval '15 minutes'
+    AND da.started_at<=clock_timestamp() AND da.started_at>=clock_timestamp()-interval '5 minutes'
+    AND cd.reason='CHAIN_READY' AND cd.policy_id='BTC_CHAIN_V1'
+    AND o.read_started_at<=clock_timestamp() AND o.read_started_at>=clock_timestamp()-interval '2 minutes'
+ ) THEN RAISE EXCEPTION '정보 제공 의도가 현재 입금·검색·수취인 원본과 다릅니다';END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_transfer_intent_source_check ON codevasp_transfer_intents;
+CREATE TRIGGER codevasp_transfer_intent_source_check BEFORE INSERT ON codevasp_transfer_intents FOR EACH ROW EXECUTE FUNCTION codevasp_transfer_intent_source();
+DROP TRIGGER IF EXISTS codevasp_transfer_intent_immutable ON codevasp_transfer_intents;
+CREATE TRIGGER codevasp_transfer_intent_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_transfer_intents FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
