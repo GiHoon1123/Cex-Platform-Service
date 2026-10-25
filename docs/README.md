@@ -209,3 +209,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [096. 사업자 목록 조회를 보존하고 최신 실패·미완료를 숨기지 않기](decisions/096-durable-codevasp-directory.md)
 
 - [097. 사업자 목록을 독립 워커에서 갱신하고 실패 후 재개하기](decisions/097-automatic-codevasp-directory.md)
+
+- [098. 거래 출처 검색의 서명 본문과 요청·결과를 결합하기](decisions/098-codevasp-transaction-origin-search.md)

@@ -1,0 +1,239 @@
+{
+  "cycle": 98,
+  "implementation_commit": "d5be64f4131ebb2f1606595bdd43d9cd76278da1",
+  "verification": {
+    "tests": {
+      "container": "cex-code-directory-b6b08ab8bf31",
+      "exit": 0,
+      "tests": {
+        "tests": 53,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryWorkerTest",
+          "name": "productionContextHonorsFlagAndClosesItsAutomaticallyStartedExecutor()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryWorkerTest",
+          "name": "fixedDelayIsMeasuredAfterCompletionRatherThanAccumulatingCatchupTasks()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryWorkerTest",
+          "name": "taskIgnoringShutdownCannotStartOverlappingReplacement()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryWorkerTest",
+          "name": "oneDedicatedThreadDoesNotOverlapOrBlockOtherScheduler()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryWorkerTest",
+          "name": "stoppedWorkerCanRestartAfterOldExecutorTerminates()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryWorkerTest",
+          "name": "disabledAndUnconfiguredCannotCreateAutomaticAttempts()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryWorkerTest",
+          "name": "testProfileCannotAutomaticallyStartEvenWhenConfiguredAndEnabled()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryWorkerTest",
+          "name": "storedFailureAndThrownPersistenceFailureDoNotCancelFutureAttempts()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "submissionRedirectIsNotFollowed()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "mismatchedSignedBodyNeverReachesGateway()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "databaseTransactionCannotSubmitOrPoll()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "invalidInputNeverRequestsSigningMaterial()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "foundResultIsBoundToRequestedIdAndOneConsistentOrigin()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "notFoundWithPositiveAnalysisAndUnknownReasonsAreRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "signedSubmissionPreservesExactBodyAndStableRequestIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "acknowledgementMustEchoSuccessAndSameRequestId()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "inconsistentOrUnknownResultsNeverBecomeFound()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "unresolvedResultsRemainSeparateWithoutClaimingPersonalWalletOrFinancialApproval()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "providerErrorsAreNotRetriedOrExposed()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+          "name": "submissionTimeoutDoesNotProveRequestWasNeverReceived()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspSettingsTest",
+          "name": "publicKeyUsesCanonicalThirtyTwoByteBase64()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspSettingsTest",
+          "name": "partialUnsafeOrUnboundedConfigurationIsRejectedWithoutEcho()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspSettingsTest",
+          "name": "explicitHttpsAndPrivateComposeCipherAreAccepted()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspSettingsTest",
+          "name": "absentConfigurationIsDisabledAndHasNoDefaultLiveAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "absentSettingsNeverCallAnyDefaultProvider()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "alteredButWellFormedSignatureIsRejectedByGateway()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "gatewayErrorsHaveNoApplicationRetryOrRawBodyDisclosure()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "malformedDirectoryNeverBecomesPartialOrEmptySuccess()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "unavailableCounterpartyAndExpiredKeyArePreservedWithoutApprovingThem()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "redirectsAreNotFollowedAcrossSigningAndGatewayBoundaries()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "documentedUtcExpiryWithoutOffsetDoesNotUseJvmLocalTimezone()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "cipherAndGatewayBodiesAreBounded()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "emptySuccessfulDirectoryIsDifferentFromFailedCall()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "officialCipherAndGatewayContractPreservesRealSignatureAndTypedDirectory()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "ambientDatabaseTransactionCannotPerformProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "eachReadObtainsNewSigningMaterialInsteadOfReusingNonce()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "invalidCipherMaterialNeverReachesGateway()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "stalledCipherBodyHasAbsoluteDeadline()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+          "name": "stalledGatewayBodyHasAbsoluteDeadline()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "immutableRowsAndHeadRewindAndBadHashCannotBypassSourceContract()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "automaticWorkerPersistsFailureAndRecoversWithNewAttempt()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "malformedReadAndUnexpectedFailureKeepBoundedFailureCodes()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "staleSuccessIsUnavailableWithoutModifyingHistory()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "latestProviderFailureBlocksEarlierSuccessAndDoesNotStoreException()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "equalPayloadSharesContentButEachReadKeepsItsOwnAttemptAndAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "failedStartAuditRollsBackEverythingBeforeProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "unconfiguredAndAmbientTransactionCannotStartIo()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "startIsDurableBeforeIoAndPendingHeadCannotExposeOldSuccess()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "concurrentRefreshHasOneClaimAndNoSecondNetworkCall()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "sourceChangesAndNewServiceInstanceDoNotReuseDifferentAuthority()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "failedFinishAuditLeavesPendingHeadAndRollsBackResultAndNewContent()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "abandonedAttemptCanBeReplacedAndLateResultCannotMoveCurrentHead()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryIntegrationTest",
+          "name": "callerTransactionPinsHeadUntilItFinishes()"
+        }
+      ],
+      "container_removed": true
+    },
+    "jars": {
+      "cex-0.0.1-SNAPSHOT-operator-admin.jar": "공유 전송/검색/목록/워커 포함, 시험 코드 제외",
+      "cex-0.0.1-SNAPSHOT.jar": "공유 전송/검색/목록/워커 포함, 시험 코드 제외"
+    },
+    "local_evidence": ".local/cycle98-proof",
+    "live_provider_verified": false,
+    "financial_effects": false,
+    "automatic_transaction_queries": false
+  }
+}

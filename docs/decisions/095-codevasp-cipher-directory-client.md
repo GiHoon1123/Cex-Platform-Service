@@ -57,38 +57,39 @@ codevasp.public-key=
 
 ## 구현과 이해에 필요한 코드
 
-출처: [CodeVaspDirectoryClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDirectoryClient.java#L38), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L38), 현재 소스의 부분 발췌.
 
 ```java
-            // 고객 원문/임의 API 종류를 받지 않는다. 서명 개인키와 암호 구현은 공식 모듈에만 둔다.
+            var command=json.createObjectNode().put("allianceName","CODE").put("apiType",type);
+            if(expectedBody!=null)command.set("request",expectedBody);
             var signed=call(HttpRequest.newBuilder(settings.cipher.resolve("/api/v1/code/api-payloads"))
-                .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString("{\"allianceName\":\"CODE\",\"apiType\":\"SEARCH_VASP_LIST\"}")),65536);
+                .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(command))),65536);
             String signature=text(signed,"signature",88),key=text(signed,"publicKey",44),date=text(signed,"dateTime",64);
             var nonce=signed.path("nonce");
             if(!CodeVaspSettings.key(signature,64)||!key.equals(settings.publicKey)||!nonce.isIntegralNumber()||!nonce.canConvertToLong()||nonce.longValue()<0)throw unavailable();
-            var time=utc(date);Instant now=Instant.now();
-            // 이 분량/시각 제한은 모듈 오설정·오래된 응답을 막는 자체 정책이며 공급사 전체 인증 허용 창의 복제가 아니다.
-            if(time.isBefore(now.minusSeconds(60))||time.isAfter(now.plusSeconds(10)))throw unavailable();
-            if(signed.hasNonNull("body")&&(!signed.path("body").isString()||!signed.path("body").asString().isEmpty()))throw unavailable();
-            var response=call(HttpRequest.newBuilder(settings.api.resolve("/v1/code/vasps"))
-                .header("X-Code-Req-Datetime",date).header("X-Code-Req-Nonce",Long.toString(nonce.longValue()))
+            var time=OffsetDateTime.parse(date,DateTimeFormatter.ISO_OFFSET_DATE_TIME);Instant now=Instant.now();
+            if(!time.getOffset().equals(ZoneOffset.UTC)||time.toInstant().isBefore(now.minusSeconds(60))||time.toInstant().isAfter(now.plusSeconds(10)))throw unavailable();
 ```
 
-플랫폼이 서명 키를 만들지 않고 문서의 고정 요청을 공식 모듈에 보낸다. 받은 서명/공개키 표현과 고정 본인 키·시각·정수 nonce를 검사한다. 원래 날짜 문자열을 바꾸면 서명이 달라지므로 게이트웨이에 그대로 전달한다. 이 부분 발췌는 전체 인증/금융 승인 구현이 아니다.
+098에서 목록/거래 검색이 공유하는 전송 경계로 옮긴 현재 코드다. 실제 세 가지 호출만 내부 메서드로 제공하며 외부 요청에서 임의 API 종류/URL을 받지 않는다. 서명 개인키는 공식 모듈에만 둔다.
 
-출처: [CodeVaspDirectoryClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDirectoryClient.java#L48), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L47), 현재 소스의 부분 발췌.
 
 ```java
-            var response=call(HttpRequest.newBuilder(settings.api.resolve("/v1/code/vasps"))
+            var request=HttpRequest.newBuilder(settings.api.resolve(path))
                 .header("X-Code-Req-Datetime",date).header("X-Code-Req-Nonce",Long.toString(nonce.longValue()))
                 .header("X-Code-Req-PubKey",key).header("X-Code-Req-Signature",signature)
-                .header("X-Request-Origin","code:"+settings.entity).GET(),2097152);
-            var rows=response.path("vasps");if(!rows.isArray()||rows.size()>5000)throw unavailable();
+                .header("X-Request-Origin","code:"+settings.entity);
+            if(expectedBody==null){
+                if(signed.hasNonNull("body")&&(!signed.path("body").isString()||!signed.path("body").asString().isEmpty()))throw unavailable();
+                request.GET();
+            }else{
+                String body=text(signed,"body",65536);
 ```
 
-헤더 이름과 code:entity 원점은 공식 v1 계약을 따른다. GET은 빈 본문을 사용한다. 실제 공급사의 서명 검증은 공급사 역할이며, 이번 시험 대역은 JDK Ed25519로 헤더가 원래 서명과 맞는지 검증한다. 제품 클라이언트가 자체 암호 모듈로 검증했다고 표시하지 않는다.
+공식 헤더 원문을 유지한다. GET은 본문 없음 계약을 지키며 서명 모듈이 GET에 임의 본문을 반환하면 거절한다. 098에서 전송 경계만 분리했고 게이트웨이 서명 검증은 공급사 역할이다.
 
-출처: [CodeVaspDirectoryClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDirectoryClient.java#L26), 현재 소스의 부분 발췌.
+출처: [CodeVaspDirectoryClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDirectoryClient.java#L17), 현재 소스의 부분 발췌.
 
 ```java
     // 공식 유효기한은 UTC이며 문서 예제에는 시차 표기가 없다. JVM의 로컬 시간대를 추측해 사용하지 않는다.
@@ -96,9 +97,9 @@ codevasp.public-key=
         .optionalStart().appendOffsetId().optionalEnd().parseDefaulting(ChronoField.OFFSET_SECONDS,0).toFormatter();
 ```
 
-DateTimeFormatterBuilder는 JDK가 제공하는 포맷터다. 유효기한의 시차가 없으면 문서가 정한 UTC0을 사용하며 JVM 로컬 시간대에 맡기지 않는다. 임의 시간대/옛 API에 대한 순차 폴백 파서를 두지 않았다.
+JDK 포맷터로 공식 UTC 유효기한을 읽는다. 시차가 없는 문서 예제도 UTC0으로 처리하며 JVM 로컬 시각이나 임의 시간대의 폴백으로 해석하지 않는다.
 
-출처: [CodeVaspDirectoryClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDirectoryClient.java#L69), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L66), 현재 소스의 부분 발췌.
 
 ```java
             var pending=http.sendAsync(request.timeout(Duration.ofSeconds(5)).header("Accept","application/json").build(),info->new LimitedResponseBody(limit));
@@ -109,7 +110,7 @@ DateTimeFormatterBuilder는 JDK가 제공하는 포맷터다. 유효기한의 �
             }finally{if(!pending.isDone())pending.cancel(true);}
 ```
 
-sendAsync의 미래 값은 전체 제한 본문을 받았을 때 완료된다. get(5,SECONDS)는 호출 워커의 대기이며 엔진 코어와 DB TX에서는 이 클라이언트를 호출하지 않는다. 완료되지 않은 요청은 finally에서 취소한다. 기존 공유 수신기의 바이트 상한을 재사용했다.
+기존 제한 수신기와 전체 응답5초 대기를 공유 전송 경계에서 유지한다. 완료되지 않은 요청은 취소하며 이 대기는 플랫폼 전용 호출자에서 수행한다. 098의 POST도 같은 본문/시간 제한을 재사용한다.
 
 Directory/Vasp/Key는 Java record의 값 묶음이며 목록은 List.copyOf로 고정한다. TypeScript의 타입 단언으로 임의 JSON을 신뢰하는 방식과 다르게 필드 타입/범위를 실제로 검사한 뒤 이 타입을 만든다. 날짜는 Instant, 기술 가용성은 reachable이며 이름에 approved/financiallyAllowed 같은 의미를 넣지 않았다.
 
@@ -176,3 +177,7 @@ macOS arm64/Temurin21/소유 HTTP 대역·PG16. 신규19개와 기존 보안41�
 ## 후속 구현 시점
 
 [097](097-automatic-codevasp-directory.md)에서 전용 자동 갱신 워커를 연결했다. 위의 자동 갱신 미구현 설명은 이 문서의 원래 구현 시점이며, 현재 일반 앱은 설정 완료/활성 시 주기 갱신한다. test 프로필은 자동 등록을 제외한다. 실제 공급사 확인·송수신인 교환·금융 승인은 여전히 별도 미완료다.
+
+## 전송 모듈 분리 시점
+
+098에서 실제 거래 출처 검색을 추가하면서 공통 서명/HTTP 경계를 CodeVaspTransport로 분리했다. 위 네 발췌는 현재 소스에 맞췄으며095 당시 원본/검증은 연결된 구현 커밋과 증적이다. 디렉터리 파싱과 네트워크 수명은 별도 빈이며, 공통 실패 안내도 원문을 포함하지 않는 공급사 요청 실패로 통일했다.
