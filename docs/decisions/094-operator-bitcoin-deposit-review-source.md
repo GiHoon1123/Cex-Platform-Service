@@ -2,6 +2,8 @@
 
 운영자가 입금 한 건의 고객 자격, 현재 체인 관찰/판단, 보류 원장 연결, 가장 최근 독립 대사를 함께 조회한다. 민감한 신원 원문과 노드 설정을 제외하고 현재 운영 인증/필수 감사를 적용한다. 이 조회는 금융 해제나 이전거래 심사 완료를 승인하지 않는다.
 
+후속 [115 별도 개인정보 검토](115-authorized-private-transfer-inspection.md)는 같은 현재 접근 정책을 재사용하며 OPERATOR/APPROVER에게만 인증된 자료와 불변 접근 증적을 제공한다. AUDITOR의 요약 권한과 구분한다.
+
 ## 문제와 기존 동작
 
 고객은091에서 본인 진행 내역을 볼 수 있지만 운영 심사를 위한 근거 조회가 없었다. 조회자가 과거 체인 판단을 현재 관찰로 오인하거나, 새 대사가 진행/실패 중인데 예전 MATCHED만 고르면 잘못된 금융 판단으로 이어질 수 있다.
@@ -43,23 +45,24 @@
 
 ## 구현과 이해에 필요한 코드
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L45), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositOperatorAccess.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositOperatorAccess.java#L29), 현재 소스의 부분 발췌.
 
 ```java
-            // 사용자 잠금은 오름차순으로 통일한다. 원본 존재 여부는 현재 운영 인증을 확인한 뒤에만 응답한다.
-            var locked=new HashMap<Long,User>();var ids=new TreeSet<Long>();ids.add(actor);if(!owners.isEmpty())ids.add(owners.getFirst());
-            for(long id:ids)users.lockById(id).ifPresent(user->locked.put(id,user));
-            sessions.requireFresh(locked.get(actor),sid,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);
-            if(deposit==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"입금 식별자를 확인하세요");
-            if(owners.isEmpty())throw missing();
-            var customer=locked.get(owners.getFirst());boolean permitted=eligibility.permitted(customer);
-            // 관찰/판단/보류/가장 최근 대사는 한 SQL 문장의 같은 커밋 스냅샷에서 읽는다.
-            // 고객 자격 변경은 같은 사용자 잠금 계약을 따르며, 노드와 엔진을 기다리지 않는다.
+        var owners=jdbc.queryForList("SELECT user_id FROM bitcoin_deposit_receipts WHERE id=? AND network=?",Long.class,receipt,settings.network.id);
+        var locked=new HashMap<Long,User>();var ids=new TreeSet<Long>();ids.add(actor);if(!owners.isEmpty())ids.add(owners.getFirst());
+        // 다른 운영/고객 업무와 같은 오름차순 잠금으로 교차 조회의 잠금 순서 역전을 피한다.
+        for(long id:ids)users.lockById(id).ifPresent(user->locked.put(id,user));
+        sessions.requireFresh(locked.get(actor),sid,roles);
+        if(receipt==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"입금 식별자를 확인하세요");
+        if(owners.isEmpty()||locked.get(owners.getFirst())==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"입금 심사 근거가 없습니다");
+        return new Access(locked.get(actor),locked.get(owners.getFirst()));
 ```
+
+115 후속 작업에서 현재 접근 정책을 별도 모듈로 분리했다. 최소 이력 조회는 OPERATOR/APPROVER/AUDITOR를, 개인정보 검토는 OPERATOR/APPROVER만 전달한다. 원본 존재 여부보다 현재 역할·추가 인증을 먼저 판정하는 계약은 유지한다.
 
 TreeSet<Long>은 ID를 중복 없이 오름차순으로 정렬한다. 이 순서로 현재 운영자와 고객을 잠근 뒤 영속 운영 세션을 다시 검사한다. 원본을 못 찾았다는 응답도 운영 인증 뒤에만 반환한다. TypeScript의 Set은 이 숫자 정렬을 자동으로 해주지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L66), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L58), 현재 소스의 부분 발췌.
 
 ```java
                  LEFT JOIN LATERAL(SELECT id,status,snapshot_at,completed_at FROM bitcoin_deposit_reconciliation_runs WHERE receipt_id=r.id ORDER BY started_at DESC,id DESC LIMIT 1) q ON true
@@ -69,7 +72,7 @@ TreeSet<Long>은 ID를 중복 없이 오름차순으로 정렬한다. 이 순서
 
 LATERAL은 앞의 입금 r.id에 대해 최신 대사 한 건을 선택한다. status=MATCHED 같은 필터를 넣지 않으므로 새 RUNNING/FAILED가 있으면 그 결과를 그대로 보여준다. 조회가 새 대사를 만들거나 원장을 정정하지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L76), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L68), 현재 소스의 부분 발췌.
 
 ```java
             // 조회의 대상과 관찰/대사 참조를 남긴다. 이름/신분증/신고 원문을 감사 문자열에 복사하지 않는다.
@@ -78,7 +81,7 @@ LATERAL은 앞의 입금 r.id에 대해 최신 대사 한 건을 선택한다. s
 
 감사는 고객 버전/자격 결과/CDD·KYC·관찰·판단·대사 참조를 기록한다. 이름·생일·신고 원문은 복사하지 않는다. 감사 쓰기가 실패하면 DTO를 성공 반환하지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L80), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L72), 현재 소스의 부분 발췌.
 
 ```java
     private static Long number(Map<String,Object> row,String key){var value=(Number)row.get(key);return value==null?null:value.longValue();}

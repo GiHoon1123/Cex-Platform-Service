@@ -85,7 +85,7 @@ MANDATORY는 이미 열린 트랜잭션에만 참여한다. Spring 프록시가 
 
 자바 switch 식은 기술 상태를 추가 확인 안내로 변환한다. FOUND는 ORIGIN_FOUND_REVIEW_REQUIRED이며 승인이라는 값을 만들지 않는다. 자동 선택 기한과 실제 워커의 생존 상태도 구분한다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L76), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L68), 현재 소스의 부분 발췌.
 
 ```java
             // 조회의 대상과 관찰/대사 참조를 남긴다. 이름/신분증/신고 원문을 감사 문자열에 복사하지 않는다.
