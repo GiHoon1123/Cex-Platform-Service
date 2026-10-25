@@ -25,7 +25,12 @@ public class CodeVaspTransactionClient {
     public void submit(Request request){
         Objects.requireNonNull(request,"입금 조회 요청이 필요합니다");
         var response=transport.searchTransaction(request.requestId(),request.txid(),request.beneficiaryAddress());
-        if(!"SUCCESS".equals(text(response,"result",32))||!request.requestId().toString().equals(text(response,"requestId",36)))throw unavailable();
+        try{
+            if(!"SUCCESS".equals(text(response,"result",32))||!request.requestId().toString().equals(text(response,"requestId",36)))throw unavailable();
+        }catch(RuntimeException invalidReply){
+            // 게이트웨이 응답을 받은 뒤의 형식/ID 오류는 미전송이 아니다. 같은 ID를 조용히 재접수하지 않는다.
+            throw new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN);
+        }
     }
 
     public Result result(UUID requestId){

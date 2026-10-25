@@ -34,6 +34,7 @@ final class CodeVaspTransport implements AutoCloseable {
     private JsonNode exchange(String type,String path,JsonNode expectedBody){
         if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("이전거래 공급사 호출은 DB 트랜잭션 밖에서 실행하세요");
         if(!settings.configured())throw unavailable();
+        boolean gatewayStarted=false;
         try{
             var command=json.createObjectNode().put("allianceName","CODE").put("apiType",type);
             if(expectedBody!=null)command.set("request",expectedBody);
@@ -57,9 +58,13 @@ final class CodeVaspTransport implements AutoCloseable {
                 if(!json.readTree(body).equals(expectedBody))throw unavailable();
                 request.header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body));
             }
+            // 이 표시 이후의 예외는 실제 미접수를 증명하지 않는다. 서명 모듈 단계의 실패와 구분한다.
+            gatewayStarted=true;
             return call(request,2097152);
-        }catch(ResponseStatusException failure){throw failure;}
-        catch(RuntimeException failure){throw unavailable();}
+        }catch(RuntimeException failure){
+            if(expectedBody!=null)throw new CodeVaspSubmissionFailure(gatewayStarted?CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN:CodeVaspSubmissionFailure.Admission.NOT_SENT);
+            throw unavailable();
+        }
     }
     private JsonNode call(HttpRequest.Builder request,long limit){
         try{

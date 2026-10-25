@@ -96,4 +96,9 @@ class CodeVaspTransactionClientTest {
     @Test void providerErrorsAreNotRetriedOrExposed(){mode="ERROR";unavailable(()->client.submit(request()));unavailable(()->client.result(id));assertEquals(2,cipherCalls.get());assertEquals(2,gatewayCalls.get());}
     @Test void submissionTimeoutDoesNotProveRequestWasNeverReceived(){mode="SUBMIT_SLOW";long started=System.nanoTime();unavailable(()->client.submit(request()));long elapsed=Duration.ofNanos(System.nanoTime()-started).toSeconds();assertTrue(elapsed>=4&&elapsed<8);assertEquals(1,gatewayCalls.get());assertEquals(1,cipherCalls.get());}
     @Test void submissionRedirectIsNotFollowed(){mode="REDIRECT";unavailable(()->client.submit(request()));assertEquals(1,cipherCalls.get());assertEquals(1,gatewayCalls.get());}
+    @Test void typedAdmissionSeparatesProvenCurrentNonSendFromUnknownGatewayOutcome(){
+        mode="WRONG_TXID";var notSent=assertThrows(CodeVaspSubmissionFailure.class,()->client.submit(request()));assertEquals(CodeVaspSubmissionFailure.Admission.NOT_SENT,notSent.admission());assertEquals(0,gatewayCalls.get());
+        for(String sent:List.of("ERROR","BAD_ACK")){mode=sent;var unknown=assertThrows(CodeVaspSubmissionFailure.class,()->client.submit(request()));assertEquals(CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN,unknown.admission());assertNull(unknown.getCause());}
+        assertEquals(2,gatewayCalls.get());
+    }
 }
