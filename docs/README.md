@@ -205,3 +205,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [094. 현재 운영 인증으로 입금 심사 근거를 최소 범위 조회](decisions/094-operator-bitcoin-deposit-review-source.md)
 
 - [095. CodeVASP Cipher 계약으로 서명 자료와 사업자 목록 읽기](decisions/095-codevasp-cipher-directory-client.md)
+
+- [096. 사업자 목록 조회를 보존하고 최신 실패·미완료를 숨기지 않기](decisions/096-durable-codevasp-directory.md)
