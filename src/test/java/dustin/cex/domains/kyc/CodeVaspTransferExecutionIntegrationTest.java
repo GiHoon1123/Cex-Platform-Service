@@ -16,7 +16,7 @@ import org.springframework.dao.DataAccessException;
 /** 실제 DB·암호화·감사를 사용하고 외부 정보 교환만 대역으로 분리한다. */
 class CodeVaspTransferExecutionIntegrationTest extends CodeVaspTransferTestSupport {
     CodeVaspTransferIntents.Intent intent;CodeVaspTransferExecution exchange;
-    @BeforeEach void prepared(){intent=intents.reserve(search.id());exchange=new CodeVaspTransferExecution(intents,transfers,crypto,jdbc,json,audit,manager);}
+    @BeforeEach void prepared(){intent=intents.reserve(search.id());exchange=new CodeVaspTransferExecution(intents,transfers,crypto,jdbc,json,audit,manager,assessments);}
     CodeVaspTransferDataClient.Result normal(){String name=declaration(dustin.cex.domains.cdd.CustomerDeclaration.Pep.NO).fullName();var person=new CodeVaspTransferDataClient.Person(name,null,LocalDate.of(1990,1,1),List.of(receipt.address()));return new CodeVaspTransferDataClient.Result("NORMAL",null,new CodeVaspTransferDataClient.Data(search.id(),"origin",new BigDecimal("0.12345678"),person,person,"b".repeat(64)));}
     void noExtraIo(){clearInvocations(transfers);}
     @Test void committedStartAndFreshBasisPrecedeIoAndReplyIsSealed(){
@@ -53,7 +53,7 @@ class CodeVaspTransferExecutionIntegrationTest extends CodeVaspTransferTestSuppo
     }
 
     @Test void historicalIdentityIsNotOpenedBeforeCurrentCustomerEligibility(){
-        var guarded=spy(crypto);var guardedIntents=new CodeVaspTransferIntents(searches,execution,directory,policy(),users,eligibility,guarded,jdbc,json,audit,manager,purposes);var guardedExecution=new CodeVaspTransferExecution(guardedIntents,transfers,guarded,jdbc,json,audit,manager);
+        var guarded=spy(crypto);var guardedIntents=new CodeVaspTransferIntents(searches,execution,directory,policy(),users,eligibility,guarded,jdbc,json,audit,manager,purposes);var guardedExecution=new CodeVaspTransferExecution(guardedIntents,transfers,guarded,jdbc,json,audit,manager,assessments);
         jdbc.update("UPDATE users SET trading_restricted=true WHERE id=?",customer.getId());assertThrows(ResponseStatusException.class,()->guardedExecution.execute(intent.id()));org.mockito.Mockito.verify(guarded,never()).decrypt(anyLong(),any(),any());org.mockito.Mockito.verifyNoInteractions(transfers);
     }
 
@@ -61,7 +61,7 @@ class CodeVaspTransferExecutionIntegrationTest extends CodeVaspTransferTestSuppo
         when(transfers.exchange(any())).thenThrow(new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN));assertEquals("OUTCOME_UNKNOWN",exchange.execute(intent.id()).status());
         var otherDirectory=new CodeVaspDirectoryService(new CodeVaspSettings("http://127.0.0.1:3","http://127.0.0.1:2","other-authority",KEY),directoryClient,jdbc,json,audit,manager);otherDirectory.refresh();clearInvocations(directoryClient);
         var otherSearches=new CodeVaspDepositSearches(otherDirectory,jdbc,audit,manager);var otherSearch=otherSearches.reserve(receipt.id());assertNotEquals(search.id(),otherSearch.id());found(otherSearch);
-        var otherExecution=new CodeVaspDepositSearchExecution(otherSearches,transactions,jdbc,audit,json,manager);var otherIntents=new CodeVaspTransferIntents(otherSearches,otherExecution,otherDirectory,policy(),users,eligibility,crypto,jdbc,json,audit,manager,purposes);var otherIntent=otherIntents.reserve(otherSearch.id());var otherExchange=new CodeVaspTransferExecution(otherIntents,transfers,crypto,jdbc,json,audit,manager);
+        var otherExecution=new CodeVaspDepositSearchExecution(otherSearches,transactions,jdbc,audit,json,manager);var otherIntents=new CodeVaspTransferIntents(otherSearches,otherExecution,otherDirectory,policy(),users,eligibility,crypto,jdbc,json,audit,manager,purposes);var otherIntent=otherIntents.reserve(otherSearch.id());var otherExchange=new CodeVaspTransferExecution(otherIntents,transfers,crypto,jdbc,json,audit,manager,assessments);
         assertThrows(ResponseStatusException.class,()->otherExchange.execute(otherIntent.id()));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM codevasp_transfer_attempts WHERE receipt_id=?",Long.class,receipt.id()));org.mockito.Mockito.verify(transfers,times(1)).exchange(any());noExtraIo();
     }
 

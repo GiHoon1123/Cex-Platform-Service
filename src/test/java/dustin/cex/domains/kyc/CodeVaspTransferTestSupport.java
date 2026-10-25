@@ -24,6 +24,7 @@ abstract class CodeVaspTransferTestSupport extends EddTestSupport {
         r.add("bitcoin.rpc-url",()->"http://127.0.0.1:1");r.add("bitcoin.rpc-user",()->"isolated");r.add("bitcoin.rpc-password",()->"isolated-transfer-intent-password-at-least-32-bytes");r.add("bitcoin.wallet",()->"cex_watch");r.add("bitcoin.network",()->"REGTEST");r.add("valuation.upbit.enabled",()->true);
         r.add("codevasp.api-url",()->"http://127.0.0.1:1");r.add("codevasp.cipher-url",()->"http://127.0.0.1:2");r.add("codevasp.entity-id",()->"transfer-intent-owner");r.add("codevasp.public-key",()->KEY);
     }
+    @Autowired CodeVaspTransferDetailAssessment assessments;
     @Autowired CodeVaspTransferPurposePolicy purposes;
     @Autowired dustin.cex.domains.valuation.BitcoinKrwPriceService prices;
     @MockitoBean dustin.cex.domains.valuation.BitcoinKrwPriceClient priceClient;

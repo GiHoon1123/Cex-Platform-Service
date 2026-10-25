@@ -28,14 +28,15 @@ public class CodeVaspTransferExecution {
     private final ObjectMapper json;
     private final AuditService audit;
     private final TransactionTemplate tx;
-    public CodeVaspTransferExecution(CodeVaspTransferIntents intents,CodeVaspTransferDataClient client,CddCrypto crypto,JdbcTemplate jdbc,ObjectMapper json,AuditService audit,PlatformTransactionManager manager){
-        this.intents=intents;this.client=client;this.crypto=crypto;this.jdbc=jdbc;this.json=json;this.audit=audit;
+    private final CodeVaspTransferDetailAssessment assessments;
+    public CodeVaspTransferExecution(CodeVaspTransferIntents intents,CodeVaspTransferDataClient client,CddCrypto crypto,JdbcTemplate jdbc,ObjectMapper json,AuditService audit,PlatformTransactionManager manager,CodeVaspTransferDetailAssessment assessments){
+        this.intents=intents;this.client=client;this.crypto=crypto;this.jdbc=jdbc;this.json=json;this.audit=audit;this.assessments=assessments;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public State execute(UUID intentId){
         if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("정보 교환은 DB 트랜잭션 밖에서 시작하세요");
         Objects.requireNonNull(intentId,"정보 제공 의도가 필요합니다");Started start=tx.execute(t->begin(intentId));
-        String status,reason=null,payload=null;
+        String status,reason=null,payload=null;CodeVaspTransferDataClient.Data received=null;
         try{
             // 시작 TX는 이미 커밋됐다. 모듈·게이트웨이·복호화 대기에 DB 연결/고객 잠금을 들고 있지 않는다.
             var result=client.exchange(start.basis().prepared().request());
@@ -44,16 +45,17 @@ public class CodeVaspTransferExecution {
                 var data=result.data();var request=start.basis().prepared().request();
                 if(data==null||!request.query().requestId().equals(data.transferId())||!request.peer().entityId().equals(data.originEntityId())
                     ||data.amount()==null||request.expectedAddressAmount().compareTo(data.amount())!=0||data.originator()==null||data.beneficiary()==null)throw new IllegalStateException();
-                status="DATA_RECEIVED";
+                status="DATA_RECEIVED";received=data;
             }else if("ERROR".equals(result.status())&&result.data()==null&&Set.of("NOT_FOUND_TXID","LACK_OF_INFORMATION","UNKNOWN","UNKNOWN_TRANSFER_ID").contains(result.reason())){status="REMOTE_ERROR";reason=result.reason();}
             else throw new IllegalStateException();
             payload=json.writeValueAsString(result);if(payload.getBytes(StandardCharsets.UTF_8).length>65508)throw new IllegalStateException();
         }catch(CodeVaspSubmissionFailure failure){status=failure.admission()==CodeVaspSubmissionFailure.Admission.NOT_SENT?"NOT_SENT":"OUTCOME_UNKNOWN";reason="PROVIDER_UNAVAILABLE";payload=null;}
         catch(RuntimeException failure){status="OUTCOME_UNKNOWN";reason="INVALID_SOURCE";payload=null;}
-        String outcome=status,code=reason,plain=payload;
+        String outcome=status,code=reason,plain=payload;var details=received;
         // 완료 저장/필수 감사 실패를 외부 실패로 다시 처리하지 않는다. 시작만 남으면 재전송하지 않고 미해결로 보존한다.
         return tx.execute(t->{
             jdbc.update("INSERT INTO codevasp_transfer_results(attempt_id,status,reason,key_id,ciphertext,content_mac) VALUES(?,?,?,?,?,?)",start.id(),outcome,code,plain==null?null:crypto.keyId(),plain==null?null:crypto.encrypt(start.owner(),start.id(),plain.getBytes(StandardCharsets.UTF_8)),plain==null?null:crypto.fingerprint("codevasp-transfer-result-v1",plain));
+            if("DATA_RECEIVED".equals(outcome))assessments.record(start.id(),start.basis().prepared(),details);
             audit.record(null,"CODE_TRANSFER_FINISHED","codevasp-transfer:"+intentId,plain==null?"DENIED":"SUCCESS","ATTEMPT:"+start.id()+":STATUS:"+outcome+":REASON:"+code);
             return state(intentId);
         });
