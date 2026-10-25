@@ -1,0 +1,328 @@
+{
+  "cycle": 112,
+  "implementation_commit": "014ff8b759b2eebb7dfdfdc4f657a74fd904d147",
+  "verification": {
+    "intents": {
+      "container": "cex-transfer-intent-306fd2c208f6",
+      "exit": 0,
+      "tests": {
+        "tests": 42,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "ambientTransactionCannotStartExternalExchange()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "finishAuditFailureKeepsUnresolvedStartAndNeverBlindlyResends()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "sqlNullReasonCannotBypassOutcomeConstraints()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "unknownOutcomeCannotBecomeAutomaticRetry()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "changedCurrentDirectoryFailsBeforeAnyDisclosure()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "staleChainAfterReservationCannotUseHistoricalIntent()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "startAuditFailureRollsBackBeforeAnyDisclosure()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "financialRestrictionDuringIoCannotEraseHistoricalReply()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "notSentMustWaitBeforeRetryAndCurrentSourcesAreRechecked()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "independentCallsCannotOverlapOneIntent()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "changedCustomerCannotUseHistoricalIntentAsPermission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "changedConnectionAuthorityCannotBypassUnknownTransferForSameReceipt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "finishedStartAndResultCannotBeMutatedOrHeadRewound()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "retryAfterProvenNonSendCreatesNewAttemptWithSameTransferIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "documentedRemoteErrorIsSealedButNeverAutomaticallyResubmitted()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "changedKeyAndNewCurrentObservationsAreExecutionBasisWithoutRewritingIntent()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "historicalIdentityIsNotOpenedBeforeCurrentCustomerEligibility()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "unboundReplyIsUnknownAndNotAReceivedFinancialFact()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferExecutionIntegrationTest",
+          "name": "committedStartAndFreshBasisPrecedeIoAndReplyIsSealed()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "intentAuditFailureRollsBackPurposeFactToo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "unvaluedCannotBorrowLaterPriceForAutomaticRequest()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "exactPurposeAndOriginalValuationAreSealedWithIntent()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "omittedPurposeFactPreventsIntentCommit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "belowMinimumCannotBorrowLaterHighPriceOrOpenCustomerPlaintext()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "forgedPurposeValueIsRejectedByDatabase()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "unrecordedIntentCannotBeUsedForExecution()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "purposeFactsCannotBeUpdatedDeletedOrTruncated()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "noCapturedValuationCannotBecomePurpose()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferPurposeIntegrationTest",
+          "name": "purposeHooksRequireExistingBusinessTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "restrictedCustomerAndOldKycReconciliationCannotPrepare()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "unapprovedCounterpartyCannotCreateDisclosableIntent()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "mandatoryAuditFailureRollsBackEncryptedIntent()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "ambientTransactionCannotPrepareOrExposeIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "multiplePositiveOutputsToSameRecipientAddressRequireSeparateReview()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "concurrentReservationsKeepOneIdentityAndAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "currentVerifiedRecipientAndAllOriginalSourcesAreSealedWithMandatoryAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "newerStaleChainCannotBorrowOriginalPendingDecision()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "directSqlCannotBindIntentToDifferentCustomer()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "existingIntentIsHistoricalMetadataAndDoesNotBecomeNewPermission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "originalIntentCannotBeUpdatedDeletedOrTruncated()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "newCustomerDeclarationCannotBorrowOldVerifiedIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferIntentIntegrationTest",
+          "name": "latestFailedSearchCannotBorrowOlderFound()"
+        }
+      ],
+      "container_removed": true
+    },
+    "processing": {
+      "container": "cex-transfer-processing-2a87b40e19ec",
+      "exit": 0,
+      "tests": {
+        "tests": 25,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "scheduleCannotClaimDoneWithoutReplyOrLoseItsSource()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "customerHoldCanBeRecheckedAfterMutableScheduleBecomesDue()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "expiredLeaseReplacementCannotBeOverwrittenByLateCompletion()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "provenNonSendSchedulesRetryInsteadOfRepeatingImmediately()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "ownedProductionWorkerRunsRealProcessingAndCloses()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "failedExecutionFinishAuditBecomesUnresolvedReviewWithoutRepeat()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "foundPendingAutomaticallyReservesTransfersAndFinishesOnce()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "ambientTransactionCannotSeedClaimOrDisclose()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "claimAuditFailureRollsBackSeedAndLeaseBeforeAnyDisclosure()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "unknownOutcomeStopsAutomaticProcessingForReview()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "missingValuationRequiresReviewWithoutPrivateRequestOrAutomaticRetry()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "heldReceiptDoesNotBlockAnotherReadyDeposit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "jobFinishFailureRecoversFromDurableReplyWithoutAnotherPut()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "latestNonFoundSearchCannotSeedPrivateJob()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "smallReferenceRequiresReviewWithoutPrivateRequestOrAutomaticRetry()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferProcessingIntegrationTest",
+          "name": "anotherConnectionAuthorityCannotClaimExistingJob()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "productionContextHonorsFlagAndClosesItsAutomaticallyStartedExecutor()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "fixedDelayIsMeasuredAfterCompletionRatherThanAccumulatingCatchupTasks()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "taskIgnoringShutdownCannotStartOverlappingReplacement()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "oneDedicatedThreadDoesNotOverlapOrBlockOtherScheduler()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "stoppedWorkerCanRestartAfterOldExecutorTerminates()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "disabledAndUnconfiguredCannotCreateAutomaticAttempts()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "testProfileCannotAutomaticallyStartEvenWhenConfiguredAndEnabled()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "metadataProcessingFlagAloneCannotEnablePrivateDisclosure()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspTransferWorkerTest",
+          "name": "storedFailureAndThrownPersistenceFailureDoNotCancelFutureAttempts()"
+        }
+      ],
+      "container_removed": true
+    },
+    "finance": {
+      "container": "cex-inbox-32ba4a8981cf",
+      "exit": 0,
+      "tests": {
+        "tests": 182,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "combined": {
+      "group_executions": {
+        "intents": 42,
+        "processing": 25,
+        "finance": 182
+      },
+      "executions": 249,
+      "unique": 249,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "local_evidence": ".local/cycle112-proof",
+    "new_cases": 12,
+    "private_transfer_enabled_by_default": false,
+    "legal_obligation_proven": false,
+    "financial_release": false
+  }
+}

@@ -237,3 +237,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [110. BTC 보류 입금과 당시 평가·미평가 사실을 함께 보존하기](decisions/110-pending-deposit-price-capture.md)
 
 - [111. 출처 검색 성공과 정보 제공 판단을 구분하고 당시 평가 근거 조회하기](decisions/111-deposit-valuation-operator-review.md)
+
+- [112. 자동 정보 요청의 목적과 당시 평가 근거를 제한하기](decisions/112-private-transfer-purpose-boundary.md)

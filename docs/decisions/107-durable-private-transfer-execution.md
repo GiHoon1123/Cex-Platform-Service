@@ -63,22 +63,16 @@ codevasp_transfer_attempts/heads/results를 추가했다. 시작/결과는 불�
 
 시도 번호는 입금 전체의 순서를 정한다. 접속 주체/검색 ID가 달라도 이전 불명 시도를 숨길 수 없다. advisory lock은 이 플랫폼 업무의 짧은 TX 전용이며 엔진 공유 락이 아니다.
 
-출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L119), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L124), 현재 소스의 부분 발췌.
 
 ```java
         var original=json.reader().with(tools.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS).readTree(plain);var fresh=json.valueToTree(current.prepared());
         // 과거 키는 이미 만료됐을 수 있어 현재용 요청 생성자로 역직렬화하지 않는다. 의도의 거래·수취인 의미만 정확히 대조한다.
         // 같은 상대의 현재 허용 정책/회전된 유효 키·새 체인 관찰은 실행의 새 근거에 남긴다.
         for(String field:List.of("dateOfBirth","identityMac"))if(!original.path(field).equals(fresh.path(field)))throw held();
-        for(String field:List.of("query","recipientName"))if(!original.path("request").path(field).equals(fresh.path("request").path(field)))throw held();
-        // 금융 금액은 JSON 노드의 구현 클래스나 부동소수점 비교로 판단하지 않는다.
-        var amount=original.path("request").path("expectedAddressAmount");
-        if(!amount.isNumber()||amount.decimalValue().compareTo(current.prepared().request().expectedAddressAmount())!=0)throw held();
-        if(!original.path("request").path("peer").path("entityId").equals(fresh.path("request").path("peer").path("entityId")))throw held();
-        return current;
 ```
 
-USE_BIG_DECIMAL_FOR_FLOATS는 JSON 소수를 이진 부동소수점으로 읽지 않도록 한다. BigDecimal.compareTo는 표현 자릿수와 관계없이 정확한 값의 동등성을 확인한다. 과거 요청의 만료된 키는 현재용 생성자에 다시 넣지 않고 현재 디렉터리에서 유효한 키를 선택한다.
+[112 목적 제한](112-private-transfer-purpose-boundary.md) 이후에는 이 다음에 봉인한 목적·가격 참조와 정확한 원화 평가액도 대조한다. 위 발췌는 현재 소스의 시작 부분이다. USE_BIG_DECIMAL_FOR_FLOATS는 JSON 소수를 이진 부동소수점으로 읽지 않도록 한다. BigDecimal.compareTo는 표현 자릿수와 관계없이 정확한 값의 동등성을 확인한다. 과거 요청의 만료된 키는 현재용 생성자에 다시 넣지 않고 현재 디렉터리에서 유효한 키를 선택한다.
 
 출처: [CodeVaspTransferExecution.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferExecution.java#L53), 현재 소스의 부분 발췌.
 

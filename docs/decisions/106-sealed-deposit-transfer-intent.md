@@ -2,6 +2,8 @@
 
 외부에 수취인 이름을 제공하기 전에 현재 고객 확인·입금/체인·송신 검색·상대 정책을 하나의 암호화된 불변 의도로 확정한다. 동시 예약/감사 실패와 최신 근거 교체를 검증한다. 이 기록은 과거 제공 의도이며 현재 전송 허가나 금융 승인 토큰이 아니다.
 
+후속 [112 목적·당시 평가 제한](112-private-transfer-purpose-boundary.md)은 새 자동 의도/실행에 목적 근거를 요구하고 소액·미평가의 자동 일정을 별도 검토로 종료한다. 이전 문서의 실행 수치는 당시 범위이며 법정 근거·동일인·금융 사용 판단과 구분한다.
+
 ## 문제와 기존 동작
 
 104는 정보 교환 통신 계약,105는 정보 제공 상대의 운영 허용 정책을 구현했다. 아직 실제 고객 확인/입금 원본과 연결하지 않았다. 요청자가 적어 준 이름이나 이전의 FOUND를 그대로 가져오면 현재 신원/제한/체인·검색 실패를 건너뛸 수 있다. 외부에 보낸 뒤에만 근거를 저장하면 중간 장애에서 제공 의도와 감사가 남지 않는다.
@@ -41,7 +43,7 @@ CodeVaspTransferIntents.reserve는 내부 업무 진입점이며 HTTP에 노출�
 
 ## 이해에 필요한 실제 코드와 문법
 
-출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L55), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L56), 현재 소스의 부분 발췌.
 
 ```java
             var user=users.lockById(owner).orElseThrow(CodeVaspTransferIntents::held);
@@ -52,7 +54,7 @@ CodeVaspTransferIntents.reserve는 내부 업무 진입점이며 HTTP에 노출�
 
 사용자 잠금을 취득한 후 현재 고객 자격을 검사한다. 기존 의도의 반환은 개인정보 없는 과거 참조다. TypeScript에서도 멱등 키의 기존 결과를 반환하는 것과 새 금융/외부 작업을 승인하는 것은 별도 의미여야 한다.
 
-출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L79), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L83), 현재 소스의 부분 발췌.
 
 ```java
             UUID declaration=(UUID)person.get("declaration_id");String plain=new String(crypto.decrypt(owner,declaration,(byte[])person.get("ciphertext")),StandardCharsets.UTF_8);
@@ -63,7 +65,7 @@ CodeVaspTransferIntents.reserve는 내부 업무 진입점이며 HTTP에 노출�
 
 기존 고객 원문 암호화와 HMAC을 재사용한다. 공개 SHA-256으로 이름/생일을 보관하지 않고, 검증된 평가의 신원 지문과 대조한다. 신고 자체가 신원 증명인 것은 아니며 앞의 현재 자격 검사와 함께 사용한다.
 
-출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L99), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L103), 현재 소스의 부분 발췌.
 
 ```java
             var outputs=json.readTree(chain.getFirst().get("outputs").toString());int matches=0;
@@ -73,7 +75,7 @@ CodeVaspTransferIntents.reserve는 내부 업무 진입점이며 HTTP에 노출�
 
 공급사에는 vout을 보내지 못하므로 주소에 양수 출력이 하나인지 별도 확인한다. Decimal 값을 float로 계산하지 않는다. 여러 출력이면 임의 합산·분할 매칭을 하지 않고 보류한다.
 
-출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L65), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferIntents.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferIntents.java#L67), 현재 소스의 부분 발췌.
 
 ```java
             audit.record(null,"CODE_TRANSFER_INTENT_RESERVED","codevasp-transfer:"+id,"SUCCESS","SEARCH:"+searchId+":ATTEMPT:"+basis.searchAttempt());

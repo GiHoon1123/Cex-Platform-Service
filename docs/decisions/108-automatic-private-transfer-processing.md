@@ -2,6 +2,8 @@
 
 검색이 끝난 보류 입금의 정보 교환 의도·현재 근거·외부 실행·암호화 응답을 전용 워커에서 연결한다. 보류 건의 재확인 일정, 임대 만료/늦은 완료와 불명 재전송 차단을 검증한다. 실제 개인정보 자동 제공은 별도 명시적 설정을 요구하며 기본은 꺼져 있다.
 
+후속 [112 목적·당시 평가 제한](112-private-transfer-purpose-boundary.md)은 새 자동 의도/실행에 목적 근거를 요구하고 소액·미평가의 자동 일정을 별도 검토로 종료한다. 이전 문서의 실행 수치는 당시 범위이며 법정 근거·동일인·금융 사용 판단과 구분한다.
+
 ## 문제와 기존 동작
 
 107까지 내부 서비스는 제공 의도에서 실제 정보 교환의 시작/응답을 보존했지만 자동 진입점이 없었다. 첫 미해결 건만 매초 고르면 현재 고객/체인/상대 조건을 만족하지 못하는 입금이 다른 준비된 입금을 막는다. 프로세스 재시작/일정 완료 저장 실패를 단순 재전송으로 해결하면 이미 제공한 개인정보를 반복할 수 있다.
@@ -66,7 +68,7 @@
 
 목록/검색 활성화와 개인정보 자동 제공은 별개 설정이다. 기본 false는 설정이 없을 때도 적용하며 test 프로필은 별도로 빈 자체를 제외한다. 이 스위치는 법적 적용 대상/제공 목적 판정을 대신하지 않는다.
 
-출처: [CodeVaspTransferProcessing.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferProcessing.java#L55), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferProcessing.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferProcessing.java#L56), 현재 소스의 부분 발췌.
 
 ```java
             SELECT j.search_id,s.receipt_id FROM codevasp_transfer_jobs j JOIN codevasp_deposit_searches s ON s.id=j.search_id
@@ -88,7 +90,7 @@ FOR UPDATE OF j SKIP LOCKED는 다른 처리자가 잠근 일정만 건너뛴다
 
 먼저 불변 실행 원본의 상태를 읽는다. 이미 수신/불명 상태가 있으면 외부 PUT를 다시 호출하지 않고 일정만 복원한다. Optional.empty는 처리할 일정/현재 임대 소유권이 없다는 뜻이며 입금이나 자산이 없다는 뜻이 아니다.
 
-출처: [CodeVaspTransferProcessing.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferProcessing.java#L80), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferProcessing.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferProcessing.java#L81), 현재 소스의 부분 발췌.
 
 ```java
             UPDATE codevasp_transfer_jobs SET intent_id=COALESCE(?,intent_id),state=?,last_reason=?,lease_id=NULL,lease_until=NULL,
