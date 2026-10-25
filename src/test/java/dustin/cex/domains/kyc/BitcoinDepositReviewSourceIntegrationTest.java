@@ -100,7 +100,7 @@ class BitcoinDepositReviewSourceIntegrationTest extends EddTestSupport {
         mvc.perform(get("/api/admin/deposits/BTC/not-a-uuid").header("Authorization","Bearer "+maker.access())).andExpect(status().isBadRequest());mvc.perform(get("/api/admin/deposits/ETH/"+UUID.randomUUID()).header("Authorization","Bearer "+maker.access())).andExpect(status().isForbidden());mvc.perform(post("/api/admin/deposits/BTC/"+UUID.randomUUID()).header("Authorization","Bearer "+maker.access())).andExpect(status().isForbidden());
     }
     @Test void differentConfiguredNetworkCannotReadReceiptThroughOperatorRole(){
-        var seed=seed();var other=new BitcoinDepositReviewSource(users,operatorSessions,eligibility,new BitcoinSettings("","","","","MAINNET"),jdbc,audit,manager,originSearch,valuations);
+        var seed=seed();var other=new BitcoinDepositReviewSource(new BitcoinDepositOperatorAccess(users,operatorSessions,jdbc),eligibility,new BitcoinSettings("","","","","MAINNET"),jdbc,audit,manager,originSearch,valuations);
         assertEquals(404,assertThrows(ResponseStatusException.class,()->other.read(maker.user().getId(),maker.sid(),seed.id())).getStatusCode().value());
     }
 

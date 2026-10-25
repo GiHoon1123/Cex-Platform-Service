@@ -1,7 +1,6 @@
 package dustin.cex.domains.bitcoin;
 
 import dustin.cex.domains.auth.model.entity.*;
-import dustin.cex.domains.auth.repository.UserRepository;
 import dustin.cex.domains.security.*;
 import java.math.*;
 import java.sql.Timestamp;
@@ -24,8 +23,7 @@ public class BitcoinDepositReviewSource {
     public record Reconciliation(UUID id,String status,Instant snapshotAt,Instant completedAt){}
     public record Source(UUID depositId,String asset,String network,String txid,int vout,String amount,Instant detectedAt,
         Instant readAt,Customer customer,Chain chain,Pending pending,Reconciliation reconciliation,dustin.cex.domains.travelrule.CodeVaspDepositSearchReview.Review originSearch,dustin.cex.domains.valuation.BitcoinDepositValuationReview.Review valuation){}
-    private final UserRepository users;
-    private final OperatorSessionPolicy sessions;
+    private final BitcoinDepositOperatorAccess access;
     private final CustomerFinancialEligibility eligibility;
     private final BitcoinSettings settings;
     private final JdbcTemplate jdbc;
@@ -33,22 +31,16 @@ public class BitcoinDepositReviewSource {
     private final TransactionTemplate tx;
     private final dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch;
     private final dustin.cex.domains.valuation.BitcoinDepositValuationReview valuation;
-    public BitcoinDepositReviewSource(UserRepository users,OperatorSessionPolicy sessions,CustomerFinancialEligibility eligibility,
+    public BitcoinDepositReviewSource(BitcoinDepositOperatorAccess access,CustomerFinancialEligibility eligibility,
         BitcoinSettings settings,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager,dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch,dustin.cex.domains.valuation.BitcoinDepositValuationReview valuation){
-        this.users=users;this.sessions=sessions;this.eligibility=eligibility;this.settings=settings;this.jdbc=jdbc;this.audit=audit;this.originSearch=originSearch;this.valuation=valuation;
+        this.access=access;this.eligibility=eligibility;this.settings=settings;this.jdbc=jdbc;this.audit=audit;this.originSearch=originSearch;this.valuation=valuation;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Source read(long actor,UUID sid,UUID deposit){
         if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("입금 심사 근거 조회는 독립 트랜잭션으로 실행하세요");
         try{return tx.execute(t->{
-            var owners=jdbc.queryForList("SELECT user_id FROM bitcoin_deposit_receipts WHERE id=? AND network=?",Long.class,deposit,settings.network.id);
-            // 사용자 잠금은 오름차순으로 통일한다. 원본 존재 여부는 현재 운영 인증을 확인한 뒤에만 응답한다.
-            var locked=new HashMap<Long,User>();var ids=new TreeSet<Long>();ids.add(actor);if(!owners.isEmpty())ids.add(owners.getFirst());
-            for(long id:ids)users.lockById(id).ifPresent(user->locked.put(id,user));
-            sessions.requireFresh(locked.get(actor),sid,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);
-            if(deposit==null)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"입금 식별자를 확인하세요");
-            if(owners.isEmpty())throw missing();
-            var customer=locked.get(owners.getFirst());boolean permitted=eligibility.permitted(customer);
+            var authorized=access.require(actor,sid,deposit,settings.network.id,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);
+            var customer=authorized.customer();boolean permitted=eligibility.permitted(customer);
             // 관찰/판단/보류/가장 최근 대사는 한 SQL 문장의 같은 커밋 스냅샷에서 읽는다.
             // 고객 자격 변경은 같은 사용자 잠금 계약을 따르며, 노드와 엔진을 기다리지 않는다.
             var row=jdbc.queryForMap("""
@@ -79,5 +71,4 @@ public class BitcoinDepositReviewSource {
     }
     private static Long number(Map<String,Object> row,String key){var value=(Number)row.get(key);return value==null?null:value.longValue();}
     private static Instant at(Map<String,Object> row,String key){var value=(Timestamp)row.get(key);return value==null?null:value.toInstant();}
-    private static ResponseStatusException missing(){return new ResponseStatusException(HttpStatus.NOT_FOUND,"입금 심사 근거가 없습니다");}
 }
