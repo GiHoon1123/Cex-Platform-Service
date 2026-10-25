@@ -2,6 +2,8 @@
 
 현재 온체인 조건과 관찰 지갑의 사용 근거를 통과한 입금을 고객 보류 자산 원장에 한 번만 기록한다. 고객의 자산 사실 보존과 사용 가능 잔액/엔진 반입을 분리하고, 입금 원본·양쪽 원장 항목·감사의 원자성과 DB 우회 검사를 설명한다.
 
+후속 [116 거래 기반 모니터링](116-durable-native-deposit-monitoring.md)은 실제 보류 원장과 당시 평가를 처리 예약에 결합하고, 별도 워커에서 단일 규칙의 검토 근거를 남긴다. 금융 허가는 아니다.
+
 ## 문제와 기존 동작
 
 086까지는 발견 원본/지갑 사용/온체인 준비를 보존했지만 고객 자산의 보류 원장 기록은 없었다. 확인된 수신을 바로 AVAILABLE로 넣으면 고객 자격·위험 심사·엔진 영속 반입이 끝나기 전에 주문에 쓸 수 있다. 반대로 정지/미확인 고객이라는 이유로 실제 고객 귀속 자산을 기록하지 않으면 보유 사실과 제한 상태가 섞인다.
@@ -44,7 +46,7 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 `recognizeNext()`는 같은 조건을 만족하는 미반입 원본 한 개를 고르며 내부 지갑 사용/근거 누락/이미 완료된 원본은 후보에서 제외한다. 선택 후의 원본은 같은 금융 TX에서 다시 검사한다. 서비스는 독립 트랜잭션을 요구하며 노드 RPC나 엔진 HTTP는 호출하지 않는다.
 
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L62), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L63), 현재 소스의 부분 발췌.
 
 ```java
         users.lockById(owner).orElseThrow(()->new IllegalStateException("입금 소유자가 없습니다"));
@@ -56,7 +58,7 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 
 현재 고객의 거래 허용과 자산 보류 기록은 별개다. 정지된 소유자도 실제 입금을 보류로 남길 수 있다. 같은 입금의 재시도는 이미 확정된 원본을 반환하며 새 항목을 만들지 않는다. 기존 완료 응답이 현재 거래 허용을 새로 승인한다는 의미는 아니다.
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L67), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L68), 현재 소스의 부분 발췌.
 
 ```java
             SELECT d.id FROM bitcoin_deposit_chain_heads qh JOIN bitcoin_deposit_chain_decisions d ON d.id=qh.decision_id
@@ -70,12 +72,14 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 
 과거 CHAIN_READY 문자열만 신뢰하지 않고 현재 판단/관찰 포인터·시각·지갑 사용 근거를 함께 검사한다. FOR SHARE는 플랫폼 DB의 짧은 확정 구간을 보호한다. 근거가 없으면 false 기본값이나 다른 DB로 우회하지 않는다.
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L80), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L81), 현재 소스의 부분 발췌.
 
 ```java
         ledger.record(key,"BTC_DEPOSIT_PENDING",List.of(p(owner,"PENDING",asset,amount),p(0,"CUSTODY",asset,amount.negate())));
         jdbc.update("INSERT INTO bitcoin_pending_deposits(receipt_id,decision_id,operation_key) VALUES(?,?,?)",deposit,decision,key);
         valuations.recordRecognized(deposit,priceId);
+        // 잠근 고객의 새 수탁 순번을 같은 트랜잭션으로 알린다. 탐지 계산은 별도 워커가 원본을 읽어 수행한다.
+        monitoring.enqueue(owner,key);
         audit.record(null,"BTC_PENDING_DEPOSIT_RECOGNIZED","bitcoin-deposit:"+deposit,"SUCCESS","DECISION:"+decision+":OP:"+key);
         return new Recognized(deposit,key,true);
 ```
@@ -102,6 +106,8 @@ PostgreSQL16 [제약 추가/검증](https://www.postgresql.org/docs/16/sql-alter
 [Bitcoin 스키마](../../src/main/resources/bitcoin/schema.sql)는 bitcoin_pending_deposits와 현재 판단의 입금 ID를 외래 키로 연결한다. 원장 거래와 입금 근거 양쪽의 지연 트리거가 서로 빠진 경우를 거부한다. 신규 PENDING/CUSTODY 항목은 현재 BTC_DEPOSIT_PENDING 업무에서만 허용한다. 후속 해제/역거래는 해당 금융 근거 계약을 별도로 추가해야 하며 임의 일반 업무로 우회하지 않는다. 초기화 순서는 원장→Bitcoin 금융 참조가 준비되도록 명시했다.
 
 명시적인 opening 원장 없이는 실제 입금 관찰만으로 최초 원장을 추측 생성하지 않는다. 새 초기 환경은 기존 정책대로 검증된 명시적 반입을 먼저 해야 한다.
+
+후속116에서 탐지 작업 알림도 같은 트랜잭션에 연결했다. 현재 발췌와 아래 당시 검증 결과를 구분한다.
 
 ## 작성한 테스트
 

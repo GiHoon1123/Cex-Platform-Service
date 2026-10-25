@@ -245,3 +245,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [114. 운영 조회에서 전송·정보 비교·작업 이력을 최소 정보로 연결하기](decisions/114-private-transfer-operator-metadata.md)
 
 - [115. 인가된 개인정보 검토와 검증된 원본·불변 접근 증적 연결하기](decisions/115-authorized-private-transfer-inspection.md)
+
+- [116. 실제 수탁 원장으로 반복 소액 입금의 검토 신호 남기기](decisions/116-durable-native-deposit-monitoring.md)

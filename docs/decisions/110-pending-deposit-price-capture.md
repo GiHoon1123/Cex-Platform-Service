@@ -2,6 +2,8 @@
 
 보류 원장에 실제 BTC 수량을 기록하는 순간의 원화 참고가격을 함께 보존한다. 가격 부재·인식 중 만료도 원본 사실로 남기며, 이후 받은 가격으로 과거 입금을 다시 평가하지 않는다. 이 기록은 내부 참고 평가이며 트래블룰 면제·개인정보 제공·자금 사용 승인이 아니다.
 
+후속 [116 거래 기반 모니터링](116-durable-native-deposit-monitoring.md)은 실제 보류 원장과 당시 평가를 처리 예약에 결합하고, 별도 워커에서 단일 규칙의 검토 근거를 남긴다. 금융 허가는 아니다.
+
 ## 문제와 기존 동작
 
 109는 가격 원본의 시각과 실패를 보존했지만 어느 입금에 어떤 가격을 사용했는지는 연결하지 않았다. 업무 처리 시마다 현재가를 다시 읽으면 같은 입금의 환산액이 달라지고, 가격 장애 때문에 실제 입금 수량까지 기록하지 못하면 수탁 자산과 원장이 어긋날 수 있다.
@@ -30,13 +32,15 @@
 
 ## 구현과 관련 코드·문법
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L79), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L80), 현재 소스의 부분 발췌.
 
 ```java
         Long priceId=valuations.captureCurrentPrice();
         ledger.record(key,"BTC_DEPOSIT_PENDING",List.of(p(owner,"PENDING",asset,amount),p(0,"CUSTODY",asset,amount.negate())));
         jdbc.update("INSERT INTO bitcoin_pending_deposits(receipt_id,decision_id,operation_key) VALUES(?,?,?)",deposit,decision,key);
         valuations.recordRecognized(deposit,priceId);
+        // 잠근 고객의 새 수탁 순번을 같은 트랜잭션으로 알린다. 탐지 계산은 별도 워커가 원본을 읽어 수행한다.
+        monitoring.enqueue(owner,key);
         audit.record(null,"BTC_PENDING_DEPOSIT_RECOGNIZED","bitcoin-deposit:"+deposit,"SUCCESS","DECISION:"+decision+":OP:"+key);
 ```
 
@@ -76,6 +80,8 @@ CREATE CONSTRAINT TRIGGER bitcoin_pending_valuation_complete_check AFTER INSERT 
 ```
 
 DEFERRABLE INITIALLY DEFERRED는 트랜잭션 안의 중간 삽입 순서는 허용하되 최종 커밋 때 평가 사실의 존재를 확인한다. 별도의 삽입 트리거는 원장과 같은 트랜잭션인지, 기준 시각·현재 가격·정확한 환산액이 일치하는지 검사한다. UPDATE·DELETE·TRUNCATE도 차단한다. 기존 금융 기록을 삭제하거나 트리거를 꺼서 시험을 맞추지 않는다.
+
+후속116에서 탐지 작업 알림도 같은 트랜잭션에 연결했다. 현재 발췌와 아래 당시 검증 결과를 구분한다.
 
 ## 작성한 테스트
 

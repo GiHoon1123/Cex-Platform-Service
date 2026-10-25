@@ -62,7 +62,7 @@
 
 TreeSet<Long>은 ID를 중복 없이 오름차순으로 정렬한다. 이 순서로 현재 운영자와 고객을 잠근 뒤 영속 운영 세션을 다시 검사한다. 원본을 못 찾았다는 응답도 운영 인증 뒤에만 반환한다. TypeScript의 Set은 이 숫자 정렬을 자동으로 해주지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L58), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L59), 현재 소스의 부분 발췌.
 
 ```java
                  LEFT JOIN LATERAL(SELECT id,status,snapshot_at,completed_at FROM bitcoin_deposit_reconciliation_runs WHERE receipt_id=r.id ORDER BY started_at DESC,id DESC LIMIT 1) q ON true
@@ -72,7 +72,7 @@ TreeSet<Long>은 ID를 중복 없이 오름차순으로 정렬한다. 이 순서
 
 LATERAL은 앞의 입금 r.id에 대해 최신 대사 한 건을 선택한다. status=MATCHED 같은 필터를 넣지 않으므로 새 RUNNING/FAILED가 있으면 그 결과를 그대로 보여준다. 조회가 새 대사를 만들거나 원장을 정정하지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L68), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L69), 현재 소스의 부분 발췌.
 
 ```java
             // 조회의 대상과 관찰/대사 참조를 남긴다. 이름/신분증/신고 원문을 감사 문자열에 복사하지 않는다.
@@ -81,7 +81,7 @@ LATERAL은 앞의 입금 r.id에 대해 최신 대사 한 건을 선택한다. s
 
 감사는 고객 버전/자격 결과/CDD·KYC·관찰·판단·대사 참조를 기록한다. 이름·생일·신고 원문은 복사하지 않는다. 감사 쓰기가 실패하면 DTO를 성공 반환하지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L72), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L73), 현재 소스의 부분 발췌.
 
 ```java
     private static Long number(Map<String,Object> row,String key){var value=(Number)row.get(key);return value==null?null:value.longValue();}
