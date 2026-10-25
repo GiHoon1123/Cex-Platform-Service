@@ -133,6 +133,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "ledger":["*OrderLedgerTest"],
             "pending-worker":["*BitcoinPendingDepositWorkerTest","*BitcoinPendingDepositWorkerIntegrationTest"],
             "pending-selection":["*BitcoinPendingSelectionIntegrationTest"],
+            "deposit-reconciliation":["*BitcoinDepositReconciliationTest","*BitcoinDepositReconciliationIntegrationTest"],
         }
         result["groups"]=[]
         for group,patterns in groups.items():

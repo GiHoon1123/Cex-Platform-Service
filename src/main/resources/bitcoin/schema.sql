@@ -330,3 +330,62 @@ END $$;
 DROP TRIGGER IF EXISTS bitcoin_pending_entry_bound ON ledger_entries;
 CREATE CONSTRAINT TRIGGER bitcoin_pending_entry_bound AFTER INSERT ON ledger_entries
  DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN(NEW.bucket IN ('PENDING','CUSTODY')) EXECUTE FUNCTION bitcoin_pending_entry_kind();
+
+-- 입금 한 건의 대사는 거래소 전체 수탁 자산 증명과 구분한다. 완료 뒤 증거/차이/범위를 바꾸지 않는다.
+CREATE TABLE IF NOT EXISTS bitcoin_deposit_reconciliation_runs (
+ id uuid PRIMARY KEY,receipt_id uuid NOT NULL REFERENCES bitcoin_deposit_receipts(id),network varchar(32) NOT NULL,wallet varchar(64) NOT NULL,
+ scope varchar(32) NOT NULL CHECK(scope='PENDING_RECEIPT'),snapshot_at timestamptz NOT NULL,
+ started_at timestamptz NOT NULL DEFAULT clock_timestamp(),completed_at timestamptz,
+ status varchar(16) NOT NULL CHECK(status IN ('RUNNING','MATCHED','MISMATCH','INCOMPLETE','HELD','FAILED')),
+ CHECK((status='RUNNING' AND completed_at IS NULL) OR(status<>'RUNNING' AND completed_at IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS bitcoin_deposit_reconciliation_history ON bitcoin_deposit_reconciliation_runs(receipt_id,started_at,id);
+CREATE TABLE IF NOT EXISTS bitcoin_deposit_reconciliation_evidence (
+ run_id uuid NOT NULL REFERENCES bitcoin_deposit_reconciliation_runs(id),kind varchar(16) NOT NULL CHECK(kind IN ('PLATFORM','NODE')),
+ payload_hash varchar(64) NOT NULL CHECK(payload_hash ~ '^[0-9a-f]{64}$'),payload text NOT NULL CHECK(jsonb_typeof(payload::jsonb)='object'),
+ CHECK(payload_hash=encode(sha256(convert_to(payload,'UTF8')),'hex')),PRIMARY KEY(run_id,kind)
+);
+CREATE TABLE IF NOT EXISTS bitcoin_deposit_reconciliation_issues (
+ id bigserial PRIMARY KEY,run_id uuid NOT NULL REFERENCES bitcoin_deposit_reconciliation_runs(id),code varchar(64) NOT NULL,expected text NOT NULL,actual text NOT NULL
+);
+CREATE OR REPLACE FUNCTION bitcoin_deposit_reconciliation_open() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM bitcoin_deposit_reconciliation_runs WHERE id=NEW.run_id AND status='RUNNING' FOR SHARE) THEN
+  RAISE EXCEPTION '완료한 입금 대사에 증거/차이를 추가할 수 없습니다';
+ END IF;
+ RETURN NEW;
+END $$;
+CREATE OR REPLACE FUNCTION bitcoin_deposit_reconciliation_finish() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='DELETE' THEN RAISE EXCEPTION '입금 대사 원본을 삭제할 수 없습니다'; END IF;
+ IF TG_OP='INSERT' THEN
+  IF NEW.status<>'RUNNING' OR NEW.completed_at IS NOT NULL THEN RAISE EXCEPTION '입금 대사는 실행 상태에서 시작해야 합니다'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM bitcoin_deposit_receipts r JOIN bitcoin_deposit_addresses a ON a.id=r.address_id
+    WHERE r.id=NEW.receipt_id AND r.network=NEW.network AND a.wallet=NEW.wallet) OR NEW.snapshot_at>NEW.started_at THEN
+   RAISE EXCEPTION '입금 대사 범위와 시점은 원본에 일치해야 합니다';
+  END IF;
+ ELSE
+  IF NEW.completed_at<OLD.started_at OR OLD.status<>'RUNNING' OR NEW.status='RUNNING' OR NEW.id<>OLD.id OR NEW.receipt_id<>OLD.receipt_id OR NEW.network<>OLD.network OR NEW.wallet<>OLD.wallet
+    OR NEW.scope<>OLD.scope OR NEW.snapshot_at<>OLD.snapshot_at OR NEW.started_at<>OLD.started_at THEN RAISE EXCEPTION '완료한 입금 대사의 범위/결과를 바꿀 수 없습니다'; END IF;
+  IF NOT EXISTS(SELECT 1 FROM bitcoin_deposit_reconciliation_evidence WHERE run_id=NEW.id AND kind='PLATFORM')
+    OR(NEW.status<>'FAILED' AND NOT EXISTS(SELECT 1 FROM bitcoin_deposit_reconciliation_evidence WHERE run_id=NEW.id AND kind='NODE'))
+    OR(NEW.status='MATCHED' AND EXISTS(SELECT 1 FROM bitcoin_deposit_reconciliation_issues WHERE run_id=NEW.id))
+    OR(NEW.status<>'MATCHED' AND NOT EXISTS(SELECT 1 FROM bitcoin_deposit_reconciliation_issues WHERE run_id=NEW.id)) THEN
+   RAISE EXCEPTION '입금 대사 결과에는 범위에 맞는 증거와 차이 기록이 필요합니다';
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_deposit_reconciliation_state ON bitcoin_deposit_reconciliation_runs;
+CREATE TRIGGER bitcoin_deposit_reconciliation_state BEFORE INSERT OR UPDATE OR DELETE ON bitcoin_deposit_reconciliation_runs
+ FOR EACH ROW EXECUTE FUNCTION bitcoin_deposit_reconciliation_finish();
+DROP TRIGGER IF EXISTS bitcoin_deposit_reconciliation_no_truncate ON bitcoin_deposit_reconciliation_runs;
+CREATE TRIGGER bitcoin_deposit_reconciliation_no_truncate BEFORE TRUNCATE ON bitcoin_deposit_reconciliation_runs FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS bitcoin_deposit_reconciliation_evidence_open ON bitcoin_deposit_reconciliation_evidence;
+CREATE TRIGGER bitcoin_deposit_reconciliation_evidence_open BEFORE INSERT ON bitcoin_deposit_reconciliation_evidence FOR EACH ROW EXECUTE FUNCTION bitcoin_deposit_reconciliation_open();
+DROP TRIGGER IF EXISTS bitcoin_deposit_reconciliation_issues_open ON bitcoin_deposit_reconciliation_issues;
+CREATE TRIGGER bitcoin_deposit_reconciliation_issues_open BEFORE INSERT ON bitcoin_deposit_reconciliation_issues FOR EACH ROW EXECUTE FUNCTION bitcoin_deposit_reconciliation_open();
+DROP TRIGGER IF EXISTS bitcoin_deposit_reconciliation_evidence_immutable ON bitcoin_deposit_reconciliation_evidence;
+CREATE TRIGGER bitcoin_deposit_reconciliation_evidence_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_deposit_reconciliation_evidence FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS bitcoin_deposit_reconciliation_issues_immutable ON bitcoin_deposit_reconciliation_issues;
+CREATE TRIGGER bitcoin_deposit_reconciliation_issues_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_deposit_reconciliation_issues FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
