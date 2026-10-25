@@ -23,14 +23,15 @@ class CustomerBitcoinDepositsIntegrationTest extends EddTestSupport {
         r.add("bitcoin.rpc-password",()->System.getenv("CEX_BITCOIN_TEST_PASSWORD"));r.add("bitcoin.wallet",()->"cex_watch");r.add("bitcoin.network",()->"REGTEST");
     }
     @Autowired CustomerBitcoinDeposits deposits;
+    @Autowired dustin.cex.domains.security.CustomerSessionPolicy sessions;
     @Autowired BitcoinDepositQualificationService qualification;
     @Autowired BitcoinPendingDepositService pending;
     @Autowired dustin.cex.domains.ledger.LedgerService ledger;
     @MockitoSpyBean BitcoinDepositReader reader;
     record Seed(UUID id,long owner,String txid,String address,String script){}
     String hex(){return UUID.randomUUID().toString().replace("-","")+UUID.randomUUID().toString().replace("-","");}
-    Seed seed(long owner,Instant time){return seed(owner,time,"bitcoin-regtest");}
-    Seed seed(long owner,Instant time,String network){
+    Seed seed(long owner,Instant time){
+        String network="bitcoin-regtest";
         // 부모 원본부터 정상 제약 안에서 추가한다. 기존 금융 이력 삭제/불변 트리거 해제를 하지 않는다.
         var addresses=jdbc.queryForList("SELECT id,address,script_pub_key FROM bitcoin_deposit_addresses WHERE user_id=? AND network=?",owner,network);
         if(addresses.isEmpty()){
@@ -97,8 +98,10 @@ class CustomerBitcoinDepositsIntegrationTest extends EddTestSupport {
         doThrow(new IllegalStateException("격리 조회 감사 장애")).when(audit).record(any(),eq("CUSTOMER_BTC_DEPOSIT_READ"),anyString(),anyString(),anyString());assertThrows(IllegalStateException.class,()->deposits.detail(customer.getId(),sid,seed.id()));
     }
     @Test void anotherNetworkOfSameCustomerIsNotMixedIntoCurrentHistory(){
-        var own=seed(customer.getId(),Instant.now().minusSeconds(1));var other=seed(customer.getId(),Instant.now().minusSeconds(1),"bitcoin-mainnet");
-        var page=deposits.own(customer.getId(),sid,null);assertEquals(List.of(own.id()),page.items().stream().map(CustomerBitcoinDeposits.Deposit::id).toList());assertEquals(404,assertThrows(ResponseStatusException.class,()->deposits.detail(customer.getId(),sid,other.id())).getStatusCode().value());
+        var own=seed(customer.getId(),Instant.now().minusSeconds(1));
+        var other=new CustomerBitcoinDeposits(sessions,new BitcoinSettings("","","","","MAINNET"),jdbc,audit,manager);
+        assertEquals(List.of(own.id()),deposits.own(customer.getId(),sid,null).items().stream().map(CustomerBitcoinDeposits.Deposit::id).toList());
+        assertTrue(other.own(customer.getId(),sid,null).items().isEmpty());assertEquals(404,assertThrows(ResponseStatusException.class,()->other.detail(customer.getId(),sid,own.id())).getStatusCode().value());
     }
 
     @Test void enrolledCustomerWithoutVerifiedMfaCannotDowngradeToPasswordOnlyHistory()throws Exception{

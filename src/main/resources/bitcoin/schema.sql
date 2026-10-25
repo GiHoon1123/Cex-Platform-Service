@@ -1,3 +1,12 @@
+-- 원장은 BTC 자산 코드를 사용하므로 실행 DB의 체인은 하나로 고정한다. 설정 변경으로 시험 자산을 실망 자산으로 바꾸지 않는다.
+CREATE TABLE IF NOT EXISTS bitcoin_network_identity (
+ singleton integer PRIMARY KEY CHECK(singleton=1),network varchar(32) NOT NULL CHECK(network IN ('bitcoin-regtest','bitcoin-mainnet')),
+ bound_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+DROP TRIGGER IF EXISTS bitcoin_network_identity_immutable ON bitcoin_network_identity;
+CREATE TRIGGER bitcoin_network_identity_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_network_identity
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
 -- 고객 주소의 소유자는 발급 이후 바꾸거나 삭제하지 않는다. 네트워크를 포함해 주소 혼동을 막는다.
 CREATE TABLE IF NOT EXISTS bitcoin_deposit_addresses (
  id uuid PRIMARY KEY,user_id bigint NOT NULL REFERENCES users(id),
@@ -389,3 +398,22 @@ DROP TRIGGER IF EXISTS bitcoin_deposit_reconciliation_evidence_immutable ON bitc
 CREATE TRIGGER bitcoin_deposit_reconciliation_evidence_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_deposit_reconciliation_evidence FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
 DROP TRIGGER IF EXISTS bitcoin_deposit_reconciliation_issues_immutable ON bitcoin_deposit_reconciliation_issues;
 CREATE TRIGGER bitcoin_deposit_reconciliation_issues_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_deposit_reconciliation_issues FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 설정 검증을 우회한 직접 삽입도 DB에 결합한 체인과 일치해야 한다. 결합 전에는 새 체인 사실을 받지 않는다.
+CREATE OR REPLACE FUNCTION bitcoin_fact_require_network() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE bound varchar;
+BEGIN
+ SELECT network INTO bound FROM bitcoin_network_identity WHERE singleton=1 FOR SHARE;
+ IF NOT FOUND OR NEW.network<>bound THEN RAISE EXCEPTION '비트코인 원본의 네트워크가 플랫폼 DB와 다릅니다'; END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_address_network ON bitcoin_deposit_addresses;
+CREATE TRIGGER bitcoin_address_network BEFORE INSERT ON bitcoin_deposit_addresses FOR EACH ROW EXECUTE FUNCTION bitcoin_fact_require_network();
+DROP TRIGGER IF EXISTS bitcoin_observation_network ON bitcoin_transaction_observations;
+CREATE TRIGGER bitcoin_observation_network BEFORE INSERT ON bitcoin_transaction_observations FOR EACH ROW EXECUTE FUNCTION bitcoin_fact_require_network();
+DROP TRIGGER IF EXISTS bitcoin_registry_network ON bitcoin_scan_registries;
+CREATE TRIGGER bitcoin_registry_network BEFORE INSERT ON bitcoin_scan_registries FOR EACH ROW EXECUTE FUNCTION bitcoin_fact_require_network();
+DROP TRIGGER IF EXISTS bitcoin_scan_network ON bitcoin_block_scans;
+CREATE TRIGGER bitcoin_scan_network BEFORE INSERT ON bitcoin_block_scans FOR EACH ROW EXECUTE FUNCTION bitcoin_fact_require_network();
+DROP TRIGGER IF EXISTS bitcoin_receipt_network ON bitcoin_deposit_receipts;
+CREATE TRIGGER bitcoin_receipt_network BEFORE INSERT ON bitcoin_deposit_receipts FOR EACH ROW EXECUTE FUNCTION bitcoin_fact_require_network();
