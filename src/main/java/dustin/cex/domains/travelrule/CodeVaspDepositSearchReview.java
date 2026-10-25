@@ -46,7 +46,8 @@ public class CodeVaspDepositSearchReview {
             String status=row.get("status")==null?(row.get("attempt_id")==null?"UNSTARTED":"RUNNING"):(String)row.get("status");
             Instant first=at(row,"first_started_at"),until=first==null?null:first.plusSeconds(900);boolean ended=until!=null&&!until.isAfter(readAt);
             reason=switch(status){
-                case "FOUND"->"INFORMATION_EXCHANGE_REQUIRED";
+                // 출처 발견은 기술적 검색 결과다. 금액·제공 목적·상대 경로 판단을 완료했다고 표시하지 않는다.
+                case "FOUND"->"ORIGIN_FOUND_REVIEW_REQUIRED";
                 case "NOT_FOUND","UNKNOWN_REQUEST","AMBIGUOUS"->"MANUAL_REVIEW_REQUIRED";
                 default->ended?"AUTO_WINDOW_EXPIRED":status.equals("UNSTARTED")?"AWAITING_SUBMISSION":status.equals("RUNNING")?"IN_PROGRESS":"AWAITING_RESULT";
             };

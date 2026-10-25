@@ -29,6 +29,7 @@ class BitcoinDepositOriginSearchReviewIntegrationTest extends EddTestSupport {
     @Autowired CodeVaspDirectoryService directory;
     @Autowired CodeVaspDepositSearches searches;
     @Autowired CodeVaspDepositSearchExecution execution;
+    @Autowired dustin.cex.domains.valuation.BitcoinDepositValuationReview valuations;
     @Autowired BitcoinDepositReviewSource source;
     @Autowired dustin.cex.domains.security.OperatorSessionPolicy operatorSessions;
     @Autowired dustin.cex.domains.security.CustomerFinancialEligibility eligibility;
@@ -55,7 +56,7 @@ class BitcoinDepositOriginSearchReviewIntegrationTest extends EddTestSupport {
     }
     @Test void foundOriginRemainsInformationExchangeRequiredAndNotFinancialPermission(){
         var search=searches.reserve(receipt.id());history(search,"SUBMIT",181,null,0,null);when(transactions.result(search.id())).thenReturn(found(search.id()));execution.refresh(search.id());clearInvocations(transactions);
-        var view=source.read(maker.user().getId(),maker.sid(),receipt.id());assertEquals("FOUND",view.originSearch().search().status());assertEquals("origin-member",view.originSearch().search().originEntityId());assertEquals("INFORMATION_EXCHANGE_REQUIRED",view.originSearch().reason());assertFalse(view.customer().financiallyEligible());assertFalse(view.pending().recognized());
+        var view=source.read(maker.user().getId(),maker.sid(),receipt.id());assertEquals("FOUND",view.originSearch().search().status());assertEquals("origin-member",view.originSearch().search().originEntityId());assertEquals("ORIGIN_FOUND_REVIEW_REQUIRED",view.originSearch().reason());assertFalse(view.customer().financiallyEligible());assertFalse(view.pending().recognized());
         String auditDetail=jdbc.queryForObject("SELECT detail FROM security_audit WHERE action='BTC_DEPOSIT_REVIEW_SOURCE_READ' AND actor_id=? AND target=? ORDER BY occurred_at DESC LIMIT 1",String.class,maker.user().getId(),"bitcoin-deposit:"+receipt.id());assertTrue(auditDetail.contains("ORIGIN_SEARCH:"+search.id()));assertTrue(auditDetail.contains("ORIGIN_ATTEMPT:"+view.originSearch().search().attemptId()));
     }
     @Test void latestRunningSearchCannotBorrowOlderFound(){
@@ -72,7 +73,7 @@ class BitcoinDepositOriginSearchReviewIntegrationTest extends EddTestSupport {
     }
     @Test void disabledProviderDoesNotFallbackToHistoricalSuccessfulSearch(){
         var search=searches.reserve(receipt.id());history(search,"SUBMIT",181,"SUBMIT_ACKNOWLEDGED",121,null);history(search,"POLL",61,"FOUND",31,found(search.id()));
-        var disabled=new CodeVaspDepositSearchReview(new CodeVaspSettings("","","",""),directory,jdbc);var other=new BitcoinDepositReviewSource(users,operatorSessions,eligibility,bitcoinSettings,jdbc,audit,manager,disabled);var view=other.read(maker.user().getId(),maker.sid(),receipt.id()).originSearch();assertFalse(view.providerConfigured());assertNull(view.sourceRef());assertNull(view.search());assertEquals(1,view.historicalSearches());assertEquals("PROVIDER_NOT_CONFIGURED",view.reason());
+        var disabled=new CodeVaspDepositSearchReview(new CodeVaspSettings("","","",""),directory,jdbc);var other=new BitcoinDepositReviewSource(users,operatorSessions,eligibility,bitcoinSettings,jdbc,audit,manager,disabled,valuations);var view=other.read(maker.user().getId(),maker.sid(),receipt.id()).originSearch();assertFalse(view.providerConfigured());assertNull(view.sourceRef());assertNull(view.search());assertEquals(1,view.historicalSearches());assertEquals("PROVIDER_NOT_CONFIGURED",view.reason());
     }
     @Test void unauthorizedOrStaleMfaCannotReadOriginProjection()throws Exception{
         searches.reserve(receipt.id());assertEquals(403,assertThrows(ResponseStatusException.class,()->source.read(customer.getId(),sid,receipt.id())).getStatusCode().value());var token=tokens.findBySessionId(maker.sid()).orElseThrow();token.setMfaVerifiedAt(LocalDateTime.now().minusMinutes(6));tokens.saveAndFlush(token);assertEquals(403,assertThrows(ResponseStatusException.class,this::read).getStatusCode().value());org.mockito.Mockito.verify(review,never()).read(any());
