@@ -98,15 +98,19 @@ CREATE OR REPLACE VIEW deposit_monitoring_inputs AS
 
 조회용 뷰는 실제 보류 원장과 당시 평가를 연결한다. 금융 권위를 새 탐지 표로 옮기지 않는다. 새 평가 삽입 시에는 각 근거가 실제 불변 원본과 같은지·창 입력 누락이 없는지도 DB에서 확인한다. 평가 수정/삭제/TRUNCATE를 거부한다. 관리자 권한·호스트 손실 보호는 별도다.
 
-출처: [BitcoinDepositMonitoringWorker.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositMonitoringWorker.java#L37), 현재 소스의 부분 발췌.
+
+출처: [BitcoinDepositMonitoringWorker.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositMonitoringWorker.java#L39), 현재 소스의 부분 발췌.
 
 ```java
-        var completed=service.processNext();
-        // 실패한 작업이 임대 만료를 기다리는 동안 빈 큐를 읽었다고 업무 복구를 선언하지 않는다.
-        if(failed&&completed.isPresent()){failed=false;log.info("입금 모니터링 처리 재개");}
+        while(active){
+            var completed=service.processNext();
+            if(completed.isEmpty())return;
+            // 실패한 작업의 임대 만료를 기다리는 빈 폴링만으로 업무 복구를 선언하지 않는다.
+            if(failed){failed=false;log.info("입금 모니터링 처리 재개");}
+        }
 ```
 
-기존 처리 플래그와 전용 단일 스케줄러를 쓰고,1초 fixed delay는 작업 완료 시점부터 센다. 실패 뒤 빈 큐를 폴링한 것만으로 복구 로그를 남기지 않는다. 실제 작업 완료가 있어야 처리 재개를 기록하며 민감한 예외 원문은 로그에 싣지 않는다.
+현재 워커는 [119 연속 처리](119-drain-ready-deposit-monitoring-inputs.md)로 준비된 입력을 계속 확정하고 빈 큐/실패 뒤에만1초를 기다린다. 실패 뒤 빈 큐를 읽었다는 이유만으로 복구를 선언하지 않는다.116 당시의 워커는 한 입력 뒤마다 지연을 적용했으며 테스트 수치는 당시 소스 기준이다.
 
 현재 운영 조회는 계정의 현재 정책/입력 위치·미처리 여부·과거 REVIEW_REQUIRED 기록 수를 제공한다. 과거 신호 수는 조사 사건 수가 아니며 같은 패턴을 후속 평가에서 다시 포착하면 여러 기록이 생길 수 있다. 이후 NO_SIGNAL이 나와도 과거 기록을 지우거나 해결됐다고 표시하지 않는다.
 

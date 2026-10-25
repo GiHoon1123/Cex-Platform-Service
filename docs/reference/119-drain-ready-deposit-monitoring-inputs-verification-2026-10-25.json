@@ -1,0 +1,68 @@
+{
+  "cycle": 119,
+  "implementation_commit": "47fa9aa959ce1781cb3ad657f2cbba39c9f28ff0",
+  "verification": {
+    "units": {
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "actual_worker": {
+      "container": "cex-deposit-monitoring-drain-864195ce537b",
+      "run_id": "864195ce537b",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "actualWorkerDrainsTenReadyInputsWithoutPerInputIdleDelay",
+          "exit": 0,
+          "log": "deposit-monitoring-drain/864195ce537b/actualWorkerDrainsTenReadyInputsWithoutPerInputIdleDelay.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_1",
+          "method": "midDrainFailureKeepsConfirmedInputsAndResumesFromTheFailedPosition",
+          "exit": 0,
+          "log": "deposit-monitoring-drain/864195ce537b/midDrainFailureKeepsConfirmedInputsAndResumesFromTheFailedPosition.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringDrainIntegrationTest",
+          "name": "actualWorkerDrainsTenReadyInputsWithoutPerInputIdleDelay()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringDrainIntegrationTest",
+          "name": "midDrainFailureKeepsConfirmedInputsAndResumesFromTheFailedPosition()"
+        }
+      ],
+      "tests": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "executions": 14,
+    "unique_cases": 14,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "local_evidence": ".local/cycle119-proof",
+    "production_throughput_benchmark": false,
+    "engine_changes": false
+  }
+}

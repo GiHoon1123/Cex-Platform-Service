@@ -251,3 +251,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [117. 밀린 입금의 과거 검토 신호를 원장 순번 재생으로 보존하기](decisions/117-ordered-deposit-monitoring-replay.md)
 
 - [118. 거래 탐지 원본과 암호화된 담당자 조사 의견 연결하기](decisions/118-verified-monitoring-evidence-and-analyst-observations.md)
+
+- [119. 준비된 입금 탐지 입력 사이의 불필요한 대기 없애기](decisions/119-drain-ready-deposit-monitoring-inputs.md)
