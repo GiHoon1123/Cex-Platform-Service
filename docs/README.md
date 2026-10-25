@@ -265,3 +265,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [125. 입금 대사의 현재 근거를 불변 시작 순번과 필수 감사로 공개하기](decisions/125-ordered-reconciliation-publication.md)
 
 - [126. 현재 금융 근거를 결합해 정상 VASP 입금 의도를 한 번만 기록하기](decisions/126-verified-vasp-bitcoin-credit-intents.md)
+
+- [127. 영속 입금 명령을 전달하고 확정 이벤트로 보류 자금을 반영하기](decisions/127-durable-bitcoin-credit-dispatch-and-settlement.md)

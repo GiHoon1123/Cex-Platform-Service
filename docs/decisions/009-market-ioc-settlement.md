@@ -52,7 +52,7 @@ Spring이 주입한 소비 서비스의 `@Transactional` 안에서 수신 키와
 
 ### 현재 코드로 연결해 읽기
 
-시장가 종료 이벤트를 받아 원래 주문과 연결하는 현재 처리 경로다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/kafka/KafkaOrderEventConsumer.java#L164)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+시장가 종료 이벤트를 받아 원래 주문과 연결하는 현재 처리 경로다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/kafka/KafkaOrderEventConsumer.java#L166)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
 
 ```java
 private void completeMarketOrder(JsonNode event) {

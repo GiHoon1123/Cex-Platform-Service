@@ -2,6 +2,8 @@
 
 고객이 플랫폼의 목록·개별 API에서 본인 BTC 입금 원본과 마지막 체인 관찰, 보류 원장 반입 상태를 확인한다. 다른 고객의 입금·내부 지갑 설정을 노출하지 않고 체인 확정과 거래 가능한 잔액을 구분한다.
 
+후속 [127 확정 입금 반영](127-durable-bitcoin-credit-dispatch-and-settlement.md)에서 실제 금융 결과 연결이 있을 때 CREDITED를 표시한다. 의도·실행 권한·HTTP 성공만으로 완료 표시하지 않는다. 아래091의 실행 수치는 당시 범위다.
+
 ## 문제와 기존 동작
 
 기존 고객 API는 입금 주소 발급/조회까지 제공했다. 실제 감지/보류 원장 반입이 있어도 고객이 자기 입금의 진행 내역을 조회하는 경로가 없었다. 주소 신규 발급의 고객 확인 조건을 과거 내역 조회에 그대로 적용하면 고객 확인 만료나 거래 제한 중 자기 자산 기록까지 숨기게 된다.
@@ -42,13 +44,13 @@
 | chainStatus | 저장된 현재 관찰의 UNCONFIRMED/CONFIRMED/CONFLICTED, 미관찰은 UNKNOWN |
 | confirmations/observedAt | 마지막 관찰의 확인 수/읽기 시작 시각. 미관찰은 null |
 | observationFresh | DB 시각 기준 과거2분 이내/미래가 아닌 읽기인지. 체인의 절대 최종성이나 업무 승인 아님 |
-| fundingStatus | 보류 원장 반입 연결이 있으면 PENDING, 없으면 UNRECOGNIZED. 사용 가능/완료 상태를 구현했다고 표시하지 않음 |
+| fundingStatus | 실제 확정 금융 결과 연결이 있으면 CREDITED, 그 외 보류 원장 연결이 있으면 PENDING, 없으면 UNRECOGNIZED. 의도/HTTP 응답만으로 완료하지 않음 |
 
 RPC 지갑 이름·지출 조건·원장 키·고객 번호·세션·심사 근거·개인정보는 응답에 없다. 제재/AML 상세 사유를 고객 DTO에 복사하지 않는다. 기존 보류 반입 뒤 체인이 바뀌면 보류 사실과 새 체인 관찰이 함께 표시되며 자동 금융 수정은 하지 않는다.
 
 ## 구현과 이해에 필요한 코드
 
-출처: [CustomerBitcoinDeposits.java](../../src/main/java/dustin/cex/domains/bitcoin/CustomerBitcoinDeposits.java#L41), 현재 소스의 부분 발췌.
+출처: [CustomerBitcoinDeposits.java](../../src/main/java/dustin/cex/domains/bitcoin/CustomerBitcoinDeposits.java#L42), 현재 소스의 부분 발췌.
 
 ```java
     public Page own(long actor,UUID sid,Cursor after){return attempt(actor,()->{
@@ -65,7 +67,7 @@ RPC 지갑 이름·지출 조건·원장 키·고객 번호·세션·심사 근�
 
 Java Supplier<T>는 값을 반환하는 콜백으로 TypeScript의 () => T와 비슷하다. attempt가 짧은 TX를 열고 실제 세션을 다시 확인한다. 더 읽은1건은 응답에서 제외하고 다음 커서 유무에만 사용한다. 시각이 같아도 UUID까지 정렬하므로 중복/누락을 막는다.
 
-출처: [CustomerBitcoinDeposits.java](../../src/main/java/dustin/cex/domains/bitcoin/CustomerBitcoinDeposits.java#L52), 현재 소스의 부분 발췌.
+출처: [CustomerBitcoinDeposits.java](../../src/main/java/dustin/cex/domains/bitcoin/CustomerBitcoinDeposits.java#L53), 현재 소스의 부분 발췌.
 
 ```java
         // 존재 여부를 먼저 조회하지 않는다. 타인의 UUID와 없는 UUID는 같은404로 처리한다.
@@ -77,7 +79,7 @@ Java Supplier<T>는 값을 반환하는 콜백으로 TypeScript의 () => T와 �
 
 기본 SELECT 자체에 사용자와 네트워크 조건이 있다. 타인 원본을 먼저 읽은 뒤403으로 바꾸지 않고 같은 쿼리에서 범위를 제한한다. 감사 기록이 실패하면 성공 응답을 반환하지 않는다.
 
-출처: [CustomerBitcoinDeposits.java](../../src/main/java/dustin/cex/domains/bitcoin/CustomerBitcoinDeposits.java#L61), 현재 소스의 부분 발췌.
+출처: [CustomerBitcoinDeposits.java](../../src/main/java/dustin/cex/domains/bitcoin/CustomerBitcoinDeposits.java#L62), 현재 소스의 부분 발췌.
 
 ```java
     private static Deposit deposit(Map<String,Object> row){
@@ -140,7 +142,7 @@ macOS arm64/Temurin21/PG16/Core31.1. BTC 통합 실행199개·노드 없이 조�
 
 ## 남은 연결
 
-프론트는 이 API의 체인 관찰과 보류 상태를 구분해 표시해야 한다. 아직 사용 가능 해제·고객/거래 위험 승인·엔진 반입·재조직 보상·입금 심사/반환 상태는 완성되지 않았다. 현재의 UNRECOGNIZED/PENDING을 거래 완료로 표시하지 않는다. 마지막 관찰과 이후의 체인은 달라질 수 있으므로 고객 조회 자체를 금융 승인 근거로 사용하지 않는다.
+프론트는 체인 관찰과 실제 금융 상태를 구분해 표시해야 한다.127에서 정상 VASP 경로의 확정 이벤트/사용 가능 반영·CREDITED를 연결했으며 다른 출처 경로·자동 워커·전체 브로커 연동·전송 후 재조직 처리·입금 심사/반환은 계속 진행한다. UNRECOGNIZED/PENDING을 거래 완료로 표시하지 않는다. 마지막 관찰과 이후의 체인은 달라질 수 있으므로 고객 조회 자체를 금융 승인 근거로 사용하지 않는다.
 
 
 ## 관련 커밋과 증적

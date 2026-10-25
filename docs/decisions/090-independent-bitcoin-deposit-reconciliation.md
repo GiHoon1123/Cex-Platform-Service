@@ -83,7 +83,7 @@ Snapshot은 Java record의 값 묶음이며 목록을 List.copyOf로 고정한�
 
 size==2와 두 계정의 정확한 고객/버킷/자산/금액을 함께 검사한다. BigDecimal.compareTo는0.1과0.100을 같은 수치로 비교한다. 순서가 달라도 일치할 수 있지만 누락/추가/중복 항목은 통과하지 않는다.
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L367), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L372), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE OR REPLACE FUNCTION bitcoin_deposit_reconciliation_finish() RETURNS trigger LANGUAGE plpgsql AS $$

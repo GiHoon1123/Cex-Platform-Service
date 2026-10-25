@@ -41,7 +41,7 @@ bitcoin_current_deposit_reconciliation은 입금별 최대 등록 순번의 실�
 
 ## 실제 코드와 문법
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L425), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L430), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE TABLE IF NOT EXISTS bitcoin_deposit_reconciliation_starts (
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS bitcoin_deposit_reconciliation_starts (
 
 IDENTITY는 기존 DB의 순번 생성 기능이다. 등록은 실행 생성 TX에 함께 들어가고 성공 감사가 있어야 커밋한다. 과거 실행의 원본을 UPDATE하거나 시각으로 순번을 추정하지 않는다.
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L475), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L480), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE OR REPLACE VIEW bitcoin_current_deposit_reconciliation AS
