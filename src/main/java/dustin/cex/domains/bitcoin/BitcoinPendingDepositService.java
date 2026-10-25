@@ -22,10 +22,11 @@ public class BitcoinPendingDepositService {
     private final UserRepository users;
     private final AuditService audit;
     private final BitcoinSettings settings;
+    private final dustin.cex.domains.valuation.BitcoinDepositValuationService valuations;
     private final TransactionTemplate tx;
     public BitcoinPendingDepositService(JdbcTemplate jdbc,LedgerService ledger,UserRepository users,AuditService audit,
-            BitcoinSettings settings,PlatformTransactionManager manager){
-        this.jdbc=jdbc;this.ledger=ledger;this.users=users;this.audit=audit;this.settings=settings;
+            BitcoinSettings settings,dustin.cex.domains.valuation.BitcoinDepositValuationService valuations,PlatformTransactionManager manager){
+        this.jdbc=jdbc;this.ledger=ledger;this.users=users;this.audit=audit;this.settings=settings;this.valuations=valuations;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Recognized recognize(UUID deposit){
@@ -74,8 +75,11 @@ public class BitcoinPendingDepositService {
         long decision=((Number)sources.getFirst().get("id")).longValue();String key="btc:pending:"+deposit;
         BigDecimal amount=(BigDecimal)receipt.get("amount");String asset=(String)receipt.get("asset");
         // 기존 원장을 사용해 자산별 합계0을 보장한다. 고객 보류 증가의 반대편은 최초 잔고 반입이 아닌 수탁 자산 계정이다.
+        // 현재 공개 참고가격의 위치를 먼저 고정한다. 가격이 없어도 자산은 미평가 상태로 보류 원장에 기록한다.
+        Long priceId=valuations.captureCurrentPrice();
         ledger.record(key,"BTC_DEPOSIT_PENDING",List.of(p(owner,"PENDING",asset,amount),p(0,"CUSTODY",asset,amount.negate())));
         jdbc.update("INSERT INTO bitcoin_pending_deposits(receipt_id,decision_id,operation_key) VALUES(?,?,?)",deposit,decision,key);
+        valuations.recordRecognized(deposit,priceId);
         audit.record(null,"BTC_PENDING_DEPOSIT_RECOGNIZED","bitcoin-deposit:"+deposit,"SUCCESS","DECISION:"+decision+":OP:"+key);
         return new Recognized(deposit,key,true);
     }
