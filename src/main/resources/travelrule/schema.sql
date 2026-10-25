@@ -60,3 +60,35 @@ DROP TRIGGER IF EXISTS codevasp_result_immutable ON codevasp_directory_results;
 CREATE TRIGGER codevasp_result_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_directory_results FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
 DROP TRIGGER IF EXISTS codevasp_head_no_delete ON codevasp_directory_heads;
 CREATE TRIGGER codevasp_head_no_delete BEFORE DELETE OR TRUNCATE ON codevasp_directory_heads FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 요청 본문을 중복 복제하지 않고 불변 입금/주소 원본과 접속 주체에 결합한다. 외부 접수 전에 이 ID를 확정한다.
+CREATE TABLE IF NOT EXISTS codevasp_deposit_searches (
+ id uuid PRIMARY KEY,receipt_id uuid NOT NULL REFERENCES bitcoin_deposit_receipts(id),
+ source_id varchar(64) NOT NULL REFERENCES codevasp_directory_sources(id),directory_attempt_id bigint NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(receipt_id,source_id),
+ FOREIGN KEY(directory_attempt_id,source_id) REFERENCES codevasp_directory_attempts(id,source_id)
+);
+CREATE OR REPLACE FUNCTION codevasp_deposit_search_source() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ -- 현재 위치를 고정하고 동일 주체의 새 성공 목록을 요구한다. 나중 승인에 이 과거 목록을 그대로 쓰면 안 된다.
+ PERFORM h.source_id FROM codevasp_directory_heads h
+ JOIN codevasp_directory_attempts a ON a.id=h.attempt_id AND a.source_id=h.source_id
+ JOIN codevasp_directory_results r ON r.attempt_id=a.id AND r.source_id=a.source_id
+ WHERE h.source_id=NEW.source_id AND h.attempt_id=NEW.directory_attempt_id AND r.status='SUCCESS' AND r.recorded_at<=clock_timestamp()
+  AND a.started_at BETWEEN clock_timestamp()-interval '5 minutes' AND clock_timestamp()
+ FOR SHARE OF h;
+ IF NOT FOUND THEN RAISE EXCEPTION '거래 검색 예약에 현재 성공한 사업자 목록이 필요합니다'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM bitcoin_deposit_receipts b
+  JOIN bitcoin_deposit_addresses d ON d.id=b.address_id AND d.user_id=b.user_id AND d.network=b.network
+  JOIN bitcoin_network_identity n ON n.singleton=1 AND n.network=b.network
+  JOIN codevasp_directory_sources s ON s.id=NEW.source_id
+  WHERE b.id=NEW.receipt_id AND b.asset='BTC'
+   AND (b.network='bitcoin-mainnet' OR s.api_origin ~ '^https?://(127[.]0[.]0[.]1|\[::1\])(:[0-9]+)?/$')) THEN
+  RAISE EXCEPTION '거래 검색의 입금 원본 또는 시험망 접속 경계가 다릅니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_search_source ON codevasp_deposit_searches;
+CREATE TRIGGER codevasp_search_source BEFORE INSERT ON codevasp_deposit_searches FOR EACH ROW EXECUTE FUNCTION codevasp_deposit_search_source();
+DROP TRIGGER IF EXISTS codevasp_search_immutable ON codevasp_deposit_searches;
+CREATE TRIGGER codevasp_search_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_deposit_searches FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
