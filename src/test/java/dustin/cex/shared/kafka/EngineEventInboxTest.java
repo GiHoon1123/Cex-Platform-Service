@@ -84,7 +84,7 @@ class EngineEventInboxTest {
                 org.mockito.Mockito.mock(dustin.cex.domains.order.repository.OrderSubmissionRepository.class),
                 org.mockito.Mockito.mock(dustin.cex.domains.settlement.trade.repository.TradeFeeRepository.class),
                 org.mockito.Mockito.mock(dustin.cex.domains.auth.repository.UserRepository.class),
-                org.mockito.Mockito.mock(dustin.cex.domains.order.repository.OrderDispatchRepository.class));
+                org.mockito.Mockito.mock(dustin.cex.domains.order.repository.OrderDispatchRepository.class),org.mockito.Mockito.mock(dustin.cex.domains.bitcoin.BitcoinCreditedEvents.class));
         String payload="""
                 {"event_type":"order_cancelled","event_id":"%s","engine_id":"%s","order_id":1,"user_id":2,"base_mint":"SOL","quote_mint":"USDT"}
                 """.formatted(event,engine);

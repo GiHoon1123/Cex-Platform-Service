@@ -28,11 +28,12 @@ public class CustomerBitcoinDeposits {
     private static final String SELECT="""
         SELECT r.id,r.asset,r.network,r.txid,r.vout,r.amount,r.recorded_at,o.status,o.confirmations,o.read_started_at,
          coalesce(o.read_started_at<=clock_timestamp() AND o.read_started_at>=clock_timestamp()-interval '2 minutes',false) fresh,
-         CASE WHEN f.receipt_id IS NULL THEN 'UNRECOGNIZED' ELSE 'PENDING' END funding_status
+         CASE WHEN c.receipt_id IS NOT NULL THEN 'CREDITED' WHEN f.receipt_id IS NULL THEN 'UNRECOGNIZED' ELSE 'PENDING' END funding_status
          FROM bitcoin_deposit_receipts r
          LEFT JOIN bitcoin_observation_heads h ON h.network=r.network AND h.txid=r.txid
          LEFT JOIN bitcoin_transaction_observations o ON o.id=h.observation_id
          LEFT JOIN bitcoin_pending_deposits f ON f.receipt_id=r.id
+         LEFT JOIN bitcoin_credited_deposits c ON c.receipt_id=r.id
          WHERE r.user_id=? AND r.network=?
         """;
     public CustomerBitcoinDeposits(CustomerSessionPolicy sessions,BitcoinSettings settings,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager){

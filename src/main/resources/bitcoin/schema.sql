@@ -332,6 +332,11 @@ CREATE CONSTRAINT TRIGGER bitcoin_pending_ledger_has_source AFTER INSERT ON ledg
 CREATE OR REPLACE FUNCTION bitcoin_pending_entry_kind() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
  IF NOT EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key=NEW.operation_key AND kind='BTC_DEPOSIT_PENDING') THEN
+  -- 실제 엔진 입금 확정에 연결된 고객 보류 감소만 추가 허용한다. 수탁 계정이나 임의 업무의 보류 이동은 열지 않는다.
+  IF NEW.bucket='PENDING' AND NEW.delta<0 AND EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key=NEW.operation_key AND kind='BTC_DEPOSIT_CREDIT') THEN
+   IF EXISTS(SELECT 1 FROM bitcoin_credited_deposits c JOIN bitcoin_credit_authorizations a ON a.receipt_id=c.receipt_id
+    WHERE c.operation_key=NEW.operation_key AND c.created_txid=txid_current() AND a.user_id=NEW.owner_id AND a.asset=NEW.asset AND NEW.delta=-a.amount) THEN RETURN NEW;END IF;
+  END IF;
   RAISE EXCEPTION '보류/수탁 항목은 검증된 입금 반입 업무에서만 생성할 수 있습니다';
  END IF;
  RETURN NEW;

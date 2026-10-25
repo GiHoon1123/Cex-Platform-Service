@@ -38,6 +38,8 @@ class TradeFeeSettlementTest {
     static class Persistence {}
     @MockitoBean dustin.cex.domains.ledger.LedgerService ledger;
     @MockitoBean EngineEventInbox inbox;
+    // 체결/수수료 전용 H2 시험은 입금 서비스를 사용하지 않는다. 입금 금융 경로는 별도 실제 PG 시험이 검증한다.
+    @MockitoBean dustin.cex.domains.bitcoin.BitcoinCreditedEvents deposits;
     @Autowired KafkaOrderEventConsumer consumer;
     @Autowired UserRepository users; @Autowired OrderRepository orders;
     @Autowired OrderDispatchRepository dispatches;

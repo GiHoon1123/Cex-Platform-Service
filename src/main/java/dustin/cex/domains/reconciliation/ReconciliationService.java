@@ -104,7 +104,7 @@ public class ReconciliationService {
             var receipts=jdbc.queryForList("SELECT payload_hash FROM engine_event_receipts WHERE event_id=?",String.class,event);
             if(receipts.isEmpty()) {issue(run,"EVENT_PENDING",event,"received","missing");return;}
             if(!receipts.getFirst().equals(row.getString(2))) issue(run,"EVENT_PAYLOAD",event,row.getString(2),receipts.getFirst());
-            try { var original=mapper.readTree(payload); checkPostings(run,"engine:"+event,expected(original)); checkTrade(run,original); }
+            try { var original=mapper.readTree(payload); checkPostings(run,"engine:"+event,expected(original)); checkTrade(run,original); checkDeposit(run,original,payload); }
             catch(Exception invalid) {issue(run,"EVENT_CONTRACT",event,"valid original",invalid.getClass().getSimpleName());}
         },run);
         jdbc.query("""
@@ -137,8 +137,22 @@ public class ReconciliationService {
         });
         reserved.forEach((key,value)->difference(run,"RESERVATION",key,value,BigDecimal.ZERO));
     }
-    private List<Posting> expected(JsonNode e) {
+    private List<Posting> expected(JsonNode e) throws Exception {
         String type=e.path("event_type").asText();
+        if(type.equals("deposit_credited")) {
+            // 정산 핸들러를 재호출하지 않는다. 독립된 입금 원본/실행 권한에서 기대 이동을 계산한다.
+            UUID receipt=UUID.fromString(e.path("deposit_id").asText());
+            var originals=jdbc.queryForList("""
+                SELECT r.user_id,r.asset,r.amount,i.basis intent_basis,i.basis_hash intent_hash,a.basis authorization_basis,a.basis_hash authorization_hash
+                 FROM bitcoin_deposit_receipts r JOIN bitcoin_credit_intents i ON i.receipt_id=r.id AND i.user_id=r.user_id AND i.asset=r.asset AND i.amount=r.amount
+                 JOIN bitcoin_credit_authorizations a ON a.receipt_id=r.id AND a.user_id=r.user_id AND a.asset=r.asset AND a.amount=r.amount WHERE r.id=?
+                """,receipt);
+            if(originals.size()!=1)throw new IllegalArgumentException("입금 원본과 실행 권한 연결이 없습니다");var r=originals.getFirst();
+            long owner=((Number)r.get("user_id")).longValue();String asset=(String)r.get("asset");BigDecimal amount=(BigDecimal)r.get("amount");
+            if(!receipt.toString().equals(e.path("deposit_id").asText())||owner!=e.path("user_id").asLong()||!asset.equals(e.path("asset").asText())||amount.compareTo(money(e,"amount"))!=0
+                ||!hash((String)r.get("intent_basis")).equals(r.get("intent_hash"))||!hash((String)r.get("authorization_basis")).equals(r.get("authorization_hash")))throw new IllegalArgumentException("입금 결과와 경제적 원본이 다릅니다");
+            return List.of(p(owner,"PENDING",asset,amount.negate()),p(owner,"AVAILABLE",asset,amount));
+        }
         if(type.equals("trade_executed")) {
             var buy=submissions.findByOrderId(e.path("buy_order_id").asLong()).orElseThrow();
             var sell=submissions.findByOrderId(e.path("sell_order_id").asLong()).orElseThrow();
@@ -170,6 +184,15 @@ public class ReconciliationService {
             default -> throw new IllegalArgumentException("지원하지 않는 확정 결과");
         };
         return List.of(p(original.getUserId(),"AVAILABLE",c.reservationMint(),refund),p(original.getUserId(),"LOCKED",c.reservationMint(),refund.negate()));
+    }
+    private void checkDeposit(UUID run,JsonNode event,String payload) throws Exception {
+        if(!"deposit_credited".equals(event.path("event_type").asText()))return;
+        String id=event.path("event_id").asText();var rows=jdbc.queryForList("SELECT * FROM bitcoin_credited_deposits WHERE receipt_id=?",UUID.fromString(event.path("deposit_id").asText()));
+        if(rows.size()!=1){issue(run,"DEPOSIT_RECEIPT_MISSING",id,"one financial receipt","missing");return;}
+        var row=rows.getFirst();
+        if(!id.equals(row.get("event_id"))||!event.path("engine_id").asText().equals(row.get("engine_id").toString())||!hash(payload).equals(row.get("payload_hash"))
+            ||!("engine:"+id).equals(row.get("operation_key"))||!event.path("timestamp").asText().equals(row.get("event_time")))
+            issue(run,"DEPOSIT_EVENT_BINDING",id,"exact durable event","different financial receipt");
     }
     private void checkTrade(UUID run,JsonNode event) {
         if(!"trade_executed".equals(event.path("event_type").asText())) return;
