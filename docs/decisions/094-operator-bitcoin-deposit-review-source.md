@@ -4,6 +4,8 @@
 
 후속 [115 별도 개인정보 검토](115-authorized-private-transfer-inspection.md)는 같은 현재 접근 정책을 재사용하며 OPERATOR/APPROVER에게만 인증된 자료와 불변 접근 증적을 제공한다. AUDITOR의 요약 권한과 구분한다.
 
+후속 [132 위험 운영 조회](132-operator-bitcoin-chain-risk-review.md)는 최소 목록/상세 위험 범위와 실제 반환 원본의 열람 감사를 연결했다. 아래 당시 검증 결과와 현재 발췌를 구분한다. 해제 승인은 계속 후속이다.
+
 ## 문제와 기존 동작
 
 고객은091에서 본인 진행 내역을 볼 수 있지만 운영 심사를 위한 근거 조회가 없었다. 조회자가 과거 체인 판단을 현재 관찰로 오인하거나, 새 대사가 진행/실패 중인데 예전 MATCHED만 고르면 잘못된 금융 판단으로 이어질 수 있다.
@@ -62,26 +64,26 @@
 
 TreeSet<Long>은 ID를 중복 없이 오름차순으로 정렬한다. 이 순서로 현재 운영자와 고객을 잠근 뒤 영속 운영 세션을 다시 검사한다. 원본을 못 찾았다는 응답도 운영 인증 뒤에만 반환한다. TypeScript의 Set은 이 숫자 정렬을 자동으로 해주지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L59), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L67), 현재 소스의 부분 발췌.
 
 ```java
                  LEFT JOIN bitcoin_current_deposit_reconciliation q ON q.receipt_id=r.id
                  WHERE r.id=? AND r.network=?
-                """,deposit,settings.network.id);
+                """,deposit,deposit,settings.network.id);
 ```
 
-LATERAL은 앞의 입금 r.id에 대해 최신 대사 한 건을 선택한다. status=MATCHED 같은 필터를 넣지 않으므로 새 RUNNING/FAILED가 있으면 그 결과를 그대로 보여준다. 조회가 새 대사를 만들거나 원장을 정정하지 않는다.
+현재 bitcoin_current_deposit_reconciliation은 불변 시작 순서로 최신 대사를 선택한다. status=MATCHED 필터로 새 RUNNING/FAILED를 숨기지 않는다. 후속132는 같은 입금의 위험 범위 CTE에도 동일한 deposit을 바인딩하므로 인수가 하나 늘었다. 조회가 새 대사를 만들거나 원장을 정정하지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L69), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L78), 현재 소스의 부분 발췌.
 
 ```java
             // 조회의 대상과 관찰/대사 참조를 남긴다. 이름/신분증/신고 원문을 감사 문자열에 복사하지 않는다.
-            audit.record(actor,"BTC_DEPOSIT_REVIEW_SOURCE_READ","bitcoin-deposit:"+deposit,"SUCCESS","CUSTOMER_VERSION:"+result.customer().version()+":ELIGIBLE:"+result.customer().financiallyEligible()+":CDD:"+result.customer().cddAssessmentId()+":KYC:"+result.customer().kycAttemptId()+":OBSERVATION:"+result.chain().observationId()+":DECISION:"+result.chain().decisionId()+":RECONCILIATION:"+(result.reconciliation()==null?null:result.reconciliation().id())+":ORIGIN_SEARCH:"+(result.originSearch().search()==null?null:result.originSearch().search().id())+":ORIGIN_ATTEMPT:"+(result.originSearch().search()==null?null:result.originSearch().search().attemptId()));return result;
+            audit.record(actor,"BTC_DEPOSIT_REVIEW_SOURCE_READ","bitcoin-deposit:"+deposit,"SUCCESS","CUSTOMER_VERSION:"+result.customer().version()+":ELIGIBLE:"+result.customer().financiallyEligible()+":CDD:"+result.customer().cddAssessmentId()+":KYC:"+result.customer().kycAttemptId()+":OBSERVATION:"+result.chain().observationId()+":DECISION:"+result.chain().decisionId()+":RISK_COUNT:"+result.executionRisk().observations()+":LAST_RISK:"+result.executionRisk().lastObservationId()+":RECONCILIATION:"+(result.reconciliation()==null?null:result.reconciliation().id())+":ORIGIN_SEARCH:"+(result.originSearch().search()==null?null:result.originSearch().search().id())+":ORIGIN_ATTEMPT:"+(result.originSearch().search()==null?null:result.originSearch().search().attemptId()));return result;
 ```
 
-감사는 고객 버전/자격 결과/CDD·KYC·관찰·판단·대사 참조를 기록한다. 이름·생일·신고 원문은 복사하지 않는다. 감사 쓰기가 실패하면 DTO를 성공 반환하지 않는다.
+감사는 고객 버전/자격 결과/CDD·KYC·관찰·판단·대사 참조를 기록한다. 후속132의 현재 코드에는 실행 후 위험 범위의 개수/마지막 관찰도 포함한다. 이름·생일·신고 원문은 복사하지 않는다. 감사 쓰기가 실패하면 DTO를 성공 반환하지 않는다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L73), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L82), 현재 소스의 부분 발췌.
 
 ```java
     private static Long number(Map<String,Object> row,String key){var value=(Number)row.get(key);return value==null?null:value.longValue();}

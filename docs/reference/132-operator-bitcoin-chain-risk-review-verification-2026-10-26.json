@@ -1,0 +1,577 @@
+{
+  "cycle": 132,
+  "implementation_commit": "5a3a27f6c4acb302a0b0fe8d6fe036b7b1059a74",
+  "verification": {
+    "combined": {
+      "executions": 224,
+      "unique": 224,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "new_tests": {
+      "container": "cex-bitcoin-credit-chain-risk-review-b23c3395f937",
+      "run_id": "b23c3395f937",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "allThreeCurrentOperatorRolesCanReadTheSameMinimalRisk",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/allThreeCurrentOperatorRolesCanReadTheSameMinimalRisk.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_1",
+          "method": "repeatedRiskObservationsAreOneDepositWithAnOrderedScope",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/repeatedRiskObservationsAreOneDepositWithAnOrderedScope.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_2",
+          "method": "laterHealthyChainDoesNotRemoveTheUnresolvedRisk",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/laterHealthyChainDoesNotRemoveTheUnresolvedRisk.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_3",
+          "method": "serializedListAndAuditDoNotCopyIdentityOrAddress",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/serializedListAndAuditDoNotCopyIdentityOrAddress.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_4",
+          "method": "customerAndMismatchedSessionCannotProbeTheList",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/customerAndMismatchedSessionCannotProbeTheList.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_5",
+          "method": "disabledOperatorCannotReuseTheRole",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/disabledOperatorCannotReuseTheRole.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_6",
+          "method": "revokedSessionCannotReusePastMfa",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/revokedSessionCannotReusePastMfa.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_7",
+          "method": "expiredOperatorGrantCannotReuseThePreviouslyValidRole",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/expiredOperatorGrantCannotReuseThePreviouslyValidRole.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_8",
+          "method": "changedRoleVersionInvalidatesAnOldSession",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/changedRoleVersionInvalidatesAnOldSession.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_9",
+          "method": "pageBoundsAreCheckedAfterAuthorizationAndLargePageIsEmpty",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/pageBoundsAreCheckedAfterAuthorizationAndLargePageIsEmpty.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_10",
+          "method": "requiredReadAuditFailureDoesNotReturnAView",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/requiredReadAuditFailureDoesNotReturnAView.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_11",
+          "method": "missingRiskSourceCannotBecomeAnEmptySuccessfulList",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/missingRiskSourceCannotBecomeAnEmptySuccessfulList.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_12",
+          "method": "ambientTransactionCannotHoldLocksAcrossAListRead",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/ambientTransactionCannotHoldLocksAcrossAListRead.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_13",
+          "method": "theActualHttpRouteRequiresCurrentOperatorAuthentication",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/theActualHttpRouteRequiresCurrentOperatorAuthentication.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_14",
+          "method": "existingDepositReviewSeparatesCurrentChainFromExecutionRisk",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/existingDepositReviewSeparatesCurrentChainFromExecutionRisk.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_15",
+          "method": "actualHttpDetailReturnsTheRiskScopeWithoutMovingMoney",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/actualHttpDetailReturnsTheRiskScopeWithoutMovingMoney.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_16",
+          "method": "itemAuditFailureRollsBackTheListAuditAndReturnsNoPartialView",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/itemAuditFailureRollsBackTheListAuditAndReturnsNoPartialView.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_17",
+          "method": "listAndItemAuditsReferToTheExactReturnedSource",
+          "exit": 0,
+          "log": "bitcoin-credit-chain-risk-review/b23c3395f937/listAndItemAuditsReferToTheExactReturnedSource.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "allThreeCurrentOperatorRolesCanReadTheSameMinimalRisk()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "repeatedRiskObservationsAreOneDepositWithAnOrderedScope()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "laterHealthyChainDoesNotRemoveTheUnresolvedRisk()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "serializedListAndAuditDoNotCopyIdentityOrAddress()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "customerAndMismatchedSessionCannotProbeTheList()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "disabledOperatorCannotReuseTheRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "revokedSessionCannotReusePastMfa()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "expiredOperatorGrantCannotReuseThePreviouslyValidRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "changedRoleVersionInvalidatesAnOldSession()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "pageBoundsAreCheckedAfterAuthorizationAndLargePageIsEmpty()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "requiredReadAuditFailureDoesNotReturnAView()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "missingRiskSourceCannotBecomeAnEmptySuccessfulList()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "ambientTransactionCannotHoldLocksAcrossAListRead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "theActualHttpRouteRequiresCurrentOperatorAuthentication()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "existingDepositReviewSeparatesCurrentChainFromExecutionRisk()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "actualHttpDetailReturnsTheRiskScopeWithoutMovingMoney()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "itemAuditFailureRollsBackTheListAuditAndReturnsNoPartialView()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinCreditChainRiskReviewIntegrationTest",
+          "name": "listAndItemAuditsReferToTheExactReturnedSource()"
+        }
+      ],
+      "tests": {
+        "tests": 18,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "existing_source": {
+      "network": "regtest",
+      "exit": 0,
+      "node_stopped": true,
+      "node_version": 310100,
+      "chain_scenarios": {
+        "reorg_before_confirmations": 1,
+        "reorg_after_confirmations": 0,
+        "confirmed_confirmations": 3,
+        "conflicted_confirmations": -2,
+        "ordinary_wallet_debit": false,
+        "internal_wallet_debit": true
+      },
+      "selection_mode": "deposit-review-only",
+      "groups": [
+        {
+          "group": "deposit-review",
+          "database": "cex-bitcoin-90d30040c82c",
+          "selection": [
+            "*BitcoinDepositReviewSourceIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 24,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "cases": [
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "operatorAndApproverRequestActualInputWithoutRewritingAssessment()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "startPublicationWaitsForCustomerLockBeforeNodeRead()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "laterRegisteredStartWinsEvenWithAnEarlierWallClock()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "invalidMissingAndUnsupportedInputsAreRejectedAndAmbientTransactionIsForbidden()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "differentConfiguredNetworkCannotReadReceiptThroughOperatorRole()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "startSequenceCannotBeForgedRewrittenOrTruncated()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "operatorApproverAndAuditorCanReadOnlyCurrentFinancialReferences()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "missingFinishAuditLeavesTheCurrentRunRunning()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "customerAndAuditorCannotCreateMonitoringWork()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "newlyObservedHeadCannotBorrowOldChainDecisionOrMissingWalletProof()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "completionPublicationWaitsForCustomerLockAfterNodeRead()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "auditFailurePreventsSuccessfulReadWithoutChangingFinance()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "missingStartAuditCannotCommitTheRunOrSequence()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "customerEligibilityReflectsCurrentIdentityRestrictionAndExpiry()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "expiredOperatorGrantCannotReusePreviouslyValidRole()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "lateOldSuccessCannotReplaceANewerFailure()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "staleObservationIsVisibleWithFreshnessFalse()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "staleMfaOrRevokedSessionCannotReadStoredEvidence()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "customerAnonymousAndForeignSessionCannotUseReviewEndpoint()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "nodeReadRunsOutsideCustomerTransaction()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "responseOmitsIdentityDocumentsWalletSettingsAndSecrets()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "currentChainAndPendingLedgerAreReportedWithoutClaimingRelease()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "newestRunningReconciliationDoesNotFallBackToOlderMatchedResult()"
+            },
+            {
+              "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+              "name": "absentObservationAndWalletDebitProofStayUnknown()"
+            }
+          ],
+          "database_removed": true
+        }
+      ],
+      "tests": {
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "operatorAndApproverRequestActualInputWithoutRewritingAssessment()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "startPublicationWaitsForCustomerLockBeforeNodeRead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "laterRegisteredStartWinsEvenWithAnEarlierWallClock()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "invalidMissingAndUnsupportedInputsAreRejectedAndAmbientTransactionIsForbidden()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "differentConfiguredNetworkCannotReadReceiptThroughOperatorRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "startSequenceCannotBeForgedRewrittenOrTruncated()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "operatorApproverAndAuditorCanReadOnlyCurrentFinancialReferences()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "missingFinishAuditLeavesTheCurrentRunRunning()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "customerAndAuditorCannotCreateMonitoringWork()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "newlyObservedHeadCannotBorrowOldChainDecisionOrMissingWalletProof()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "completionPublicationWaitsForCustomerLockAfterNodeRead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "auditFailurePreventsSuccessfulReadWithoutChangingFinance()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "missingStartAuditCannotCommitTheRunOrSequence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "customerEligibilityReflectsCurrentIdentityRestrictionAndExpiry()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "expiredOperatorGrantCannotReusePreviouslyValidRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "lateOldSuccessCannotReplaceANewerFailure()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "staleObservationIsVisibleWithFreshnessFalse()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "staleMfaOrRevokedSessionCannotReadStoredEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "customerAnonymousAndForeignSessionCannotUseReviewEndpoint()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "nodeReadRunsOutsideCustomerTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "responseOmitsIdentityDocumentsWalletSettingsAndSecrets()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "currentChainAndPendingLedgerAreReportedWithoutClaimingRelease()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "newestRunningReconciliationDoesNotFallBackToOlderMatchedResult()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "absentObservationAndWalletDebitProofStayUnknown()"
+        }
+      ],
+      "database_removed": true
+    },
+    "finance": {
+      "container": "cex-inbox-0563ff1052eb",
+      "exit": 0,
+      "tests": {
+        "tests": 182,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "artifacts": {
+      "jars": [
+        {
+          "name": "cex-0.0.1-SNAPSHOT-operator-admin.jar",
+          "sha256": "62307376e45ab675e7c2d98fd5cbfb846a001388f4d861ef8937edfb0943deeb"
+        },
+        {
+          "name": "cex-0.0.1-SNAPSHOT.jar",
+          "sha256": "1481e837ad97499b3b2d447e209eab9c9383d6e84d2c357024b7a67b2a058b7a"
+        }
+      ],
+      "test_classes_excluded": true,
+      "cli_help_and_invalid_selection": true
+    }
+  }
+}

@@ -273,3 +273,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [130. 실제 엔진 WAL·Kafka 입금 확정과 장애 복구 연결](decisions/130-real-engine-bitcoin-credit-wire.md)
 
 - [131. 실행 권한 이후 체인 위험으로 신규 금융 권한 제한](decisions/131-bitcoin-post-authorization-chain-risk.md)
+
+- [132. 현재 운영 인증과 실제 열람 감사로 체인 위험 조회](decisions/132-operator-bitcoin-chain-risk-review.md)

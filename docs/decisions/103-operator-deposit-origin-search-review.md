@@ -85,11 +85,11 @@ MANDATORY는 이미 열린 트랜잭션에만 참여한다. Spring 프록시가 
 
 자바 switch 식은 기술 상태를 추가 확인 안내로 변환한다. FOUND는 ORIGIN_FOUND_REVIEW_REQUIRED이며 승인이라는 값을 만들지 않는다. 자동 선택 기한과 실제 워커의 생존 상태도 구분한다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L69), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L78), 현재 소스의 부분 발췌.
 
 ```java
             // 조회의 대상과 관찰/대사 참조를 남긴다. 이름/신분증/신고 원문을 감사 문자열에 복사하지 않는다.
-            audit.record(actor,"BTC_DEPOSIT_REVIEW_SOURCE_READ","bitcoin-deposit:"+deposit,"SUCCESS","CUSTOMER_VERSION:"+result.customer().version()+":ELIGIBLE:"+result.customer().financiallyEligible()+":CDD:"+result.customer().cddAssessmentId()+":KYC:"+result.customer().kycAttemptId()+":OBSERVATION:"+result.chain().observationId()+":DECISION:"+result.chain().decisionId()+":RECONCILIATION:"+(result.reconciliation()==null?null:result.reconciliation().id())+":ORIGIN_SEARCH:"+(result.originSearch().search()==null?null:result.originSearch().search().id())+":ORIGIN_ATTEMPT:"+(result.originSearch().search()==null?null:result.originSearch().search().attemptId()));return result;
+            audit.record(actor,"BTC_DEPOSIT_REVIEW_SOURCE_READ","bitcoin-deposit:"+deposit,"SUCCESS","CUSTOMER_VERSION:"+result.customer().version()+":ELIGIBLE:"+result.customer().financiallyEligible()+":CDD:"+result.customer().cddAssessmentId()+":KYC:"+result.customer().kycAttemptId()+":OBSERVATION:"+result.chain().observationId()+":DECISION:"+result.chain().decisionId()+":RISK_COUNT:"+result.executionRisk().observations()+":LAST_RISK:"+result.executionRisk().lastObservationId()+":RECONCILIATION:"+(result.reconciliation()==null?null:result.reconciliation().id())+":ORIGIN_SEARCH:"+(result.originSearch().search()==null?null:result.originSearch().search().id())+":ORIGIN_ATTEMPT:"+(result.originSearch().search()==null?null:result.originSearch().search().attemptId()));return result;
 ```
 
 기존 현재 역할/MFA/대상 검증을 통과한 조회에 검색/시도 ID를 추가로 감사한다. 공급사 주소/키/고객 원문을 붙이지 않고 감사 필드 길이 제한을 유지한다. 감사 실패는 성공 응답을 막는다.
