@@ -44,7 +44,7 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 `recognizeNext()`는 같은 조건을 만족하는 미반입 원본 한 개를 고르며 내부 지갑 사용/근거 누락/이미 완료된 원본은 후보에서 제외한다. 선택 후의 원본은 같은 금융 TX에서 다시 검사한다. 서비스는 독립 트랜잭션을 요구하며 노드 RPC나 엔진 HTTP는 호출하지 않는다.
 
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L61), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L62), 현재 소스의 부분 발췌.
 
 ```java
         users.lockById(owner).orElseThrow(()->new IllegalStateException("입금 소유자가 없습니다"));
@@ -56,7 +56,7 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 
 현재 고객의 거래 허용과 자산 보류 기록은 별개다. 정지된 소유자도 실제 입금을 보류로 남길 수 있다. 같은 입금의 재시도는 이미 확정된 원본을 반환하며 새 항목을 만들지 않는다. 기존 완료 응답이 현재 거래 허용을 새로 승인한다는 의미는 아니다.
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L66), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L67), 현재 소스의 부분 발췌.
 
 ```java
             SELECT d.id FROM bitcoin_deposit_chain_heads qh JOIN bitcoin_deposit_chain_decisions d ON d.id=qh.decision_id
@@ -70,16 +70,17 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 
 과거 CHAIN_READY 문자열만 신뢰하지 않고 현재 판단/관찰 포인터·시각·지갑 사용 근거를 함께 검사한다. FOR SHARE는 플랫폼 DB의 짧은 확정 구간을 보호한다. 근거가 없으면 false 기본값이나 다른 DB로 우회하지 않는다.
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L77), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L80), 현재 소스의 부분 발췌.
 
 ```java
         ledger.record(key,"BTC_DEPOSIT_PENDING",List.of(p(owner,"PENDING",asset,amount),p(0,"CUSTODY",asset,amount.negate())));
         jdbc.update("INSERT INTO bitcoin_pending_deposits(receipt_id,decision_id,operation_key) VALUES(?,?,?)",deposit,decision,key);
+        valuations.recordRecognized(deposit,priceId);
         audit.record(null,"BTC_PENDING_DEPOSIT_RECOGNIZED","bitcoin-deposit:"+deposit,"SUCCESS","DECISION:"+decision+":OP:"+key);
         return new Recognized(deposit,key,true);
 ```
 
-BigDecimal.negate는 정확한 반대 항목을 만든다. 같은 금융 트랜잭션에서 양쪽 원장, 근거 연결, 감사를 기록한다. 고객 AVAILABLE과 엔진 입력은 수정하지 않는다. TypeScript number의 부동소수점으로 두 항목의 합계를 보정하는 처리가 아니다.
+[110의 평가 결합](110-pending-deposit-price-capture.md) 이후 현재 코드는 같은 트랜잭션에 평가·미평가 사실도 저장한다. `priceId`는 원장 저장 전 확인한 당시 가격 위치다. BigDecimal.negate는 정확한 반대 항목을 만든다. 같은 금융 트랜잭션에서 양쪽 원장, 근거 연결, 감사를 기록한다. 고객 AVAILABLE과 엔진 입력은 수정하지 않는다. TypeScript number의 부동소수점으로 두 항목의 합계를 보정하는 처리가 아니다.
 
 출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L318), 현재 소스의 부분 발췌.
 

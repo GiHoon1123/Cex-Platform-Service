@@ -233,3 +233,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [108. 정보 교환의 자동 일정과 전용 워커에서 보류·임대·중복을 관리하기](decisions/108-automatic-private-transfer-processing.md)
 
 - [109. BTC 원화 참고가격의 원문과 시각·실패를 보존하기](decisions/109-durable-bitcoin-krw-reference-price.md)
+
+- [110. BTC 보류 입금과 당시 평가·미평가 사실을 함께 보존하기](decisions/110-pending-deposit-price-capture.md)

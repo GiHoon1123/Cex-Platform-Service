@@ -32,7 +32,7 @@ Spring [TransactionTemplate 설정](https://docs.spring.io/spring-framework/refe
 보류 워커는 미반입/현재 온체인 준비/최신 관찰/지갑 사용false 후보 하나를 선택한다. 다른 업무가 잠근 고객 행은 건너뛰고 다음 실행에서 다시 고려한다. 선택한 고객 행은 같은 금융 TX에서 소유하며 기존 recognize 내부의 사용자 잠금/원본 재검사/멱등/원장/감사 계약은 유지한다.
 
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L38), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L39), 현재 소스의 부분 발췌.
 
 ```java
             // 다른 업무가 잠근 고객은 다음 시도로 미룬다. 독립 고객의 보류 반입이 한 계정의 긴 잠금 때문에 멈추지 않는다.
