@@ -56,7 +56,7 @@
 
 Jackson JsonNode는 TypeScript의 타입 단언과 달리 실제 수신 JSON의 구조를 검사한다. body.size와 허용 필드 검사는 평문 개인정보의 추가 전송도 차단한다. 암호문 형식 검사는 암호 인증 성공을 증명하지 않으며 실제 인증 복호화는 모듈 책임이다.
 
-출처: [CodeVaspTransferDataClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferDataClient.java#L54), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferDataClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferDataClient.java#L62), 현재 소스의 부분 발췌.
 
 ```java
             BigDecimal amount=new BigDecimal(value).setScale(8,RoundingMode.UNNECESSARY);
@@ -124,3 +124,7 @@ Java21/macOS arm64/소유 PostgreSQL16·두 HTTP 대역. `python3 scripts/verify
 
 - [구현 c9ffae6](https://github.com/GiHoon1123/Cex-Platform-Service/commit/c9ffae6e17c88b5c4370d61d6bc5d08485e56479)
 - [격리 실행 증적](../reference/104-codevasp-private-transfer-data-verification-2026-10-25.json)
+
+## 상대 허용 정책 연결 시점
+
+[105](105-codevasp-counterparty-policy.md)에서 실제 전송 직전 명시적 상대 허용을 필수로 연결했다. 기본 허용 목록은 비어 있어 개인정보를 전송하지 않는다.104의17개 시험/당시 코드는 원래 커밋이며, 현재 생성자는 정책을 추가로 받는다. 현재 고객/체인 결합·자동 업무는 아직 별도다.

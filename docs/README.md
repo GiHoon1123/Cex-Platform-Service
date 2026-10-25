@@ -223,3 +223,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [103. 운영 입금 심사에 현재 출처 검색과 미해결 근거를 최소 공개하기](decisions/103-operator-deposit-origin-search-review.md)
 
 - [104. BTC 송수신인 정보의 암호화 요청과 복호화 결과를 결합하기](decisions/104-codevasp-private-transfer-data.md)
+
+- [105. 미검토 상대에게 송수신인 정보를 제공하지 않도록 전송 전에 차단하기](decisions/105-codevasp-counterparty-policy.md)
