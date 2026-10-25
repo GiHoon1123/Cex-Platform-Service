@@ -26,6 +26,7 @@ class BitcoinDepositOriginSearchReviewIntegrationTest extends EddTestSupport {
     @MockitoBean CodeVaspDirectoryClient directoryClient;
     @MockitoBean CodeVaspTransactionClient transactions;
     @MockitoSpyBean CodeVaspDepositSearchReview review;
+    @Autowired dustin.cex.domains.monitoring.DepositMonitoringReview accountMonitoring;
     @Autowired CodeVaspDirectoryService directory;
     @Autowired CodeVaspDepositSearches searches;
     @Autowired CodeVaspDepositSearchExecution execution;
@@ -73,7 +74,7 @@ class BitcoinDepositOriginSearchReviewIntegrationTest extends EddTestSupport {
     }
     @Test void disabledProviderDoesNotFallbackToHistoricalSuccessfulSearch(){
         var search=searches.reserve(receipt.id());history(search,"SUBMIT",181,"SUBMIT_ACKNOWLEDGED",121,null);history(search,"POLL",61,"FOUND",31,found(search.id()));
-        var disabled=new CodeVaspDepositSearchReview(new CodeVaspSettings("","","",""),directory,jdbc);var other=new BitcoinDepositReviewSource(new BitcoinDepositOperatorAccess(users,operatorSessions,jdbc),eligibility,bitcoinSettings,jdbc,audit,manager,disabled,valuations);var view=other.read(maker.user().getId(),maker.sid(),receipt.id()).originSearch();assertFalse(view.providerConfigured());assertNull(view.sourceRef());assertNull(view.search());assertEquals(1,view.historicalSearches());assertEquals("PROVIDER_NOT_CONFIGURED",view.reason());
+        var disabled=new CodeVaspDepositSearchReview(new CodeVaspSettings("","","",""),directory,jdbc);var other=new BitcoinDepositReviewSource(new BitcoinDepositOperatorAccess(users,operatorSessions,jdbc),eligibility,bitcoinSettings,jdbc,audit,manager,disabled,valuations,accountMonitoring);var view=other.read(maker.user().getId(),maker.sid(),receipt.id()).originSearch();assertFalse(view.providerConfigured());assertNull(view.sourceRef());assertNull(view.search());assertEquals(1,view.historicalSearches());assertEquals("PROVIDER_NOT_CONFIGURED",view.reason());
     }
     @Test void unauthorizedOrStaleMfaCannotReadOriginProjection()throws Exception{
         searches.reserve(receipt.id());assertEquals(403,assertThrows(ResponseStatusException.class,()->source.read(customer.getId(),sid,receipt.id())).getStatusCode().value());var token=tokens.findBySessionId(maker.sid()).orElseThrow();token.setMfaVerifiedAt(LocalDateTime.now().minusMinutes(6));tokens.saveAndFlush(token);assertEquals(403,assertThrows(ResponseStatusException.class,this::read).getStatusCode().value());org.mockito.Mockito.verify(review,never()).read(any());

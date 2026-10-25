@@ -22,7 +22,7 @@ public class BitcoinDepositReviewSource {
     public record Pending(boolean recognized,String operationKey){}
     public record Reconciliation(UUID id,String status,Instant snapshotAt,Instant completedAt){}
     public record Source(UUID depositId,String asset,String network,String txid,int vout,String amount,Instant detectedAt,
-        Instant readAt,Customer customer,Chain chain,Pending pending,Reconciliation reconciliation,dustin.cex.domains.travelrule.CodeVaspDepositSearchReview.Review originSearch,dustin.cex.domains.valuation.BitcoinDepositValuationReview.Review valuation){}
+        Instant readAt,Customer customer,Chain chain,Pending pending,Reconciliation reconciliation,dustin.cex.domains.travelrule.CodeVaspDepositSearchReview.Review originSearch,dustin.cex.domains.valuation.BitcoinDepositValuationReview.Review valuation,dustin.cex.domains.monitoring.DepositMonitoringReview.Summary accountMonitoring){}
     private final BitcoinDepositOperatorAccess access;
     private final CustomerFinancialEligibility eligibility;
     private final BitcoinSettings settings;
@@ -31,9 +31,10 @@ public class BitcoinDepositReviewSource {
     private final TransactionTemplate tx;
     private final dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch;
     private final dustin.cex.domains.valuation.BitcoinDepositValuationReview valuation;
+    private final dustin.cex.domains.monitoring.DepositMonitoringReview accountMonitoring;
     public BitcoinDepositReviewSource(BitcoinDepositOperatorAccess access,CustomerFinancialEligibility eligibility,
-        BitcoinSettings settings,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager,dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch,dustin.cex.domains.valuation.BitcoinDepositValuationReview valuation){
-        this.access=access;this.eligibility=eligibility;this.settings=settings;this.jdbc=jdbc;this.audit=audit;this.originSearch=originSearch;this.valuation=valuation;
+        BitcoinSettings settings,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager,dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch,dustin.cex.domains.valuation.BitcoinDepositValuationReview valuation,dustin.cex.domains.monitoring.DepositMonitoringReview accountMonitoring){
+        this.access=access;this.eligibility=eligibility;this.settings=settings;this.jdbc=jdbc;this.audit=audit;this.originSearch=originSearch;this.valuation=valuation;this.accountMonitoring=accountMonitoring;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Source read(long actor,UUID sid,UUID deposit){
@@ -64,7 +65,7 @@ public class BitcoinDepositReviewSource {
                 new Customer(customer.getId(),customer.getVersion(),permitted,(UUID)row.get("assessment_id"),(UUID)row.get("active_attempt")),
                 new Chain(number(row,"observation_id"),row.get("chain_status")==null?"UNKNOWN":(String)row.get("chain_status"),number(row,"confirmations"),at(row,"read_started_at"),Boolean.TRUE.equals(row.get("fresh")),(Boolean)row.get("wallet_debit"),number(row,"decision_id"),(String)row.get("decision_reason"),Boolean.TRUE.equals(row.get("decision_current"))),
                 new Pending(row.get("operation_key")!=null,(String)row.get("operation_key")),
-                row.get("reconciliation_id")==null?null:new Reconciliation((UUID)row.get("reconciliation_id"),(String)row.get("reconciliation_status"),at(row,"snapshot_at"),at(row,"completed_at")),originSearch.read(deposit),valuation.read(deposit));
+                row.get("reconciliation_id")==null?null:new Reconciliation((UUID)row.get("reconciliation_id"),(String)row.get("reconciliation_status"),at(row,"snapshot_at"),at(row,"completed_at")),originSearch.read(deposit),valuation.read(deposit),accountMonitoring.read(customer.getId()));
             // 조회의 대상과 관찰/대사 참조를 남긴다. 이름/신분증/신고 원문을 감사 문자열에 복사하지 않는다.
             audit.record(actor,"BTC_DEPOSIT_REVIEW_SOURCE_READ","bitcoin-deposit:"+deposit,"SUCCESS","CUSTOMER_VERSION:"+result.customer().version()+":ELIGIBLE:"+result.customer().financiallyEligible()+":CDD:"+result.customer().cddAssessmentId()+":KYC:"+result.customer().kycAttemptId()+":OBSERVATION:"+result.chain().observationId()+":DECISION:"+result.chain().decisionId()+":RECONCILIATION:"+(result.reconciliation()==null?null:result.reconciliation().id())+":ORIGIN_SEARCH:"+(result.originSearch().search()==null?null:result.originSearch().search().id())+":ORIGIN_ATTEMPT:"+(result.originSearch().search()==null?null:result.originSearch().search().attemptId()));return result;
         });}catch(ResponseStatusException e){audit.denied(actor,"BTC_DEPOSIT_REVIEW_SOURCE","restricted",(e.getStatusCode().is5xxServerError()?"SOURCE_UNAVAILABLE_":"POLICY_DENIED_")+e.getStatusCode().value());throw e;}

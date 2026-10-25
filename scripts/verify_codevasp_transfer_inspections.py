@@ -19,7 +19,7 @@ groups = [
     ("inspection", ["*CodeVaspTransferInspectionIntegrationTest"], 18),
     ("transfer", ["*CodeVaspTransferReviewIntegrationTest"], 11),
     ("origin", ["*BitcoinDepositOriginSearchReviewIntegrationTest"], 13),
-    ("authorization", ["*BitcoinDepositReviewSourceIntegrationTest"], 14),
+    ("authorization", ["*BitcoinDepositReviewSourceIntegrationTest"], 16),
 ]
 for group, selections, expected in groups:
     name = "cex-transfer-inspection-" + uuid4().hex[:12]
@@ -63,6 +63,6 @@ for group, selections, expected in groups:
         current["container_removed"] = removed.returncode == 0
         (ARTIFACTS / "transfer-inspection.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
 result["tests"] = {key:sum(g["tests"][key] for g in result["groups"]) for key in ["tests", "failures", "errors", "skipped"]}
-assert len({(c["class"], c["name"]) for c in result["cases"]}) == 56
+assert len({(c["class"], c["name"]) for c in result["cases"]}) == 58
 result["exit"] = 0
 (ARTIFACTS / "transfer-inspection.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")

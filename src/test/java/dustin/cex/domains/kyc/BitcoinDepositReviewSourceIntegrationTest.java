@@ -20,7 +20,10 @@ class BitcoinDepositReviewSourceIntegrationTest extends EddTestSupport {
     @DynamicPropertySource static void bitcoin(DynamicPropertyRegistry r){
         r.add("bitcoin.rpc-url",()->System.getenv("CEX_BITCOIN_TEST_URL"));r.add("bitcoin.rpc-user",()->System.getenv("CEX_BITCOIN_TEST_USER"));r.add("bitcoin.rpc-password",()->System.getenv("CEX_BITCOIN_TEST_PASSWORD"));r.add("bitcoin.wallet",()->"cex_watch");r.add("bitcoin.network",()->"REGTEST");
     }
+    @Autowired dustin.cex.domains.monitoring.DepositMonitoringReview accountMonitoring;
     @Autowired dustin.cex.domains.valuation.BitcoinDepositValuationReview valuations;
+    @Autowired dustin.cex.domains.monitoring.DepositMonitoringRequest monitoringRequest;
+    @Autowired dustin.cex.domains.monitoring.DepositMonitoringService monitoringService;
     @Autowired BitcoinDepositReviewSource source;
     @Autowired dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch;
     @Autowired BitcoinDepositQualificationService qualification;
@@ -42,7 +45,7 @@ class BitcoinDepositReviewSourceIntegrationTest extends EddTestSupport {
         var seed=seed();var auditor=account(UserRole.AUDITOR);
         for(var actor:List.of(maker,checker,auditor)){
             var view=source.read(actor.user().getId(),actor.sid(),seed.id());assertEquals(seed.id(),view.depositId());assertEquals(customer.getId(),view.customer().id());assertEquals("0.12345678",view.amount());assertNotNull(view.readAt());assertFalse(view.customer().financiallyEligible());
-            mvc.perform(get("/api/admin/deposits/BTC/"+seed.id()).header("Authorization","Bearer "+actor.access())).andExpect(status().isOk()).andExpect(header().string("Cache-Control",org.hamcrest.Matchers.containsString("no-store")));
+            mvc.perform(get("/api/admin/deposits/BTC/"+seed.id()).header("Authorization","Bearer "+actor.access())).andExpect(status().isOk()).andExpect(header().string("Cache-Control",org.hamcrest.Matchers.containsString("no-store"))).andExpect(jsonPath("$.accountMonitoring.assurance").value("ONE_RULE_REFERENCE_ONLY_NOT_FINANCIAL_PERMISSION"));
         }
     }
     @Test void customerAnonymousAndForeignSessionCannotUseReviewEndpoint()throws Exception{
@@ -100,8 +103,22 @@ class BitcoinDepositReviewSourceIntegrationTest extends EddTestSupport {
         mvc.perform(get("/api/admin/deposits/BTC/not-a-uuid").header("Authorization","Bearer "+maker.access())).andExpect(status().isBadRequest());mvc.perform(get("/api/admin/deposits/ETH/"+UUID.randomUUID()).header("Authorization","Bearer "+maker.access())).andExpect(status().isForbidden());mvc.perform(post("/api/admin/deposits/BTC/"+UUID.randomUUID()).header("Authorization","Bearer "+maker.access())).andExpect(status().isForbidden());
     }
     @Test void differentConfiguredNetworkCannotReadReceiptThroughOperatorRole(){
-        var seed=seed();var other=new BitcoinDepositReviewSource(new BitcoinDepositOperatorAccess(users,operatorSessions,jdbc),eligibility,new BitcoinSettings("","","","","MAINNET"),jdbc,audit,manager,originSearch,valuations);
+        var seed=seed();var other=new BitcoinDepositReviewSource(new BitcoinDepositOperatorAccess(users,operatorSessions,jdbc),eligibility,new BitcoinSettings("","","","","MAINNET"),jdbc,audit,manager,originSearch,valuations,accountMonitoring);
         assertEquals(404,assertThrows(ResponseStatusException.class,()->other.read(maker.user().getId(),maker.sid(),seed.id())).getStatusCode().value());
     }
 
+    @Test void operatorAndApproverRequestActualInputWithoutRewritingAssessment()throws Exception{
+        var seed=seed();observe(seed,false);opening();pending.recognize(seed.id());
+        for(var actor:List.of(maker,checker))mvc.perform(post("/api/admin/deposits/BTC/"+seed.id()+"/monitoring-requests").header("Authorization","Bearer "+actor.access())).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("QUEUED"));
+        // 동작 중인 다른 고객의 불변 자료도 그대로 처리한다. 현재 대상까지의 작업 수만큼만 진행한다.
+        long maximum=jdbc.queryForObject("SELECT count(*) FROM deposit_monitoring_jobs",Long.class)+1;
+        for(long n=0;n<maximum;n++){var result=monitoringService.processNext();if(result.isPresent()&&result.get().userId()==customer.getId())break;}
+        var before=source.read(maker.user().getId(),maker.sid(),seed.id()).accountMonitoring().assessmentId();assertNotNull(before);
+        assertEquals("ALREADY_CURRENT",monitoringRequest.request(maker.user().getId(),maker.sid(),seed.id()).status());assertEquals(before,source.read(maker.user().getId(),maker.sid(),seed.id()).accountMonitoring().assessmentId());
+    }
+    @Test void customerAndAuditorCannotCreateMonitoringWork()throws Exception{
+        var seed=seed();var auditor=account(UserRole.AUDITOR);
+        for(String token:List.of(customerAccess,auditor.access()))for(UUID id:List.of(seed.id(),UUID.randomUUID()))mvc.perform(post("/api/admin/deposits/BTC/"+id+"/monitoring-requests").header("Authorization","Bearer "+token)).andExpect(status().isForbidden());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->monitoringRequest.request(maker.user().getId(),maker.sid(),seed.id())).getStatusCode().value());
+    }
 }

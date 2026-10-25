@@ -24,9 +24,10 @@ public class BitcoinPendingDepositService {
     private final BitcoinSettings settings;
     private final dustin.cex.domains.valuation.BitcoinDepositValuationService valuations;
     private final TransactionTemplate tx;
+    private final dustin.cex.domains.monitoring.DepositMonitoringQueue monitoring;
     public BitcoinPendingDepositService(JdbcTemplate jdbc,LedgerService ledger,UserRepository users,AuditService audit,
-            BitcoinSettings settings,dustin.cex.domains.valuation.BitcoinDepositValuationService valuations,PlatformTransactionManager manager){
-        this.jdbc=jdbc;this.ledger=ledger;this.users=users;this.audit=audit;this.settings=settings;this.valuations=valuations;
+            BitcoinSettings settings,dustin.cex.domains.valuation.BitcoinDepositValuationService valuations,dustin.cex.domains.monitoring.DepositMonitoringQueue monitoring,PlatformTransactionManager manager){
+        this.jdbc=jdbc;this.ledger=ledger;this.users=users;this.audit=audit;this.settings=settings;this.valuations=valuations;this.monitoring=monitoring;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Recognized recognize(UUID deposit){
@@ -80,6 +81,8 @@ public class BitcoinPendingDepositService {
         ledger.record(key,"BTC_DEPOSIT_PENDING",List.of(p(owner,"PENDING",asset,amount),p(0,"CUSTODY",asset,amount.negate())));
         jdbc.update("INSERT INTO bitcoin_pending_deposits(receipt_id,decision_id,operation_key) VALUES(?,?,?)",deposit,decision,key);
         valuations.recordRecognized(deposit,priceId);
+        // 잠근 고객의 새 수탁 순번을 같은 트랜잭션으로 알린다. 탐지 계산은 별도 워커가 원본을 읽어 수행한다.
+        monitoring.enqueue(owner,key);
         audit.record(null,"BTC_PENDING_DEPOSIT_RECOGNIZED","bitcoin-deposit:"+deposit,"SUCCESS","DECISION:"+decision+":OP:"+key);
         return new Recognized(deposit,key,true);
     }
