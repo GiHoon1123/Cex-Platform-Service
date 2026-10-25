@@ -12,7 +12,10 @@ ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT.parent / ".local"
 DOCKER = shutil.which("docker") or "/usr/local/bin/docker"
 name = "cex-bound-approvals-" + uuid4().hex[:12]
-result = {"container": name}
+run_id = name.rsplit("-",1)[1]
+proof = ARTIFACTS/"bound-approvals"/run_id
+proof.mkdir(parents=True,exist_ok=True)
+result = {"container": name,"run_id":run_id}
 try:
     subprocess.run([DOCKER,"run","--detach","--rm","--name",name,"--publish","127.0.0.1::5432",
         "--tmpfs","/var/lib/postgresql/data","-e","POSTGRES_USER=root","-e","POSTGRES_PASSWORD=1234",
@@ -24,11 +27,14 @@ try:
             raise RuntimeError("격리 PostgreSQL 시작 시간 초과")
         time.sleep(0.2)
     address=subprocess.check_output([DOCKER,"port",name,"5432/tcp"],text=True).strip()
-    env=os.environ.copy()
+    env={k:v for k,v in os.environ.items() if not k.startswith(("CDD_","EDD_","DIDIT_","SPRING_MAIL_","CUSTOMER_MAIL_","BITCOIN_","CEX_BITCOIN_TEST_","CODEVASP_","VALUATION_"))}
     env["JWT_SECRET"]="isolated-process-jwt-secret-at-least-32-bytes"
     env["ENGINE_SERVICE_TOKEN"]="isolated-engine-service-token-32-bytes"
     env["SPRING_KAFKA_BOOTSTRAP_SERVERS"]="127.0.0.1:1"
     env["BOT_BOT_COUNT"]="0"
+    env["SPRING_KAFKA_LISTENER_AUTO_STARTUP"]="false"
+    env["BITCOIN_PROCESSING_ENABLED"]="false"
+    env["CUSTOMER_MAIL_DISPATCH_ENABLED"]="false"
     env["ORDER_DISPATCH_ENABLED"]="false"
     env["ENGINE_HTTP_URL"]="http://127.0.0.1:1"
     env["CEX_TEST_DATABASE_URL"]="jdbc:postgresql://"+address+"/cex_test"
@@ -46,19 +52,19 @@ try:
         command=["./gradlew","test"]
         for pattern in patterns:command.extend(["--tests",pattern])
         command.extend(["--rerun-tasks","bootJar","--console=plain"])
-        with (ARTIFACTS/("bound-approvals-"+group+".log")).open("w") as log:
+        with (proof/(group+".log")).open("w") as log:
             completed=subprocess.run(command,cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
-        evidence=ARTIFACTS/"bound-approval-suites"/group
+        evidence=proof/(group+"-xml")
         evidence.mkdir(parents=True,exist_ok=True)
         suites=[]
         for path in (ROOT/"build/test-results/test").glob("TEST-*.xml"):
             shutil.copy(path,evidence/path.name);suites.append(ET.parse(path).getroot())
         counts={key:sum(int(suite.attrib.get(key,0)) for suite in suites) for key in ["tests","failures","errors","skipped"]}
-        result["groups"].append({"name":group,"exit":completed.returncode,"tests":counts})
+        result["groups"].append({"name":group,"database":database,"exit":completed.returncode,"tests":counts,"log":str((proof/(group+".log")).relative_to(ARTIFACTS)),"cases":[{"class":c.attrib["classname"],"name":c.attrib["name"]} for suite in suites for c in suite.findall("testcase")]})
         result["exit"]=completed.returncode
         if completed.returncode:
-            raise RuntimeError("승인 회귀 실패: .local/bound-approvals-"+group+".log 확인")
-        assert counts["tests"]>0 and counts["skipped"]==0,counts
+            raise RuntimeError("승인 회귀 실패: "+str(proof/(group+".log")))
+        assert counts["tests"]>0 and counts["failures"]==counts["errors"]==counts["skipped"]==0,counts
         print(group+": "+json.dumps(counts),flush=True)
     result["tests"]={key:sum(group["tests"][key] for group in result["groups"]) for key in ["tests","failures","errors","skipped"]}
     print(json.dumps(result,indent=2),flush=True)
