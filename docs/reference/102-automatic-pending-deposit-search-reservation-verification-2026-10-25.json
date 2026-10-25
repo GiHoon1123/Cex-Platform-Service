@@ -1,0 +1,657 @@
+{
+  "cycle": 102,
+  "implementation_commit": "b18838933f6f5262968e3a914e922470552156e3",
+  "verification": {
+    "pending": {
+      "container": "cex-code-pending-f4543d102257",
+      "run_id": "f4543d102257",
+      "groups": [
+        {
+          "database": "pending_case_0",
+          "method": "unrecognizedReceiptIsNotAutomaticallyReservedButRecognizedPendingIs",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/unrecognizedReceiptIsNotAutomaticallyReservedButRecognizedPendingIs.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_1",
+          "method": "coinbaseIsPreservedForReviewWithoutOriginatingVaspLookup",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/coinbaseIsPreservedForReviewWithoutOriginatingVaspLookup.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_2",
+          "method": "twoPendingReceiptsAreReservedOnceInDurableArrivalOrder",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/twoPendingReceiptsAreReservedOnceInDurableArrivalOrder.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_3",
+          "method": "concurrentAutomaticReservationCreatesOneStableRequestAndAudit",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/concurrentAutomaticReservationCreatesOneStableRequestAndAudit.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_4",
+          "method": "reservationAuditFailureKeepsPendingAndHasNoExternalSubmission",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/reservationAuditFailureKeepsPendingAndHasNoExternalSubmission.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_5",
+          "method": "failedCurrentDirectoryCannotReserveOrDiscardPending",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/failedCurrentDirectoryCannotReserveOrDiscardPending.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_6",
+          "method": "newPendingReservationFailureCannotBlockExistingIndependentPoll",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/newPendingReservationFailureCannotBlockExistingIndependentPoll.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_7",
+          "method": "ownedWorkerAutomaticallyReservesPendingAndPersistsAcknowledgement",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/ownedWorkerAutomaticallyReservesPendingAndPersistsAcknowledgement.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_8",
+          "method": "existingReservationSurvivesNewServiceInstanceWithoutAnotherAutomaticIdentity",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/existingReservationSurvivesNewServiceInstanceWithoutAnotherAutomaticIdentity.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_9",
+          "method": "ambientTransactionCannotAutomaticallyReserveBeforeProviderIo",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/ambientTransactionCannotAutomaticallyReserveBeforeProviderIo.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_10",
+          "method": "testChainPendingCannotBeAutomaticallySentToExternalProviderOrigin",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/testChainPendingCannotBeAutomaticallySentToExternalProviderOrigin.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "pending_case_11",
+          "method": "technicalLookupDoesNotDeclareLaterStaleChainEvidenceReadyForSpending",
+          "exit": 0,
+          "log": "codevasp-pending-reservations/f4543d102257/technicalLookupDoesNotDeclareLaterStaleChainEvidenceReadyForSpending.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "unrecognizedReceiptIsNotAutomaticallyReservedButRecognizedPendingIs()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "coinbaseIsPreservedForReviewWithoutOriginatingVaspLookup()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "twoPendingReceiptsAreReservedOnceInDurableArrivalOrder()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "concurrentAutomaticReservationCreatesOneStableRequestAndAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "reservationAuditFailureKeepsPendingAndHasNoExternalSubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "failedCurrentDirectoryCannotReserveOrDiscardPending()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "newPendingReservationFailureCannotBlockExistingIndependentPoll()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "ownedWorkerAutomaticallyReservesPendingAndPersistsAcknowledgement()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "existingReservationSurvivesNewServiceInstanceWithoutAnotherAutomaticIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "ambientTransactionCannotAutomaticallyReserveBeforeProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "testChainPendingCannotBeAutomaticallySentToExternalProviderOrigin()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "technicalLookupDoesNotDeclareLaterStaleChainEvidenceReadyForSpending()"
+        }
+      ],
+      "tests": {
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "searches": {
+      "container": "cex-code-deposit-search-d161fdce9ccd",
+      "exit": 0,
+      "tests": {
+        "tests": 46,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "heldNewSubmissionCannotBlockIndependentDuePollDuringDirectoryOutage()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "changedAuthorityCannotReadOldRequestAndNeedsItsOwnFreshDirectory()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticallyStartedOwnedWorkerPersistsRealDatabaseAttemptAndStops()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticOldUnknownSubmissionCanPollWhileDirectoryRefreshHasFailed()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticProcessingRetriesDueProcessingResultThenRespectsThirtySecondBackoff()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticProcessingUsesReservedIdentityAndSkipsImmediateSecondCall()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "ambientTransactionAndDisabledSourceDoNotReserve()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "orphanedSubmissionIsRecoveredByPollingAndLateAckCannotMoveCurrentHead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticProvenNonSendWaitsForFreshDirectoryBeforeSubmittingAgain()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "provenNonSendIsStoredSeparatelyWithoutImmediateRetryBurst()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "restartAndLaterDirectoryFailureDoNotReplaceAlreadyReservedIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "completedOrUnresolvableTechnicalResultsAreNotPolledForever()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "lostSubmissionResponseIsUnknownAndDoesNotTriggerImmediateResubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "failedCurrentDirectoryAndMissingReceiptCannotCreateReservation()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "provenNonSendCanRetrySameRequestAfterIntervalWithoutPollingUnknownIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "reservationBindsStableRequestToImmutableReceiptWithoutExternalSubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "completedAttemptEnforcesPollingIntervalAndDirectResubmissionIsRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "executionFinishAuditFailureRetainsRunningStartWithoutSecondSubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "latestRunningAndFailedPollCannotExposeEarlierFound()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "concurrentExecutionCannotSubmitTwiceWhileFirstProviderCallIsPending()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "mandatoryAuditFailureRollsBackReservationBeforeAnySubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "concurrentAutomaticSelectorsHaveOnlyOneExternalSubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "futureRecordedDirectoryCannotBeUsedThroughDirectSqlBypass()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "newerDirectoryDoesNotRewriteOriginalReservationEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "executionSubmitsOriginalRequestOnceAndPersistsAcknowledgement()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "resultPhaseCannotPretendSubmissionWasCompletedSearch()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticWindowExhaustionKeepsRunningEvidenceAndAllowsExplicitResolution()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "malformedPollReplyKeepsBoundedInvalidSourceFailure()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "immutableReservationAndCurrentDirectoryTriggerRejectDirectBypass()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "testChainCannotBeReservedAgainstExternalProviderOrigin()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticSelectionDoesNotCrossConfiguredSourceAuthority()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "immutableResultsAndPayloadBindingRejectDirectDatabaseBypass()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "futureExecutionTimesCannotBeInsertedAsFreshHistory()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "concurrentReservationCommitsOneIdentityAndOneMandatoryAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticSelectorCannotHoldCallerTransactionOverProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "distinctReceiptsHaveDistinctRequestsEvenWhenAddressIsShared()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "executionCannotUseAmbientTransactionForProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "executionStartAuditFailureCannotReachProvider()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "productionContextHonorsFlagAndClosesItsAutomaticallyStartedExecutor()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "fixedDelayIsMeasuredAfterCompletionRatherThanAccumulatingCatchupTasks()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "taskIgnoringShutdownCannotStartOverlappingReplacement()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "oneDedicatedThreadDoesNotOverlapOrBlockOtherScheduler()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "stoppedWorkerCanRestartAfterOldExecutorTerminates()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "disabledAndUnconfiguredCannotCreateAutomaticAttempts()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "testProfileCannotAutomaticallyStartEvenWhenConfiguredAndEnabled()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "storedFailureAndThrownPersistenceFailureDoNotCancelFutureAttempts()"
+        }
+      ],
+      "container_removed": true
+    },
+    "combined": {
+      "executions": 58,
+      "unique": 58,
+      "overlap": 0,
+      "jars": {
+        "cex-0.0.1-SNAPSHOT-operator-admin.jar": "보류 입금 자동 예약 메서드 포함, 시험 코드 제외",
+        "cex-0.0.1-SNAPSHOT.jar": "보류 입금 자동 예약 메서드 포함, 시험 코드 제외"
+      },
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "ambientTransactionAndDisabledSourceDoNotReserve()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticOldUnknownSubmissionCanPollWhileDirectoryRefreshHasFailed()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticProcessingRetriesDueProcessingResultThenRespectsThirtySecondBackoff()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticProcessingUsesReservedIdentityAndSkipsImmediateSecondCall()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticProvenNonSendWaitsForFreshDirectoryBeforeSubmittingAgain()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticSelectionDoesNotCrossConfiguredSourceAuthority()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticSelectorCannotHoldCallerTransactionOverProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticWindowExhaustionKeepsRunningEvidenceAndAllowsExplicitResolution()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "automaticallyStartedOwnedWorkerPersistsRealDatabaseAttemptAndStops()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "changedAuthorityCannotReadOldRequestAndNeedsItsOwnFreshDirectory()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "completedAttemptEnforcesPollingIntervalAndDirectResubmissionIsRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "completedOrUnresolvableTechnicalResultsAreNotPolledForever()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "concurrentAutomaticSelectorsHaveOnlyOneExternalSubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "concurrentExecutionCannotSubmitTwiceWhileFirstProviderCallIsPending()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "concurrentReservationCommitsOneIdentityAndOneMandatoryAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "distinctReceiptsHaveDistinctRequestsEvenWhenAddressIsShared()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "executionCannotUseAmbientTransactionForProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "executionFinishAuditFailureRetainsRunningStartWithoutSecondSubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "executionStartAuditFailureCannotReachProvider()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "executionSubmitsOriginalRequestOnceAndPersistsAcknowledgement()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "failedCurrentDirectoryAndMissingReceiptCannotCreateReservation()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "futureExecutionTimesCannotBeInsertedAsFreshHistory()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "futureRecordedDirectoryCannotBeUsedThroughDirectSqlBypass()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "heldNewSubmissionCannotBlockIndependentDuePollDuringDirectoryOutage()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "immutableReservationAndCurrentDirectoryTriggerRejectDirectBypass()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "immutableResultsAndPayloadBindingRejectDirectDatabaseBypass()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "latestRunningAndFailedPollCannotExposeEarlierFound()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "lostSubmissionResponseIsUnknownAndDoesNotTriggerImmediateResubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "malformedPollReplyKeepsBoundedInvalidSourceFailure()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "mandatoryAuditFailureRollsBackReservationBeforeAnySubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "newerDirectoryDoesNotRewriteOriginalReservationEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "orphanedSubmissionIsRecoveredByPollingAndLateAckCannotMoveCurrentHead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "provenNonSendCanRetrySameRequestAfterIntervalWithoutPollingUnknownIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "provenNonSendIsStoredSeparatelyWithoutImmediateRetryBurst()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "reservationBindsStableRequestToImmutableReceiptWithoutExternalSubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "restartAndLaterDirectoryFailureDoNotReplaceAlreadyReservedIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "resultPhaseCannotPretendSubmissionWasCompletedSearch()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspDepositSearchIntegrationTest",
+          "name": "testChainCannotBeReservedAgainstExternalProviderOrigin()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "ambientTransactionCannotAutomaticallyReserveBeforeProviderIo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "coinbaseIsPreservedForReviewWithoutOriginatingVaspLookup()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "concurrentAutomaticReservationCreatesOneStableRequestAndAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "existingReservationSurvivesNewServiceInstanceWithoutAnotherAutomaticIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "failedCurrentDirectoryCannotReserveOrDiscardPending()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "newPendingReservationFailureCannotBlockExistingIndependentPoll()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "ownedWorkerAutomaticallyReservesPendingAndPersistsAcknowledgement()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "reservationAuditFailureKeepsPendingAndHasNoExternalSubmission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "technicalLookupDoesNotDeclareLaterStaleChainEvidenceReadyForSpending()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "testChainPendingCannotBeAutomaticallySentToExternalProviderOrigin()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "twoPendingReceiptsAreReservedOnceInDurableArrivalOrder()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspPendingReservationIntegrationTest",
+          "name": "unrecognizedReceiptIsNotAutomaticallyReservedButRecognizedPendingIs()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "disabledAndUnconfiguredCannotCreateAutomaticAttempts()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "fixedDelayIsMeasuredAfterCompletionRatherThanAccumulatingCatchupTasks()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "oneDedicatedThreadDoesNotOverlapOrBlockOtherScheduler()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "productionContextHonorsFlagAndClosesItsAutomaticallyStartedExecutor()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "stoppedWorkerCanRestartAfterOldExecutorTerminates()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "storedFailureAndThrownPersistenceFailureDoNotCancelFutureAttempts()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "taskIgnoringShutdownCannotStartOverlappingReplacement()"
+        },
+        {
+          "class": "dustin.cex.domains.travelrule.CodeVaspDepositSearchWorkerTest",
+          "name": "testProfileCannotAutomaticallyStartEvenWhenConfiguredAndEnabled()"
+        }
+      ]
+    },
+    "local_evidence": ".local/cycle102-proof",
+    "financial_approval": false,
+    "live_provider_verified": false
+  }
+}

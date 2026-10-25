@@ -217,3 +217,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [100. 입금 검색의 미전송·결과 불명을 구분하고 실행 이력 보존하기](decisions/100-durable-deposit-search-execution.md)
 
 - [101. 예약된 입금 검색을 독립 워커에서 제한적으로 자동 처리하기](decisions/101-automatic-deposit-search-processing.md)
+
+- [102. 보류 원장 입금을 자동 출처 검색 예약·접수에 연결하기](decisions/102-automatic-pending-deposit-search-reservation.md)

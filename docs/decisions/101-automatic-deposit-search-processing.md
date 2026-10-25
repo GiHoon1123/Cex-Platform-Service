@@ -47,7 +47,7 @@
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CodeVaspDepositSearchProcessing.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchProcessing.java#L25), 현재 소스의 부분 발췌.
+출처: [CodeVaspDepositSearchProcessing.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchProcessing.java#L36), 현재 소스의 부분 발췌.
 
 ```java
         if(Boolean.TRUE.equals(candidate.get("requires_submit"))){
@@ -65,7 +65,7 @@
 
 requires_submit는 SQL의 불리언 값이다. 새 접수의 현재 목록 전제가 실패해도 독립 조회 후보를 다시 선택한다. 과거 정상 목록을 돌려주는 폴백이 아니라 서로 다른 전제를 가진 작업의 선택이다. Optional.empty는 할 일이 없거나 다른 프로세스가 먼저 실행한 경우이며 금융 성공/실패를 뜻하지 않는다.
 
-출처: [CodeVaspDepositSearchProcessing.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchProcessing.java#L49), 현재 소스의 부분 발췌.
+출처: [CodeVaspDepositSearchProcessing.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchProcessing.java#L60), 현재 소스의 부분 발췌.
 
 ```java
              WHERE s.source_id=?
@@ -151,3 +151,7 @@ SQL의 최신 시도/완료 시각으로 미착수·임대 만료·재조회 간
 
 - [구현 e2b1cc8](https://github.com/GiHoon1123/Cex-Platform-Service/commit/e2b1cc8469fb656c662e0e4a2b3684de071538b8)
 - [격리 실행 증적](../reference/101-automatic-deposit-search-processing-verification-2026-10-25.json)
+
+## 후속 보류 원장 연결 시점
+
+[102](102-automatic-pending-deposit-search-reservation.md)에서 이미 보류 반입한 일반 BTC 입금을 자동 예약에 연결했다. 위 자동 예약 미연결 설명은101 시점이다. 코인베이스/현재 체인 재검사·정보 교환·금융 허가는 별도이며 금융 반영은 미완료다.
