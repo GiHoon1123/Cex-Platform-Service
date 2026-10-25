@@ -74,7 +74,7 @@ TransactionTemplate이 최초 확인/결합의 짧은 DB 트랜잭션을 소유�
 
 결합 원본과 필수 감사는 같은 TX다. 감사 실패를 삼키지 않아 모두 롤백한다. 정상 재시작은 새 감사나 새 결합 원본을 만들지 않는다.
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L403), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L405), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE OR REPLACE FUNCTION bitcoin_fact_require_network() RETURNS trigger LANGUAGE plpgsql AS $$

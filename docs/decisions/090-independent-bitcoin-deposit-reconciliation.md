@@ -2,6 +2,8 @@
 
 입금 한 건의 불변 원본과 보류 원장 항목을 고정한 뒤 비트코인 노드에서 거래를 새로 읽어 비교한다. 일치·누락·보류·불일치·조회 실패를 구분하고, 대사 과정에서 금융 기록을 자동 수정하지 않는다.
 
+후속 [125 불변 시작 순번](125-ordered-reconciliation-publication.md)에서 현재 실행 선택을 시각 정렬에서 시작 순번으로 바꾸고 짧은 고객 잠금/필수 감사로 공개한다. 외부 노드 읽기는 계속 TX 밖이다. 아래 수치는 당시 범위다.
+
 ## 문제와 기존 동작
 
 089까지 블록 발견→출력 식별→현재 체인 판단→보류 원장 반입이 동작한다. 같은 쓰기 경로가 저장한 현재 판단만 다시 읽으면 노드와 원장이 실제로 같은 입금을 표현하는지 독립적으로 확인하지 못한다. 합계가0이라는 사실도 잘못된 고객/금액의 균형 분개를 찾기에 충분하지 않다.
@@ -45,6 +47,8 @@ PostgreSQL16 [REPEATABLE READ](https://www.postgresql.org/docs/16/transaction-is
         // 같은 시점의 플랫폼 원본을 값으로 고정한 다음 DB 연결을 돌려준다. 노드를 기다리며 스냅샷을 붙잡지 않는다.
         Snapshot captured=snapshot.execute(t->capture(deposit));UUID run=UUID.randomUUID();String platform=json.writeValueAsString(captured);
         write.executeWithoutResult(t->{
+            // 시작 공개와 금융 판단은 같은 플랫폼 고객 잠금을 따른다. 이 잠금은 아래 노드 조회 전에 해제한다.
+            jdbc.queryForObject("SELECT id FROM users WHERE id=? FOR UPDATE",Long.class,captured.receipt().user());
             jdbc.update("""
                 INSERT INTO bitcoin_deposit_reconciliation_runs(id,receipt_id,network,wallet,scope,snapshot_at,status)
                  VALUES(?,?,?,?,'PENDING_RECEIPT',?,'RUNNING')
@@ -56,7 +60,7 @@ PostgreSQL16 [REPEATABLE READ](https://www.postgresql.org/docs/16/transaction-is
 
 Snapshot은 Java record의 값 묶음이며 목록을 List.copyOf로 고정한다. TypeScript의 타입 readonly가 실행 중 변경을 자동 차단하지 않는 것과 달리 이 목록은 변경 불가능한 복사본이다. 플랫폼 캡처 TX를 마친 뒤 시작/증거를 별도 TX에서 확정하고 그 다음 노드를 읽는다.
 
-출처: [BitcoinDepositReconciliationService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReconciliationService.java#L66), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReconciliationService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReconciliationService.java#L68), 현재 소스의 부분 발췌.
 
 ```java
                     // 다른 고객의 같은 거래 출력을 불필요하게 복사하지 않는다. 거래 메타데이터와 해당 출력만 증거로 남긴다.
@@ -68,7 +72,7 @@ Snapshot은 Java record의 값 묶음이며 목록을 List.copyOf로 고정한�
 
 출력 번호가 같은 항목만 남기고 거래 메타데이터의 outputs는 빈 목록으로 만든다. 원본 금액은 BigDecimal로 유지하며 부동소수점 변환을 하지 않는다. 이 부분 발췌는 전체 노드 응답이나 단독 실행 예제가 아니다.
 
-출처: [BitcoinDepositReconciliationService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReconciliationService.java#L124), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReconciliationService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReconciliationService.java#L128), 현재 소스의 부분 발췌.
 
 ```java
     static boolean matchesEntries(long owner,String asset,BigDecimal amount,List<Entry> entries){
@@ -86,6 +90,8 @@ CREATE OR REPLACE FUNCTION bitcoin_deposit_reconciliation_finish() RETURNS trigg
 BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION '입금 대사 원본을 삭제할 수 없습니다'; END IF;
  IF TG_OP='INSERT' THEN
+  -- 직접 SQL로 시작하더라도 고객 잠금 뒤에만 시작 순번을 할당한다. 외부 노드 호출은 이 트랜잭션 밖이다.
+  PERFORM u.id FROM users u JOIN bitcoin_deposit_receipts r ON r.user_id=u.id WHERE r.id=NEW.receipt_id FOR UPDATE OF u;
   IF NEW.status<>'RUNNING' OR NEW.completed_at IS NOT NULL THEN RAISE EXCEPTION '입금 대사는 실행 상태에서 시작해야 합니다'; END IF;
   IF NOT EXISTS(SELECT 1 FROM bitcoin_deposit_receipts r JOIN bitcoin_deposit_addresses a ON a.id=r.address_id
     WHERE r.id=NEW.receipt_id AND r.network=NEW.network AND a.wallet=NEW.wallet) OR NEW.snapshot_at>NEW.started_at THEN
@@ -100,6 +106,9 @@ BEGIN
     OR(NEW.status<>'MATCHED' AND NOT EXISTS(SELECT 1 FROM bitcoin_deposit_reconciliation_issues WHERE run_id=NEW.id)) THEN
    RAISE EXCEPTION '입금 대사 결과에는 범위에 맞는 증거와 차이 기록이 필요합니다';
   END IF;
+ END IF;
+ RETURN NEW;
+END $$;
 ```
 
 DB는 원본의 네트워크/지갑/시점·실행→완료 전이·필수 증거와 차이 기록을 검사한다. 완료 상태는 다시 쓰지 않는다. 별도 자식 트리거는 완료 뒤 증거/차이 추가를 거부하고 수정/삭제/TRUNCATE도 차단한다. 관리자 권한 탈취까지 방어하는 외부 증거 보관소를 구현한 것은 아니다.

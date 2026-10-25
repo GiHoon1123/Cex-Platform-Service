@@ -65,7 +65,7 @@ TreeSet<Long>은 ID를 중복 없이 오름차순으로 정렬한다. 이 순서
 출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L59), 현재 소스의 부분 발췌.
 
 ```java
-                 LEFT JOIN LATERAL(SELECT id,status,snapshot_at,completed_at FROM bitcoin_deposit_reconciliation_runs WHERE receipt_id=r.id ORDER BY started_at DESC,id DESC LIMIT 1) q ON true
+                 LEFT JOIN bitcoin_current_deposit_reconciliation q ON q.receipt_id=r.id
                  WHERE r.id=? AND r.network=?
                 """,deposit,settings.network.id);
 ```

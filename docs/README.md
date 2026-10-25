@@ -261,3 +261,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [122. 승인된 거래 판단의 종결·내부 회부를 별도 실행 서명으로 확정하기](decisions/122-explicit-case-closure-and-reporting-referral.md)
 
 - [124. 입금 원본과 엔진 HTTP 응답을 결합하고 불확실한 결과를 보존하기](decisions/124-strict-engine-deposit-http-client.md)
+
+- [125. 입금 대사의 현재 근거를 불변 시작 순번과 필수 감사로 공개하기](decisions/125-ordered-reconciliation-publication.md)
