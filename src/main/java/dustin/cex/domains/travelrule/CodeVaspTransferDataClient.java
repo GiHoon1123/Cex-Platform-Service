@@ -7,7 +7,7 @@ import java.util.*;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 
-/** 국내 CODE 개인 수취의 정보 교환 계약만 해석한다. 현재 키/사업자 실사·고객 KYC·금융 허가는 호출 업무가 별도 검증한다. */
+/** 국내 CODE 개인 수취의 정보 교환 계약만 해석한다. 정보 제공 상대 허용은 전송 전에 검사하며 현재 디렉터리·고객 KYC·금융 허가는 호출 업무가 별도 검증한다. */
 @Component
 public class CodeVaspTransferDataClient {
     // 호출 업무가 확정한 공개 거래 원본·수취인 이름·현재 상대 키를 하나로 묶는다. 생성자 검사는 법적 실사나 고객 승인을 대신하지 않는다.
@@ -36,10 +36,18 @@ public class CodeVaspTransferDataClient {
         @Override public String toString(){return "TransferDataResult[개인정보 생략]";}
     }
     private final CodeVaspTransport transport;
-    public CodeVaspTransferDataClient(CodeVaspTransport transport){this.transport=transport;}
+    private final CodeVaspCounterpartyPolicy policy;
+    public CodeVaspTransferDataClient(CodeVaspTransport transport,CodeVaspCounterpartyPolicy policy){this.transport=transport;this.policy=policy;}
     // 외부 PUT와 복호화는 DB 잠금 밖에서 실행한다. 호출 전 미전송만 증명할 수 있으며 응답 해석 실패도 재전송 허가가 아니다.
     public Result exchange(Request request){
-        Objects.requireNonNull(request,"정보 교환 요청이 필요합니다");var response=transport.transferData(request);
+        Objects.requireNonNull(request,"정보 교환 요청이 필요합니다");
+        // 실제 개인정보 전송 경계에서도 운영 허용을 검사한다. 이것은 호출자가 제공한 목록의 최신성·진위를 증명하지 않는다.
+        // 같은 내부 호출을 다른 업무에서 재사용해도 미검토 상대/만료 정책으로 이름을 내보낼 수 없게 한다.
+        try{
+            var now=Instant.now();var selected=policy.select(new CodeVaspDirectoryClient.Directory(now,now,List.of(request.peer())),request.peer().entityId());
+            if(!selected.key().equals(request.key()))throw unavailable();
+        }catch(RuntimeException denied){throw new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.NOT_SENT);}
+        var response=transport.transferData(request);
         try{
             if(!request.query().requestId().toString().equals(text(response,"transferId",36)))throw unavailable();
             for(String field:response.propertyNames())if(!Set.of("result","reasonType","reasonMsg","transferId","currency","amount","historicalCost","tradePrice","tradeCurrency","isExceedingThreshold","payload").contains(field))throw unavailable();

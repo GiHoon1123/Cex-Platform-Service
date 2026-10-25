@@ -39,7 +39,7 @@ try:
     ARTIFACTS.mkdir(exist_ok=True)
     started=time.time()
     with (ARTIFACTS/"codevasp-directory.log").open("w") as log:
-        completed=subprocess.run(["./gradlew","test","--tests","*CodeVaspSettingsTest","--tests","*CodeVaspDirectory*Test","--tests","*CodeVaspTransactionClientTest","--tests","*CodeVaspTransferDataClientTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+        completed=subprocess.run(["./gradlew","test","--tests","*CodeVaspSettingsTest","--tests","*CodeVaspDirectory*Test","--tests","*CodeVaspTransactionClientTest","--tests","*CodeVaspTransferDataClientTest","--tests","*CodeVaspCounterpartyPolicyTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
     result["exit"]=completed.returncode
     if completed.returncode:
         raise RuntimeError("사업자 목록 회귀 실패: .local/codevasp-directory.log 확인")
