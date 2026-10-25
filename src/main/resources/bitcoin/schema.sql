@@ -368,6 +368,8 @@ CREATE OR REPLACE FUNCTION bitcoin_deposit_reconciliation_finish() RETURNS trigg
 BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION '입금 대사 원본을 삭제할 수 없습니다'; END IF;
  IF TG_OP='INSERT' THEN
+  -- 직접 SQL로 시작하더라도 고객 잠금 뒤에만 시작 순번을 할당한다. 외부 노드 호출은 이 트랜잭션 밖이다.
+  PERFORM u.id FROM users u JOIN bitcoin_deposit_receipts r ON r.user_id=u.id WHERE r.id=NEW.receipt_id FOR UPDATE OF u;
   IF NEW.status<>'RUNNING' OR NEW.completed_at IS NOT NULL THEN RAISE EXCEPTION '입금 대사는 실행 상태에서 시작해야 합니다'; END IF;
   IF NOT EXISTS(SELECT 1 FROM bitcoin_deposit_receipts r JOIN bitcoin_deposit_addresses a ON a.id=r.address_id
     WHERE r.id=NEW.receipt_id AND r.network=NEW.network AND a.wallet=NEW.wallet) OR NEW.snapshot_at>NEW.started_at THEN
@@ -417,3 +419,60 @@ DROP TRIGGER IF EXISTS bitcoin_scan_network ON bitcoin_block_scans;
 CREATE TRIGGER bitcoin_scan_network BEFORE INSERT ON bitcoin_block_scans FOR EACH ROW EXECUTE FUNCTION bitcoin_fact_require_network();
 DROP TRIGGER IF EXISTS bitcoin_receipt_network ON bitcoin_deposit_receipts;
 CREATE TRIGGER bitcoin_receipt_network BEFORE INSERT ON bitcoin_deposit_receipts FOR EACH ROW EXECUTE FUNCTION bitcoin_fact_require_network();
+
+-- 대사의 현재 근거는 벽시계나 완료 순서가 아니라 실제로 확정한 시작 순번으로 고른다.
+-- 과거 실행을 추측해 채우지 않는다. 새 검증부터 등록하며 예전 실행 원본은 그대로 보존한다.
+CREATE TABLE IF NOT EXISTS bitcoin_deposit_reconciliation_starts (
+ position bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+ run_id uuid NOT NULL UNIQUE REFERENCES bitcoin_deposit_reconciliation_runs(id),
+ receipt_id uuid NOT NULL REFERENCES bitcoin_deposit_receipts(id),
+ registered_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current()
+);
+CREATE INDEX IF NOT EXISTS bitcoin_reconciliation_start_receipt ON bitcoin_deposit_reconciliation_starts(receipt_id,position DESC);
+CREATE OR REPLACE FUNCTION bitcoin_reconciliation_start_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ -- 실행 생성 트리거에서만 등록한다. 호출자가 옛 실행을 새 시작으로 직접 포장하지 못하게 한다.
+ IF pg_trigger_depth()<2 OR NEW.created_txid<>txid_current() OR NEW.registered_at>clock_timestamp()
+  OR NOT EXISTS(SELECT 1 FROM bitcoin_deposit_reconciliation_runs r WHERE r.id=NEW.run_id AND r.receipt_id=NEW.receipt_id AND r.status='RUNNING') THEN
+  RAISE EXCEPTION '대사 시작 순번은 새 실행 생성과 같은 트랜잭션에서만 기록합니다';END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_reconciliation_start_binding_check ON bitcoin_deposit_reconciliation_starts;
+CREATE TRIGGER bitcoin_reconciliation_start_binding_check BEFORE INSERT ON bitcoin_deposit_reconciliation_starts FOR EACH ROW EXECUTE FUNCTION bitcoin_reconciliation_start_binding();
+CREATE OR REPLACE FUNCTION bitcoin_reconciliation_register_start() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ INSERT INTO bitcoin_deposit_reconciliation_starts(run_id,receipt_id) VALUES(NEW.id,NEW.receipt_id);RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_reconciliation_register_start_check ON bitcoin_deposit_reconciliation_runs;
+CREATE TRIGGER bitcoin_reconciliation_register_start_check AFTER INSERT ON bitcoin_deposit_reconciliation_runs FOR EACH ROW EXECUTE FUNCTION bitcoin_reconciliation_register_start();
+CREATE OR REPLACE FUNCTION bitcoin_reconciliation_start_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id IS NULL AND a.action='BTC_DEPOSIT_RECONCILIATION_STARTED'
+  AND a.target='bitcoin-reconciliation:'||NEW.run_id::text AND a.outcome='SUCCESS' AND a.detail='RECEIPT:'||NEW.receipt_id::text
+  AND a.occurred_at>=NEW.registered_at AND length(a.source_address)>0) THEN
+  RAISE EXCEPTION '대사 시작 순번에는 해당 실행의 필수 감사가 필요합니다';END IF;
+ RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_reconciliation_start_audit_check ON bitcoin_deposit_reconciliation_starts;
+CREATE CONSTRAINT TRIGGER bitcoin_reconciliation_start_audit_check AFTER INSERT ON bitcoin_deposit_reconciliation_starts
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION bitcoin_reconciliation_start_audit();
+CREATE OR REPLACE FUNCTION bitcoin_reconciliation_finish_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id IS NULL AND a.action='BTC_DEPOSIT_RECONCILIATION_FINISHED'
+  AND a.target='bitcoin-reconciliation:'||NEW.id::text AND a.outcome=CASE WHEN NEW.status='MATCHED' THEN 'SUCCESS' ELSE 'DENIED' END
+  AND a.detail='STATUS:'||NEW.status||':ISSUES:'||(SELECT count(*) FROM bitcoin_deposit_reconciliation_issues i WHERE i.run_id=NEW.id)::text
+  AND a.occurred_at>=NEW.completed_at AND length(a.source_address)>0) THEN
+  RAISE EXCEPTION '대사 완료에는 실제 결과와 차이 수에 결합한 필수 감사가 필요합니다';END IF;
+ RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_reconciliation_finish_audit_check ON bitcoin_deposit_reconciliation_runs;
+CREATE CONSTRAINT TRIGGER bitcoin_reconciliation_finish_audit_check AFTER UPDATE ON bitcoin_deposit_reconciliation_runs
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN(NEW.status<>'RUNNING') EXECUTE FUNCTION bitcoin_reconciliation_finish_audit();
+DROP TRIGGER IF EXISTS bitcoin_reconciliation_starts_immutable ON bitcoin_deposit_reconciliation_starts;
+CREATE TRIGGER bitcoin_reconciliation_starts_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_deposit_reconciliation_starts
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+-- 최신 시작이 실행 중이거나 실패해도 이전 성공을 선택하지 않는다. 재시작해도 같은 근거를 읽는다.
+CREATE OR REPLACE VIEW bitcoin_current_deposit_reconciliation AS
+ SELECT DISTINCT ON(s.receipt_id) r.*,s.position start_position,s.registered_at
+ FROM bitcoin_deposit_reconciliation_starts s JOIN bitcoin_deposit_reconciliation_runs r ON r.id=s.run_id
+ ORDER BY s.receipt_id,s.position DESC;

@@ -169,10 +169,11 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                     if time.monotonic()>deadline:raise RuntimeError("격리 PostgreSQL 시작 실패")
                     time.sleep(.2)
                 db_address=subprocess.check_output([docker,"port",database,"5432/tcp"],text=True).strip()
-                env={k:v for k,v in os.environ.items() if not k.startswith(("BITCOIN_","CEX_BITCOIN_TEST_","CDD_","EDD_","DIDIT_","SPRING_MAIL_","CUSTOMER_MAIL_"))}
+                env={k:v for k,v in os.environ.items() if not k.startswith(("BITCOIN_","CEX_BITCOIN_TEST_","CDD_","EDD_","DIDIT_","SPRING_MAIL_","CUSTOMER_MAIL_","CODEVASP_","VALUATION_"))}
                 env.update(CEX_TEST_DATABASE_URL="jdbc:postgresql://"+db_address+"/cex_test",
                     BITCOIN_PROCESSING_ENABLED="false",JWT_SECRET="isolated-process-jwt-secret-at-least-32-bytes",ENGINE_SERVICE_TOKEN="isolated-engine-service-token-32-bytes",
-                    SPRING_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:1",BOT_BOT_COUNT="0",ORDER_DISPATCH_ENABLED="false",ENGINE_HTTP_URL="http://127.0.0.1:1")
+                    SPRING_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:1",SPRING_KAFKA_LISTENER_AUTO_STARTUP="false",BOT_BOT_COUNT="0",
+                    CODEVASP_PROCESSING_ENABLED="false",CODEVASP_PRIVATE_TRANSFER_ENABLED="false",VALUATION_UPBIT_ENABLED="false",CUSTOMER_MAIL_DISPATCH_ENABLED="false",ORDER_DISPATCH_ENABLED="false",ENGINE_HTTP_URL="http://127.0.0.1:1")
                 env.update(CEX_BITCOIN_TEST_URL="http://127.0.0.1:"+str(rpc_port),CEX_BITCOIN_TEST_USER=credentials["username"],
                     CEX_BITCOIN_TEST_PASSWORD=credentials["password"],
                     CEX_BITCOIN_TEST_CONFIRMED_TX=confirmed,CEX_BITCOIN_TEST_CONFLICTED_TX=conflicted,CEX_BITCOIN_TEST_REPLACEMENT_TX=replacement,

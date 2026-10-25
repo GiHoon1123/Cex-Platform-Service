@@ -56,7 +56,7 @@ public class BitcoinDepositReviewSource {
                  LEFT JOIN bitcoin_observation_wallet_debits w ON w.observation_id=o.id
                  LEFT JOIN bitcoin_deposit_chain_heads dh ON dh.receipt_id=r.id LEFT JOIN bitcoin_deposit_chain_decisions d ON d.id=dh.decision_id
                  LEFT JOIN bitcoin_pending_deposits p ON p.receipt_id=r.id
-                 LEFT JOIN LATERAL(SELECT id,status,snapshot_at,completed_at FROM bitcoin_deposit_reconciliation_runs WHERE receipt_id=r.id ORDER BY started_at DESC,id DESC LIMIT 1) q ON true
+                 LEFT JOIN bitcoin_current_deposit_reconciliation q ON q.receipt_id=r.id
                  WHERE r.id=? AND r.network=?
                 """,deposit,settings.network.id);
             // 검색과 불변 평가 기록은 각각 별도 SQL로 읽는다. 같은 운영 인증·감사 경계 안의 조회이며 전체 금융 승인 스냅샷으로 사용하지 않는다.

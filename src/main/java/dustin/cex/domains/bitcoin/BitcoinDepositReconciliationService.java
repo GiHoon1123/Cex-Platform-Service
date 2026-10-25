@@ -45,6 +45,8 @@ public class BitcoinDepositReconciliationService {
         // 같은 시점의 플랫폼 원본을 값으로 고정한 다음 DB 연결을 돌려준다. 노드를 기다리며 스냅샷을 붙잡지 않는다.
         Snapshot captured=snapshot.execute(t->capture(deposit));UUID run=UUID.randomUUID();String platform=json.writeValueAsString(captured);
         write.executeWithoutResult(t->{
+            // 시작 공개와 금융 판단은 같은 플랫폼 고객 잠금을 따른다. 이 잠금은 아래 노드 조회 전에 해제한다.
+            jdbc.queryForObject("SELECT id FROM users WHERE id=? FOR UPDATE",Long.class,captured.receipt().user());
             jdbc.update("""
                 INSERT INTO bitcoin_deposit_reconciliation_runs(id,receipt_id,network,wallet,scope,snapshot_at,status)
                  VALUES(?,?,?,?,'PENDING_RECEIPT',?,'RUNNING')
@@ -75,6 +77,8 @@ public class BitcoinDepositReconciliationService {
         }
         Status result=status;String nodeEvidence=node;
         write.executeWithoutResult(t->{
+            // 외부 조회가 끝난 뒤에만 다시 잠근다. 오래 걸린 옛 실행의 완료가 새 시작 순번을 바꾸지는 않는다.
+            jdbc.queryForObject("SELECT id FROM users WHERE id=? FOR UPDATE",Long.class,captured.receipt().user());
             if(nodeEvidence!=null)evidence(run,"NODE",nodeEvidence);
             for(var issue:issues)jdbc.update("INSERT INTO bitcoin_deposit_reconciliation_issues(run_id,code,expected,actual) VALUES(?,?,?,?)",run,issue.code(),issue.expected(),issue.actual());
             jdbc.update("UPDATE bitcoin_deposit_reconciliation_runs SET status=?,completed_at=clock_timestamp() WHERE id=?",result.name(),run);

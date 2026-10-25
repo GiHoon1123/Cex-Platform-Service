@@ -102,7 +102,7 @@ class BitcoinDepositReconciliationIntegrationTest {
     @Test void finalAuditFailureLeavesRunningPlatformEvidenceInsteadOfFalseSuccess(){
         long before=count("bitcoin_deposit_reconciliation_runs");doThrow(new IllegalStateException("격리 감사 장애")).when(audit).record(isNull(),eq("BTC_DEPOSIT_RECONCILIATION_FINISHED"),anyString(),anyString(),anyString());
         assertThrows(IllegalStateException.class,()->reconciliation.reconcile(id(ordinary())));assertEquals(before+1,count("bitcoin_deposit_reconciliation_runs"));
-        UUID run=jdbc.queryForObject("SELECT id FROM bitcoin_deposit_reconciliation_runs WHERE status='RUNNING' ORDER BY started_at DESC LIMIT 1",UUID.class);assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_evidence WHERE run_id=? AND kind='PLATFORM'",Long.class,run));assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_evidence WHERE run_id=? AND kind='NODE'",Long.class,run));
+        UUID run=jdbc.queryForObject("SELECT id FROM bitcoin_current_deposit_reconciliation WHERE status='RUNNING' ORDER BY start_position DESC LIMIT 1",UUID.class);assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_evidence WHERE run_id=? AND kind='PLATFORM'",Long.class,run));assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_evidence WHERE run_id=? AND kind='NODE'",Long.class,run));
     }
     @Test void startAuditFailureRollsBackRunAndEvidenceBeforeNodeRead(){
         long before=count("bitcoin_deposit_reconciliation_runs");clearInvocations(reader);doThrow(new IllegalStateException("격리 감사 장애")).when(audit).record(isNull(),eq("BTC_DEPOSIT_RECONCILIATION_STARTED"),anyString(),anyString(),anyString());
@@ -114,7 +114,10 @@ class BitcoinDepositReconciliationIntegrationTest {
     @Test void databaseRejectsWrongSourceScopeAndEvidenceHash(){
         UUID run=UUID.randomUUID();UUID receipt=id(ordinary());
         assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO bitcoin_deposit_reconciliation_runs(id,receipt_id,network,wallet,scope,snapshot_at,status) VALUES(?,?,'bitcoin-mainnet','cex_watch','PENDING_RECEIPT',clock_timestamp(),'RUNNING')",run,receipt));
-        jdbc.update("INSERT INTO bitcoin_deposit_reconciliation_runs(id,receipt_id,network,wallet,scope,snapshot_at,status) VALUES(?,?,'bitcoin-regtest','cex_watch','PENDING_RECEIPT',clock_timestamp(),'RUNNING')",run,receipt);
+        new TransactionTemplate(manager).executeWithoutResult(t->{
+            jdbc.update("INSERT INTO bitcoin_deposit_reconciliation_runs(id,receipt_id,network,wallet,scope,snapshot_at,status) VALUES(?,?,'bitcoin-regtest','cex_watch','PENDING_RECEIPT',clock_timestamp(),'RUNNING')",run,receipt);
+            audit.record(null,"BTC_DEPOSIT_RECONCILIATION_STARTED","bitcoin-reconciliation:"+run,"SUCCESS","RECEIPT:"+receipt);
+        });
         assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO bitcoin_deposit_reconciliation_evidence(run_id,kind,payload_hash,payload) VALUES(?,'PLATFORM',?,'{}')",run,"0".repeat(64)));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_evidence WHERE run_id=?",Long.class,run));
     }

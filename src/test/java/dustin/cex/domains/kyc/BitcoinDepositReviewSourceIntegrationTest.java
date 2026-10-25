@@ -121,4 +121,71 @@ class BitcoinDepositReviewSourceIntegrationTest extends EddTestSupport {
         for(String token:List.of(customerAccess,auditor.access()))for(UUID id:List.of(seed.id(),UUID.randomUUID()))mvc.perform(post("/api/admin/deposits/BTC/"+id+"/monitoring-requests").header("Authorization","Bearer "+token)).andExpect(status().isForbidden());
         assertEquals(409,assertThrows(ResponseStatusException.class,()->monitoringRequest.request(maker.user().getId(),maker.sid(),seed.id())).getStatusCode().value());
     }
+    /** 새 시작은 정상 원본과 필수 감사로 생성한다. 옛 행의 시각/결과를 UPDATE해 시험하지 않는다. */
+    UUID startWithEarlierClock(BitcoinDepositFixtures.Seed seed){return new TransactionTemplate(manager).execute(t->{
+        jdbc.queryForObject("SELECT id FROM users WHERE id=? FOR UPDATE",Long.class,seed.owner());UUID run=UUID.randomUUID();
+        jdbc.update("INSERT INTO bitcoin_deposit_reconciliation_runs(id,receipt_id,network,wallet,scope,snapshot_at,started_at,status) VALUES(?,?,'bitcoin-regtest','cex_watch','PENDING_RECEIPT',clock_timestamp()-interval '1 minute',clock_timestamp()-interval '1 minute','RUNNING')",run,seed.id());
+        audit.record(null,"BTC_DEPOSIT_RECONCILIATION_STARTED","bitcoin-reconciliation:"+run,"SUCCESS","RECEIPT:"+seed.id());return run;
+    });}
+    BitcoinDepositFixtures.Seed pendingSource(){var seed=seed();observe(seed,false);opening();pending.recognize(seed.id());return seed;}
+    BitcoinDepositReconciliationService reconciler(BitcoinDepositReader fake){return new BitcoinDepositReconciliationService(jdbc,fake,settings,json,audit,manager);}
+    UUID currentRun(UUID receipt){return jdbc.queryForObject("SELECT id FROM bitcoin_current_deposit_reconciliation WHERE receipt_id=?",UUID.class,receipt);}
+    long startPosition(UUID run){return jdbc.queryForObject("SELECT position FROM bitcoin_deposit_reconciliation_starts WHERE run_id=?",Long.class,run);}
+    void auditCause(String message,Runnable work){var failure=assertThrows(RuntimeException.class,work::run);Throwable root=failure;while(root.getCause()!=null)root=root.getCause();assertTrue(root.getMessage().contains(message),root.toString());}
+    @Test void laterRegisteredStartWinsEvenWithAnEarlierWallClock(){
+        var seed=pendingSource();var fake=mock(BitcoinDepositReader.class);when(fake.inspect(seed.txid())).thenReturn(observed(seed));var first=reconciler(fake).reconcile(seed.id());assertEquals(BitcoinDepositReconciliationService.Status.MATCHED,first.status());
+        UUID newer=startWithEarlierClock(seed);assertTrue(startPosition(newer)>startPosition(first.id()));var view=source.read(maker.user().getId(),maker.sid(),seed.id()).reconciliation();assertEquals(newer,view.id());assertEquals("RUNNING",view.status());
+        assertTrue(jdbc.queryForObject("SELECT started_at FROM bitcoin_deposit_reconciliation_runs WHERE id=?",java.sql.Timestamp.class,newer).before(jdbc.queryForObject("SELECT started_at FROM bitcoin_deposit_reconciliation_runs WHERE id=?",java.sql.Timestamp.class,first.id())));
+    }
+    @Test void lateOldSuccessCannotReplaceANewerFailure()throws Exception{
+        var seed=pendingSource();var entered=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);var fake=mock(BitcoinDepositReader.class);
+        when(fake.inspect(seed.txid())).thenAnswer(call->{entered.countDown();assertTrue(release.await(5,java.util.concurrent.TimeUnit.SECONDS));return observed(seed);});
+        try(var pool=java.util.concurrent.Executors.newSingleThreadExecutor()){
+            var old=pool.submit(()->reconciler(fake).reconcile(seed.id()));try{
+                assertTrue(entered.await(5,java.util.concurrent.TimeUnit.SECONDS));var failed=mock(BitcoinDepositReader.class);when(failed.inspect(seed.txid())).thenThrow(new IllegalStateException("격리 새 노드 조회 실패"));var latest=reconciler(failed).reconcile(seed.id());assertEquals(BitcoinDepositReconciliationService.Status.FAILED,latest.status());
+                release.countDown();var late=old.get(5,java.util.concurrent.TimeUnit.SECONDS);assertEquals(BitcoinDepositReconciliationService.Status.MATCHED,late.status());assertEquals(latest.id(),currentRun(seed.id()));assertEquals("FAILED",source.read(maker.user().getId(),maker.sid(),seed.id()).reconciliation().status());
+            }finally{release.countDown();}
+        }
+    }
+    @Test void startPublicationWaitsForCustomerLockBeforeNodeRead()throws Exception{
+        var seed=pendingSource();var fake=mock(BitcoinDepositReader.class);var entered=new java.util.concurrent.CountDownLatch(1);when(fake.inspect(seed.txid())).thenReturn(observed(seed));
+        try(var pool=java.util.concurrent.Executors.newSingleThreadExecutor()){
+            var future=new java.util.concurrent.atomic.AtomicReference<java.util.concurrent.Future<BitcoinDepositReconciliationService.Report>>();
+            new TransactionTemplate(manager).executeWithoutResult(t->{
+                jdbc.queryForObject("SELECT id FROM users WHERE id=? FOR UPDATE",Long.class,customer.getId());future.set(pool.submit(()->{entered.countDown();return reconciler(fake).reconcile(seed.id());}));
+                try{assertTrue(entered.await(5,java.util.concurrent.TimeUnit.SECONDS));assertThrows(java.util.concurrent.TimeoutException.class,()->future.get().get(200,java.util.concurrent.TimeUnit.MILLISECONDS));}catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IllegalStateException(interrupted);}verifyNoInteractions(fake);
+            });
+            assertEquals(BitcoinDepositReconciliationService.Status.MATCHED,future.get().get(5,java.util.concurrent.TimeUnit.SECONDS).status());
+        }
+    }
+    @Test void completionPublicationWaitsForCustomerLockAfterNodeRead()throws Exception{
+        var seed=pendingSource();var entered=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);var leaving=new java.util.concurrent.CountDownLatch(1);var fake=mock(BitcoinDepositReader.class);
+        when(fake.inspect(seed.txid())).thenAnswer(call->{entered.countDown();assertTrue(release.await(5,java.util.concurrent.TimeUnit.SECONDS));leaving.countDown();return observed(seed);});
+        try(var pool=java.util.concurrent.Executors.newSingleThreadExecutor()){
+            var future=pool.submit(()->reconciler(fake).reconcile(seed.id()));try{
+                assertTrue(entered.await(5,java.util.concurrent.TimeUnit.SECONDS));new TransactionTemplate(manager).executeWithoutResult(t->{
+                    jdbc.queryForObject("SELECT id FROM users WHERE id=? FOR UPDATE",Long.class,customer.getId());release.countDown();try{assertTrue(leaving.await(5,java.util.concurrent.TimeUnit.SECONDS));assertThrows(java.util.concurrent.TimeoutException.class,()->future.get(200,java.util.concurrent.TimeUnit.MILLISECONDS));}catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IllegalStateException(interrupted);}
+                    assertEquals("RUNNING",jdbc.queryForObject("SELECT status FROM bitcoin_current_deposit_reconciliation WHERE receipt_id=?",String.class,seed.id()));
+                });assertEquals(BitcoinDepositReconciliationService.Status.MATCHED,future.get(5,java.util.concurrent.TimeUnit.SECONDS).status());
+            }finally{release.countDown();}
+        }
+    }
+    @Test void nodeReadRunsOutsideCustomerTransaction(){
+        var seed=pendingSource();var fake=mock(BitcoinDepositReader.class);when(fake.inspect(seed.txid())).thenAnswer(call->{assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());return observed(seed);});assertEquals(BitcoinDepositReconciliationService.Status.MATCHED,reconciler(fake).reconcile(seed.id()).status());
+    }
+    @Test void missingStartAuditCannotCommitTheRunOrSequence(){
+        var seed=pendingSource();var fake=mock(BitcoinDepositReader.class);long runs=jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_runs",Long.class),starts=jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_starts",Long.class);
+        doNothing().when(audit).record(isNull(),eq("BTC_DEPOSIT_RECONCILIATION_STARTED"),anyString(),anyString(),anyString());auditCause("대사 시작 순번에는 해당 실행의 필수 감사가 필요합니다",()->reconciler(fake).reconcile(seed.id()));
+        assertEquals(runs,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_runs",Long.class));assertEquals(starts,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_starts",Long.class));verifyNoInteractions(fake);
+    }
+    @Test void missingFinishAuditLeavesTheCurrentRunRunning(){
+        var seed=pendingSource();var fake=mock(BitcoinDepositReader.class);when(fake.inspect(seed.txid())).thenReturn(observed(seed));doNothing().when(audit).record(isNull(),eq("BTC_DEPOSIT_RECONCILIATION_FINISHED"),anyString(),anyString(),anyString());
+        auditCause("대사 완료에는 실제 결과와 차이 수에 결합한 필수 감사가 필요합니다",()->reconciler(fake).reconcile(seed.id()));var view=source.read(maker.user().getId(),maker.sid(),seed.id()).reconciliation();assertEquals("RUNNING",view.status());assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_reconciliation_evidence WHERE run_id=?",Long.class,view.id()));
+    }
+    @Test void startSequenceCannotBeForgedRewrittenOrTruncated(){
+        var seed=pendingSource();var fake=mock(BitcoinDepositReader.class);when(fake.inspect(seed.txid())).thenReturn(observed(seed));var result=reconciler(fake).reconcile(seed.id());
+        for(String sql:List.of("UPDATE bitcoin_deposit_reconciliation_starts SET position=position","DELETE FROM bitcoin_deposit_reconciliation_starts","TRUNCATE bitcoin_deposit_reconciliation_starts"))assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.execute(sql));
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO bitcoin_deposit_reconciliation_starts(run_id,receipt_id) VALUES(?,?)",result.id(),seed.id()));assertEquals(result.id(),currentRun(seed.id()));
+    }
+
 }
