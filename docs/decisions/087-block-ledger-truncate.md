@@ -80,7 +80,7 @@ JUnit TestInfo의 태그를 읽어 without-opening 시나리오는 최초 반입
 | openingRefusesFinancialHistoryEvenWhenBalancesLookValid 수정 | 처음부터 최초 반입 없이 과거 체결만 존재하면 최초 반입 거부 |
 | setup(TestInfo) 수정 | 소유 새 스키마를 사용하고 without-opening만 반입 생략, 다른 시나리오는 기존 최초 원장 유지 |
 
-주문 접수/멱등/수수료·체결 정산/재시도/원장/독립 대사/엔진 HTTP/시장 공개 등을 포함한 기존 선택179개에 신규1개를 더해180개를 실행했다. [MarketPathTest](../../src/test/java/dustin/cex/domains/market/MarketPathTest.java)는 실제 Rust 엔진 HTTP→자체 WAL→Kafka→플랫폼 정산/공개 소켓의1개 연결 시나리오를 추가 실행했다. 예약된 봇은0명이고 시험이 정해진 합성 주문을 명시적으로 보낸다.
+주문 접수/멱등/수수료·체결 정산/재시도/원장/독립 대사/엔진 HTTP/시장 공개 등을 포함한 기존 선택179개에 신규1개를 더해180개를 실행했다. [MarketPathTest](../../src/test/java/dustin/cex/integration/MarketPathTest.java)는 실제 Rust 엔진 HTTP→자체 WAL→Kafka→플랫폼 정산/공개 소켓의1개 연결 시나리오를 추가 실행했다. 예약된 봇은0명이고 시험이 정해진 합성 주문을 명시적으로 보낸다.
 
 ## 실행 명령과 결과
 
