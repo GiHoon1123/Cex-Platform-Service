@@ -197,3 +197,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [089. 독립 워커로 보류 원장을 자동 반입하고 잠긴 고객 건너뛰기](decisions/089-automatic-bitcoin-pending-ledger.md)
 
 - [090. 새 노드 읽기와 보류 원장을 입금별로 독립 대사하기](decisions/090-independent-bitcoin-deposit-reconciliation.md)
+
+- [091. 본인 BTC 입금 목록과 보류 진행 내역 조회](decisions/091-customer-bitcoin-deposit-history.md)
