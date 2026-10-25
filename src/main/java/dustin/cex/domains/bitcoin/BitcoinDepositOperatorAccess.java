@@ -25,8 +25,8 @@ public class BitcoinDepositOperatorAccess {
 
     /** 현재 운영 인증을 먼저 판정한 뒤 대상의 존재를 알린다. 고객·운영자 변경은 같은 사용자 잠금 계약으로 직렬화한다. */
     @Transactional(propagation=Propagation.MANDATORY)
-    public Access require(long actor,UUID sid,UUID receipt,String network,UserRole... roles){
-        var owners=jdbc.queryForList("SELECT user_id FROM bitcoin_deposit_receipts WHERE id=? AND network=?",Long.class,receipt,network);
+    public Access require(long actor,UUID sid,UUID receipt,BitcoinSettings settings,UserRole... roles){
+        var owners=jdbc.queryForList("SELECT user_id FROM bitcoin_deposit_receipts WHERE id=? AND network=?",Long.class,receipt,settings.network.id);
         var locked=new HashMap<Long,User>();var ids=new TreeSet<Long>();ids.add(actor);if(!owners.isEmpty())ids.add(owners.getFirst());
         // 다른 운영/고객 업무와 같은 오름차순 잠금으로 교차 조회의 잠금 순서 역전을 피한다.
         for(long id:ids)users.lockById(id).ifPresent(user->locked.put(id,user));

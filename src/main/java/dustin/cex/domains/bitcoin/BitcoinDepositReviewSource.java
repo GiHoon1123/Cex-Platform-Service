@@ -39,7 +39,7 @@ public class BitcoinDepositReviewSource {
     public Source read(long actor,UUID sid,UUID deposit){
         if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("입금 심사 근거 조회는 독립 트랜잭션으로 실행하세요");
         try{return tx.execute(t->{
-            var authorized=access.require(actor,sid,deposit,settings.network.id,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);
+            var authorized=access.require(actor,sid,deposit,settings,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);
             var customer=authorized.customer();boolean permitted=eligibility.permitted(customer);
             // 관찰/판단/보류/가장 최근 대사는 한 SQL 문장의 같은 커밋 스냅샷에서 읽는다.
             // 고객 자격 변경은 같은 사용자 잠금 계약을 따르며, 노드와 엔진을 기다리지 않는다.

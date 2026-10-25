@@ -13,5 +13,5 @@ import org.springframework.stereotype.Component;
 public class CodeVaspSchemaInitializer {
     private final JdbcTemplate jdbc;
     public CodeVaspSchemaInitializer(JdbcTemplate jdbc){this.jdbc=jdbc;}
-    @PostConstruct void initialize()throws Exception{jdbc.execute(new ClassPathResource("travelrule/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("travelrule/purpose-schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("travelrule/detail-assessment-schema.sql").getContentAsString(StandardCharsets.UTF_8));}
+    @PostConstruct void initialize()throws Exception{jdbc.execute(new ClassPathResource("travelrule/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("travelrule/purpose-schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("travelrule/detail-assessment-schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("travelrule/inspection-schema.sql").getContentAsString(StandardCharsets.UTF_8));}
 }
