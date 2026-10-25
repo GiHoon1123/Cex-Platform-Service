@@ -17,7 +17,7 @@ import tools.jackson.databind.json.JsonMapper;
 /** 소유한 두 HTTP 대역으로 공식 모듈→게이트웨이 계약을 검사한다. 실제 공급사/개인키/신원 데이터를 사용하지 않는다. */
 class CodeVaspDirectoryClientTest {
     static final JsonMapper JSON=JsonMapper.builder().build();
-    HttpServer cipher,gateway;ExecutorService workers;CodeVaspDirectoryClient client;KeyPair pair;String key;
+    HttpServer cipher,gateway;ExecutorService workers;CodeVaspDirectoryClient client;CodeVaspTransport transport;KeyPair pair;String key;
     volatile String mode="NORMAL";AtomicInteger cipherCalls=new AtomicInteger(),gatewayCalls=new AtomicInteger();AtomicLong sequence=new AtomicLong(1000);
     AtomicReference<Throwable> callbackFailure=new AtomicReference<>();CountDownLatch release=new CountDownLatch(1);AtomicBoolean verified=new AtomicBoolean();
     final Set<String> nonces=ConcurrentHashMap.newKeySet();
@@ -73,13 +73,13 @@ class CodeVaspDirectoryClientTest {
             if(mode.equals("EMPTY_DIRECTORY"))rows.removeAll();String payload=JSON.writeValueAsString(result);if(mode.equals("DUPLICATE_DIRECTORY_FIELD"))payload=payload.substring(0,payload.length()-1)+",\"vasps\":[]}";
             send(exchange,200,payload);
         }catch(Throwable failure){callbackFailure.compareAndSet(null,failure);send(exchange,500,"격리 공급사 시험 실패");}});
-        cipher.start();gateway.start();client=new CodeVaspDirectoryClient(new CodeVaspSettings(gatewayBase(),cipherBase(),"cex-study",key));
+        cipher.start();gateway.start();transport=new CodeVaspTransport(new CodeVaspSettings(gatewayBase(),cipherBase(),"cex-study",key));client=new CodeVaspDirectoryClient(transport);
     }
     String cipherBase(){return "http://127.0.0.1:"+cipher.getAddress().getPort();}String gatewayBase(){return "http://127.0.0.1:"+gateway.getAddress().getPort();}
     void send(HttpExchange exchange,int status,String payload)throws java.io.IOException{byte[] body=payload.getBytes(StandardCharsets.UTF_8);try(exchange){exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(status,body.length);exchange.getResponseBody().write(body);}catch(java.io.IOException closed){if(!mode.endsWith("OVERSIZE"))throw closed;}}
     void slow(HttpExchange exchange)throws Exception{try(exchange){exchange.sendResponseHeaders(200,0);exchange.getResponseBody().write('{');exchange.getResponseBody().flush();assertTrue(release.await(10,TimeUnit.SECONDS));}catch(java.io.IOException closed){/* 수신 제한으로 닫힌 시험 연결은 종료 처리한다. */}}
-    @AfterEach void stop(){release.countDown();if(client!=null)client.close();if(cipher!=null)cipher.stop(0);if(gateway!=null)gateway.stop(0);if(workers!=null)workers.close();assertNull(callbackFailure.get());}
-    ResponseStatusException unavailable(){var failure=assertThrows(ResponseStatusException.class,()->client.read());assertEquals(503,failure.getStatusCode().value());assertEquals("이전거래 사업자 목록을 확인할 수 없습니다",failure.getReason());return failure;}
+    @AfterEach void stop(){release.countDown();if(transport!=null)transport.close();if(cipher!=null)cipher.stop(0);if(gateway!=null)gateway.stop(0);if(workers!=null)workers.close();assertNull(callbackFailure.get());}
+    ResponseStatusException unavailable(){var failure=assertThrows(ResponseStatusException.class,()->client.read());assertEquals(503,failure.getStatusCode().value());assertEquals("이전거래 공급사 요청을 완료할 수 없습니다",failure.getReason());return failure;}
     @Test void officialCipherAndGatewayContractPreservesRealSignatureAndTypedDirectory(){var result=client.read();assertTrue(verified.get());assertEquals(1,cipherCalls.get());assertEquals(1,gatewayCalls.get());assertTrue(!result.readFinishedAt().isBefore(result.readStartedAt()));var vasp=result.vasps().getFirst();assertEquals("counterparty",vasp.entityId());assertTrue(vasp.reachable());assertEquals("KR",vasp.country());assertEquals(key,vasp.keys().getFirst().publicKey());assertEquals(Instant.parse("2099-01-01T00:00:00Z"),vasp.keys().getFirst().expiresAt());mode="UTC_OFFSET";client.read();assertTrue(verified.get());assertEquals(2,gatewayCalls.get());}
     @Test void eachReadObtainsNewSigningMaterialInsteadOfReusingNonce(){client.read();client.read();assertEquals(2,nonces.size());assertEquals(2,cipherCalls.get());}
     @Test void unavailableCounterpartyAndExpiredKeyArePreservedWithoutApprovingThem(){mode="DOWN_EXPIRED";var vasp=client.read().vasps().getFirst();assertFalse(vasp.reachable());assertTrue(vasp.keys().getFirst().expiresAt().isBefore(Instant.now()));}
@@ -93,7 +93,7 @@ class CodeVaspDirectoryClientTest {
     @Test void stalledCipherBodyHasAbsoluteDeadline(){mode="CIPHER_SLOW";long started=System.nanoTime();unavailable();long elapsed=Duration.ofNanos(System.nanoTime()-started).toSeconds();assertTrue(elapsed>=4&&elapsed<8);assertEquals(0,gatewayCalls.get());}
     @Test void stalledGatewayBodyHasAbsoluteDeadline(){mode="GATEWAY_SLOW";long started=System.nanoTime();unavailable();long elapsed=Duration.ofNanos(System.nanoTime()-started).toSeconds();assertTrue(elapsed>=4&&elapsed<8);}
     @Test void ambientDatabaseTransactionCannotPerformProviderIo(){TransactionSynchronizationManager.setActualTransactionActive(true);try{assertThrows(IllegalStateException.class,()->client.read());}finally{TransactionSynchronizationManager.clear();}assertEquals(0,cipherCalls.get());assertEquals(0,gatewayCalls.get());}
-    @Test void absentSettingsNeverCallAnyDefaultProvider(){try(var disabled=new CodeVaspDirectoryClient(new CodeVaspSettings("","","",""))){assertThrows(ResponseStatusException.class,disabled::read);}assertEquals(0,cipherCalls.get());assertEquals(0,gatewayCalls.get());}
+    @Test void absentSettingsNeverCallAnyDefaultProvider(){try(var disabled=new CodeVaspTransport(new CodeVaspSettings("","","",""))){assertThrows(ResponseStatusException.class,()->new CodeVaspDirectoryClient(disabled).read());}assertEquals(0,cipherCalls.get());assertEquals(0,gatewayCalls.get());}
     @Test void documentedUtcExpiryWithoutOffsetDoesNotUseJvmLocalTimezone(){
         var original=TimeZone.getDefault();try{TimeZone.setDefault(TimeZone.getTimeZone("Asia/Seoul"));mode="NAIVE_EXPIRY";assertEquals(Instant.parse("2099-01-01T00:00:00Z"),client.read().vasps().getFirst().keys().getFirst().expiresAt());}finally{TimeZone.setDefault(original);}
     }
