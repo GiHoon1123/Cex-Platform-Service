@@ -127,6 +127,15 @@ class CodeVaspDirectoryIntegrationTest {
         doReturn(new CodeVaspDirectoryClient.Directory(Instant.now().plusSeconds(60),Instant.now().plusSeconds(61),List.of())).when(client).read();assertEquals("INVALID_SOURCE",service.refresh().failureCode());
         doThrow(new IllegalStateException("격리 내부 원문")).when(client).read();assertEquals("INTERNAL_FAILURE",service.refresh().failureCode());unavailable(service::current);
     }
+    @Test void automaticWorkerPersistsFailureAndRecoversWithNewAttempt()throws Exception{
+        var calls=new java.util.concurrent.atomic.AtomicInteger();var second=new CountDownLatch(1);var release=new CountDownLatch(1);
+        doAnswer(i->{assertFalse(TransactionSynchronizationManager.isActualTransactionActive());if(calls.incrementAndGet()==1)throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_GATEWAY,"격리 공급사 장애");second.countDown();assertTrue(release.await(5,TimeUnit.SECONDS));return directory();}).when(client).read();
+        var worker=new CodeVaspDirectoryWorker(config,service,true,Duration.ofMillis(200));
+        try{worker.start();assertTrue(second.await(5,TimeUnit.SECONDS));unavailable(service::current);release.countDown();org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(3)).ignoreException(ResponseStatusException.class).untilAsserted(()->assertEquals(2,count("codevasp_directory_results",service.current().sourceId())));}
+        finally{release.countDown();worker.stop();}
+        var current=service.current();assertEquals(2,count("codevasp_directory_results",current.sourceId()));assertEquals("FAILED",jdbc.queryForObject("SELECT status FROM codevasp_directory_results WHERE source_id=? ORDER BY attempt_id LIMIT 1",String.class,current.sourceId()));
+    }
+
     @Test void unconfiguredAndAmbientTransactionCannotStartIo(){
         var disabled=service(new CodeVaspSettings("","","",""),audit);unavailable(disabled::refresh);unavailable(disabled::current);
         assertThrows(IllegalStateException.class,()->new TransactionTemplate(manager).execute(t->service.refresh()));verifyNoInteractions(client);
