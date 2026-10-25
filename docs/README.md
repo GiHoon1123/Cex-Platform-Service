@@ -211,3 +211,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [097. 사업자 목록을 독립 워커에서 갱신하고 실패 후 재개하기](decisions/097-automatic-codevasp-directory.md)
 
 - [098. 거래 출처 검색의 서명 본문과 요청·결과를 결합하기](decisions/098-codevasp-transaction-origin-search.md)
+
+- [099. 입금 검색 요청 ID를 외부 접수 전에 영속 예약하기](decisions/099-durable-deposit-search-reservation.md)
