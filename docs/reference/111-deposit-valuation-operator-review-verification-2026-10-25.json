@@ -1,0 +1,223 @@
+{
+  "cycle": 111,
+  "implementation_commit": "5f0e4f2b19f988c291a63088082dd4968b69e2a6",
+  "verification": {
+    "review": {
+      "run_id": "8d1e1add1a09",
+      "groups": [
+        {
+          "group": "valuation",
+          "container": "cex-valuation-review-9a4d15bf1780",
+          "selection": [
+            "*BitcoinDepositValuationReviewIntegrationTest",
+            "*BitcoinDepositValuationReviewTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 11,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "container_removed": true
+        },
+        {
+          "group": "origin",
+          "container": "cex-valuation-review-e7628feac5d1",
+          "selection": [
+            "*BitcoinDepositOriginSearchReviewIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 13,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "container_removed": true
+        },
+        {
+          "group": "authorization",
+          "container": "cex-valuation-review-ac9e6d558ee5",
+          "selection": [
+            "*BitcoinDepositReviewSourceIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 14,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "container_removed": true
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositValuationReviewIntegrationTest",
+          "name": "customerCannotReadValuationAndInternalReaderNeedsTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositValuationReviewIntegrationTest",
+          "name": "exactHistoricalValueAndSourceSurviveNewCurrentPrice()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositValuationReviewIntegrationTest",
+          "name": "missingCaptureIsUnknownAndDoesNotBorrowCurrentPrice()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositValuationReviewIntegrationTest",
+          "name": "unavailableCaptureStaysUnknownAfterLaterPriceArrives()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositValuationReviewIntegrationTest",
+          "name": "belowBoundaryIsReferenceOnlyAndDoesNotGrantExemption()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositValuationReviewIntegrationTest",
+          "name": "auditFailurePreventsSuccessfulValuationResponse()"
+        },
+        {
+          "class": "dustin.cex.domains.valuation.BitcoinDepositValuationReviewTest",
+          "name": "exactBoundaryBelongsToUpperReferenceBand()"
+        },
+        {
+          "class": "dustin.cex.domains.valuation.BitcoinDepositValuationReviewTest",
+          "name": "justBelowBoundaryIsNotRoundedUp()"
+        },
+        {
+          "class": "dustin.cex.domains.valuation.BitcoinDepositValuationReviewTest",
+          "name": "nonPositiveValuesCannotLookLikeValidSmallDeposits()"
+        },
+        {
+          "class": "dustin.cex.domains.valuation.BitcoinDepositValuationReviewTest",
+          "name": "justAboveBoundaryIsComparedExactly()"
+        },
+        {
+          "class": "dustin.cex.domains.valuation.BitcoinDepositValuationReviewTest",
+          "name": "missingIsUnknownRatherThanZeroOrExempt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "currentOperatorApproverAndAuditorReadScopedSearchWithNoStore()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "unresolvedTechnicalSearchesRemainManualReviewWithoutOriginOrApproval()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "internalProjectionRequiresCallerTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "expiredAutomaticWindowIsVisibleWithoutDeletingEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "differentSourceHistoryIsCountedWithoutBecomingCurrentSearch()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "responseAndAuditOmitProviderAddressesKeysAndSourcePayload()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "latestFailedPollCannotBorrowOlderFound()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "disabledProviderDoesNotFallbackToHistoricalSuccessfulSearch()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "sourceFailureIsAuditedAsUnavailableAndMandatoryAuditStillBlocksRead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "latestRunningSearchCannotBorrowOlderFound()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "unauthorizedOrStaleMfaCannotReadOriginProjection()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "foundOriginRemainsInformationExchangeRequiredAndNotFinancialPermission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "normalPendingWaitsForReservationAndCoinbaseRequiresSeparateReview()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "invalidMissingAndUnsupportedInputsAreRejectedAndAmbientTransactionIsForbidden()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "differentConfiguredNetworkCannotReadReceiptThroughOperatorRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "operatorApproverAndAuditorCanReadOnlyCurrentFinancialReferences()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "newlyObservedHeadCannotBorrowOldChainDecisionOrMissingWalletProof()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "auditFailurePreventsSuccessfulReadWithoutChangingFinance()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "customerEligibilityReflectsCurrentIdentityRestrictionAndExpiry()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "expiredOperatorGrantCannotReusePreviouslyValidRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "staleObservationIsVisibleWithFreshnessFalse()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "staleMfaOrRevokedSessionCannotReadStoredEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "customerAnonymousAndForeignSessionCannotUseReviewEndpoint()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "responseOmitsIdentityDocumentsWalletSettingsAndSecrets()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "currentChainAndPendingLedgerAreReportedWithoutClaimingRelease()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "newestRunningReconciliationDoesNotFallBackToOlderMatchedResult()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "absentObservationAndWalletDebitProofStayUnknown()"
+        }
+      ],
+      "tests": {
+        "tests": 38,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0
+    },
+    "local_evidence": ".local/cycle111-proof",
+    "new_cases": 11,
+    "regression_cases": 27,
+    "financial_permission": false,
+    "private_transfer_enabled_by_default": false
+  }
+}

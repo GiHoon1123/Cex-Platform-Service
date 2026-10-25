@@ -2,6 +2,8 @@
 
 운영자 입금 심사 조회에 현재 접속 주체의 출처 검색 상태와 추가 확인 사유를 붙인다. 현재 역할·최근 MFA·필수 감사를 통과한 읽기만 허용하고, 기술 검색 FOUND를 금융 승인으로 바꾸지 않는다.
 
+후속 [111 운영 평가 근거 조회](111-deposit-valuation-operator-review.md)에서 당시 평가를 연결하고 FOUND 안내를 추가 판단 필요로 수정했다. 아래 코드 발췌는 현재 소스이며103 당시 실행 결과와 구분한다.
+
 ## 문제와 기존 동작
 
 [094](094-operator-bitcoin-deposit-review-source.md)의 운영자 조회는 체인/고객/보류 원장/독립 대사를 보여준다. [102](102-automatic-pending-deposit-search-reservation.md)까지 검색이 자동화됐지만 운영자가 검색의 진행·실패·미해결을 같은 입금 근거에서 확인할 수는 없었다. 마지막 정상 결과만 읽거나 설정 변경 전 검색을 현재 자료로 재사용하면 미완료/실패가 가려진다.
@@ -49,7 +51,7 @@ reason은 다음의 **기술 처리/추가 확인 안내**다. 승인/반환/금
 |IN_PROGRESS/AWAITING_RESULT | 최신 시작 진행/결과 재확인 대기 |
 |AUTO_WINDOW_EXPIRED | 미해결 검색의 자동 선택 기한 종료. 원본은 남음 |
 |MANUAL_REVIEW_REQUIRED | NOT_FOUND/UNKNOWN_REQUEST/AMBIGUOUS 추가 검토. 개인지갑 승인/실패 확정 아님 |
-|INFORMATION_EXCHANGE_REQUIRED | FOUND지만 송수신인 정보 확인은 별도 |
+|ORIGIN_FOUND_REVIEW_REQUIRED | FOUND지만 송수신인 정보 확인은 별도 |
 
 기존 네트워크/고객/원장/대사 SQL과 검색 투영은 서로 다른 문장 시각이다. 사용자 자격은 기존 사용자 잠금 계약으로 고정하지만 체인/검색의 모든 외부 상태가 하나로 정지했다는 의미는 아니다. 조회 응답을 금융 승인 토큰처럼 보관해 나중 사용하지 말고 실제 업무 시 현재 근거와 버전을 다시 확인해야 한다. 코어 큐·실행 잔액을 조회하지 않는다.
 
@@ -71,16 +73,17 @@ MANDATORY는 이미 열린 트랜잭션에만 참여한다. Spring 프록시가 
 
 ```java
             reason=switch(status){
-                case "FOUND"->"INFORMATION_EXCHANGE_REQUIRED";
+                // 출처 발견은 기술적 검색 결과다. 금액·제공 목적·상대 경로 판단을 완료했다고 표시하지 않는다.
+                case "FOUND"->"ORIGIN_FOUND_REVIEW_REQUIRED";
                 case "NOT_FOUND","UNKNOWN_REQUEST","AMBIGUOUS"->"MANUAL_REVIEW_REQUIRED";
                 default->ended?"AUTO_WINDOW_EXPIRED":status.equals("UNSTARTED")?"AWAITING_SUBMISSION":status.equals("RUNNING")?"IN_PROGRESS":"AWAITING_RESULT";
             };
             search=new Search((UUID)row.get("id"),number(row,"attempt_id"),(String)row.get("phase"),status,(String)row.get("failure_code"),at(row,"created_at"),at(row,"started_at"),at(row,"recorded_at"),until,ended,(String)row.get("origin_entity_id"));
 ```
 
-자바 switch 식은 기술 상태를 추가 확인 안내로 변환한다. FOUND는 INFORMATION_EXCHANGE_REQUIRED이며 승인이라는 값을 만들지 않는다. 자동 선택 기한과 실제 워커의 생존 상태도 구분한다.
+자바 switch 식은 기술 상태를 추가 확인 안내로 변환한다. FOUND는 ORIGIN_FOUND_REVIEW_REQUIRED이며 승인이라는 값을 만들지 않는다. 자동 선택 기한과 실제 워커의 생존 상태도 구분한다.
 
-출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L75), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositReviewSource.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReviewSource.java#L76), 현재 소스의 부분 발췌.
 
 ```java
             // 조회의 대상과 관찰/대사 참조를 남긴다. 이름/신분증/신고 원문을 감사 문자열에 복사하지 않는다.
