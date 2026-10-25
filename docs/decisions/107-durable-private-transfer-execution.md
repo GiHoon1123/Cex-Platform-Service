@@ -155,3 +155,7 @@ PostgreSQL CHECK는 FALSE만 거절하고 UNKNOWN은 허용할 수 있다. 따�
 
 - [구현 491cbbd](https://github.com/GiHoon1123/Cex-Platform-Service/commit/491cbbdb0c1d6ab0e9b8a8567ffa9de5ad876430)
 - [격리 실행 증적](../reference/107-durable-private-transfer-execution-verification-2026-10-25.json)
+
+## 자동 일정 연결 시점
+
+[108](108-automatic-private-transfer-processing.md)에서 검색/보류 원본에서 제공 의도·실행을 자동 연결하는 일정/전용 워커를 추가했다. 개인정보 자동 제공 설정은 기본 false이며 금액 환산/제공 목적·대상 결정과 금융 승인은 아직 미완료다.107 당시 내부 실행/검증은 원래 커밋과 증적이다.
