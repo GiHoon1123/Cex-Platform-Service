@@ -201,3 +201,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [091. 본인 BTC 입금 목록과 보류 진행 내역 조회](decisions/091-customer-bitcoin-deposit-history.md)
 
 - [093. 플랫폼 DB의 비트코인 네트워크를 고정해 시험망·실망 혼합 차단](decisions/093-bitcoin-database-network-identity.md)
+
+- [094. 현재 운영 인증으로 입금 심사 근거를 최소 범위 조회](decisions/094-operator-bitcoin-deposit-review-source.md)
