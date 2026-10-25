@@ -2,6 +2,8 @@
 
 플랫폼의 실제 입금 처리 서비스부터 별도 Rust 프로세스의 HTTP·자체 WAL·Kafka, 플랫폼의 금융 트랜잭션과 독립 대사까지 연결했다. 응답 유실·강제 종료·감사 저장 실패를 주입해 같은 입금 원본과 자산 보존을 검증한다. 공통 사이클130이다. 이번 제품 코드 변경은 없으며 실제 연결 자동화 테스트·실행기를 추가했다.
 
+후속 [131 실행 후 체인 위험](131-bitcoin-post-authorization-chain-risk.md)은 권한 이후 위험 관찰을 플랫폼 신규 권한에 연결했다. 아래130의 당시 범위/검증과 구분한다.
+
 ## 문제와 기존 동작
 
 [127 전달/금융 확정](127-durable-bitcoin-credit-dispatch-and-settlement.md)과 [128 자동 처리](128-automatic-bitcoin-credit-processing.md)는 실제 PG 트랜잭션과 원장·감사를 검증했지만 새 시험에서는 엔진 HTTP와 노드 응답을 대역으로 사용했다. [엔진021](../../../Cex-Engine/docs/decisions/021-internal-deposit-credit-http.md)은 별도 경계 검증이었다. 각 경계 통과만으로 실제 Rust 직렬화·HTTP 결과 코드·브로커 수신·플랫폼의 원장 조건이 맞는다고 주장할 수 없었다.

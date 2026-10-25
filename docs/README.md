@@ -271,3 +271,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [128. 준비된 입금을 장수 워커와 영속 일정으로 자동 반영하기](decisions/128-automatic-bitcoin-credit-processing.md)
 
 - [130. 실제 엔진 WAL·Kafka 입금 확정과 장애 복구 연결](decisions/130-real-engine-bitcoin-credit-wire.md)
+
+- [131. 실행 권한 이후 체인 위험으로 신규 금융 권한 제한](decisions/131-bitcoin-post-authorization-chain-risk.md)

@@ -79,7 +79,7 @@ Java record는 원본 필드의 불변 값을 묶는다. 여기서는 엔진에 
 
 현재 입력 처리 범위와 불완전 평가를 먼저 검사한다. 사건 머리 하나가 아니라 전체 미종결 사건을 검사하므로 새 사건으로 머리가 옮겨도 옛 사건을 숨기지 않는다. Java Set.of와 equals는 허용 결과를 명시하며 문자열에 포함된 단어로 추측하지 않는다.
 
-출처: [credit-schema.sql](../../src/main/resources/bitcoin/credit-schema.sql#L75), 현재 소스의 부분 발췌.
+출처: [credit-schema.sql](../../src/main/resources/bitcoin/credit-schema.sql#L79), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE CONSTRAINT TRIGGER bitcoin_credit_intent_audit_check AFTER INSERT ON bitcoin_credit_intents DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION bitcoin_credit_intent_audit();
