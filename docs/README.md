@@ -207,3 +207,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [095. CodeVASP Cipher 계약으로 서명 자료와 사업자 목록 읽기](decisions/095-codevasp-cipher-directory-client.md)
 
 - [096. 사업자 목록 조회를 보존하고 최신 실패·미완료를 숨기지 않기](decisions/096-durable-codevasp-directory.md)
+
+- [097. 사업자 목록을 독립 워커에서 갱신하고 실패 후 재개하기](decisions/097-automatic-codevasp-directory.md)

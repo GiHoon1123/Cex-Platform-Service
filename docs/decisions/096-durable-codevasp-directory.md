@@ -133,3 +133,7 @@ END $$;
 
 - [구현 a929c42](https://github.com/GiHoon1123/Cex-Platform-Service/commit/a929c42f57e1ac50131fc95e1e036e1b9c548fb8)
 - [격리 실행 증적](../reference/096-durable-codevasp-directory-verification-2026-10-25.json)
+
+## 후속 구현 시점
+
+[097](097-automatic-codevasp-directory.md)에서 전용 자동 갱신 워커를 연결했다. 위의 자동 갱신 미구현 설명은 이 문서의 원래 구현 시점이며, 현재 일반 앱은 설정 완료/활성 시 주기 갱신한다. test 프로필은 자동 등록을 제외한다. 실제 공급사 확인·송수신인 교환·금융 승인은 여전히 별도 미완료다.
