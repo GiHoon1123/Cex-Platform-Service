@@ -5,8 +5,6 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import dustin.cex.domains.bitcoin.*;
-import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
@@ -28,32 +26,9 @@ class CustomerBitcoinDepositsIntegrationTest extends EddTestSupport {
     @Autowired BitcoinPendingDepositService pending;
     @Autowired dustin.cex.domains.ledger.LedgerService ledger;
     @MockitoSpyBean BitcoinDepositReader reader;
-    record Seed(UUID id,long owner,String txid,String address,String script){}
-    String hex(){return UUID.randomUUID().toString().replace("-","")+UUID.randomUUID().toString().replace("-","");}
-    Seed seed(long owner,Instant time){
-        String network="bitcoin-regtest";
-        // 부모 원본부터 정상 제약 안에서 추가한다. 기존 금융 이력 삭제/불변 트리거 해제를 하지 않는다.
-        var addresses=jdbc.queryForList("SELECT id,address,script_pub_key FROM bitcoin_deposit_addresses WHERE user_id=? AND network=?",owner,network);
-        if(addresses.isEmpty()){
-            jdbc.update("INSERT INTO bitcoin_deposit_addresses(id,user_id,network,wallet,address,script_pub_key) VALUES(?,?,?,'cex_watch',?,?)",UUID.randomUUID(),owner,network,"합성조회주소-"+UUID.randomUUID(),"0014"+hex().substring(0,40));
-            addresses=jdbc.queryForList("SELECT id,address,script_pub_key FROM bitcoin_deposit_addresses WHERE user_id=? AND network=?",owner,network);
-        }
-        var address=addresses.getFirst();String txid=hex();UUID receipt=UUID.randomUUID();String received=json.writeValueAsString(List.of(Map.of("addressId",address.get("id"),"txid",txid,"vout",0,"amount",new BigDecimal("0.12345678"))));
-        long registry=jdbc.queryForObject("INSERT INTO bitcoin_scan_registries(network,wallet,digest,addresses) VALUES(?,'cex_watch',?,?::jsonb) RETURNING id",Long.class,network,hex(),json.writeValueAsString(List.of(Map.of("id",address.get("id")))));
-        String hash=hex();long scan=jdbc.queryForObject("INSERT INTO bitcoin_block_scans(network,wallet,height,block_hash,tip_hash,tip_height,registry_id,received) VALUES(?,'cex_watch',0,?,?,0,?,?::jsonb) RETURNING id",Long.class,network,hash,hash,registry,received);
-        jdbc.update("INSERT INTO bitcoin_deposit_receipts(id,network,txid,vout,address_id,user_id,asset,amount,first_scan_id,recorded_at) VALUES(?,?,?,0,?,?,'BTC',0.12345678,?,?)",receipt,network,txid,address.get("id"),owner,scan,Timestamp.from(time));
-        return new Seed(receipt,owner,txid,(String)address.get("address"),(String)address.get("script_pub_key"));
-    }
-    long observe(Seed seed,boolean stale){return new TransactionTemplate(manager).execute(t->{
-        String outputs=json.writeValueAsString(List.of(new BitcoinDepositReader.Output(0,seed.address(),seed.script(),new BigDecimal("0.12345678"))));
-        long observation=jdbc.queryForObject("""
-            INSERT INTO bitcoin_transaction_observations(network,wallet,txid,status,confirmations,coinbase,block_hash,block_height,tip_hash,tip_height,outputs,read_started_at)
-             VALUES('bitcoin-regtest','cex_watch',?,'CONFIRMED',6,false,?,0,?,5,?::jsonb,clock_timestamp()-CASE WHEN ? THEN interval '3 minutes' ELSE interval '0 seconds' END) RETURNING id
-            """,Long.class,seed.txid(),hex(),hex(),outputs,stale);
-        jdbc.update("INSERT INTO bitcoin_observation_wallet_debits(observation_id,wallet_debit) VALUES(?,false)",observation);
-        jdbc.update("INSERT INTO bitcoin_observation_heads(network,txid,observation_id) VALUES('bitcoin-regtest',?,?) ON CONFLICT(network,txid) DO UPDATE SET observation_id=excluded.observation_id",seed.txid(),observation);
-        qualification.evaluate(observation);return observation;
-    });}
+    String hex(){return BitcoinDepositFixtures.hex();}
+    BitcoinDepositFixtures.Seed seed(long owner,Instant time){return BitcoinDepositFixtures.seed(jdbc,json,owner,time);}
+    long observe(BitcoinDepositFixtures.Seed seed,boolean stale){return BitcoinDepositFixtures.observe(jdbc,json,manager,qualification,seed,stale);}
     @org.junit.jupiter.api.AfterEach void queryNeverCallsEngineOrNode(){verifyNoInteractions(reader,engine);}
     @Test void emptyHistoryCreatesNoAddressOrReceipt(){var page=deposits.own(customer.getId(),sid,null);assertTrue(page.items().isEmpty());assertNull(page.next());assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM bitcoin_deposit_addresses WHERE user_id=?",Long.class,customer.getId()));}
     @Test void equalTimestampCursorHasNoOmissionsOrDuplicates(){

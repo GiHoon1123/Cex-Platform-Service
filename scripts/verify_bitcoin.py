@@ -134,6 +134,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "pending-worker":["*BitcoinPendingDepositWorkerTest","*BitcoinPendingDepositWorkerIntegrationTest"],
             "pending-selection":["*BitcoinPendingSelectionIntegrationTest"],
             "network-identity":["*BitcoinNetworkIdentityIntegrationTest"],
+            "deposit-review":["*BitcoinDepositReviewSourceIntegrationTest"],
             "customer-deposits":["*CustomerBitcoinDepositsIntegrationTest"],
             "deposit-reconciliation":["*BitcoinDepositReconciliationTest","*BitcoinDepositReconciliationIntegrationTest"],
         }
