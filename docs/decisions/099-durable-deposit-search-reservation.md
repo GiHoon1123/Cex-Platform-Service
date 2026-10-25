@@ -130,3 +130,7 @@ CREATE OR REPLACE FUNCTION codevasp_deposit_search_source() RETURNS trigger LANG
 
 - [구현 f08a001](https://github.com/GiHoon1123/Cex-Platform-Service/commit/f08a0012a879478b91d80009862e77ea521b01e5)
 - [격리 실행 증적](../reference/099-durable-deposit-search-reservation-verification-2026-10-25.json)
+
+## 후속 실행 연결 시점
+
+[100](100-durable-deposit-search-execution.md)에서 영속한 검색 ID의 접수/조회와 불변 실행 결과를 연결했다. 게이트웨이에 보내기 전 실패를 증명하는 타입만 같은 ID 재접수에 사용하며, 전송 이후 불명·중단은 조회로 이어진다. 위의 실행 미연결 설명과 검증 개수는 원래 시점이다. 자동 처리/정보 교환·금융 허가는 여전히 미완료다.

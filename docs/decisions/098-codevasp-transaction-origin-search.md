@@ -49,7 +49,7 @@
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L55), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L56), 현재 소스의 부분 발췌.
 
 ```java
                 String body=text(signed,"body",65536);
@@ -61,7 +61,7 @@
 
 expectedBody는 요청한 세 필드의 JSON 값이다. Jackson으로 의미가 같은지 확인하되 실제 HTTP에는 원래 body 문자열을 보낸다. TypeScript에서도 JSON.parse로 비교한 뒤 JSON.stringify한 결과를 보내면 서명 바이트가 달라질 수 있다. 모듈의 서명 자체는 게이트웨이가 검증하며 여기서는 형식/본인 공개키/시각/본문 결합을 검사한다.
 
-출처: [CodeVaspTransactionClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransactionClient.java#L37), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransactionClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransactionClient.java#L42), 현재 소스의 부분 발췌.
 
 ```java
         else if(outcome.equals("invalid"))status=switch(text(response,"reasonType",64)){
@@ -76,7 +76,7 @@ expectedBody는 요청한 세 필드의 JSON 값이다. Jackson으로 의미가 
 
 Java switch 식은 문자열 사유를 다섯 상태 중 해당 값으로 변환한다. default를 정상 상태로 채우지 않고 예외로 거절한다. TypeScript의 유니언 타입도 실제 JSON 문자열의 런타임 검증 없이 안전해지지 않는다는 점은 같다.
 
-출처: [CodeVaspTransactionClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransactionClient.java#L58), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransactionClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransactionClient.java#L63), 현재 소스의 부분 발췌.
 
 ```java
         var found=analysis.stream().filter(row->row.result().equals("FOUND")).toList();
@@ -126,3 +126,7 @@ stream의 filter/toList는 양성 분석만 모아 일치 근거를 확인한다
 - [격리 실행 증적](../reference/098-codevasp-transaction-origin-search-verification-2026-10-25.json)
 
 - [검색·전송 분리 c129427](https://github.com/GiHoon1123/Cex-Platform-Service/commit/c129427) 및 위 연결된 연속 JSON 거부 수정은 같은098 작업의 작은 커밋이다.
+
+## 후속 실행 연결 시점
+
+[100](100-durable-deposit-search-execution.md)에서 영속한 검색 ID의 접수/조회와 불변 실행 결과를 연결했다. 게이트웨이에 보내기 전 실패를 증명하는 타입만 같은 ID 재접수에 사용하며, 전송 이후 불명·중단은 조회로 이어진다. 위의 실행 미연결 설명과 검증 개수는 원래 시점이다. 자동 처리/정보 교환·금융 허가는 여전히 미완료다.
