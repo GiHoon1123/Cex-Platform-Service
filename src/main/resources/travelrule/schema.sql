@@ -290,3 +290,30 @@ DROP TRIGGER IF EXISTS codevasp_transfer_result_immutable ON codevasp_transfer_r
 CREATE TRIGGER codevasp_transfer_result_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_transfer_results FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
 DROP TRIGGER IF EXISTS codevasp_transfer_head_no_delete ON codevasp_transfer_heads;
 CREATE TRIGGER codevasp_transfer_head_no_delete BEFORE DELETE OR TRUNCATE ON codevasp_transfer_heads FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 작업 일정은 갱신 가능한 운영 상태다. 개인정보/금융 증거는 이 표가 아니라 불변 의도·실행·감사에 보관한다.
+CREATE TABLE IF NOT EXISTS codevasp_transfer_jobs (
+ search_id uuid PRIMARY KEY REFERENCES codevasp_deposit_searches(id),intent_id uuid REFERENCES codevasp_transfer_intents(id),
+ state varchar(24) NOT NULL DEFAULT 'PENDING' CHECK(state IN ('PENDING','RETRY','HELD','DONE','REVIEW_REQUIRED')),
+ last_reason varchar(32) NOT NULL DEFAULT 'NEW' CHECK(last_reason IN ('NEW','NOT_SENT','CURRENT_SOURCE_UNAVAILABLE','SOURCE_MISSING','CURRENT_CONDITIONS_NOT_MET','LOCAL_FAILURE','DATA_RECEIVED','RUNNING','OUTCOME_UNKNOWN','REMOTE_ERROR','PRIOR_TRANSFER')),
+ next_attempt_at timestamptz DEFAULT clock_timestamp(),lease_id uuid,lease_until timestamptz,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ CHECK((lease_id IS NULL)=(lease_until IS NULL)),CHECK((state IN ('DONE','REVIEW_REQUIRED'))=(next_attempt_at IS NULL)),
+ CHECK(state NOT IN ('DONE','REVIEW_REQUIRED') OR lease_id IS NULL)
+);
+CREATE INDEX IF NOT EXISTS codevasp_transfer_job_due ON codevasp_transfer_jobs(next_attempt_at,search_id) WHERE state IN ('PENDING','RETRY','HELD');
+CREATE OR REPLACE FUNCTION codevasp_transfer_job_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND(NEW.search_id<>OLD.search_id OR NEW.created_at<>OLD.created_at) THEN
+  RAISE EXCEPTION '정보 교환 작업의 원본을 바꿀 수 없습니다';END IF;
+ IF NEW.intent_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM codevasp_transfer_intents i WHERE i.id=NEW.intent_id AND i.search_id=NEW.search_id) THEN
+  RAISE EXCEPTION '정보 교환 작업과 제공 의도의 검색 원본이 다릅니다';END IF;
+ IF NEW.state='DONE' AND NOT EXISTS(SELECT 1 FROM codevasp_transfer_heads h JOIN codevasp_transfer_results r ON r.attempt_id=h.attempt_id
+  WHERE h.intent_id=NEW.intent_id AND r.status='DATA_RECEIVED') THEN
+  RAISE EXCEPTION '수신 원본 없이 정보 교환 작업을 완료할 수 없습니다';END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_transfer_job_binding_check ON codevasp_transfer_jobs;
+CREATE TRIGGER codevasp_transfer_job_binding_check BEFORE INSERT OR UPDATE ON codevasp_transfer_jobs FOR EACH ROW EXECUTE FUNCTION codevasp_transfer_job_binding();
+DROP TRIGGER IF EXISTS codevasp_transfer_job_no_delete ON codevasp_transfer_jobs;
+CREATE TRIGGER codevasp_transfer_job_no_delete BEFORE DELETE OR TRUNCATE ON codevasp_transfer_jobs FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
