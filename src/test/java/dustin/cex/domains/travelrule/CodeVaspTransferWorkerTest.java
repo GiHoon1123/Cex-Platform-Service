@@ -33,10 +33,21 @@ class CodeVaspTransferWorkerTest {
     }
     @Test void fixedDelayIsMeasuredAfterCompletionRatherThanAccumulatingCatchupTasks()throws Exception{
         var service=mock(CodeVaspTransferProcessing.class);var entered=new CountDownLatch(1);var release=new CountDownLatch(1);var calls=new AtomicInteger();
-        when(service.processNext()).thenAnswer(i->{if(calls.incrementAndGet()==1){entered.countDown();assertTrue(release.await(3,TimeUnit.SECONDS));}return report("SUCCESS");});
+        var firstCompleted=new AtomicLong();var secondStarted=new AtomicLong();
+        when(service.processNext()).thenAnswer(i->{
+            int invocation=calls.incrementAndGet();
+            if(invocation==1){entered.countDown();assertTrue(release.await(10,TimeUnit.SECONDS));firstCompleted.set(System.nanoTime());}
+            else if(invocation==2)secondStarted.set(System.nanoTime());
+            return report("SUCCESS");
+        });
         var worker=new CodeVaspTransferWorker(configured(),service,true,Duration.ofMillis(300));
-        try{worker.start();assertTrue(entered.await(3,TimeUnit.SECONDS));Thread.sleep(450);assertEquals(1,calls.get());release.countDown();await().during(Duration.ofMillis(100)).atMost(Duration.ofMillis(220)).until(()->calls.get()==1);await().atMost(Duration.ofSeconds(2)).until(()->calls.get()>=2);}
-        finally{release.countDown();worker.stop();}
+        try{
+            worker.start();assertTrue(entered.await(3,TimeUnit.SECONDS));Thread.sleep(450);assertEquals(1,calls.get());release.countDown();
+            // 짧은 시간 창 안에 시험 스레드가 실행됐다고 가정하지 않는다. 실제 두 실행의 단조 시각 차이를 검사한다.
+            // 고정 주기라면 밀린 실행이 즉시 시작하지만 고정 지연은 첫 작업이 끝난 뒤에도 300밀리초를 기다린다.
+            await().atMost(Duration.ofSeconds(3)).until(()->secondStarted.get()!=0);
+            assertTrue(secondStarted.get()-firstCompleted.get()>=TimeUnit.MILLISECONDS.toNanos(300));
+        }finally{release.countDown();worker.stop();}
     }
     @Test void storedFailureAndThrownPersistenceFailureDoNotCancelFutureAttempts(){
         var service=mock(CodeVaspTransferProcessing.class);var calls=new AtomicInteger();
