@@ -118,6 +118,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "worker":["*BitcoinProcessingWorkerTest","*BitcoinProcessingWorkerIntegrationTest"],
             "jobs":["*BitcoinDepositObservationJobsIntegrationTest"],
             "observation-worker":["*BitcoinDepositObservationWorkerTest","*BitcoinDepositObservationWorkerIntegrationTest"],
+            "qualification":["*BitcoinDepositQualificationTest","*BitcoinDepositQualificationIntegrationTest"],
         }
         result["groups"]=[]
         for group,patterns in groups.items():
@@ -126,6 +127,14 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             group_result={"group":group,"database":database,"selection":patterns}
             result["groups"].append(group_result)
             try:
+                if group=="qualification":
+                    rpc("generatetoaddress",[3,mining])
+                    deadline=time.monotonic()+10
+                    while rpc("getwalletinfo",[],"cex_watch")["lastprocessedblock"]["hash"]!=rpc("getbestblockhash"):
+                        if time.monotonic()>deadline:raise RuntimeError("정책 시험의 추가 블록 반영 대기 실패")
+                        time.sleep(.1)
+                    result["qualification_scenario"]={"tip_height":rpc("getblockcount"),"confirmed_confirmations":rpc("gettransaction",[confirmed,True,True],"cex_watch")["confirmations"]}
+                    assert result["qualification_scenario"]["confirmed_confirmations"]==6
                 subprocess.run([docker,"run","--detach","--rm","--name",database,"--publish","127.0.0.1::5432",
                     "--tmpfs","/var/lib/postgresql/data","-e","POSTGRES_USER=root","-e","POSTGRES_PASSWORD=1234",
                     "-e","POSTGRES_DB=cex_test","postgres:16"],check=True,stdout=subprocess.DEVNULL)

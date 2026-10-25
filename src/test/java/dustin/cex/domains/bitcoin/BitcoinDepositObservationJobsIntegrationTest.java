@@ -44,6 +44,7 @@ class BitcoinDepositObservationJobsIntegrationTest {
     @Autowired BitcoinScanService scans;
     @Autowired BitcoinDepositReceiptService receipts;
     @Autowired BitcoinSettings config;
+    @Autowired BitcoinDepositQualificationService qualification;
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager manager;
     @Autowired dustin.cex.domains.auth.repository.UserRepository users;
@@ -114,7 +115,7 @@ class BitcoinDepositObservationJobsIntegrationTest {
     @Test void claimedButAbandonedWorkCanBeResumedByFreshServiceAfterExpiry(){
         due();doThrow(new AssertionError("격리된 실행 중단")).when(observations).refresh(txid());assertThrows(AssertionError.class,jobs::refreshDue);assertNotNull(state().get("lease_id"));
         assertFalse(jobs.refreshDue());reset(observations);jdbc.update("UPDATE bitcoin_deposit_observation_jobs SET lease_until=clock_timestamp()-interval '1 second' WHERE txid=?",txid());
-        var fresh=new BitcoinDepositObservationJobs(jdbc,config,observations,audit,manager);assertTrue(fresh.refreshDue());assertEquals("OBSERVED",state().get("last_outcome"));assertNull(state().get("lease_id"));
+        var fresh=new BitcoinDepositObservationJobs(jdbc,config,observations,audit,manager,qualification);assertTrue(fresh.refreshDue());assertEquals("OBSERVED",state().get("last_outcome"));assertNull(state().get("lease_id"));
     }
     @Test void claimAuditFailureRollsBackLeaseBeforeNode(){
         due();doThrow(new IllegalStateException("격리 임대 감사 장애")).when(audit).record(isNull(),eq("BTC_DEPOSIT_OBSERVATION_CLAIMED"),anyString(),anyString(),anyString());

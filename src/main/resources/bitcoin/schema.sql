@@ -203,3 +203,57 @@ CREATE TRIGGER bitcoin_observation_job_original BEFORE INSERT OR UPDATE ON bitco
 DROP TRIGGER IF EXISTS bitcoin_observation_job_no_delete ON bitcoin_deposit_observation_jobs;
 CREATE TRIGGER bitcoin_observation_job_no_delete BEFORE DELETE OR TRUNCATE ON bitcoin_deposit_observation_jobs
  FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 온체인 준비 판단은 고객 자격/금융 반입 허용과 구분한다. 적용 정책과 당시 관찰을 불변으로 연결한다.
+CREATE TABLE IF NOT EXISTS bitcoin_deposit_chain_decisions (
+ id bigserial PRIMARY KEY,receipt_id uuid NOT NULL REFERENCES bitcoin_deposit_receipts(id),
+ observation_id bigint NOT NULL REFERENCES bitcoin_transaction_observations(id),
+ policy_id varchar(32) NOT NULL CHECK(policy_id='BTC_CHAIN_V1'),
+ reason varchar(32) NOT NULL CHECK(reason IN ('OUTPUT_MISMATCH','CONFLICTED','WAITING_CHAIN','STALE_OBSERVATION','IMMATURE_COINBASE','WAITING_CONFIRMATIONS','CHAIN_READY')),
+ created_txid bigint NOT NULL DEFAULT txid_current(),recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ UNIQUE(id,receipt_id)
+);
+CREATE OR REPLACE FUNCTION bitcoin_chain_decision_source() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE source record; output_count integer; matching_count integer;
+BEGIN
+ SELECT o.*,a.address,a.script_pub_key,r.vout,r.amount AS receipt_amount INTO source
+  FROM bitcoin_deposit_receipts r JOIN bitcoin_deposit_addresses a ON a.id=r.address_id
+  JOIN bitcoin_transaction_observations o ON o.id=NEW.observation_id AND o.network=r.network AND o.txid=r.txid AND o.wallet=a.wallet
+  JOIN bitcoin_observation_heads h ON h.observation_id=o.id WHERE r.id=NEW.receipt_id FOR SHARE OF h;
+ IF NOT FOUND THEN RAISE EXCEPTION '온체인 판단은 같은 고객 입금의 현재 거래 관찰을 참조해야 합니다'; END IF;
+ IF NEW.reason='CHAIN_READY' THEN
+  SELECT count(*),count(*) FILTER(WHERE e->>'address'=source.address AND e->>'scriptPubKey'=source.script_pub_key AND (e->>'amount')::numeric=source.receipt_amount)
+    INTO output_count,matching_count FROM jsonb_array_elements(source.outputs) e WHERE (e->>'vout')::integer=source.vout;
+  IF source.status<>'CONFIRMED' OR source.confirmations<6 OR(source.coinbase AND source.confirmations<101)
+     OR source.read_started_at>clock_timestamp() OR source.read_started_at<clock_timestamp()-interval '2 minutes'
+     OR output_count<>1 OR matching_count<>1 THEN RAISE EXCEPTION '온체인 준비 조건을 충족하지 않은 입금입니다'; END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_chain_decision_original ON bitcoin_deposit_chain_decisions;
+CREATE TRIGGER bitcoin_chain_decision_original BEFORE INSERT ON bitcoin_deposit_chain_decisions
+ FOR EACH ROW EXECUTE FUNCTION bitcoin_chain_decision_source();
+DROP TRIGGER IF EXISTS bitcoin_chain_decision_no_change ON bitcoin_deposit_chain_decisions;
+CREATE TRIGGER bitcoin_chain_decision_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_deposit_chain_decisions
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+CREATE TABLE IF NOT EXISTS bitcoin_deposit_chain_heads (
+ receipt_id uuid PRIMARY KEY REFERENCES bitcoin_deposit_receipts(id),decision_id bigint NOT NULL,
+ FOREIGN KEY(decision_id,receipt_id) REFERENCES bitcoin_deposit_chain_decisions(id,receipt_id)
+);
+CREATE OR REPLACE FUNCTION bitcoin_chain_head_fresh() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND(NEW.receipt_id<>OLD.receipt_id OR NEW.decision_id<=OLD.decision_id) THEN
+  RAISE EXCEPTION '온체인 판단은 같은 입금의 새 원본으로만 전진해야 합니다';
+ END IF;
+ IF NOT EXISTS(SELECT 1 FROM bitcoin_deposit_chain_decisions d WHERE d.id=NEW.decision_id AND d.receipt_id=NEW.receipt_id AND d.created_txid=txid_current()) THEN
+  RAISE EXCEPTION '현재 온체인 판단과 원본은 같은 트랜잭션에서 확정해야 합니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_chain_head_original ON bitcoin_deposit_chain_heads;
+CREATE TRIGGER bitcoin_chain_head_original BEFORE INSERT OR UPDATE ON bitcoin_deposit_chain_heads
+ FOR EACH ROW EXECUTE FUNCTION bitcoin_chain_head_fresh();
+DROP TRIGGER IF EXISTS bitcoin_chain_head_no_delete ON bitcoin_deposit_chain_heads;
+CREATE TRIGGER bitcoin_chain_head_no_delete BEFORE DELETE OR TRUNCATE ON bitcoin_deposit_chain_heads
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

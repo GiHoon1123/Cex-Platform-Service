@@ -19,10 +19,11 @@ public class BitcoinDepositObservationJobs {
     private final BitcoinSettings settings;
     private final BitcoinObservationService observations;
     private final AuditService audit;
+    private final BitcoinDepositQualificationService qualification;
     private final TransactionTemplate tx;
     public BitcoinDepositObservationJobs(JdbcTemplate jdbc,BitcoinSettings settings,BitcoinObservationService observations,
-            AuditService audit,PlatformTransactionManager manager){
-        this.jdbc=jdbc;this.settings=settings;this.observations=observations;this.audit=audit;
+            AuditService audit,PlatformTransactionManager manager,BitcoinDepositQualificationService qualification){
+        this.jdbc=jdbc;this.settings=settings;this.observations=observations;this.audit=audit;this.qualification=qualification;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
     @PostConstruct void seedKnownReceipts(){
@@ -74,6 +75,7 @@ public class BitcoinDepositObservationJobs {
             if(owns.isEmpty()){
                 audit.record(null,"BTC_DEPOSIT_OBSERVATION_FINISHED","bitcoin-observation-lease:"+work.id(),"DENIED","LEASE_LOST");return;
             }
+            if(observed!=null)qualification.evaluate(observed.id());
             jdbc.update("""
                 UPDATE bitcoin_deposit_observation_jobs SET lease_id=NULL,lease_until=NULL,next_attempt_at=clock_timestamp()+interval '30 seconds',
                  latest_observation_id=COALESCE(?,latest_observation_id),last_outcome=?,failures=CASE WHEN ? THEN 0 ELSE failures+1 END
