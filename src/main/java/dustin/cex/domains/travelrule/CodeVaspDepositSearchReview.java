@@ -9,12 +9,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-/** 인가된 입금 심사 TX에서 기술 검색 근거만 투영한다. 네트워크 호출·예약·자금 승인 기능은 제공하지 않는다. */
+/** 인가된 입금 심사 트랜잭션에서 검색·전송·비교·작업의 최소 이력만 읽는다. 개인정보 복호화·네트워크·자금 승인은 수행하지 않는다. */
 @Service
 public class CodeVaspDepositSearchReview {
     public record Search(UUID id,Long attemptId,String phase,String status,String failureCode,Instant createdAt,
         Instant startedAt,Instant recordedAt,Instant automaticUntil,boolean automaticWindowEnded,String originEntityId){}
-    public record Review(boolean providerConfigured,String sourceRef,long historicalSearches,String reason,Instant readAt,Search search){}
+    public record Assessment(String policy,String status,String reason,Instant recordedAt){}
+    public record RequestBasis(Long searchAttemptId,Long directoryAttemptId,Long chainDecisionId,Long observationId,UUID cddAssessmentId){}
+    public record Transfer(UUID intentId,Instant intendedAt,String purpose,String purposePolicy,UUID attemptId,
+        Instant startedAt,String status,String reason,Instant recordedAt,RequestBasis requestBasis,Assessment assessment){}
+    public record Job(String state,String reason,Instant nextAttemptAt,Instant leaseUntil,Instant updatedAt){}
+    public record Review(boolean providerConfigured,String sourceRef,long historicalSearches,String reason,Instant readAt,
+        Search search,Transfer transfer,Job job,String assurance){}
     private final CodeVaspSettings settings;
     private final CodeVaspDirectoryService directory;
     private final JdbcTemplate jdbc;
@@ -27,6 +33,11 @@ public class CodeVaspDepositSearchReview {
         var row=jdbc.queryForMap("""
             SELECT statement_timestamp() read_at,p.receipt_id pending_id,o.coinbase,
              s.id,s.created_at,h.attempt_id,a.phase,a.started_at,r.status,r.failure_code,r.recorded_at,
+             i.id transfer_intent_id,i.created_at intended_at,purpose.purpose,purpose.policy_id purpose_policy,
+             th.attempt_id transfer_attempt_id,ta.created_at transfer_started_at,
+             ta.search_attempt_id basis_search_attempt,ta.directory_attempt_id basis_directory_attempt,ta.decision_id basis_decision,ta.observation_id basis_observation,ta.assessment_id basis_cdd_assessment,tr.status transfer_status,tr.reason transfer_reason,tr.recorded_at transfer_recorded_at,
+             assessment.policy_id assessment_policy,assessment.status assessment_status,assessment.reason assessment_reason,assessment.recorded_at assessment_recorded_at,
+             job.state job_state,job.last_reason job_reason,job.next_attempt_at,job.lease_until,job.updated_at job_updated_at,
              CASE WHEN r.status='FOUND' THEN r.payload::jsonb->>'entityId' ELSE NULL END origin_entity_id,
              r.payload IS NULL OR r.payload_hash=encode(sha256(convert_to(r.payload,'UTF8')),'hex') payload_valid,
              (SELECT min(initial.started_at) FROM codevasp_search_attempts initial WHERE initial.search_id=s.id) first_started_at,
@@ -39,6 +50,13 @@ public class CodeVaspDepositSearchReview {
              LEFT JOIN codevasp_search_heads h ON h.search_id=s.id
              LEFT JOIN codevasp_search_attempts a ON a.id=h.attempt_id
              LEFT JOIN codevasp_search_results r ON r.attempt_id=a.id
+             LEFT JOIN codevasp_transfer_intents i ON i.search_id=s.id
+             LEFT JOIN codevasp_transfer_purposes purpose ON purpose.intent_id=i.id
+             LEFT JOIN codevasp_transfer_heads th ON th.intent_id=i.id
+             LEFT JOIN codevasp_transfer_attempts ta ON ta.id=th.attempt_id
+             LEFT JOIN codevasp_transfer_results tr ON tr.attempt_id=ta.id
+             LEFT JOIN codevasp_transfer_detail_assessments assessment ON assessment.attempt_id=tr.attempt_id
+             LEFT JOIN codevasp_transfer_jobs job ON job.search_id=s.id
             """,source,source,receipt,source);
         Instant readAt=at(row,"read_at");Search search=null;String reason;
         if(row.get("id")!=null){
@@ -57,7 +75,14 @@ public class CodeVaspDepositSearchReview {
         else if(Boolean.TRUE.equals(row.get("coinbase")))reason="COINBASE_REVIEW_REQUIRED";
         else reason="AWAITING_RESERVATION";
         // 현재 접속 주체의 검색만 현재란에 둔다. 설정이 바뀌어도 예전 검색 수를 남겨 기록이 사라진 것으로 보이지 않게 한다.
-        return new Review(configured,source,((Number)row.get("historical_searches")).longValue(),reason,readAt,search);
+        // 현재 검색에 묶인 최신 전송 포인터만 읽는다. 새 시도가 미완료면 과거 성공/실패를 대신 보여주지 않는다.
+        Assessment assessment=row.get("assessment_status")==null?null:new Assessment((String)row.get("assessment_policy"),(String)row.get("assessment_status"),(String)row.get("assessment_reason"),at(row,"assessment_recorded_at"));
+        RequestBasis basis=row.get("transfer_attempt_id")==null?null:new RequestBasis(number(row,"basis_search_attempt"),number(row,"basis_directory_attempt"),number(row,"basis_decision"),number(row,"basis_observation"),(UUID)row.get("basis_cdd_assessment"));
+        Transfer transfer=row.get("transfer_intent_id")==null?null:new Transfer((UUID)row.get("transfer_intent_id"),at(row,"intended_at"),(String)row.get("purpose"),(String)row.get("purpose_policy"),(UUID)row.get("transfer_attempt_id"),at(row,"transfer_started_at"),
+            row.get("transfer_status")==null?(row.get("transfer_attempt_id")==null?"UNSTARTED":"RUNNING"):(String)row.get("transfer_status"),(String)row.get("transfer_reason"),at(row,"transfer_recorded_at"),basis,assessment);
+        Job job=row.get("job_state")==null?null:new Job((String)row.get("job_state"),(String)row.get("job_reason"),at(row,"next_attempt_at"),at(row,"lease_until"),at(row,"job_updated_at"));
+        // 분류는 당시 요청 근거와 비교한 저장 이력이다. 현재 금융 판단에 쓰려면 인증된 원본과 현재 고객/체인/위험을 다시 확인해야 한다.
+        return new Review(configured,source,((Number)row.get("historical_searches")).longValue(),reason,readAt,search,transfer,job,"METADATA_ONLY_NOT_A_FINANCIAL_DECISION");
     }
     private static Instant at(Map<String,Object> row,String key){var value=(Timestamp)row.get(key);return value==null?null:value.toInstant();}
     private static Long number(Map<String,Object> row,String key){var value=(Number)row.get(key);return value==null?null:value.longValue();}
