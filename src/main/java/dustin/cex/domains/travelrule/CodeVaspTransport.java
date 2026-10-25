@@ -15,7 +15,7 @@ import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.*;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 목록과 거래 출처 조회가 동일한 서명·본문·시간·크기 경계를 사용한다. 호출 종류와 경로는 내부에서 고정한다. */
+/** 목록·거래 출처 조회·정보 교환이 동일한 서명·본문·시간·크기 경계를 사용한다. 호출 종류와 경로는 내부에서 고정한다. */
 @Component
 final class CodeVaspTransport implements AutoCloseable {
     private final CodeVaspSettings settings;
@@ -38,22 +38,13 @@ final class CodeVaspTransport implements AutoCloseable {
         try{
             var command=json.createObjectNode().put("allianceName","CODE").put("apiType",type);
             if(expectedBody!=null)command.set("request",expectedBody);
-            var signed=call(HttpRequest.newBuilder(settings.cipher.resolve("/api/v1/code/api-payloads"))
-                .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(command))),65536);
-            String signature=text(signed,"signature",88),key=text(signed,"publicKey",44),date=text(signed,"dateTime",64);
-            var nonce=signed.path("nonce");
-            if(!CodeVaspSettings.key(signature,64)||!key.equals(settings.publicKey)||!nonce.isIntegralNumber()||!nonce.canConvertToLong()||nonce.longValue()<0)throw unavailable();
-            var time=OffsetDateTime.parse(date,DateTimeFormatter.ISO_OFFSET_DATE_TIME);Instant now=Instant.now();
-            if(!time.getOffset().equals(ZoneOffset.UTC)||time.toInstant().isBefore(now.minusSeconds(60))||time.toInstant().isAfter(now.plusSeconds(10)))throw unavailable();
-            var request=HttpRequest.newBuilder(settings.api.resolve(path))
-                .header("X-Code-Req-Datetime",date).header("X-Code-Req-Nonce",Long.toString(nonce.longValue()))
-                .header("X-Code-Req-PubKey",key).header("X-Code-Req-Signature",signature)
-                .header("X-Request-Origin","code:"+settings.entity);
+            var signed=sign(command);
+            var request=headers(path,signed);
             if(expectedBody==null){
-                if(signed.hasNonNull("body")&&(!signed.path("body").isString()||!signed.path("body").asString().isEmpty()))throw unavailable();
+                if(signed.raw().hasNonNull("body")&&(!signed.raw().path("body").isString()||!signed.raw().path("body").asString().isEmpty()))throw unavailable();
                 request.GET();
             }else{
-                String body=text(signed,"body",65536);
+                String body=text(signed.raw(),"body",65536);
                 // 모듈이 다른 거래/수신 주소를 서명했으면 전송하지 않는다. JSON 의미를 대조한 뒤 서명된 원래 바이트를 그대로 보낸다.
                 if(!json.readTree(body).equals(expectedBody))throw unavailable();
                 request.header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body));
@@ -65,6 +56,72 @@ final class CodeVaspTransport implements AutoCloseable {
             if(expectedBody!=null)throw new CodeVaspSubmissionFailure(gatewayStarted?CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN:CodeVaspSubmissionFailure.Admission.NOT_SENT);
             throw unavailable();
         }
+    }
+    private record Signed(JsonNode raw,String signature,String date,long nonce){
+        @Override public String toString(){return "Signed[서명 자료 생략]";}
+    }
+    private Signed sign(JsonNode command){
+        var signed=call(HttpRequest.newBuilder(settings.cipher.resolve("/api/v1/code/api-payloads"))
+            .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(command))),65536);
+        String signature=text(signed,"signature",88),key=text(signed,"publicKey",44),date=text(signed,"dateTime",64);
+        var nonce=signed.path("nonce");
+        if(!CodeVaspSettings.key(signature,64)||!key.equals(settings.publicKey)||!nonce.isIntegralNumber()||!nonce.canConvertToLong()||nonce.longValue()<0)throw unavailable();
+        var time=OffsetDateTime.parse(date,DateTimeFormatter.ISO_OFFSET_DATE_TIME);Instant now=Instant.now();
+        if(!time.getOffset().equals(ZoneOffset.UTC)||time.toInstant().isBefore(now.minusSeconds(60))||time.toInstant().isAfter(now.plusSeconds(10)))throw unavailable();
+        return new Signed(signed,signature,date,nonce.longValue());
+    }
+    private HttpRequest.Builder headers(String path,Signed signed){
+        return HttpRequest.newBuilder(settings.api.resolve(path)).header("X-Code-Req-Datetime",signed.date())
+            .header("X-Code-Req-Nonce",Long.toString(signed.nonce())).header("X-Code-Req-PubKey",settings.publicKey)
+            .header("X-Code-Req-Signature",signed.signature()).header("X-Request-Origin","code:"+settings.entity);
+    }
+    record DecodedTransfer(JsonNode identity,String ciphertextHash){
+        @Override public String toString(){return "DecodedTransfer[교환 원문 생략]";}
+    }
+    JsonNode transferData(CodeVaspTransferDataClient.Request input){
+        if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("이전거래 정보 교환은 DB 트랜잭션 밖에서 실행하세요");
+        if(!settings.configured())throw new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.NOT_SENT);boolean gatewayStarted=false;
+        try{
+            // 개인정보는 본인 소유의 비공개 모듈에만 평문으로 보낸다. 게이트웨이에는 모듈이 암호화한 payload만 전달한다.
+            var request=json.createObjectNode().put("transferId",input.query().requestId().toString()).put("txid",input.query().txid())
+                .put("beneficiaryAddress",input.query().beneficiaryAddress()).put("beneficiaryWalletAddress",input.query().beneficiaryAddress())
+                .put("beneficiaryNameIdentifierType","LEGL").put("beneficiaryNaturalPersonLastName",input.recipientName());
+            var command=json.createObjectNode().put("allianceName","CODE").put("apiType","VERIFICATION_TRANSACTION_ID")
+                .put("remotePublicKey",input.key().publicKey()).set("request",request);
+            var signed=sign(command);String raw=text(signed.raw(),"body",65536);var body=json.readTree(raw);
+            if(body==null||!body.isObject()||body.size()!=4||!input.query().requestId().toString().equals(text(body,"transferId",36))
+                ||!input.query().txid().equals(text(body,"txid",64))||!input.query().beneficiaryAddress().equals(text(body,"beneficiaryAddress",120)))throw unavailable();
+            // 추가 평문 개인정보 필드가 생겨도 조용히 전송하지 않는다. 본문에는 공개 결합 필드3개와 암호문만 허용한다.
+            for(String field:body.propertyNames())if(!Set.of("transferId","txid","beneficiaryAddress","payload").contains(field))throw unavailable();
+            ciphertext(text(body,"payload",65536));
+            if(!input.key().expiresAt().isAfter(Instant.now()))throw unavailable();
+            var httpRequest=headers("/v1/code/verification/tx/"+input.peer().entityId(),signed)
+                .header("X-Code-Req-Remote-PubKey",input.key().publicKey()).header("Content-Type","application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(raw));
+            gatewayStarted=true;
+            return call(httpRequest,2097152);
+        }catch(Exception failure){
+            // 서명/본문 검사 전의 미전송과 PUT 이후·복호화 단계의 불명을 구분하고 원문 원인을 전파하지 않는다.
+            throw new CodeVaspSubmissionFailure(gatewayStarted?CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN:CodeVaspSubmissionFailure.Admission.NOT_SENT);
+        }
+    }
+    DecodedTransfer decryptTransfer(CodeVaspTransferDataClient.Request input,JsonNode envelope){
+        if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("이전거래 복호화는 DB 트랜잭션 밖에서 실행하세요");
+        try{
+            String encrypted=text(envelope,"payload",65536);byte[] encryptedBytes=ciphertext(encrypted);
+            var decrypt=json.createObjectNode().put("allianceName","CODE").put("data",encrypted).put("remotePublicKey",input.key().publicKey());
+            var decoded=call(HttpRequest.newBuilder(settings.cipher.resolve("/api/v1/code/decrypt"))
+                .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(decrypt))),262144);
+            var identity=decoded.path("body");String original=text(decoded,"bodyString",65536);
+            if(!identity.isObject()||!identity.equals(json.readTree(original)))throw unavailable();
+            String hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(encryptedBytes));
+            return new DecodedTransfer(identity,hash);
+        }catch(Exception invalid){throw unavailable();}
+    }
+    private static byte[] ciphertext(String value){
+        byte[] decoded=Base64.getDecoder().decode(value);
+        if(decoded.length<40||decoded.length>49152||!Base64.getEncoder().encodeToString(decoded).equals(value))throw unavailable();
+        return decoded;
     }
     private JsonNode call(HttpRequest.Builder request,long limit){
         try{
