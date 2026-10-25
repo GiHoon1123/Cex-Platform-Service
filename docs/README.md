@@ -249,3 +249,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [116. 실제 수탁 원장으로 반복 소액 입금의 검토 신호 남기기](decisions/116-durable-native-deposit-monitoring.md)
 
 - [117. 밀린 입금의 과거 검토 신호를 원장 순번 재생으로 보존하기](decisions/117-ordered-deposit-monitoring-replay.md)
+
+- [118. 거래 탐지 원본과 암호화된 담당자 조사 의견 연결하기](decisions/118-verified-monitoring-evidence-and-analyst-observations.md)

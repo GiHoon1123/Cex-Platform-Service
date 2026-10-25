@@ -1,0 +1,1105 @@
+{
+  "cycle": 118,
+  "implementation_commit": "e4879914ef252a42dc0a71add0856842f7b83d14",
+  "verification": {
+    "combined": {
+      "groups": {
+        "investigations": {
+          "executions": 29,
+          "unique": 29
+        },
+        "monitoring": {
+          "executions": 16,
+          "unique": 16
+        },
+        "review": {
+          "executions": 58,
+          "unique": 58
+        },
+        "finance": {
+          "executions": 182,
+          "unique": 182
+        }
+      },
+      "executions": 285,
+      "unique": 285,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "local_evidence": ".local/cycle118-proof",
+    "new_tests": 29,
+    "financial_approval": false,
+    "case_resolution": false,
+    "engine_changes": false,
+    "investigations": {
+      "container": "cex-deposit-monitoring-investigations-491837850fc2",
+      "run_id": "491837850fc2",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "operatorAndApproverInspectExactInputsAndRecordAccessThroughHttp",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/operatorAndApproverInspectExactInputsAndRecordAccessThroughHttp.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_1",
+          "method": "auditorListsMetadataButCannotInspectOrWriteNotes",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/auditorListsMetadataButCannotInspectOrWriteNotes.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_2",
+          "method": "customerAndAnonymousCannotProbeExistingOrMissingTargets",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/customerAndAnonymousCannotProbeExistingOrMissingTargets.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_3",
+          "method": "staleMfaAndForeignSessionAreRejectedBeforeSourceRead",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/staleMfaAndForeignSessionAreRejectedBeforeSourceRead.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_4",
+          "method": "revokedOperatorCannotReadStoredEvidence",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/revokedOperatorCannotReadStoredEvidence.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_5",
+          "method": "foreignCustomerReceiptCannotBorrowAssessment",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/foreignCustomerReceiptCannotBorrowAssessment.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_6",
+          "method": "sourceHashAndRecomputedPolicyMustAgree",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/sourceHashAndRecomputedPolicyMustAgree.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_7",
+          "method": "forgedDocumentWithNewHashStillMustMatchRealFinancialSource",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/forgedDocumentWithNewHashStillMustMatchRealFinancialSource.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_8",
+          "method": "recordAndReadEncryptedNotesWithoutChangingRiskOrMoney",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/recordAndReadEncryptedNotesWithoutChangingRiskOrMoney.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_9",
+          "method": "sameRequestKeyIsIdempotentAndChangedContentConflicts",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/sameRequestKeyIsIdempotentAndChangedContentConflicts.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_10",
+          "method": "concurrentSameRequestCreatesOnlyOneObservation",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/concurrentSameRequestCreatesOnlyOneObservation.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_11",
+          "method": "observationRequiresOwnSourceViewAndOperatorRole",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/observationRequiresOwnSourceViewAndOperatorRole.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_12",
+          "method": "malformedNotesAndMissingFieldsCannotWrite",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/malformedNotesAndMissingFieldsCannotWrite.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_13",
+          "method": "auditorGetsObservationMetadataWithoutPlaintext",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/auditorGetsObservationMetadataWithoutPlaintext.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_14",
+          "method": "ciphertextTamperingAndUnsupportedKeysAreRejected",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/ciphertextTamperingAndUnsupportedKeysAreRejected.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_15",
+          "method": "auditFailureRollsBackSourceInspection",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/auditFailureRollsBackSourceInspection.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_16",
+          "method": "missingAuditCannotCommitSourceInspection",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/missingAuditCannotCommitSourceInspection.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_17",
+          "method": "auditFailureRollsBackObservationButKeepsItsView",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/auditFailureRollsBackObservationButKeepsItsView.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_18",
+          "method": "missingAuditCannotCommitObservationOrNoteAccess",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/missingAuditCannotCommitObservationOrNoteAccess.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_19",
+          "method": "historiesCannotBeUpdatedDeletedOrTruncated",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/historiesCannotBeUpdatedDeletedOrTruncated.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_20",
+          "method": "metadataUsesBoundedKeysetPaginationWithoutDuplicates",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/metadataUsesBoundedKeysetPaginationWithoutDuplicates.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_21",
+          "method": "unsupportedMethodsAndExtraPathsRemainDenied",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/unsupportedMethodsAndExtraPathsRemainDenied.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_22",
+          "method": "surroundingTransactionIsRejectedWithoutPartialAccess",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/surroundingTransactionIsRejectedWithoutPartialAccess.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_23",
+          "method": "noSignalInputIsInspectableButCannotBeMadeAnUnresolvedInvestigation",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/noSignalInputIsInspectableButCannotBeMadeAnUnresolvedInvestigation.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_24",
+          "method": "newerInputDoesNotRelabelHistoricalEvidenceOrOpinion",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/newerInputDoesNotRelabelHistoricalEvidenceOrOpinion.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_25",
+          "method": "changedOperatorVersionCannotReuseEarlierSourceView",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/changedOperatorVersionCannotReuseEarlierSourceView.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_26",
+          "method": "idempotentKeyCannotBorrowObservationThroughAnotherCustomerReceipt",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/idempotentKeyCannotBorrowObservationThroughAnotherCustomerReceipt.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_27",
+          "method": "missingEvidenceKeyCannotWriteAnUnprotectedNote",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/missingEvidenceKeyCannotWriteAnUnprotectedNote.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_28",
+          "method": "databaseRejectsForgedActorAndBorrowedSourceView",
+          "exit": 0,
+          "log": "deposit-monitoring-investigations/491837850fc2/databaseRejectsForgedActorAndBorrowedSourceView.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "operatorAndApproverInspectExactInputsAndRecordAccessThroughHttp()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "auditorListsMetadataButCannotInspectOrWriteNotes()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "customerAndAnonymousCannotProbeExistingOrMissingTargets()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "staleMfaAndForeignSessionAreRejectedBeforeSourceRead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "revokedOperatorCannotReadStoredEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "foreignCustomerReceiptCannotBorrowAssessment()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "sourceHashAndRecomputedPolicyMustAgree()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "forgedDocumentWithNewHashStillMustMatchRealFinancialSource()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "recordAndReadEncryptedNotesWithoutChangingRiskOrMoney()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "sameRequestKeyIsIdempotentAndChangedContentConflicts()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "concurrentSameRequestCreatesOnlyOneObservation()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "observationRequiresOwnSourceViewAndOperatorRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "malformedNotesAndMissingFieldsCannotWrite()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "auditorGetsObservationMetadataWithoutPlaintext()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "ciphertextTamperingAndUnsupportedKeysAreRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "auditFailureRollsBackSourceInspection()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "missingAuditCannotCommitSourceInspection()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "auditFailureRollsBackObservationButKeepsItsView()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "missingAuditCannotCommitObservationOrNoteAccess()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "historiesCannotBeUpdatedDeletedOrTruncated()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "metadataUsesBoundedKeysetPaginationWithoutDuplicates()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "unsupportedMethodsAndExtraPathsRemainDenied()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "surroundingTransactionIsRejectedWithoutPartialAccess()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "noSignalInputIsInspectableButCannotBeMadeAnUnresolvedInvestigation()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "newerInputDoesNotRelabelHistoricalEvidenceOrOpinion()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "changedOperatorVersionCannotReuseEarlierSourceView()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "idempotentKeyCannotBorrowObservationThroughAnotherCustomerReceipt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "missingEvidenceKeyCannotWriteAnUnprotectedNote()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringInvestigationIntegrationTest",
+          "name": "databaseRejectsForgedActorAndBorrowedSourceView()"
+        }
+      ],
+      "tests": {
+        "tests": 29,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "monitoring": {
+      "container": "cex-deposit-monitoring-923f5d4fcec0",
+      "run_id": "923f5d4fcec0",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "oneRecognizedDepositHasDurableSourceAndCurrentMonitoringPosition",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/oneRecognizedDepositHasDurableSourceAndCurrentMonitoringPosition.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_1",
+          "method": "fiveDistinctSmallTransactionsCreateReviewSignalWithoutFinancialEffect",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/fiveDistinctSmallTransactionsCreateReviewSignalWithoutFinancialEffect.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_2",
+          "method": "oldMissingValuationIsNotRepairedWithCurrentPrice",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/oldMissingValuationIsNotRepairedWithCurrentPrice.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_3",
+          "method": "unchangedInputDoesNotCreateDuplicateAssessmentsOrAudit",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/unchangedInputDoesNotCreateDuplicateAssessmentsOrAudit.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_4",
+          "method": "assessmentAuditFailurePreservesInputAndRetriesAfterLeaseExpiry",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/assessmentAuditFailurePreservesInputAndRetriesAfterLeaseExpiry.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_5",
+          "method": "concurrentProcessorsKeepOneAssessmentAndOneCurrentHead",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/concurrentProcessorsKeepOneAssessmentAndOneCurrentHead.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_6",
+          "method": "incomingDepositDuringAssessmentIsNotLostFromQueue",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/incomingDepositDuringAssessmentIsNotLostFromQueue.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_7",
+          "method": "assessmentAndFinancialPositionsCannotBeRewrittenOrTruncated",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/assessmentAndFinancialPositionsCannotBeRewrittenOrTruncated.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_8",
+          "method": "sqlCannotSubstituteDifferentFinancialSourceOrDropPartOfWindow",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/sqlCannotSubstituteDifferentFinancialSourceOrDropPartOfWindow.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_9",
+          "method": "noCustodyInputDoesNotInventMonitoringOrFinancialPermission",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/noCustodyInputDoesNotInventMonitoringOrFinancialPermission.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_10",
+          "method": "queueNeedsBusinessTransactionAndRejectsForeignOperation",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/queueNeedsBusinessTransactionAndRejectsForeignOperation.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_11",
+          "method": "queueFailureRollsBackRecognitionButPreservesObservedReceipt",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/queueFailureRollsBackRecognitionButPreservesObservedReceipt.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_12",
+          "method": "overLimitSnapshotRemainsIncompleteInsteadOfBecomingPartialNoSignal",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/overLimitSnapshotRemainsIncompleteInsteadOfBecomingPartialNoSignal.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_13",
+          "method": "unqueuedSourceStaysExplicitlyUnassessedUntilRequested",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/unqueuedSourceStaysExplicitlyUnassessedUntilRequested.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_14",
+          "method": "delayedProcessingPreservesEarlierSignalAfterWindowHasMoved",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/delayedProcessingPreservesEarlierSignalAfterWindowHasMoved.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_15",
+          "method": "sqlCannotSkipUnassessedInput",
+          "exit": 0,
+          "log": "deposit-monitoring/923f5d4fcec0/sqlCannotSkipUnassessedInput.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "oneRecognizedDepositHasDurableSourceAndCurrentMonitoringPosition()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "fiveDistinctSmallTransactionsCreateReviewSignalWithoutFinancialEffect()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "oldMissingValuationIsNotRepairedWithCurrentPrice()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "unchangedInputDoesNotCreateDuplicateAssessmentsOrAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "assessmentAuditFailurePreservesInputAndRetriesAfterLeaseExpiry()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "concurrentProcessorsKeepOneAssessmentAndOneCurrentHead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "incomingDepositDuringAssessmentIsNotLostFromQueue()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "assessmentAndFinancialPositionsCannotBeRewrittenOrTruncated()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "sqlCannotSubstituteDifferentFinancialSourceOrDropPartOfWindow()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "noCustodyInputDoesNotInventMonitoringOrFinancialPermission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "queueNeedsBusinessTransactionAndRejectsForeignOperation()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "queueFailureRollsBackRecognitionButPreservesObservedReceipt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "overLimitSnapshotRemainsIncompleteInsteadOfBecomingPartialNoSignal()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "unqueuedSourceStaysExplicitlyUnassessedUntilRequested()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "delayedProcessingPreservesEarlierSignalAfterWindowHasMoved()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.DepositMonitoringIntegrationTest",
+          "name": "sqlCannotSkipUnassessedInput()"
+        }
+      ],
+      "tests": {
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "review": {
+      "run_id": "9397a134db38",
+      "groups": [
+        {
+          "group": "inspection",
+          "container": "cex-transfer-inspection-36d510693aeb",
+          "selection": [
+            "*CodeVaspTransferInspectionIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 18,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "container_removed": true
+        },
+        {
+          "group": "transfer",
+          "container": "cex-transfer-inspection-644bde98c5be",
+          "selection": [
+            "*CodeVaspTransferReviewIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 11,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "container_removed": true
+        },
+        {
+          "group": "origin",
+          "container": "cex-transfer-inspection-83d7379867a2",
+          "selection": [
+            "*BitcoinDepositOriginSearchReviewIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 13,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "container_removed": true
+        },
+        {
+          "group": "authorization",
+          "container": "cex-transfer-inspection-6cd2b400b4c9",
+          "selection": [
+            "*BitcoinDepositReviewSourceIntegrationTest"
+          ],
+          "exit": 0,
+          "tests": {
+            "tests": 16,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "container_removed": true
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "customerAndAnonymousCannotReadExistingOrMissingEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "verifiedMismatchCanBeInspectedWithoutCallingItTransportFailure()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "wrongResponseMacIsRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "unsupportedKeyEpochDoesNotFallBackToAnotherKey()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "otherMethodsAndUnregisteredSubpathsRemainDenied()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "changedConnectionAuthorityCannotReadOldPersonalEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "revokedOperatorCannotReadPastEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "damagedRequestCiphertextIsRejectedWithoutChangingOriginal()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "silentlyOmittedAuditCannotCommitInspectionReceipt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "anotherReceiptCannotBorrowReceivedAttempt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "mismatchedStoredClassificationIsRecomputedAndRejected()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "failedMandatoryAuditRollsBackAccessReceipt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "accessReceiptsCannotBeUpdatedDeletedTruncatedOrForged()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "restrictedCustomerCanStillBeInvestigatedAndInternalReaderNeedsTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "staleOperatorMfaIsRejectedBeforeDecryption()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "operatorAndApproverCanInspectVerifiedDetailsThroughHttpWithNoStore()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "eachInspectionHasDistinctImmutableAccessReceiptAndMinimalAudit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferInspectionIntegrationTest",
+          "name": "auditorKeepsMetadataAccessButCannotDecrypt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "unknownOutcomeCannotBorrowAssessmentOrTriggerAnotherRequest()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "customerCannotUsePrivateMetadataView()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "manualReviewJobCanExistWithoutDisclosableIntent()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "changedConnectionAuthorityDoesNotExposeOldPrivateRecords()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "mismatchedDetailsRemainReviewDespiteSuccessfulReceipt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "receivedConsistentSummaryContainsOnlyReferencesAndCodes()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "foundSearchAloneDoesNotInventTransferOrAssessment()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "reservedIntentShowsPurposeAndExplicitlyUnstartedTransfer()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "auditFailureCannotReturnPrivateMetadata()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "newerChainObservationDoesNotRelabelHistoricalRequestBasis()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.CodeVaspTransferReviewIntegrationTest",
+          "name": "inFlightReadShowsCurrentStartWithoutWaitingForExternalCall()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "currentOperatorApproverAndAuditorReadScopedSearchWithNoStore()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "unresolvedTechnicalSearchesRemainManualReviewWithoutOriginOrApproval()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "internalProjectionRequiresCallerTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "expiredAutomaticWindowIsVisibleWithoutDeletingEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "differentSourceHistoryIsCountedWithoutBecomingCurrentSearch()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "responseAndAuditOmitProviderAddressesKeysAndSourcePayload()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "latestFailedPollCannotBorrowOlderFound()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "disabledProviderDoesNotFallbackToHistoricalSuccessfulSearch()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "sourceFailureIsAuditedAsUnavailableAndMandatoryAuditStillBlocksRead()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "latestRunningSearchCannotBorrowOlderFound()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "unauthorizedOrStaleMfaCannotReadOriginProjection()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "foundOriginRemainsInformationExchangeRequiredAndNotFinancialPermission()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositOriginSearchReviewIntegrationTest",
+          "name": "normalPendingWaitsForReservationAndCoinbaseRequiresSeparateReview()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "operatorAndApproverRequestActualInputWithoutRewritingAssessment()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "invalidMissingAndUnsupportedInputsAreRejectedAndAmbientTransactionIsForbidden()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "differentConfiguredNetworkCannotReadReceiptThroughOperatorRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "operatorApproverAndAuditorCanReadOnlyCurrentFinancialReferences()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "customerAndAuditorCannotCreateMonitoringWork()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "newlyObservedHeadCannotBorrowOldChainDecisionOrMissingWalletProof()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "auditFailurePreventsSuccessfulReadWithoutChangingFinance()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "customerEligibilityReflectsCurrentIdentityRestrictionAndExpiry()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "expiredOperatorGrantCannotReusePreviouslyValidRole()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "staleObservationIsVisibleWithFreshnessFalse()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "staleMfaOrRevokedSessionCannotReadStoredEvidence()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "customerAnonymousAndForeignSessionCannotUseReviewEndpoint()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "responseOmitsIdentityDocumentsWalletSettingsAndSecrets()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "currentChainAndPendingLedgerAreReportedWithoutClaimingRelease()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "newestRunningReconciliationDoesNotFallBackToOlderMatchedResult()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinDepositReviewSourceIntegrationTest",
+          "name": "absentObservationAndWalletDebitProofStayUnknown()"
+        }
+      ],
+      "tests": {
+        "tests": 58,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0
+    },
+    "finance": {
+      "container": "cex-inbox-b1859cab2052",
+      "exit": 0,
+      "tests": {
+        "tests": 182,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    }
+  }
+}
