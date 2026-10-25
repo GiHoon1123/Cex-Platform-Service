@@ -225,3 +225,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [104. BTC 송수신인 정보의 암호화 요청과 복호화 결과를 결합하기](decisions/104-codevasp-private-transfer-data.md)
 
 - [105. 미검토 상대에게 송수신인 정보를 제공하지 않도록 전송 전에 차단하기](decisions/105-codevasp-counterparty-policy.md)
+
+- [106. 현재 고객과 입금·송신 출처를 암호화된 정보 제공 의도로 결합하기](decisions/106-sealed-deposit-transfer-intent.md)
