@@ -49,10 +49,10 @@
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L56), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L47), 현재 소스의 부분 발췌.
 
 ```java
-                String body=text(signed,"body",65536);
+                String body=text(signed.raw(),"body",65536);
                 // 모듈이 다른 거래/수신 주소를 서명했으면 전송하지 않는다. JSON 의미를 대조한 뒤 서명된 원래 바이트를 그대로 보낸다.
                 if(!json.readTree(body).equals(expectedBody))throw unavailable();
                 request.header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body));
@@ -130,3 +130,7 @@ stream의 filter/toList는 양성 분석만 모아 일치 근거를 확인한다
 ## 후속 실행 연결 시점
 
 [100](100-durable-deposit-search-execution.md)에서 영속한 검색 ID의 접수/조회와 불변 실행 결과를 연결했다. 게이트웨이에 보내기 전 실패를 증명하는 타입만 같은 ID 재접수에 사용하며, 전송 이후 불명·중단은 조회로 이어진다. 위의 실행 미연결 설명과 검증 개수는 원래 시점이다. 자동 처리/정보 교환·금융 허가는 여전히 미완료다.
+
+## 정보 교환 추가 시점
+
+[104](104-codevasp-private-transfer-data.md)에서 고정 정보 교환/복호화를 추가하고 공통 서명/헤더 준비를 추출했다. 위 본문 발췌는 현재 Signed 값의 raw() 접근을 반영한다.098 당시 세 검색 경로/검증은 원래 커밋이며 금융 승인과 구분한다.

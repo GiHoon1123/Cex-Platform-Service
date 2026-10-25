@@ -221,3 +221,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [102. 보류 원장 입금을 자동 출처 검색 예약·접수에 연결하기](decisions/102-automatic-pending-deposit-search-reservation.md)
 
 - [103. 운영 입금 심사에 현재 출처 검색과 미해결 근거를 최소 공개하기](decisions/103-operator-deposit-origin-search-review.md)
+
+- [104. BTC 송수신인 정보의 암호화 요청과 복호화 결과를 결합하기](decisions/104-codevasp-private-transfer-data.md)

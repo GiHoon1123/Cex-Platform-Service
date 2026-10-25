@@ -57,37 +57,33 @@ codevasp.public-key=
 
 ## 구현과 이해에 필요한 코드
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L39), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L63), 현재 소스의 부분 발췌.
 
 ```java
-            var command=json.createObjectNode().put("allianceName","CODE").put("apiType",type);
-            if(expectedBody!=null)command.set("request",expectedBody);
-            var signed=call(HttpRequest.newBuilder(settings.cipher.resolve("/api/v1/code/api-payloads"))
-                .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(command))),65536);
-            String signature=text(signed,"signature",88),key=text(signed,"publicKey",44),date=text(signed,"dateTime",64);
-            var nonce=signed.path("nonce");
-            if(!CodeVaspSettings.key(signature,64)||!key.equals(settings.publicKey)||!nonce.isIntegralNumber()||!nonce.canConvertToLong()||nonce.longValue()<0)throw unavailable();
-            var time=OffsetDateTime.parse(date,DateTimeFormatter.ISO_OFFSET_DATE_TIME);Instant now=Instant.now();
-            if(!time.getOffset().equals(ZoneOffset.UTC)||time.toInstant().isBefore(now.minusSeconds(60))||time.toInstant().isAfter(now.plusSeconds(10)))throw unavailable();
+    private Signed sign(JsonNode command){
+        var signed=call(HttpRequest.newBuilder(settings.cipher.resolve("/api/v1/code/api-payloads"))
+            .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(command))),65536);
+        String signature=text(signed,"signature",88),key=text(signed,"publicKey",44),date=text(signed,"dateTime",64);
+        var nonce=signed.path("nonce");
+        if(!CodeVaspSettings.key(signature,64)||!key.equals(settings.publicKey)||!nonce.isIntegralNumber()||!nonce.canConvertToLong()||nonce.longValue()<0)throw unavailable();
+        var time=OffsetDateTime.parse(date,DateTimeFormatter.ISO_OFFSET_DATE_TIME);Instant now=Instant.now();
+        if(!time.getOffset().equals(ZoneOffset.UTC)||time.toInstant().isBefore(now.minusSeconds(60))||time.toInstant().isAfter(now.plusSeconds(10)))throw unavailable();
+        return new Signed(signed,signature,date,nonce.longValue());
 ```
 
-098에서 목록/거래 검색이 공유하는 전송 경계로 옮긴 현재 코드다. 실제 세 가지 호출만 내부 메서드로 제공하며 외부 요청에서 임의 API 종류/URL을 받지 않는다. 서명 개인키는 공식 모듈에만 둔다.
+098에서 목록/거래 검색이 공유하는 전송 경계로 옮긴 현재 코드다. 당시 세 가지 고정 호출을 제공했으며104에서 정보 교환을 추가했다. 현재도 외부 요청에서 임의 API 종류/URL을 받지 않는다. 서명 개인키는 공식 모듈에만 둔다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L48), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L73), 현재 소스의 부분 발췌.
 
 ```java
-            var request=HttpRequest.newBuilder(settings.api.resolve(path))
-                .header("X-Code-Req-Datetime",date).header("X-Code-Req-Nonce",Long.toString(nonce.longValue()))
-                .header("X-Code-Req-PubKey",key).header("X-Code-Req-Signature",signature)
-                .header("X-Request-Origin","code:"+settings.entity);
-            if(expectedBody==null){
-                if(signed.hasNonNull("body")&&(!signed.path("body").isString()||!signed.path("body").asString().isEmpty()))throw unavailable();
-                request.GET();
-            }else{
-                String body=text(signed,"body",65536);
+    private HttpRequest.Builder headers(String path,Signed signed){
+        return HttpRequest.newBuilder(settings.api.resolve(path)).header("X-Code-Req-Datetime",signed.date())
+            .header("X-Code-Req-Nonce",Long.toString(signed.nonce())).header("X-Code-Req-PubKey",settings.publicKey)
+            .header("X-Code-Req-Signature",signed.signature()).header("X-Request-Origin","code:"+settings.entity);
+    }
 ```
 
-공식 헤더 원문을 유지한다. GET은 본문 없음 계약을 지키며 서명 모듈이 GET에 임의 본문을 반환하면 거절한다. 098에서 전송 경계만 분리했고 게이트웨이 서명 검증은 공급사 역할이다.
+공식 헤더 원문을 유지한다. GET은 본문 없음 계약을 지키며 서명 모듈이 GET에 임의 본문을 반환하면 거절한다. 104에서 서명/헤더의 공통 비공개 메서드를 추출했고 게이트웨이 서명 검증은 공급사 역할이다.
 
 출처: [CodeVaspDirectoryClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDirectoryClient.java#L17), 현재 소스의 부분 발췌.
 
@@ -99,7 +95,7 @@ codevasp.public-key=
 
 JDK 포맷터로 공식 UTC 유효기한을 읽는다. 시차가 없는 문서 예제도 UTC0으로 처리하며 JVM 로컬 시각이나 임의 시간대의 폴백으로 해석하지 않는다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L71), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L128), 현재 소스의 부분 발췌.
 
 ```java
             var pending=http.sendAsync(request.timeout(Duration.ofSeconds(5)).header("Accept","application/json").build(),info->new LimitedResponseBody(limit));
@@ -181,3 +177,7 @@ macOS arm64/Temurin21/소유 HTTP 대역·PG16. 신규19개와 기존 보안41�
 ## 전송 모듈 분리 시점
 
 098에서 실제 거래 출처 검색을 추가하면서 공통 서명/HTTP 경계를 CodeVaspTransport로 분리했다. 위 네 발췌는 현재 소스에 맞췄으며095 당시 원본/검증은 연결된 구현 커밋과 증적이다. 디렉터리 파싱과 네트워크 수명은 별도 빈이며, 공통 실패 안내도 원문을 포함하지 않는 공급사 요청 실패로 통일했다.
+
+## 정보 교환 추가 시점
+
+[104](104-codevasp-private-transfer-data.md)에서 암호화 정보 교환 클라이언트를 추가했다. 위 서명/헤더 발췌는 추출한 현재 메서드다.095의 검증·실제 공급사 미확인 상태는 당시 기록이며 정보 교환 업무 승인/자동 반영은 여전히 미완료다.

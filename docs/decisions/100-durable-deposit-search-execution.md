@@ -66,7 +66,7 @@ current()는 최신 위치를 FOR SHARE로 고정해 새 SQL에서 해당 불변
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L61), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L52), 현재 소스의 부분 발췌.
 
 ```java
             // 이 표시 이후의 예외는 실제 미접수를 증명하지 않는다. 서명 모듈 단계의 실패와 구분한다.
@@ -77,7 +77,6 @@ current()는 최신 위치를 FOR SHARE로 고정해 새 SQL에서 해당 불변
             throw unavailable();
         }
     }
-    private JsonNode call(HttpRequest.Builder request,long limit){
 ```
 
 boolean 표시는 JDK HTTP 호출로 넘어가는 보수적 경계다. 이 뒤의 연결 오류를 보고 미접수를 추정하지 않는다. 모듈 단계 오류는 게이트웨이에 보내지 않은 현재 호출로 분류한다. 공개 실패 타입은 ResponseStatusException의 원문 없는 하위 타입이며, reason 문자열을 파싱해 제어하지 않는다.
@@ -162,3 +161,5 @@ boolean 표시는 JDK HTTP 호출로 넘어가는 보수적 경계다. 이 뒤�
 ## 후속 자동 처리 시점
 
 [101](101-automatic-deposit-search-processing.md)에서 이미 예약된 검색의 전용 워커/후보 선택·자동 반복 제한을 연결했다. 위 자동 처리 미구현 설명은100의 시점이다. 실제 보류 입금의 자동 예약·정보 교환/운영 해결·금융 허가는 여전히 미완료다.
+
+104에서 공통 서명/헤더를 추출해 위 전송 경계 발췌의 다음 메서드는 생략했다. 현재 동작과 과거100 검증의 시점은 구분한다.
