@@ -45,7 +45,7 @@ PostgreSQL16 [SELECT 잠금 절](https://www.postgresql.org/docs/16/sql-select.h
 
 입금과 작업 등록은 같은 TransactionTemplate 내부다. 전송 완료로 오해할 외부 네트워크 호출은 없고, 트랜잭션 실패 시 새 입금·작업·블록 식별 완료·감사가 같이 롤백된다. 작업의 원본은 불변 입금이며 임의 거래 ID를 새 작업으로 넣는 경로가 아니다.
 
-출처: [BitcoinDepositObservationJobs.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositObservationJobs.java#L54), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositObservationJobs.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositObservationJobs.java#L55), 현재 소스의 부분 발췌.
 
 ```java
             SELECT txid FROM bitcoin_deposit_observation_jobs WHERE network=? AND wallet=?
@@ -58,7 +58,7 @@ PostgreSQL16 [SELECT 잠금 절](https://www.postgresql.org/docs/16/sql-select.h
 
 `FOR UPDATE SKIP LOCKED`는 이미 다른 소비자가 잠근 작업을 기다리지 않는다. 이 잠금은 claim 트랜잭션이 끝나면 해제된다. 임대 시각/다음 기한은 애플리케이션 시계 대신 같은 DB의 clock_timestamp를 사용한다.
 
-출처: [BitcoinDepositObservationJobs.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositObservationJobs.java#L42), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositObservationJobs.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositObservationJobs.java#L43), 현재 소스의 부분 발췌.
 
 ```java
             observed=observations.refresh(work.txid());
@@ -74,7 +74,7 @@ PostgreSQL16 [SELECT 잠금 절](https://www.postgresql.org/docs/16/sql-select.h
 
 노드 호출 때 실제 DB 트랜잭션이 없는 것을 테스트에서 확인한다. 읽기 오류는 제한된 코드로만 분류한다. 예외 원문을 DB/감사에 복사하지 않으며 성공했던 관찰을 지우지도 않는다. 409는 다른 관찰 확정과의 충돌로 따로 구분한다.
 
-출처: [BitcoinDepositObservationJobs.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositObservationJobs.java#L71), 현재 소스의 부분 발췌.
+출처: [BitcoinDepositObservationJobs.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositObservationJobs.java#L72), 085에서 온체인 판단을 연결한 현재 소스의 부분 발췌.
 
 ```java
                 SELECT txid FROM bitcoin_deposit_observation_jobs WHERE network=? AND wallet=? AND txid=?
@@ -83,6 +83,7 @@ PostgreSQL16 [SELECT 잠금 절](https://www.postgresql.org/docs/16/sql-select.h
             if(owns.isEmpty()){
                 audit.record(null,"BTC_DEPOSIT_OBSERVATION_FINISHED","bitcoin-observation-lease:"+work.id(),"DENIED","LEASE_LOST");return;
             }
+            if(observed!=null)qualification.evaluate(observed.id());
             jdbc.update("""
                 UPDATE bitcoin_deposit_observation_jobs SET lease_id=NULL,lease_until=NULL,next_attempt_at=clock_timestamp()+interval '30 seconds',
                  latest_observation_id=COALESCE(?,latest_observation_id),last_outcome=?,failures=CASE WHEN ? THEN 0 ELSE failures+1 END
@@ -133,3 +134,5 @@ macOS arm64/Temurin21/Core31.1 regtest/묶음별 PG16에서 **신규11개+기존
 
 - [구현 519b492](https://github.com/GiHoon1123/Cex-Platform-Service/commit/519b492b06b15c663354fc0251b389abbf7474e3)
 - [격리 실행 증적](../reference/083-durable-bitcoin-observation-jobs-verification-2026-10-25.json)
+
+085 현행 기준: 성공 관찰의 유효 임대 완료 TX에서 [온체인 판단](085-bitcoin-deposit-chain-qualification.md)도 기록한다. 기존083의 시험/시점은 유지하며 고객 자격/금융 반입은 여전히 후속이다.

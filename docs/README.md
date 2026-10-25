@@ -185,3 +185,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [083. 영속 임대로 입금 거래 재확인과 늦은 결과 분리하기](decisions/083-durable-bitcoin-observation-jobs.md)
 
 - [084. 독립 워커로 고객 입금 거래 관찰 자동 이어가기](decisions/084-automatic-bitcoin-deposit-observation.md)
+
+- [085. 고객 입금의 출력과 확정·성숙도 조건 판단하기](decisions/085-bitcoin-deposit-chain-qualification.md)
