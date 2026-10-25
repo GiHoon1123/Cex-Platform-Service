@@ -1,4 +1,5 @@
 """실행 소유 로컬 체인과 제한 RPC 계정으로 주소 파생을 검증하고 노드를 종료한다."""
+import argparse
 import base64
 import json
 import os
@@ -12,6 +13,11 @@ import time
 import urllib.request
 import xml.etree.ElementTree as ET
 
+# 운영 조회 변경은 실제 노드가 필요한 해당 묶음만 반복 검증할 수 있다.
+# 기본 실행은 기존 전체 검증이며, 선택 모드도 노드/DB 격리와 금융 원본을 그대로 사용한다.
+parser=argparse.ArgumentParser(description="소유 Bitcoin Core와 DB의 전체 또는 운영 입금 조회 검증")
+parser.add_argument("--deposit-review-only",action="store_true",help="운영 입금 조회의 기존 실제 PG 회귀만 실행")
+options=parser.parse_args()
 ROOT=Path(__file__).resolve().parent.parent
 ARTIFACTS=ROOT.parent/".local"
 CORE_HOME=Path(os.environ["CEX_BITCOIN_CORE_HOME"]).resolve()
@@ -138,6 +144,8 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "customer-deposits":["*CustomerBitcoinDepositsIntegrationTest"],
             "deposit-reconciliation":["*BitcoinDepositReconciliationTest","*BitcoinDepositReconciliationIntegrationTest"],
         }
+        if options.deposit_review_only:groups={"deposit-review":groups["deposit-review"]}
+        result["selection_mode"]="deposit-review-only" if options.deposit_review_only else "full"
         result["groups"]=[]
         for group,patterns in groups.items():
             result["exit"]=None
