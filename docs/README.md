@@ -219,3 +219,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [101. 예약된 입금 검색을 독립 워커에서 제한적으로 자동 처리하기](decisions/101-automatic-deposit-search-processing.md)
 
 - [102. 보류 원장 입금을 자동 출처 검색 예약·접수에 연결하기](decisions/102-automatic-pending-deposit-search-reservation.md)
+
+- [103. 운영 입금 심사에 현재 출처 검색과 미해결 근거를 최소 공개하기](decisions/103-operator-deposit-origin-search-review.md)
