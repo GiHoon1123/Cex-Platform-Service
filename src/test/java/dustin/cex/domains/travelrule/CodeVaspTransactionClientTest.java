@@ -43,6 +43,7 @@ class CodeVaspTransactionClientTest {
             // 필드 사이 공백을 넣어 제품이 재직렬화하지 않고 서명 원문을 전달하는지 검사한다.
             String raw=post?JSON.writeValueAsString(body).replace(",",", "):"";
             if(mode.equals("DUPLICATE_SIGNED_FIELD")&&post)raw=raw.substring(0,raw.length()-1)+",\"txid\":\""+txid+"\"}";
+            if(mode.equals("TRAILING_SIGNED_OBJECT")&&post)raw+=" {}";
             signedBody.set(raw);String date=Instant.now().toString();long sequence=nonce.incrementAndGet();var signature=Signature.getInstance("Ed25519");signature.initSign(pair.getPrivate());signature.update((date+raw+sequence).getBytes(StandardCharsets.UTF_8));
             var answer=JSON.createObjectNode().put("signature",Base64.getEncoder().encodeToString(signature.sign())).put("nonce",sequence).put("dateTime",date).put("publicKey",key);
             if(post)answer.put("body",raw);if(mode.equals("NON_STRING_BODY"))answer.put("body",4);
@@ -72,7 +73,7 @@ class CodeVaspTransactionClientTest {
                     case "UNKNOWN_RESULT"->result.put("result","ok");
                 }
             }
-            String payload=JSON.writeValueAsString(result);if(mode.equals("DUPLICATE_RESPONSE_FIELD"))payload=payload.substring(0,payload.length()-1)+",\"requestId\":\""+id+"\"}";send(exchange,200,payload);
+            String payload=JSON.writeValueAsString(result);if(mode.equals("DUPLICATE_RESPONSE_FIELD"))payload=payload.substring(0,payload.length()-1)+",\"requestId\":\""+id+"\"}";if(mode.equals("TRAILING_RESPONSE_OBJECT"))payload+=" {}";send(exchange,200,payload);
         }catch(Throwable failure){callbackFailure.compareAndSet(null,failure);send(exchange,500,"격리 게이트웨이 시험 실패");}});
         cipher.start();gateway.start();transport=new CodeVaspTransport(new CodeVaspSettings(gatewayBase(),cipherBase(),"cex-query",key));client=new CodeVaspTransactionClient(transport);
     }
@@ -86,9 +87,9 @@ class CodeVaspTransactionClientTest {
         var statuses=Map.of("PROCESSING",CodeVaspTransactionClient.Status.PROCESSING,"NOT_FOUND_TXID",CodeVaspTransactionClient.Status.NOT_FOUND,"LACK_OF_INFORMATION",CodeVaspTransactionClient.Status.UNKNOWN_REQUEST,"ALLIANCE_DATA_NON_UNIQUE_RESULT",CodeVaspTransactionClient.Status.AMBIGUOUS);
         statuses.forEach((reason,status)->{outcome=reason;var result=client.result(id);assertEquals(status,result.status());assertNull(result.entityId());assertFalse(result.toString().contains("개인정보"));});
     }
-    @Test void mismatchedSignedBodyNeverReachesGateway(){for(String invalid:List.of("WRONG_TXID","WRONG_ADDRESS","WRONG_REQUEST","EXTRA_FIELD","MISSING_FIELD","NON_STRING_BODY","DUPLICATE_SIGNED_FIELD")){mode=invalid;unavailable(()->client.submit(request()));}assertEquals(0,gatewayCalls.get());}
+    @Test void mismatchedSignedBodyNeverReachesGateway(){for(String invalid:List.of("WRONG_TXID","WRONG_ADDRESS","WRONG_REQUEST","EXTRA_FIELD","MISSING_FIELD","NON_STRING_BODY","DUPLICATE_SIGNED_FIELD","TRAILING_SIGNED_OBJECT")){mode=invalid;unavailable(()->client.submit(request()));}assertEquals(0,gatewayCalls.get());}
     @Test void acknowledgementMustEchoSuccessAndSameRequestId(){for(String invalid:List.of("BAD_ACK","WRONG_RESPONSE_ID","DUPLICATE_RESPONSE_FIELD")){mode=invalid;unavailable(()->client.submit(request()));}assertEquals(3,gatewayCalls.get());}
-    @Test void inconsistentOrUnknownResultsNeverBecomeFound(){for(String invalid:List.of("WRONG_RESPONSE_ID","MISMATCHED_ORIGIN","DUPLICATE_ORIGIN","MULTIPLE_FOUND","UNKNOWN_ANALYSIS","MISSING_ANALYSIS","BAD_ANALYSIS_TYPE","UNKNOWN_RESULT","DUPLICATE_RESPONSE_FIELD")){mode=invalid;unavailable(()->client.result(id));}}
+    @Test void inconsistentOrUnknownResultsNeverBecomeFound(){for(String invalid:List.of("WRONG_RESPONSE_ID","MISMATCHED_ORIGIN","DUPLICATE_ORIGIN","MULTIPLE_FOUND","UNKNOWN_ANALYSIS","MISSING_ANALYSIS","BAD_ANALYSIS_TYPE","UNKNOWN_RESULT","DUPLICATE_RESPONSE_FIELD","TRAILING_RESPONSE_OBJECT")){mode=invalid;unavailable(()->client.result(id));}}
     @Test void notFoundWithPositiveAnalysisAndUnknownReasonsAreRejected(){outcome="NOT_FOUND_TXID";mode="NOT_FOUND_BUT_FOUND";unavailable(()->client.result(id));outcome="NEW_REASON";mode="NORMAL";unavailable(()->client.result(id));}
     @Test void invalidInputNeverRequestsSigningMaterial(){for(String bad:List.of("0x"+txid,txid.toUpperCase(),"x".repeat(64),"a".repeat(63)))assertThrows(IllegalArgumentException.class,()->new CodeVaspTransactionClient.Request(id,bad,address));assertThrows(IllegalArgumentException.class,()->new CodeVaspTransactionClient.Request(null,txid,address));assertThrows(IllegalArgumentException.class,()->new CodeVaspTransactionClient.Request(id,txid,"bad/address"));assertThrows(NullPointerException.class,()->client.submit(null));assertThrows(NullPointerException.class,()->client.result(null));assertEquals(0,cipherCalls.get());}
     @Test void databaseTransactionCannotSubmitOrPoll(){TransactionSynchronizationManager.setActualTransactionActive(true);try{assertThrows(IllegalStateException.class,()->client.submit(request()));assertThrows(IllegalStateException.class,()->client.result(id));}finally{TransactionSynchronizationManager.clear();}assertEquals(0,cipherCalls.get());}

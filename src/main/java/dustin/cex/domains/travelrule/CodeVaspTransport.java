@@ -21,7 +21,7 @@ final class CodeVaspTransport implements AutoCloseable {
     private final CodeVaspSettings settings;
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();
     private final ObjectMapper json=JsonMapper.builder(JsonFactory.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
-        .streamReadConstraints(StreamReadConstraints.builder().maxNestingDepth(32).maxStringLength(65536).build()).build()).build();
+        .streamReadConstraints(StreamReadConstraints.builder().maxNestingDepth(32).maxStringLength(65536).build()).build()).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
     CodeVaspTransport(CodeVaspSettings settings){this.settings=settings;}
 
     JsonNode directory(){return exchange("SEARCH_VASP_LIST","/v1/code/vasps",null);}
