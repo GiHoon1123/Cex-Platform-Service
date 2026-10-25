@@ -110,6 +110,20 @@ public class DepositMonitoringCaseReviews {
         if(!viewed)throw denied(HttpStatus.CONFLICT);return checker;
     }
     private User assigned(long actor,UUID sid,Review r,Map<Long,User> people){var person=people.get(actor);sessions.requireFresh(person,sid,UserRole.OPERATOR,UserRole.APPROVER);var p=r.payload();if((actor==p.requesterId()&&p.requesterPerson().equals(person.getOperatorPersonId()))||(actor==p.checkerId()&&p.checkerPerson().equals(person.getOperatorPersonId())))return person;throw denied(HttpStatus.NOT_FOUND);}
+    /** 후속 업무는 별도 내용 결합 인증을 사용한다. 이 메서드는 기존 승인의 현재 근거만 검증하며 종결을 실행하지 않는다. */
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Inspection dispositionEvidence(long actor,UUID sid,UUID id){
+        // 요청은 불변이므로 식별자만 먼저 읽는다. 현재 역할·인물은 모든 관련 사용자 잠금 뒤 처음 검증한다.
+        var r=read(id);var p=r.payload();var people=lock(actor,p.requesterId(),p.checkerId(),p.userId());var person=assigned(actor,sid,r,people);
+        var maker=people.get(p.requesterId());var checker=people.get(p.checkerId());
+        if(maker==null||checker==null||maker.getRole()!=UserRole.OPERATOR||checker.getRole()!=UserRole.APPROVER||!maker.isAuthenticationAllowed()||!checker.isAuthenticationAllowed()
+            ||maker.getVersion()!=p.requesterVersion()||checker.getVersion()!=p.checkerVersion()||!p.requesterPerson().equals(maker.getOperatorPersonId())||!p.checkerPerson().equals(checker.getOperatorPersonId()))throw denied(HttpStatus.FORBIDDEN);
+        // 의견의 부분 구간 승인과 사건 전체 실행은 다르다. 새 신호나 의견이 있으면 후속 실행을 준비하지 않는다.
+        if(!read(id).status().equals("APPROVED")||!evidence.position(p.caseId(),null).equals(p.scope()))throw denied(HttpStatus.CONFLICT);
+        evidence.requireViewed(person,sid,p.scope());var content=facts(r);
+        if(!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM deposit_monitoring_case_review_views WHERE review_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND payload_hash=? AND viewed_at>clock_timestamp()-interval '5 minutes')",Boolean.class,id,actor,person.getOperatorPersonId(),person.getVersion(),sid,r.payloadHash())))throw denied(HttpStatus.CONFLICT);
+        return new Inspection(r,content);
+    }
     private Facts facts(Review r){try{
         var p=r.payload();if(!crypto.keyId().equals(p.evidenceKeyId())||!cdd.keyId().equals(p.cddKeyId()))throw new IllegalStateException();
         byte[] cipher=jdbc.queryForObject("SELECT facts_cipher FROM deposit_monitoring_case_reviews WHERE id=?",byte[].class,p.id());var facts=json.readValue(crypto.decrypt(p.evidenceKeyId(),context(p.id(),r.payloadHash()),cipher),Facts.class).validated();

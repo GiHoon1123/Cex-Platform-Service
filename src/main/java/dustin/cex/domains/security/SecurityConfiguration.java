@@ -41,6 +41,9 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-assessments/*/inspect","/api/admin/deposits/BTC/*/monitoring-assessments/*/observations/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-assessments/*/observations").access(audited(audit,sessions,"OPERATOR"))
                 // 판단 방향과 사유는 지정 인물만 읽는다. 승인/반려는 승인자의 내용 결합 서명이 있어야 한다.
+                .requestMatchers(HttpMethod.POST,"/api/admin/monitoring/case-actions").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/monitoring/case-actions/report-referrals").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/monitoring/case-actions/*/approve/options","/api/admin/monitoring/case-actions/*/reject/options","/api/admin/monitoring/case-actions/*/approve","/api/admin/monitoring/case-actions/*/reject").access(audited(audit,sessions,"APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/monitoring/case-reviews","/api/admin/monitoring/case-reviews/context/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/monitoring/case-reviews").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/monitoring/case-reviews/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))

@@ -20,7 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 @DependsOn("depositMonitoringSchemaInitializer")
 public class DepositMonitoringCases {
-    public static final String ASSURANCE="OPEN_INVESTIGATION_NOT_A_REPORT_OR_FINANCIAL_PERMISSION";
+    public static final String ASSURANCE="INVESTIGATION_NOT_A_REPORT_OR_FINANCIAL_PERMISSION";
     public record Case(UUID id,long customerId,String policy,UUID firstAssessmentId,long signalCount,Instant openedAt,String status,String assurance){}
     public record Member(UUID assessmentId,UUID receiptId,String cursor,Instant referenceAt,String reason,String sourceHash,long observations){}
     public record Members(Case investigation,List<Member> items,String nextBefore){}
@@ -43,9 +43,11 @@ public class DepositMonitoringCases {
         var old=jdbc.queryForList("SELECT case_id FROM deposit_monitoring_case_assessments WHERE assessment_id=?",UUID.class,assessment);
         if(!old.isEmpty())return old.getFirst();
         var heads=jdbc.queryForList("SELECT case_id FROM deposit_monitoring_case_heads WHERE user_id=? FOR UPDATE",UUID.class,owner);UUID id;
-        if(heads.isEmpty()){
+        // 종결 당시 범위가 아직 유효한 경우에만 새 사건을 만든다. 원래 사건과 구성원은 수정하지 않는다.
+        if(heads.isEmpty()||Boolean.TRUE.equals(jdbc.queryForObject("SELECT monitoring_case_closed(?)",Boolean.class,heads.getFirst()))){
             id=UUID.randomUUID();jdbc.update("INSERT INTO deposit_monitoring_cases(id,user_id,policy_id,first_assessment_id) VALUES(?,?,?,?)",id,owner,source.get("policy_id"),assessment);
-            jdbc.update("INSERT INTO deposit_monitoring_case_heads(user_id,case_id) VALUES(?,?)",owner,id);
+            if(heads.isEmpty())jdbc.update("INSERT INTO deposit_monitoring_case_heads(user_id,case_id) VALUES(?,?)",owner,id);
+            else jdbc.update("UPDATE deposit_monitoring_case_heads SET case_id=? WHERE user_id=?",id,owner);
         }else id=heads.getFirst();
         jdbc.update("INSERT INTO deposit_monitoring_case_assessments(case_id,assessment_id,input_cursor,source_hash) VALUES(?,?,?,?)",id,assessment,source.get("input_cursor"),source.get("source_hash"));
         audit.record(null,"MONITORING_CASE_ASSESSMENT_LINKED","monitoring-case:"+id+":assessment:"+assessment,"SUCCESS",(String)source.get("source_hash"));return id;
@@ -53,7 +55,7 @@ public class DepositMonitoringCases {
     /** 사건 목록은 개인정보·메모·전체 금융 입력 없이 제공한다. 현재 역할과 추가 인증을 조회 전에 다시 확인한다. */
     public List<Case> list(long actor,UUID sid,int page){return work(actor,"MONITORING_CASES_LISTED",()->{
         authorize(actor,sid);if(page<0||page>10000)throw denied(HttpStatus.BAD_REQUEST);
-        var rows=jdbc.queryForList("SELECT c.*,(SELECT count(*) FROM deposit_monitoring_case_assessments m WHERE m.case_id=c.id) signals FROM deposit_monitoring_cases c ORDER BY c.opened_at DESC,c.id DESC LIMIT 25 OFFSET ?",page*25);
+        var rows=jdbc.queryForList("SELECT c.*,monitoring_case_closed(c.id) closed,(SELECT count(*) FROM deposit_monitoring_case_assessments m WHERE m.case_id=c.id) signals FROM deposit_monitoring_cases c ORDER BY c.opened_at DESC,c.id DESC LIMIT 25 OFFSET ?",page*25);
         var result=rows.stream().map(this::map).toList();audit.record(actor,"MONITORING_CASES_LISTED","monitoring-cases","SUCCESS","METADATA_ONLY");return result;
     });}
     public Members members(long actor,UUID sid,UUID id,Long before){return work(actor,"MONITORING_CASE_READ",()->{
@@ -68,8 +70,8 @@ public class DepositMonitoringCases {
         var items=rows.stream().limit(25).map(r->new Member((UUID)r.get("id"),(UUID)r.get("receipt_id"),r.get("input_cursor").toString(),((Timestamp)r.get("reference_at")).toInstant(),(String)r.get("reason"),(String)r.get("source_hash"),((Number)r.get("observations")).longValue())).toList();
         audit.record(actor,"MONITORING_CASE_READ","monitoring-case:"+id,"SUCCESS","METADATA_ONLY");return new Members(investigation,items,rows.size()>25?items.getLast().cursor():null);
     });}
-    private Case read(UUID id){var rows=jdbc.queryForList("SELECT c.*,(SELECT count(*) FROM deposit_monitoring_case_assessments m WHERE m.case_id=c.id) signals FROM deposit_monitoring_cases c WHERE c.id=?",id);if(rows.isEmpty())throw denied(HttpStatus.NOT_FOUND);return map(rows.getFirst());}
-    private Case map(Map<String,Object> r){return new Case((UUID)r.get("id"),((Number)r.get("user_id")).longValue(),(String)r.get("policy_id"),(UUID)r.get("first_assessment_id"),((Number)r.get("signals")).longValue(),((Timestamp)r.get("opened_at")).toInstant(),"OPEN",ASSURANCE);}
+    private Case read(UUID id){var rows=jdbc.queryForList("SELECT c.*,monitoring_case_closed(c.id) closed,(SELECT count(*) FROM deposit_monitoring_case_assessments m WHERE m.case_id=c.id) signals FROM deposit_monitoring_cases c WHERE c.id=?",id);if(rows.isEmpty())throw denied(HttpStatus.NOT_FOUND);return map(rows.getFirst());}
+    private Case map(Map<String,Object> r){return new Case((UUID)r.get("id"),((Number)r.get("user_id")).longValue(),(String)r.get("policy_id"),(UUID)r.get("first_assessment_id"),((Number)r.get("signals")).longValue(),((Timestamp)r.get("opened_at")).toInstant(),Boolean.TRUE.equals(r.get("closed"))?"CLOSED":"OPEN",ASSURANCE);}
     private void authorize(long actor,UUID sid){sessions.requireFresh(users.lockById(actor).orElse(null),sid,UserRole.OPERATOR,UserRole.APPROVER,UserRole.AUDITOR);}
     private <T>T work(long actor,String action,Supplier<T> callback){if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("조사 사건 업무는 독립 트랜잭션으로 시작하세요");try{return tx.execute(t->callback.get());}catch(ResponseStatusException denied){audit.denied(actor,action,"monitoring-case-restricted","POLICY_OR_SOURCE_"+denied.getStatusCode().value());throw denied;}}
     private static ResponseStatusException denied(HttpStatus status){return new ResponseStatusException(status,"현재 운영 인증과 실제 거래 탐지 근거를 확인하세요");}
