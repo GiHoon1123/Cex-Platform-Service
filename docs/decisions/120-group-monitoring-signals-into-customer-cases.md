@@ -4,6 +4,8 @@
 
 후속 [121 범위가 고정된 독립 판단](121-bound-independent-transaction-case-reviews.md)은 실제 원본/의견 열람·암호화 사유·지정 인물의 내용 결합 서명을 연결한다. 범위 밖 새 신호는 승인에 포함하지 않으며 판단 승인 자체는 사건 종결·외부 보고·금융 허가가 아니다.
 
+후속 [122 종결·내부 회부](122-explicit-case-closure-and-reporting-referral.md)에서 현재 사건 상태와 종결 후 새 사건을 구현했다. 아래120 시험 결과는 당시 OPEN 사건의 범위다. 현재 위치는 불변 원본과 달리 같은 고객의 유효 종결→같은 TX의 새 사건으로만 이동할 수 있다.
+
 ## 문제와 기존 동작
 
 116~119는 입력마다 탐지와 원본·의견을 남겼다.5번째 입금에서 신호가 발생한 뒤6번째 입금에서도 같은 패턴이 이어지면 평가2개가 만들어진다. 이를 각각 별도 조사 사건으로 취급하면 같은 고객의 연관 거래가 흩어지고 담당자의 중복 작업이 늘어난다.
@@ -79,14 +81,16 @@ GET `/api/admin/monitoring-cases/{case}?before={cursor}`는 신호25개와 다�
 ```java
         if(!old.isEmpty())return old.getFirst();
         var heads=jdbc.queryForList("SELECT case_id FROM deposit_monitoring_case_heads WHERE user_id=? FOR UPDATE",UUID.class,owner);UUID id;
-        if(heads.isEmpty()){
+        // 종결 당시 범위가 아직 유효한 경우에만 새 사건을 만든다. 원래 사건과 구성원은 수정하지 않는다.
+        if(heads.isEmpty()||Boolean.TRUE.equals(jdbc.queryForObject("SELECT monitoring_case_closed(?)",Boolean.class,heads.getFirst()))){
             id=UUID.randomUUID();jdbc.update("INSERT INTO deposit_monitoring_cases(id,user_id,policy_id,first_assessment_id) VALUES(?,?,?,?)",id,owner,source.get("policy_id"),assessment);
-            jdbc.update("INSERT INTO deposit_monitoring_case_heads(user_id,case_id) VALUES(?,?)",owner,id);
+            if(heads.isEmpty())jdbc.update("INSERT INTO deposit_monitoring_case_heads(user_id,case_id) VALUES(?,?)",owner,id);
+            else jdbc.update("UPDATE deposit_monitoring_case_heads SET case_id=? WHERE user_id=?",id,owner);
         }else id=heads.getFirst();
         jdbc.update("INSERT INTO deposit_monitoring_case_assessments(case_id,assessment_id,input_cursor,source_hash) VALUES(?,?,?,?)",id,assessment,source.get("input_cursor"),source.get("source_hash"));
 ```
 
-이미 연결된 평가면 원래 사건 ID를 반환한다. 새 첫 신호만 UUID 사건/현재 위치를 만들고 이후 신호는 그 사건에 붙인다. 신호를 사건에 묶는 연결 관계이며 금융 잔액이나 실행 상태의 권위를 옮기는 구조가 아니다.
+이미 연결된 평가면 원래 사건 ID를 반환한다. 120 당시에는 첫 신호에 사건/현재 위치를 만들고 이후 신호를 같은 사건에 붙였다. 현재 발췌는122의 종결 후 새 사건 생성과 제한된 위치 이동을 포함한다. 종결되지 않은 사건에는 계속 신호를 모은다. 신호를 사건에 묶는 연결 관계이며 금융 잔액이나 실행 상태의 권위를 옮기는 구조가 아니다.
 
 출처: [case-schema.sql](../../src/main/resources/monitoring/case-schema.sql#L79), 현재 소스의 부분 발췌.
 
@@ -97,7 +101,7 @@ CREATE CONSTRAINT TRIGGER monitoring_assessment_case_complete_check AFTER INSERT
 
 지연 제약은 새 REVIEW_REQUIRED 평가가 커밋될 때 사건 연결 존재를 요구한다. 서비스에서 연결 호출이 조용히 빠져도 부분 완료를 확정하지 못한다. 다른 지연 제약은 새 사건의 첫 연결/현재 위치와 각 연결의 특정 원본·필수 감사를 요구한다.
 
-출처: [DepositMonitoringCases.java](../../src/main/java/dustin/cex/domains/monitoring/DepositMonitoringCases.java#L62), 현재 소스의 부분 발췌.
+출처: [DepositMonitoringCases.java](../../src/main/java/dustin/cex/domains/monitoring/DepositMonitoringCases.java#L64), 현재 소스의 부분 발췌.
 
 ```java
             SELECT a.id,i.receipt_id,m.input_cursor,a.reference_at,a.reason,m.source_hash,
