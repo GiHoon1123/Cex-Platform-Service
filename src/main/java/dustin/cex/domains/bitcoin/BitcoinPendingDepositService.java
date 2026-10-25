@@ -26,7 +26,7 @@ public class BitcoinPendingDepositService {
     public BitcoinPendingDepositService(JdbcTemplate jdbc,LedgerService ledger,UserRepository users,AuditService audit,
             BitcoinSettings settings,PlatformTransactionManager manager){
         this.jdbc=jdbc;this.ledger=ledger;this.users=users;this.audit=audit;this.settings=settings;
-        tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
+        tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Recognized recognize(UUID deposit){
         requireIndependent();if(deposit==null)throw new IllegalArgumentException("입금 원본이 필요합니다");
@@ -35,8 +35,9 @@ public class BitcoinPendingDepositService {
     public Optional<Recognized> recognizeNext(){
         requireIndependent();
         return tx.execute(t->{
+            // 다른 업무가 잠근 고객은 다음 시도로 미룬다. 독립 고객의 보류 반입이 한 계정의 긴 잠금 때문에 멈추지 않는다.
             var pending=jdbc.queryForList("""
-                SELECT r.id FROM bitcoin_deposit_receipts r JOIN bitcoin_deposit_addresses a ON a.id=r.address_id
+                SELECT r.id FROM bitcoin_deposit_receipts r JOIN users u ON u.id=r.user_id JOIN bitcoin_deposit_addresses a ON a.id=r.address_id
                  JOIN bitcoin_deposit_chain_heads qh ON qh.receipt_id=r.id JOIN bitcoin_deposit_chain_decisions d ON d.id=qh.decision_id
                  JOIN bitcoin_observation_heads oh ON oh.observation_id=d.observation_id
                  JOIN bitcoin_transaction_observations o ON o.id=oh.observation_id
@@ -44,7 +45,7 @@ public class BitcoinPendingDepositService {
                  WHERE r.network=? AND a.wallet=? AND d.reason='CHAIN_READY' AND d.policy_id='BTC_CHAIN_V1'
                   AND o.read_started_at<=clock_timestamp() AND o.read_started_at>=clock_timestamp()-interval '2 minutes'
                   AND NOT EXISTS(SELECT 1 FROM bitcoin_pending_deposits f WHERE f.receipt_id=r.id)
-                 ORDER BY r.recorded_at,r.id LIMIT 1
+                 ORDER BY r.recorded_at,r.id LIMIT 1 FOR UPDATE OF u SKIP LOCKED
                 """,settings.network.id,settings.wallet);
             return pending.isEmpty()?Optional.empty():Optional.of(within((UUID)pending.getFirst().get("id")));
         });

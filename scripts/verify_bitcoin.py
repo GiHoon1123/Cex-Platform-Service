@@ -87,6 +87,8 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             broadcast(txid)
             return txid
         confirmed=send("0.12345678");rpc("generatetoaddress",[1,mining])
+        second_watch=rpc("getnewaddress",["second_customer","bech32"],"cex_watch")
+        second=rpc("sendtoaddress",{"address":second_watch,"amount":"0.2","fee_rate":20},"funding_keys");broadcast(second)
         conflicted=send("0.23456789")
         replacement=rpc("bumpfee",[conflicted,{"fee_rate":40}],"funding_keys")["txid"]
         broadcast(replacement)
@@ -129,6 +131,8 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "qualification":["*BitcoinDepositQualificationTest","*BitcoinDepositQualificationIntegrationTest"],
             "pending-ledger":["*BitcoinPendingDepositIntegrationTest"],
             "ledger":["*OrderLedgerTest"],
+            "pending-worker":["*BitcoinPendingDepositWorkerTest","*BitcoinPendingDepositWorkerIntegrationTest"],
+            "pending-selection":["*BitcoinPendingSelectionIntegrationTest"],
         }
         result["groups"]=[]
         for group,patterns in groups.items():
@@ -171,6 +175,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                     CEX_BITCOIN_TEST_UNCONFIRMED_TX=unconfirmed,CEX_BITCOIN_TEST_COINBASE_TX=coinbase,
                     CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_INTERNAL_TX=internal,CEX_BITCOIN_TEST_ADDRESS=watch,
                     CEX_BITCOIN_TEST_SCRIPT=script,CEX_BITCOIN_TEST_EMPTY_SCRIPT=empty_script,
+                    CEX_BITCOIN_TEST_SECOND_ADDRESS=second_watch,CEX_BITCOIN_TEST_SECOND_SCRIPT=rpc("getaddressinfo",[second_watch],"cex_watch")["scriptPubKey"],CEX_BITCOIN_TEST_SECOND_TX=second,
                     CEX_BITCOIN_TEST_CONFIRMED_HEIGHT=str(confirmed_height))
                 env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
                 command=["./gradlew","test"]
