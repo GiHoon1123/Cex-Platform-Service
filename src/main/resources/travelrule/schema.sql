@@ -215,3 +215,78 @@ DROP TRIGGER IF EXISTS codevasp_transfer_intent_source_check ON codevasp_transfe
 CREATE TRIGGER codevasp_transfer_intent_source_check BEFORE INSERT ON codevasp_transfer_intents FOR EACH ROW EXECUTE FUNCTION codevasp_transfer_intent_source();
 DROP TRIGGER IF EXISTS codevasp_transfer_intent_immutable ON codevasp_transfer_intents;
 CREATE TRIGGER codevasp_transfer_intent_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_transfer_intents FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 제공 의도의 의미는 보존하고 실제 전송마다 현재 근거를 암호화해 새 시도로 남긴다.
+CREATE TABLE IF NOT EXISTS codevasp_transfer_attempts (
+ id uuid PRIMARY KEY,intent_id uuid NOT NULL REFERENCES codevasp_transfer_intents(id),sequence bigserial UNIQUE,
+ search_id uuid NOT NULL REFERENCES codevasp_deposit_searches(id),user_id bigint NOT NULL REFERENCES users(id),receipt_id uuid NOT NULL REFERENCES bitcoin_deposit_receipts(id),
+ search_attempt_id bigint NOT NULL REFERENCES codevasp_search_attempts(id),directory_attempt_id bigint NOT NULL REFERENCES codevasp_directory_attempts(id),
+ decision_id bigint NOT NULL REFERENCES bitcoin_deposit_chain_decisions(id),observation_id bigint NOT NULL REFERENCES bitcoin_transaction_observations(id),
+ declaration_id uuid NOT NULL REFERENCES cdd_declarations(id),assessment_id uuid NOT NULL REFERENCES cdd_assessments(id),
+ policy_hash varchar(64) NOT NULL CHECK(policy_hash ~ '^[a-f0-9]{64}$'),peer_id varchar(128) NOT NULL,
+ peer_public_key varchar(44) NOT NULL CHECK(length(peer_public_key)=44 AND octet_length(decode(peer_public_key,'base64'))=32),
+ key_id varchar(64) NOT NULL CHECK(key_id ~ '^[a-f0-9]{64}$'),ciphertext bytea NOT NULL CHECK(octet_length(ciphertext) BETWEEN 28 AND 65536),
+ content_mac varchar(64) NOT NULL CHECK(content_mac ~ '^[a-f0-9]{64}$'),
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),UNIQUE(id,intent_id)
+);
+CREATE INDEX IF NOT EXISTS codevasp_transfer_attempt_receipt ON codevasp_transfer_attempts(receipt_id,sequence DESC);
+CREATE TABLE IF NOT EXISTS codevasp_transfer_heads (
+ intent_id uuid PRIMARY KEY REFERENCES codevasp_transfer_intents(id),attempt_id uuid NOT NULL UNIQUE,
+ FOREIGN KEY(attempt_id,intent_id) REFERENCES codevasp_transfer_attempts(id,intent_id)
+);
+CREATE TABLE IF NOT EXISTS codevasp_transfer_results (
+ attempt_id uuid PRIMARY KEY REFERENCES codevasp_transfer_attempts(id),status varchar(24) NOT NULL,
+ reason varchar(32),key_id varchar(64),ciphertext bytea,content_mac varchar(64),recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ CHECK((status='DATA_RECEIVED' AND reason IS NULL AND ciphertext IS NOT NULL)
+  OR(status='REMOTE_ERROR' AND reason IS NOT NULL AND reason IN ('NOT_FOUND_TXID','LACK_OF_INFORMATION','UNKNOWN','UNKNOWN_TRANSFER_ID') AND ciphertext IS NOT NULL)
+  OR(status IN ('NOT_SENT','OUTCOME_UNKNOWN') AND reason IS NOT NULL AND reason IN ('PROVIDER_UNAVAILABLE','INVALID_SOURCE') AND ciphertext IS NULL)),
+ CHECK((ciphertext IS NULL AND key_id IS NULL AND content_mac IS NULL)
+  OR(ciphertext IS NOT NULL AND octet_length(ciphertext) BETWEEN 28 AND 65536 AND key_id IS NOT NULL AND key_id ~ '^[a-f0-9]{64}$' AND content_mac IS NOT NULL AND content_mac ~ '^[a-f0-9]{64}$'))
+);
+CREATE OR REPLACE FUNCTION codevasp_transfer_attempt_admission() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE prior record;
+BEGIN
+ PERFORM pg_advisory_xact_lock(hashtextextended('code-private-transfer-receipt-v1:'||NEW.receipt_id::text,0));
+ SELECT a.id,r.status,r.recorded_at INTO prior FROM codevasp_transfer_attempts a LEFT JOIN codevasp_transfer_results r ON r.attempt_id=a.id
+  WHERE a.receipt_id=NEW.receipt_id ORDER BY a.sequence DESC LIMIT 1;
+ IF FOUND AND (prior.status IS DISTINCT FROM 'NOT_SENT' OR prior.recorded_at>clock_timestamp()-interval '30 seconds') THEN
+  RAISE EXCEPTION '미전송이 확인되지 않은 정보 교환을 반복할 수 없습니다';
+ END IF;
+ IF NEW.created_txid<>txid_current() OR NOT EXISTS(SELECT 1 FROM codevasp_transfer_intents i
+  WHERE i.id=NEW.intent_id AND i.search_id=NEW.search_id AND i.user_id=NEW.user_id AND i.receipt_id=NEW.receipt_id AND i.peer_id=NEW.peer_id)
+ THEN RAISE EXCEPTION '정보 교환 시작이 원래 의도와 다릅니다';END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_transfer_attempt_admission_check ON codevasp_transfer_attempts;
+CREATE TRIGGER codevasp_transfer_attempt_admission_check BEFORE INSERT ON codevasp_transfer_attempts FOR EACH ROW EXECUTE FUNCTION codevasp_transfer_attempt_admission();
+DROP TRIGGER IF EXISTS codevasp_transfer_attempt_source_check ON codevasp_transfer_attempts;
+CREATE TRIGGER codevasp_transfer_attempt_source_check BEFORE INSERT ON codevasp_transfer_attempts FOR EACH ROW EXECUTE FUNCTION codevasp_transfer_intent_source();
+CREATE OR REPLACE FUNCTION codevasp_transfer_head_forward() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE fresh record;previous bigint;
+BEGIN
+ SELECT sequence,created_txid INTO fresh FROM codevasp_transfer_attempts WHERE id=NEW.attempt_id AND intent_id=NEW.intent_id;
+ IF NOT FOUND OR fresh.created_txid<>txid_current() THEN RAISE EXCEPTION '같은 트랜잭션의 정보 교환 시작만 현재 위치가 될 수 있습니다';END IF;
+ IF TG_OP='UPDATE' THEN
+  SELECT sequence INTO previous FROM codevasp_transfer_attempts WHERE id=OLD.attempt_id;
+  IF NEW.intent_id<>OLD.intent_id OR fresh.sequence<=previous THEN RAISE EXCEPTION '정보 교환 위치를 되돌릴 수 없습니다';END IF;
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_transfer_head_forward_check ON codevasp_transfer_heads;
+CREATE TRIGGER codevasp_transfer_head_forward_check BEFORE INSERT OR UPDATE ON codevasp_transfer_heads FOR EACH ROW EXECUTE FUNCTION codevasp_transfer_head_forward();
+CREATE OR REPLACE FUNCTION codevasp_transfer_result_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE original record;
+BEGIN
+ SELECT * INTO original FROM codevasp_transfer_attempts WHERE id=NEW.attempt_id;
+ IF NOT FOUND OR NEW.recorded_at<original.created_at OR NEW.recorded_at>clock_timestamp() OR(NEW.key_id IS NOT NULL AND NEW.key_id<>original.key_id)
+ THEN RAISE EXCEPTION '정보 교환 결과의 시각/암호키가 시작 원본과 다릅니다';END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_transfer_result_binding_check ON codevasp_transfer_results;
+CREATE TRIGGER codevasp_transfer_result_binding_check BEFORE INSERT ON codevasp_transfer_results FOR EACH ROW EXECUTE FUNCTION codevasp_transfer_result_binding();
+DROP TRIGGER IF EXISTS codevasp_transfer_attempt_immutable ON codevasp_transfer_attempts;
+CREATE TRIGGER codevasp_transfer_attempt_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_transfer_attempts FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS codevasp_transfer_result_immutable ON codevasp_transfer_results;
+CREATE TRIGGER codevasp_transfer_result_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_transfer_results FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS codevasp_transfer_head_no_delete ON codevasp_transfer_heads;
+CREATE TRIGGER codevasp_transfer_head_no_delete BEFORE DELETE OR TRUNCATE ON codevasp_transfer_heads FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

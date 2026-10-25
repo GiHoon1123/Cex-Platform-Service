@@ -39,7 +39,7 @@ try:
     ARTIFACTS.mkdir(exist_ok=True)
     started=time.time()
     with (ARTIFACTS/"transfer-intents.log").open("w") as log:
-        completed=subprocess.run(["./gradlew","test","--tests","*CodeVaspTransferIntentIntegrationTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+        completed=subprocess.run(["./gradlew","test","--tests","*CodeVaspTransferIntentIntegrationTest","--tests","*CodeVaspTransferExecutionIntegrationTest","--rerun-tasks","bootJar","operatorAdminJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
     result["exit"]=completed.returncode
     if completed.returncode:
         raise RuntimeError("정보 제공 의도 회귀 실패: .local/transfer-intents.log 확인")
