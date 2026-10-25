@@ -44,7 +44,7 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 `recognizeNext()`는 같은 조건을 만족하는 미반입 원본 한 개를 고르며 내부 지갑 사용/근거 누락/이미 완료된 원본은 후보에서 제외한다. 선택 후의 원본은 같은 금융 TX에서 다시 검사한다. 서비스는 독립 트랜잭션을 요구하며 노드 RPC나 엔진 HTTP는 호출하지 않는다.
 
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L60), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L61), 현재 소스의 부분 발췌.
 
 ```java
         users.lockById(owner).orElseThrow(()->new IllegalStateException("입금 소유자가 없습니다"));
@@ -56,7 +56,7 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 
 현재 고객의 거래 허용과 자산 보류 기록은 별개다. 정지된 소유자도 실제 입금을 보류로 남길 수 있다. 같은 입금의 재시도는 이미 확정된 원본을 반환하며 새 항목을 만들지 않는다. 기존 완료 응답이 현재 거래 허용을 새로 승인한다는 의미는 아니다.
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L65), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L66), 현재 소스의 부분 발췌.
 
 ```java
             SELECT d.id FROM bitcoin_deposit_chain_heads qh JOIN bitcoin_deposit_chain_decisions d ON d.id=qh.decision_id
@@ -70,7 +70,7 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 
 과거 CHAIN_READY 문자열만 신뢰하지 않고 현재 판단/관찰 포인터·시각·지갑 사용 근거를 함께 검사한다. FOR SHARE는 플랫폼 DB의 짧은 확정 구간을 보호한다. 근거가 없으면 false 기본값이나 다른 DB로 우회하지 않는다.
 
-출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L76), 현재 소스의 부분 발췌.
+출처: [BitcoinPendingDepositService.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPendingDepositService.java#L77), 현재 소스의 부분 발췌.
 
 ```java
         ledger.record(key,"BTC_DEPOSIT_PENDING",List.of(p(owner,"PENDING",asset,amount),p(0,"CUSTODY",asset,amount.negate())));
@@ -154,3 +154,5 @@ python3 scripts/verify_engine_inbox.py
 
 - [구현 fcc2e60](https://github.com/GiHoon1123/Cex-Platform-Service/commit/fcc2e60e8208aa885656cebe750be4b8921a7237)
 - [격리 실행 증적](../reference/088-bitcoin-pending-asset-ledger-verification-2026-10-25.json)
+
+089 현행 연결: [독립 보류 반입 워커](089-automatic-bitcoin-pending-ledger.md)를 추가했다. recognizeNext는 잠긴 고객을 건너뛰고 다른 고객을 선택한다.088의 당시 수동 호출/시험 기록은 유지하며 사용 가능 잔액/엔진 금융 반입은 여전히 후속이다.

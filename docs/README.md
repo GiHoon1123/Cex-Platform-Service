@@ -193,3 +193,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [087. 확정 원장의 직접·연쇄 전체 비우기 차단하기](decisions/087-block-ledger-truncate.md)
 
 - [088. 검증된 고객 입금을 보류 자산 원장에 한 번만 반입하기](decisions/088-bitcoin-pending-asset-ledger.md)
+
+- [089. 독립 워커로 보류 원장을 자동 반입하고 잠긴 고객 건너뛰기](decisions/089-automatic-bitcoin-pending-ledger.md)
