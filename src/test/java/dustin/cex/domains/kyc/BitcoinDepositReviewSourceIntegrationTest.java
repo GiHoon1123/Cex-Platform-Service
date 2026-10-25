@@ -21,6 +21,7 @@ class BitcoinDepositReviewSourceIntegrationTest extends EddTestSupport {
         r.add("bitcoin.rpc-url",()->System.getenv("CEX_BITCOIN_TEST_URL"));r.add("bitcoin.rpc-user",()->System.getenv("CEX_BITCOIN_TEST_USER"));r.add("bitcoin.rpc-password",()->System.getenv("CEX_BITCOIN_TEST_PASSWORD"));r.add("bitcoin.wallet",()->"cex_watch");r.add("bitcoin.network",()->"REGTEST");
     }
     @Autowired BitcoinDepositReviewSource source;
+    @Autowired dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch;
     @Autowired BitcoinDepositQualificationService qualification;
     @Autowired BitcoinPendingDepositService pending;
     @Autowired BitcoinSettings settings;
@@ -98,7 +99,7 @@ class BitcoinDepositReviewSourceIntegrationTest extends EddTestSupport {
         mvc.perform(get("/api/admin/deposits/BTC/not-a-uuid").header("Authorization","Bearer "+maker.access())).andExpect(status().isBadRequest());mvc.perform(get("/api/admin/deposits/ETH/"+UUID.randomUUID()).header("Authorization","Bearer "+maker.access())).andExpect(status().isForbidden());mvc.perform(post("/api/admin/deposits/BTC/"+UUID.randomUUID()).header("Authorization","Bearer "+maker.access())).andExpect(status().isForbidden());
     }
     @Test void differentConfiguredNetworkCannotReadReceiptThroughOperatorRole(){
-        var seed=seed();var other=new BitcoinDepositReviewSource(users,operatorSessions,eligibility,new BitcoinSettings("","","","","MAINNET"),jdbc,audit,manager);
+        var seed=seed();var other=new BitcoinDepositReviewSource(users,operatorSessions,eligibility,new BitcoinSettings("","","","","MAINNET"),jdbc,audit,manager,originSearch);
         assertEquals(404,assertThrows(ResponseStatusException.class,()->other.read(maker.user().getId(),maker.sid(),seed.id())).getStatusCode().value());
     }
 

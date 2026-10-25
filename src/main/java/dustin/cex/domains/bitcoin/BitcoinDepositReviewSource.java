@@ -23,7 +23,7 @@ public class BitcoinDepositReviewSource {
     public record Pending(boolean recognized,String operationKey){}
     public record Reconciliation(UUID id,String status,Instant snapshotAt,Instant completedAt){}
     public record Source(UUID depositId,String asset,String network,String txid,int vout,String amount,Instant detectedAt,
-        Instant readAt,Customer customer,Chain chain,Pending pending,Reconciliation reconciliation){}
+        Instant readAt,Customer customer,Chain chain,Pending pending,Reconciliation reconciliation,dustin.cex.domains.travelrule.CodeVaspDepositSearchReview.Review originSearch){}
     private final UserRepository users;
     private final OperatorSessionPolicy sessions;
     private final CustomerFinancialEligibility eligibility;
@@ -31,9 +31,10 @@ public class BitcoinDepositReviewSource {
     private final JdbcTemplate jdbc;
     private final AuditService audit;
     private final TransactionTemplate tx;
+    private final dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch;
     public BitcoinDepositReviewSource(UserRepository users,OperatorSessionPolicy sessions,CustomerFinancialEligibility eligibility,
-        BitcoinSettings settings,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager){
-        this.users=users;this.sessions=sessions;this.eligibility=eligibility;this.settings=settings;this.jdbc=jdbc;this.audit=audit;
+        BitcoinSettings settings,JdbcTemplate jdbc,AuditService audit,PlatformTransactionManager manager,dustin.cex.domains.travelrule.CodeVaspDepositSearchReview originSearch){
+        this.users=users;this.sessions=sessions;this.eligibility=eligibility;this.settings=settings;this.jdbc=jdbc;this.audit=audit;this.originSearch=originSearch;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Source read(long actor,UUID sid,UUID deposit){
@@ -64,15 +65,16 @@ public class BitcoinDepositReviewSource {
                  LEFT JOIN LATERAL(SELECT id,status,snapshot_at,completed_at FROM bitcoin_deposit_reconciliation_runs WHERE receipt_id=r.id ORDER BY started_at DESC,id DESC LIMIT 1) q ON true
                  WHERE r.id=? AND r.network=?
                 """,deposit,settings.network.id);
+            // 외부 검색은 별도 SQL 시각의 기술 근거다. 같은 TX의 운영 인증/감사 경계 안에서 읽되 전체 금융 승인 스냅샷으로 사용하지 않는다.
             var result=new Source(deposit,(String)row.get("asset"),(String)row.get("network"),(String)row.get("txid"),((Number)row.get("vout")).intValue(),
                 ((BigDecimal)row.get("amount")).setScale(8,RoundingMode.UNNECESSARY).toPlainString(),at(row,"recorded_at"),at(row,"read_at"),
                 new Customer(customer.getId(),customer.getVersion(),permitted,(UUID)row.get("assessment_id"),(UUID)row.get("active_attempt")),
                 new Chain(number(row,"observation_id"),row.get("chain_status")==null?"UNKNOWN":(String)row.get("chain_status"),number(row,"confirmations"),at(row,"read_started_at"),Boolean.TRUE.equals(row.get("fresh")),(Boolean)row.get("wallet_debit"),number(row,"decision_id"),(String)row.get("decision_reason"),Boolean.TRUE.equals(row.get("decision_current"))),
                 new Pending(row.get("operation_key")!=null,(String)row.get("operation_key")),
-                row.get("reconciliation_id")==null?null:new Reconciliation((UUID)row.get("reconciliation_id"),(String)row.get("reconciliation_status"),at(row,"snapshot_at"),at(row,"completed_at")));
+                row.get("reconciliation_id")==null?null:new Reconciliation((UUID)row.get("reconciliation_id"),(String)row.get("reconciliation_status"),at(row,"snapshot_at"),at(row,"completed_at")),originSearch.read(deposit));
             // 조회의 대상과 관찰/대사 참조를 남긴다. 이름/신분증/신고 원문을 감사 문자열에 복사하지 않는다.
-            audit.record(actor,"BTC_DEPOSIT_REVIEW_SOURCE_READ","bitcoin-deposit:"+deposit,"SUCCESS","CUSTOMER_VERSION:"+result.customer().version()+":ELIGIBLE:"+result.customer().financiallyEligible()+":CDD:"+result.customer().cddAssessmentId()+":KYC:"+result.customer().kycAttemptId()+":OBSERVATION:"+result.chain().observationId()+":DECISION:"+result.chain().decisionId()+":RECONCILIATION:"+(result.reconciliation()==null?null:result.reconciliation().id()));return result;
-        });}catch(ResponseStatusException e){audit.denied(actor,"BTC_DEPOSIT_REVIEW_SOURCE","restricted","POLICY_DENIED_"+e.getStatusCode().value());throw e;}
+            audit.record(actor,"BTC_DEPOSIT_REVIEW_SOURCE_READ","bitcoin-deposit:"+deposit,"SUCCESS","CUSTOMER_VERSION:"+result.customer().version()+":ELIGIBLE:"+result.customer().financiallyEligible()+":CDD:"+result.customer().cddAssessmentId()+":KYC:"+result.customer().kycAttemptId()+":OBSERVATION:"+result.chain().observationId()+":DECISION:"+result.chain().decisionId()+":RECONCILIATION:"+(result.reconciliation()==null?null:result.reconciliation().id())+":ORIGIN_SEARCH:"+(result.originSearch().search()==null?null:result.originSearch().search().id())+":ORIGIN_ATTEMPT:"+(result.originSearch().search()==null?null:result.originSearch().search().attemptId()));return result;
+        });}catch(ResponseStatusException e){audit.denied(actor,"BTC_DEPOSIT_REVIEW_SOURCE","restricted",(e.getStatusCode().is5xxServerError()?"SOURCE_UNAVAILABLE_":"POLICY_DENIED_")+e.getStatusCode().value());throw e;}
     }
     private static Long number(Map<String,Object> row,String key){var value=(Number)row.get(key);return value==null?null:value.longValue();}
     private static Instant at(Map<String,Object> row,String key){var value=(Timestamp)row.get(key);return value==null?null:value.toInstant();}
