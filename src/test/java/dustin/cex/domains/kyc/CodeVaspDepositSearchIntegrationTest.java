@@ -190,7 +190,7 @@ class CodeVaspDepositSearchIntegrationTest {
     @Test void provenNonSendCanRetrySameRequestAfterIntervalWithoutPollingUnknownIdentity(){
         var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",61,"SUBMIT_NOT_SENT",31,null);var execution=execution(audit);var result=execution.refresh(search.id());assertEquals("SUBMIT",result.phase());assertEquals("SUBMIT_ACKNOWLEDGED",result.status());verify(transactions).submit(search.request());verify(transactions,never()).result(any());
     }
-    CodeVaspDepositSearchProcessing processing(){return new CodeVaspDepositSearchProcessing(directory,execution(audit),jdbc);}
+    CodeVaspDepositSearchProcessing processing(){return new CodeVaspDepositSearchProcessing(directory,execution(audit),jdbc,searches);}
     @Test void automaticProcessingUsesReservedIdentityAndSkipsImmediateSecondCall(){
         var search=searches.reserve(receipt.id());var processing=processing();var first=processing.processNext().orElseThrow();assertEquals(search.id(),first.searchId());assertEquals("SUBMIT_ACKNOWLEDGED",first.status());assertTrue(processing.processNext().isEmpty());verify(transactions,times(1)).submit(search.request());
     }

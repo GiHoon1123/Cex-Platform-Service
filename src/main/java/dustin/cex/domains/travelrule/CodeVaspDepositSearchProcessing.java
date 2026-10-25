@@ -12,14 +12,25 @@ public class CodeVaspDepositSearchProcessing {
     private final CodeVaspDirectoryService directory;
     private final CodeVaspDepositSearchExecution execution;
     private final JdbcTemplate jdbc;
-    public CodeVaspDepositSearchProcessing(CodeVaspDirectoryService directory,CodeVaspDepositSearchExecution execution,JdbcTemplate jdbc){
-        this.directory=directory;this.execution=execution;this.jdbc=jdbc;
+    private final CodeVaspDepositSearches searches;
+    public CodeVaspDepositSearchProcessing(CodeVaspDirectoryService directory,CodeVaspDepositSearchExecution execution,JdbcTemplate jdbc,CodeVaspDepositSearches searches){
+        this.directory=directory;this.execution=execution;this.jdbc=jdbc;this.searches=searches;
     }
     public Optional<CodeVaspDepositSearchExecution.State> processNext(){
         if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("자동 검색은 DB 트랜잭션 밖에서 실행하세요");
         String source=directory.configuredSourceId();
+        ResponseStatusException reservationHeld=null;
+        try{searches.reserveNextPending();}
+        catch(ResponseStatusException unavailable){
+            // 새 예약의 현재 목록 전제가 실패해도 이미 접수됐을 수 있는 검색의 조회는 계속한다.
+            if(unavailable.getStatusCode().value()!=503)throw unavailable;
+            reservationHeld=unavailable;
+        }
         var candidates=candidates(source,false);
-        if(candidates.isEmpty())return Optional.empty();
+        if(candidates.isEmpty()){
+            if(reservationHeld!=null)throw reservationHeld;
+            return Optional.empty();
+        }
         var candidate=candidates.getFirst();
         // 새 접수는 현재 기술 목록을 확인한다. 이미 접수됐을 수 있는 ID의 조회까지 목록 장애로 막지는 않는다.
         if(Boolean.TRUE.equals(candidate.get("requires_submit"))){

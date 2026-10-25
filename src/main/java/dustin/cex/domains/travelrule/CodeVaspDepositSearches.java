@@ -47,6 +47,26 @@ public class CodeVaspDepositSearches {
         });
     }
 
+    /** 이미 수탁 보류 원장에 반입한 일반 입금만 자동 예약한다. 현재 거래 허가나 사용 가능 잔액을 만들지 않는다. */
+    public Optional<Search> reserveNextPending(){
+        if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("자동 검색 예약은 DB 트랜잭션 밖에서 실행하세요");
+        String source=directory.configuredSourceId();
+        var candidates=jdbc.queryForList("""
+            SELECT p.receipt_id FROM bitcoin_pending_deposits p JOIN bitcoin_deposit_receipts b ON b.id=p.receipt_id
+             JOIN bitcoin_deposit_chain_decisions d ON d.id=p.decision_id AND d.receipt_id=b.id
+             JOIN bitcoin_transaction_observations o ON o.id=d.observation_id AND o.coinbase=false
+             JOIN ledger_transactions l ON l.operation_key=p.operation_key AND l.kind='BTC_DEPOSIT_PENDING'
+             JOIN codevasp_directory_sources s ON s.id=?
+             WHERE b.asset='BTC' AND (b.network='bitcoin-mainnet' OR s.api_origin ~ '^https?://(127[.]0[.]0[.]1|\\[::1\\])(:[0-9]+)?/$')
+              AND NOT EXISTS(SELECT 1 FROM codevasp_deposit_searches previous WHERE previous.receipt_id=b.id AND previous.source_id=s.id)
+             ORDER BY p.recorded_at,p.receipt_id LIMIT 1
+            """,source);
+        if(candidates.isEmpty())return Optional.empty();
+        // 보류 원장과 원래 판단은 불변 원본이다. 선택 뒤 다른 실행이 먼저 예약해도 동일 ID를 돌려주는 기존 트랜잭션을 재사용한다.
+        // 이후 체인 상태 변화는 별도 관찰/대사와 금융 승인에서 다시 확인한다. 이 기술 검색을 최신 체인 확정으로 해석하지 않는다.
+        return Optional.of(reserve((UUID)candidates.getFirst().get("receipt_id")));
+    }
+
     /** 내부 처리기가 원본을 다시 읽는 진입점이다. 고객/운영자 HTTP 인가를 대신하는 공개 조회 API가 아니다. */
     public Search get(UUID id){
         Objects.requireNonNull(id,"검색 식별자가 필요합니다");String source=directory.configuredSourceId();
