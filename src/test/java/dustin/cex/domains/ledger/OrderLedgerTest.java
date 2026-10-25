@@ -23,7 +23,7 @@ class OrderLedgerTest {
     OrderSubmissionRepository originals;EngineAuditClient source;ReconciliationService reconciliation;
     ObjectMapper mapper=new ObjectMapper();
     BigDecimal n(String value) {return new BigDecimal(value);}
-    @BeforeEach void setup() throws Exception {
+    @BeforeEach void setup(TestInfo test) throws Exception {
         String url=System.getenv("CEX_TEST_DATABASE_URL");
         admin=new JdbcTemplate(new DriverManagerDataSource(url,"root","1234"));
         schema="ledger_"+UUID.randomUUID().toString().replace("-","");admin.execute("CREATE SCHEMA "+schema);
@@ -36,7 +36,8 @@ class OrderLedgerTest {
         for(String table:List.of("order_submissions","order_dispatches","trade_fees")) jdbc.execute("CREATE TABLE "+table+"(id bigint)");
         ledger=new LedgerService(jdbc);ledger.schema();
         jdbc.execute("INSERT INTO user_balances VALUES(1,'USDT',1000,0),(2,'BTC',1,0)");
-        tx.executeWithoutResult(status->ledger.initializeOpening());
+        // 최초 반입 전 시나리오는 처음부터 빈 원장으로 시작한다. 확정 원본을 지워 시험 상태를 만들지 않는다.
+        if(!test.getTags().contains("without-opening"))tx.executeWithoutResult(status->ledger.initializeOpening());
         originals=mock(OrderSubmissionRepository.class);source=mock(EngineAuditClient.class);engine=UUID.randomUUID().toString();
         when(source.page(anyLong(),any(),any())).thenReturn(page(0,List.of()));
         reconciliation=new ReconciliationService(jdbc,source,originals,manager);
@@ -127,15 +128,14 @@ class OrderLedgerTest {
     @Test void openingCannotBeRepeatedOrInferredFromExistingOrders() {
         assertThrows(IllegalStateException.class,()->tx.executeWithoutResult(status->ledger.initializeOpening()));
     }
-    @Test void missingOpeningNeverAdoptsCurrentBalanceAutomatically() {
-        // 실행 소유 스키마에서만 최초 기록 누락을 주입한다. 제품에는 초기화/삭제 경로가 없다.
-        jdbc.execute("TRUNCATE ledger_entries,ledger_transactions");
+    @Test @Tag("without-opening") void missingOpeningNeverAdoptsCurrentBalanceAutomatically() {
+        // 이 시험은 준비 단계에서 최초 반입을 하지 않는다. 현재 잔고를 보고 원장을 자동 생성해서는 안 된다.
         assertThrows(IllegalStateException.class,()->tx.executeWithoutResult(status->ledger.record("reserve:1","RESERVE",List.of(p(1,"AVAILABLE","USDT",n("-1")),p(1,"LOCKED","USDT",n("1"))))));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM ledger_transactions",Long.class));
         assertEquals(0,jdbc.queryForObject("SELECT available FROM user_balances WHERE user_id=1",BigDecimal.class).compareTo(n("1000")));
     }
-    @Test void openingRefusesFinancialHistoryEvenWhenBalancesLookValid() {
-        jdbc.execute("TRUNCATE ledger_entries,ledger_transactions");jdbc.execute("INSERT INTO trades(engine_event_id) VALUES('old-result')");
+    @Test @Tag("without-opening") void openingRefusesFinancialHistoryEvenWhenBalancesLookValid() {
+        jdbc.execute("INSERT INTO trades(engine_event_id) VALUES('old-result')");
         assertThrows(IllegalStateException.class,()->tx.executeWithoutResult(status->ledger.initializeOpening()));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM ledger_transactions",Long.class));
     }
@@ -152,6 +152,16 @@ class OrderLedgerTest {
         when(source.page(anyLong(),any(),any())).thenReturn(page(1,List.of(event)));
         var report=reconciliation.run();assertEquals("MISMATCH",report.status());assertEquals(1,issues(report,"EVENT_CONTRACT"));
         assertEquals(0,issues(report,"BALANCE_AVAILABLE"));assertEquals(0,issues(report,"RESERVATION"));
+    }
+
+    @Test void committedLedgerCannotBeTruncatedDirectlyOrThroughCascade() {
+        long transactions=jdbc.queryForObject("SELECT count(*) FROM ledger_transactions",Long.class);
+        long entries=jdbc.queryForObject("SELECT count(*) FROM ledger_entries",Long.class);
+        assertThrows(RuntimeException.class,()->jdbc.execute("TRUNCATE ledger_entries"));
+        assertThrows(RuntimeException.class,()->jdbc.execute("TRUNCATE ledger_transactions CASCADE"));
+        assertEquals(transactions,jdbc.queryForObject("SELECT count(*) FROM ledger_transactions",Long.class));
+        assertEquals(entries,jdbc.queryForObject("SELECT count(*) FROM ledger_entries",Long.class));
+        assertEquals("MATCHED",reconciliation.run().status());
     }
 
 }

@@ -24,6 +24,15 @@ DO $$ BEGIN
         CREATE TRIGGER ledger_entries_immutable BEFORE UPDATE OR DELETE ON ledger_entries FOR EACH ROW EXECUTE FUNCTION cex_ledger_immutable();
     END IF;
 END $$;
+-- 전체 비우기는 행 삭제 트리거를 실행하지 않는다. 확정 원본 두 표의 문장 단위 비우기도 별도로 차단한다.
+DO $$ BEGIN
+    IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='ledger_transactions_no_truncate' AND tgrelid='ledger_transactions'::regclass) THEN
+        CREATE TRIGGER ledger_transactions_no_truncate BEFORE TRUNCATE ON ledger_transactions FOR EACH STATEMENT EXECUTE FUNCTION cex_ledger_immutable();
+    END IF;
+    IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgname='ledger_entries_no_truncate' AND tgrelid='ledger_entries'::regclass) THEN
+        CREATE TRIGGER ledger_entries_no_truncate BEFORE TRUNCATE ON ledger_entries FOR EACH STATEMENT EXECUTE FUNCTION cex_ledger_immutable();
+    END IF;
+END $$;
 CREATE OR REPLACE FUNCTION cex_ledger_entry_owner() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key=NEW.operation_key AND created_txid=txid_current()) THEN
