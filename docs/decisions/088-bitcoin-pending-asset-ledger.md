@@ -81,7 +81,7 @@ CUSTODY의 이번 항목은 검증된 입금 유입을 기록한다. 이를 현�
 
 BigDecimal.negate는 정확한 반대 항목을 만든다. 같은 금융 트랜잭션에서 양쪽 원장, 근거 연결, 감사를 기록한다. 고객 AVAILABLE과 엔진 입력은 수정하지 않는다. TypeScript number의 부동소수점으로 두 항목의 합계를 보정하는 처리가 아니다.
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L309), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L318), 현재 소스의 부분 발췌.
 
 ```sql
  IF entries<>2 OR NOT EXISTS(SELECT 1 FROM ledger_entries WHERE operation_key=op AND owner_id=source.user_id AND bucket='PENDING' AND asset=source.asset AND delta=source.amount)

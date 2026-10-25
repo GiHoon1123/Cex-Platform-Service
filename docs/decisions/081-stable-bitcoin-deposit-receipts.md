@@ -72,7 +72,7 @@ Stripe의 [멱등 요청](https://docs.stripe.com/api/idempotent_requests)은 �
 
 입금 원본 전부와 블록 처리 완료/감사는 같은 트랜잭션으로 확정된다. 빈 블록도 완료 표시가 있어 반복해서 처리하지 않는다. 예외가 나면 원본/완료/감사를 모두 롤백한다.
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L118), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L127), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE TABLE IF NOT EXISTS bitcoin_deposit_receipts (

@@ -117,7 +117,7 @@ Long과 Instant는 미관찰에서 null일 수 있다. Number.longValue는 DB의
 | recognizedPendingIsNotAdvertisedAsAvailableBalance | 실제 보류 원장 반입 후 PENDING·금액 유지, 사용 가능 잔액 행0 |
 | invalidCursorNullDetailAndAmbientTransactionAreRejected | 불완전/과거 범위/미래 커서·null·외부 TX 거부, HTTP 잘못된 UUID400·미지원 자산403 |
 | mandatoryReadAuditFailurePreventsSuccessfulResponse | 목록/개별 필수 감사 실패 시 성공 반환 금지 |
-| anotherNetworkOfSameCustomerIsNotMixedIntoCurrentHistory | 같은 고객의 다른 체인 기록 목록 배제/개별404 |
+| anotherNetworkOfSameCustomerIsNotMixedIntoCurrentHistory | 현재 다른 네트워크의 조회에서 기존 체인 기록 목록 배제/개별404 |
 | enrolledCustomerWithoutVerifiedMfaCannotDowngradeToPasswordOnlyHistory | 등록 사실만 남고 현재 다중 인증이 없는 세션은 직접 호출/HTTP403 |
 
 각 시험 종료 시 reader/engine 호출0을 확인한다. 신규 [독립 실행기](../../scripts/verify_customer_deposits.py)는 소유 PG를 만들고 응답할 수 없는 루프백 RPC 주소를 사용한다. 따라서 조회 성공이 실행 중인 비트코인 노드에 의존하지 않음을 별도로 확인한다. 설치 의존성은 기존 Python 표준 라이브러리/Docker/Gradle이다.
@@ -147,3 +147,5 @@ macOS arm64/Temurin21/PG16/Core31.1. BTC 통합 실행199개·노드 없이 조�
 
 - [구현 79d89ca](https://github.com/GiHoon1123/Cex-Platform-Service/commit/79d89cab3775a3f88d2e76ff4065cf45853d17e8)
 - [격리 실행 증적](../reference/091-customer-bitcoin-deposit-history-verification-2026-10-25.json)
+
+093 현행 변경: [플랫폼 DB 네트워크 결합](093-bitcoin-database-network-identity.md)으로 같은 DB에 두 체인 원본을 함께 넣을 수 없게 했다. 현재 네트워크 조회 회귀는 regtest 원본을 다른 네트워크 설정의 조회 서비스가 읽지 못하는지 확인한다.091 당시의 두 체인 합성 원본/실행 증적은 당시 범위로 보존한다.

@@ -199,3 +199,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [090. 새 노드 읽기와 보류 원장을 입금별로 독립 대사하기](decisions/090-independent-bitcoin-deposit-reconciliation.md)
 
 - [091. 본인 BTC 입금 목록과 보류 진행 내역 조회](decisions/091-customer-bitcoin-deposit-history.md)
+
+- [093. 플랫폼 DB의 비트코인 네트워크를 고정해 시험망·실망 혼합 차단](decisions/093-bitcoin-database-network-identity.md)

@@ -70,7 +70,7 @@
 
 관찰 원본을 만든 같은 트랜잭션에서 근거를 추가하고 그 다음 현재 포인터/감사를 확정한다. 한 단계 실패 시 함께 롤백한다. 기존 관찰에 나중에 분류를 추측해 붙이지 않는다.
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L262), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L271), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE TABLE IF NOT EXISTS bitcoin_observation_wallet_debits (

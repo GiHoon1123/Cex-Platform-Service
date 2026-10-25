@@ -64,7 +64,7 @@ Started의 expected는 nullable Long이다. 최초 관찰에는 현재 ID가 없
 
 쿼리 파라미터로 잠금 키를 전달한다. 잠금 후 새 SQL 조회가 READ COMMITTED의 최신 커밋 버전을 읽는다. 버전이 달라지면 이전 결과가 실제로 더 새로워 보이더라도 보수적으로 중단하고 다음 조회를 요구한다. 여러 await를 순서대로 호출하는 것만으로 이런 DB 계약이 생기는 것은 아니다.
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L47), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L56), 현재 소스의 부분 발췌.
 
 ```sql
  IF NOT EXISTS(SELECT 1 FROM bitcoin_transaction_observations o WHERE o.id=NEW.observation_id

@@ -70,7 +70,7 @@ var candidate는 노드가 검증한 수신 주소 결과다. 노드 대기는 �
 
 ON CONFLICT DO NOTHING은 기존 소유자를 바꾸지 않는다. 충돌 뒤 임의로 주소 소유를 보정하지 않고503으로 중단한다. audit.record가 실패하면 같은 TX의 소유 INSERT도 롤백된다. Address record는 응답에 필요한 값만 전달하며 저장 엔티티나 노드 응답을 그대로 노출하지 않는다.
 
-출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L2), 현재 소스의 부분 발췌.
+출처: [schema.sql](../../src/main/resources/bitcoin/schema.sql#L11), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE TABLE IF NOT EXISTS bitcoin_deposit_addresses (
