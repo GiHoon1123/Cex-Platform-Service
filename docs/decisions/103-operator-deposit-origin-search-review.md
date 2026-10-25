@@ -4,6 +4,8 @@
 
 후속 [111 운영 평가 근거 조회](111-deposit-valuation-operator-review.md)에서 당시 평가를 연결하고 FOUND 안내를 추가 판단 필요로 수정했다. 아래 코드 발췌는 현재 소스이며103 당시 실행 결과와 구분한다.
 
+후속 [114 보호된 전송/비교 이력 조회](114-private-transfer-operator-metadata.md)는 복호화 없이 최소 상태·사유와 요청 당시 근거를 제공한다. 과거 실행 수치와 현재 응답 계약을 구분한다.
+
 ## 문제와 기존 동작
 
 [094](094-operator-bitcoin-deposit-review-source.md)의 운영자 조회는 체인/고객/보류 원장/독립 대사를 보여준다. [102](102-automatic-pending-deposit-search-reservation.md)까지 검색이 자동화됐지만 운영자가 검색의 진행·실패·미해결을 같은 입금 근거에서 확인할 수는 없었다. 마지막 정상 결과만 읽거나 설정 변경 전 검색을 현재 자료로 재사용하면 미완료/실패가 가려진다.
@@ -57,7 +59,7 @@ reason은 다음의 **기술 처리/추가 확인 안내**다. 승인/반환/금
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CodeVaspDepositSearchReview.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchReview.java#L23), 현재 소스의 부분 발췌.
+출처: [CodeVaspDepositSearchReview.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchReview.java#L29), 현재 소스의 부분 발췌.
 
 ```java
     @Transactional(propagation=Propagation.MANDATORY)
@@ -69,7 +71,7 @@ reason은 다음의 **기술 처리/추가 확인 안내**다. 승인/반환/금
 
 MANDATORY는 이미 열린 트랜잭션에만 참여한다. Spring 프록시가 경계를 적용하므로 실제 권한 확인을 수행하는 기존 입금 심사 서비스가 같은 TX에서 호출한다. 이 내부 메서드는 단독 HTTP 인가 API가 아니다. TypeScript에서도 트랜잭션 객체를 받는 내부 조회와 외부 인증 경계를 분리해야 한다.
 
-출처: [CodeVaspDepositSearchReview.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchReview.java#L48), 현재 소스의 부분 발췌.
+출처: [CodeVaspDepositSearchReview.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchReview.java#L66), 현재 소스의 부분 발췌.
 
 ```java
             reason=switch(status){

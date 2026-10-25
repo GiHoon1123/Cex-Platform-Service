@@ -65,7 +65,7 @@ Java record는 응답 필드를 선언하는 불변 자료형이다. TypeScript�
 
 BigDecimal.compareTo는 scale 차이보다 수치 자체로 비교한다. 정확히1000000이면 상위 참고 구간에 포함하고, 소수점 아래의 아주 작은 차이도 반올림하지 않는다. 이 구간은 송신 당시 법정 기준액의 증명이나 법적 의무 판정이 아니다.
 
-출처: [CodeVaspDepositSearchReview.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchReview.java#L48), 현재 소스의 부분 발췌.
+출처: [CodeVaspDepositSearchReview.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspDepositSearchReview.java#L66), 현재 소스의 부분 발췌.
 
 ```java
             reason=switch(status){
