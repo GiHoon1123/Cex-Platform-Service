@@ -105,7 +105,8 @@ public class CodeVaspDirectoryService {
         });
     }
     // 이미 보존한 요청을 같은 접속 주체로 다시 찾을 때 사용한다. 현재 목록/금융 허가를 보증하는 메서드는 아니다.
-    String configuredSourceId(){requireConfigured();return source();}
+    /** 다른 입금 워커에도 설정된 접속 주체의 식별자만 제공한다. 비밀 설정이나 공급사 원문을 노출하지 않는다. */
+    public String configuredSourceId(){requireConfigured();return source();}
     private void requireConfigured(){if(!settings.configured())throw unavailable();}
     private String origin(){return settings.api.resolve("/").toString();}
     // 내부 서명 모듈 주소는 운송 경로다. 자료 주체는 공급사 원점·등록 사업자·등록 공개키로 구분한다.
