@@ -239,3 +239,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [111. 출처 검색 성공과 정보 제공 판단을 구분하고 당시 평가 근거 조회하기](decisions/111-deposit-valuation-operator-review.md)
 
 - [112. 자동 정보 요청의 목적과 당시 평가 근거를 제한하기](decisions/112-private-transfer-purpose-boundary.md)
+
+- [113. 정상 수신과 고객 자료의 일관성을 분리해 기록하기](decisions/113-received-transfer-detail-consistency.md)

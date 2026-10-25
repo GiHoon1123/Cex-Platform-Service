@@ -2,6 +2,8 @@
 
 암호화 제공 의도에서 실제 정보 교환의 시작·현재 근거·응답까지 영속 연결한다. 외부 대기 동안 DB 잠금을 해제하고, 미전송 증명 이후에만 재시도한다. 성공 응답 수신과 금융 승인·사용 가능 잔액은 분리한다.
 
+후속 [113 수신 자료 일관성 분류](113-received-transfer-detail-consistency.md)는 정상 수신과 요청 당시 고객 자료의 비교 결과를 분리한다. 현재 고객 적격성·동일인 확정·금융 해제는 별도다.
+
 ## 문제와 기존 동작
 
 106까지 현재 고객/입금·출처에 결합된 제공 의도를 저장했지만 외부로 전송하지 않았다. 의도 ID만 읽고 전송하면 예약 뒤 고객 제한·신고/체인/검색·목록/키가 바뀌었는지 알 수 없다. 시작 기록 없이 전송하면 응답 유실/프로세스 종료 시 제공 사실을 추적하기 어렵고, 응답이 없다고 재전송하면 공급사가 이미 처리한 요청을 반복할 수 있다.
@@ -51,7 +53,7 @@ codevasp_transfer_attempts/heads/results를 추가했다. 시작/결과는 불�
 
 ## 실제 코드와 이해에 필요한 문법
 
-출처: [CodeVaspTransferExecution.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferExecution.java#L64), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferExecution.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferExecution.java#L66), 현재 소스의 부분 발췌.
 
 ```java
         UUID receiptId=sources.getFirst();
@@ -74,18 +76,19 @@ codevasp_transfer_attempts/heads/results를 추가했다. 시작/결과는 불�
 
 [112 목적 제한](112-private-transfer-purpose-boundary.md) 이후에는 이 다음에 봉인한 목적·가격 참조와 정확한 원화 평가액도 대조한다. 위 발췌는 현재 소스의 시작 부분이다. USE_BIG_DECIMAL_FOR_FLOATS는 JSON 소수를 이진 부동소수점으로 읽지 않도록 한다. BigDecimal.compareTo는 표현 자릿수와 관계없이 정확한 값의 동등성을 확인한다. 과거 요청의 만료된 키는 현재용 생성자에 다시 넣지 않고 현재 디렉터리에서 유효한 키를 선택한다.
 
-출처: [CodeVaspTransferExecution.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferExecution.java#L53), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransferExecution.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransferExecution.java#L54), 현재 소스의 부분 발췌.
 
 ```java
-        String outcome=status,code=reason,plain=payload;
+        String outcome=status,code=reason,plain=payload;var details=received;
         // 완료 저장/필수 감사 실패를 외부 실패로 다시 처리하지 않는다. 시작만 남으면 재전송하지 않고 미해결로 보존한다.
         return tx.execute(t->{
             jdbc.update("INSERT INTO codevasp_transfer_results(attempt_id,status,reason,key_id,ciphertext,content_mac) VALUES(?,?,?,?,?,?)",start.id(),outcome,code,plain==null?null:crypto.keyId(),plain==null?null:crypto.encrypt(start.owner(),start.id(),plain.getBytes(StandardCharsets.UTF_8)),plain==null?null:crypto.fingerprint("codevasp-transfer-result-v1",plain));
+            if("DATA_RECEIVED".equals(outcome))assessments.record(start.id(),start.basis().prepared(),details);
             audit.record(null,"CODE_TRANSFER_FINISHED","codevasp-transfer:"+intentId,plain==null?"DENIED":"SUCCESS","ATTEMPT:"+start.id()+":STATUS:"+outcome+":REASON:"+code);
             return state(intentId);
 ```
 
-자바 lambda가 바깥 값을 참조하도록 최종 지역 변수로 정리한다. 공급사 호출의 catch 블록 밖에서 결과/감사 TX를 수행해 DB 저장 실패를 원격 오류로 오인한 재저장을 막는다. 암호문에도 개인정보 보존/접근 통제가 필요하다.
+후속113에서는 DATA_RECEIVED의 비교 분류도 같은 트랜잭션에 기록한다. 위 발췌는 현재 코드이며107 당시 검증과 구분한다. 자바 lambda가 바깥 값을 참조하도록 최종 지역 변수로 정리한다. 공급사 호출의 catch 블록 밖에서 결과/감사 TX를 수행해 DB 저장 실패를 원격 오류로 오인한 재저장을 막는다. 암호문에도 개인정보 보존/접근 통제가 필요하다.
 
 출처: [schema.sql](../../src/main/resources/travelrule/schema.sql#L240), 현재 소스의 부분 발췌.
 
