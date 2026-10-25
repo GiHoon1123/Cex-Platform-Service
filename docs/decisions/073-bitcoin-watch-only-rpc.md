@@ -149,3 +149,5 @@ python3 scripts/verify_kyc.py
 077 현행 기준: 노드 전송/기본 준비 확인은 BitcoinRpcClient로 분리했다. 주소 파생은 BitcoinCoreClient, 거래 출력 관찰은 [077 기록](077-bitcoin-deposit-observation.md)을 따른다. 주소용64KiB 제한과 별도로 거래 원문/해독 결과용32MiB 제한을 사용한다.
 
 082 현행 기준: 노드 설정이 있으면 [전용 발견 워커](082-bitcoin-discovery-processing-worker.md)가 완료 블록 조회와 입금 ID 생성을 자동 실행한다. `BITCOIN_PROCESSING_ENABLED=false`로 중지하며 test 프로필/격리 실행기는 false를 명시한다. 잔액 적립은 아직 연결하지 않았다.
+
+084 현행 기준: [독립 관찰 워커](084-automatic-bitcoin-deposit-observation.md)가 영속 임대 큐로 입금 거래도 자동 재확인한다. `BITCOIN_PROCESSING_ENABLED=false`는 발견/식별/관찰 모두 중지한다. 확정/보류·금융 반영은 아직 후속이다.

@@ -183,3 +183,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [082. 전용 워커로 블록 발견과 고객 입금 식별 이어가기](decisions/082-bitcoin-discovery-processing-worker.md)
 
 - [083. 영속 임대로 입금 거래 재확인과 늦은 결과 분리하기](decisions/083-durable-bitcoin-observation-jobs.md)
+
+- [084. 독립 워커로 고객 입금 거래 관찰 자동 이어가기](decisions/084-automatic-bitcoin-deposit-observation.md)
