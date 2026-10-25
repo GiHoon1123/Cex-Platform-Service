@@ -1,0 +1,62 @@
+-- 공급사 접속 원점/등록 주체/등록 공개키가 다르면 같은 현재 자료로 사용하지 않는다.
+CREATE TABLE IF NOT EXISTS codevasp_directory_sources (
+ id varchar(64) PRIMARY KEY,api_origin varchar(1024) NOT NULL,entity_id varchar(128) NOT NULL,self_public_key varchar(44) NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ UNIQUE(api_origin,entity_id,self_public_key),
+ CHECK(id=encode(sha256(convert_to(api_origin||E'\n'||entity_id||E'\n'||self_public_key,'UTF8')),'hex')),
+ CHECK(position(E'\n' in api_origin)=0 AND entity_id ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'),
+ CHECK(length(self_public_key)=44 AND octet_length(decode(self_public_key,'base64'))=32 AND encode(decode(self_public_key,'base64'),'base64')=self_public_key)
+);
+CREATE TABLE IF NOT EXISTS codevasp_directory_attempts (
+ id bigserial PRIMARY KEY,source_id varchar(64) NOT NULL REFERENCES codevasp_directory_sources(id),
+ started_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),UNIQUE(id,source_id)
+);
+CREATE TABLE IF NOT EXISTS codevasp_directory_heads (
+ source_id varchar(64) PRIMARY KEY REFERENCES codevasp_directory_sources(id),attempt_id bigint NOT NULL,
+ FOREIGN KEY(attempt_id,source_id) REFERENCES codevasp_directory_attempts(id,source_id)
+);
+-- 검증한 기술 목록 내용은 한 번만 보관한다. 각 조회의 새 시각/결과는 아래 별도 원본에 남긴다.
+CREATE TABLE IF NOT EXISTS codevasp_directory_contents (
+ id bigserial PRIMARY KEY,source_id varchar(64) NOT NULL REFERENCES codevasp_directory_sources(id),payload_hash varchar(64) NOT NULL,payload text NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),UNIQUE(source_id,payload_hash),UNIQUE(id,source_id),
+ CHECK(octet_length(payload)<=4194304 AND payload_hash=encode(sha256(convert_to(payload,'UTF8')),'hex')),
+ CHECK(jsonb_typeof(payload::jsonb)='array' AND jsonb_array_length(payload::jsonb)<=5000)
+);
+CREATE TABLE IF NOT EXISTS codevasp_directory_results (
+ attempt_id bigint PRIMARY KEY,source_id varchar(64) NOT NULL,status varchar(16) NOT NULL CHECK(status IN ('SUCCESS','FAILED')),
+ failure_code varchar(32),content_id bigint,client_started_at timestamptz,client_finished_at timestamptz,
+ recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ FOREIGN KEY(attempt_id,source_id) REFERENCES codevasp_directory_attempts(id,source_id),FOREIGN KEY(content_id,source_id) REFERENCES codevasp_directory_contents(id,source_id),
+ CHECK((status='SUCCESS' AND failure_code IS NULL AND content_id IS NOT NULL AND client_started_at IS NOT NULL AND client_finished_at IS NOT NULL AND client_started_at<=client_finished_at)
+  OR(status='FAILED' AND failure_code IN ('PROVIDER_UNAVAILABLE','INVALID_SOURCE','INTERNAL_FAILURE') AND failure_code IS NOT NULL AND content_id IS NULL AND client_started_at IS NULL AND client_finished_at IS NULL))
+);
+CREATE OR REPLACE FUNCTION codevasp_directory_head_forward() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND (NEW.source_id<>OLD.source_id OR NEW.attempt_id<=OLD.attempt_id) THEN RAISE EXCEPTION '사업자 목록의 현재 조회를 과거로 되돌릴 수 없습니다'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM codevasp_directory_attempts a WHERE a.id=NEW.attempt_id AND a.source_id=NEW.source_id AND a.created_txid=txid_current()) THEN
+  RAISE EXCEPTION '사업자 목록 현재 위치는 새 조회 시작과 같은 트랜잭션에서 확정해야 합니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_head_forward ON codevasp_directory_heads;
+CREATE TRIGGER codevasp_head_forward BEFORE INSERT OR UPDATE ON codevasp_directory_heads FOR EACH ROW EXECUTE FUNCTION codevasp_directory_head_forward();
+CREATE OR REPLACE FUNCTION codevasp_directory_result_time() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NEW.status='SUCCESS' AND NOT EXISTS(SELECT 1 FROM codevasp_directory_attempts a WHERE a.id=NEW.attempt_id AND a.source_id=NEW.source_id
+   AND NEW.client_started_at>=a.started_at-interval '10 seconds' AND NEW.client_finished_at<=clock_timestamp()+interval '10 seconds') THEN
+  RAISE EXCEPTION '사업자 목록의 읽기 시각이 조회 원본과 다릅니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_result_time ON codevasp_directory_results;
+CREATE TRIGGER codevasp_result_time BEFORE INSERT ON codevasp_directory_results FOR EACH ROW EXECUTE FUNCTION codevasp_directory_result_time();
+DROP TRIGGER IF EXISTS codevasp_source_immutable ON codevasp_directory_sources;
+CREATE TRIGGER codevasp_source_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_directory_sources FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS codevasp_attempt_immutable ON codevasp_directory_attempts;
+CREATE TRIGGER codevasp_attempt_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_directory_attempts FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS codevasp_content_immutable ON codevasp_directory_contents;
+CREATE TRIGGER codevasp_content_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_directory_contents FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS codevasp_result_immutable ON codevasp_directory_results;
+CREATE TRIGGER codevasp_result_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_directory_results FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS codevasp_head_no_delete ON codevasp_directory_heads;
+CREATE TRIGGER codevasp_head_no_delete BEFORE DELETE OR TRUNCATE ON codevasp_directory_heads FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

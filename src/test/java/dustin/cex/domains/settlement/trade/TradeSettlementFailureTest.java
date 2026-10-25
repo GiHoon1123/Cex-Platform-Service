@@ -46,6 +46,7 @@ class TradeSettlementFailureTest {
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.kyc.KycSchemaInitializer kycSchema;
     // 정산 기록 전용 H2 시험은 BTC 소유권의 PostgreSQL 불변 제약 초기화도 실행하지 않는다.
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.bitcoin.BitcoinSchemaInitializer bitcoinSchema;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.travelrule.CodeVaspSchemaInitializer codeVaspSchema;
 
     @Autowired
     private TradeSettlementService tradeSettlementService;
