@@ -259,3 +259,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [121. 고정한 거래 구간의 판단을 지정 인물의 독립 서명에 결합하기](decisions/121-bound-independent-transaction-case-reviews.md)
 
 - [122. 승인된 거래 판단의 종결·내부 회부를 별도 실행 서명으로 확정하기](decisions/122-explicit-case-closure-and-reporting-referral.md)
+
+- [124. 입금 원본과 엔진 HTTP 응답을 결합하고 불확실한 결과를 보존하기](decisions/124-strict-engine-deposit-http-client.md)

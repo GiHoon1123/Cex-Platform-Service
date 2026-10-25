@@ -1,0 +1,271 @@
+{
+  "cycle": 124,
+  "implementation_commit": "0d9c5bc5113fd363c499d081be158cf7b3c50852",
+  "verification": {
+    "combined": {
+      "executions": 237,
+      "unique": 220,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "clients": {
+        "dustin.cex.shared.http.EngineDepositClientTest": 28,
+        "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest": 10,
+        "dustin.cex.shared.http.EngineHttpClientTest": 17
+      },
+      "finance": 182,
+      "overlap": 17
+    },
+    "client_cases": {
+      "counts": {
+        "dustin.cex.shared.http.EngineDepositClientTest": 28,
+        "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest": 10,
+        "dustin.cex.shared.http.EngineHttpClientTest": 17
+      },
+      "executions": 55,
+      "unique": 55,
+      "cases": [
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "interruptedCallerRetainsTheInterruptFlag()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "globalProxyCannotReceiveTheInternalServiceKey()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "onlyExactDurableRejectionIsAConfirmedRejection()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "unexpectedFieldsAndWrongJsonTypesAreUnknown()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "largeValidIntegerIsSerializedWithoutExponent()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "sendsExactStableFinancialContentAndServiceIdentity()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "explicitUnknownDoesNotBecomeARejection()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "nonJsonContentTypeCannotConfirmFinancialState()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "invalidIdentityAndAssetsNeverReachTheWire()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "mismatchedStatusAndCodeNeverConfirmsAnything()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "credentialsQueryFragmentAndPathInEndpointAreRejected()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "zeroNegativePrecisionAndRangeFailuresNeverReachTheWire()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "redirectDoesNotForwardTheServiceSecret()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "financialInputIsNotCopiedIntoDebugOutput()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "invalidTimeoutAndSecretFailAtConstruction()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "oversizedResponseIsCancelledAndRemainsUnknown()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "unknownAndNullCodesAreNotCompatibilityFallbacks()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "declaredJsonWithCharsetIsSupported()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "duplicateFieldsAndTrailingDocumentsAreUnknown()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "connectionFailureDoesNotProveNoPreviousExecution()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "deadlineIncludesTheIncompleteBody()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "anotherDepositsReplyCannotConfirmThisIntent()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "missingIdentityOrCodeIsUnknown()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "explicitRetryKeepsTheSameIdentityAndBody()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "onlyExplicitThisAttemptNotAcceptedHasThatMeaning()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "malformedUtf8IsNotSilentlyReplaced()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "deadlineIncludesWaitingForResponseHeaders()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineDepositClientTest",
+          "databaseTransactionCannotHoldLocksAcrossTransport()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "duplicateTrailingAndOversizedBodiesAreRejected()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "invalidPricesNeverBecomeRoundedOrZeroValues()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "invalidUtf8CannotChangeOriginalByteFingerprint()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "ambientTransactionCannotCallProvider()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "staleFutureReversedAndNonIntegralSourceTimesAreRejected()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "exactPriceAndBothSourceTimesArePreserved()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "wrongOrAmbiguousMarketNeverBecomesQuote()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "stalledBodyHasAbsoluteDeadline()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "errorsAndRedirectsAreNotRetriedOrFollowed()"
+        ],
+        [
+          "dustin.cex.domains.valuation.BitcoinKrwPriceClientTest",
+          "arbitraryRemoteOrUnsafeTestOriginCannotOverrideProductSource()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "allEngineCommandsCarryServiceIdentity()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[1] timeout = 0"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[2] timeout = -1"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[1] status = 200"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[2] status = 202"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[3] status = 201"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[4] status = 400"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[5] status = 500"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[6] status = 503"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "receivedRequestWithoutResponseTimesOutWithoutResubmitting()"
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[1] defect = \"{}\""
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[2] defect = \"wrong-order\""
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[3] defect = \"wrong-user\""
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[4] defect = \"numeric-id\""
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[5] defect = \"missing-time\""
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[6] defect = \"invalid-time\""
+        ],
+        [
+          "dustin.cex.shared.http.EngineHttpClientTest",
+          "[7] defect = \"wrong-state\""
+        ]
+      ]
+    },
+    "finance": {
+      "container": "cex-inbox-26d7df3437ef",
+      "exit": 0,
+      "tests": {
+        "tests": 182,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "container_removed": true
+    },
+    "local_evidence": ".local/cycle124-proof",
+    "new_tests": 28,
+    "automatic_dispatch": false,
+    "financial_ledger_changes": false,
+    "global_proxy_disabled": true
+  },
+  "related_commits": [
+    "1e7886919a9d32dcc2e37614488bc3c43251dbcb",
+    "0d9c5bc5113fd363c499d081be158cf7b3c50852"
+  ]
+}
