@@ -123,7 +123,7 @@ sequenceDiagram
 
 ### 현재 코드로 연결해 읽기
 
-업무 종류·요청·해시·결정 방향·세션에 묶인 일회용 옵션만 조회한다. 아래는 2026-10-25 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/OperatorMfaService.java#L119)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+업무 종류·요청·해시·결정 방향·세션에 묶인 일회용 옵션만 조회한다. 아래는 2026-10-25 현재 [실제 소스](../../src/main/java/dustin/cex/domains/security/OperatorMfaService.java#L120)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
 
 ```java
 public void authorizeApproval(long actor,UUID sid,ApprovalKind kind,UUID requestId,String payloadHash,boolean approve,AuthorizationProof proof) {
