@@ -267,3 +267,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [126. 현재 금융 근거를 결합해 정상 VASP 입금 의도를 한 번만 기록하기](decisions/126-verified-vasp-bitcoin-credit-intents.md)
 
 - [127. 영속 입금 명령을 전달하고 확정 이벤트로 보류 자금을 반영하기](decisions/127-durable-bitcoin-credit-dispatch-and-settlement.md)
+
+- [128. 준비된 입금을 장수 워커와 영속 일정으로 자동 반영하기](decisions/128-automatic-bitcoin-credit-processing.md)

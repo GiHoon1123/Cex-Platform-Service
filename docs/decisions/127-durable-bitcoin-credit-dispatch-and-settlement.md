@@ -2,6 +2,8 @@
 
 최초 전송 권한을 현재 근거로 확정하고 잠금을 놓은 뒤 같은 입금 원본을 엔진에 전달한다. HTTP 확정과 플랫폼 잔액 확정은 구분하며, 실제 Kafka 입금 결과·수신 키·원장·잔액·감사는 하나의 DB 트랜잭션으로 반영한다. 독자는 응답 유실·중복·순서 역전·부분 실패에서도 무엇이 확정됐는지 설명할 수 있다.
 
+후속 [128 자동 후보/영속 일정/장수 워커](128-automatic-bitcoin-credit-processing.md)는 준비된 정상 VASP 입금의 실제 대사·전달을 자동 연결한다. 아래127의 실행 수치는 당시 범위이며 실제 브로커/전체 프로세스 연결과 다른 출처 해결은 별도다.
+
 ## 문제와 기존 동작
 
 [126](126-verified-vasp-bitcoin-credit-intents.md)은 정상 VASP 입금의 불변 의도까지만 기록했다. [엔진021](../../../Cex-Engine/docs/decisions/021-internal-deposit-credit-http.md)과 [플랫폼124](124-strict-engine-deposit-http-client.md)는 HTTP 계약을 제공했지만 실제 금융 의도/시도/잔액에 연결되지 않았다. 기존 금융 소비자는 주문 결과만 받았고 고객 입금 조회는 PENDING까지만 표시했다.
