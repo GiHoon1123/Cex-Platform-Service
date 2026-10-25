@@ -277,3 +277,56 @@ CREATE TRIGGER bitcoin_wallet_debit_fresh BEFORE INSERT ON bitcoin_observation_w
 DROP TRIGGER IF EXISTS bitcoin_wallet_debit_no_change ON bitcoin_observation_wallet_debits;
 CREATE TRIGGER bitcoin_wallet_debit_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_observation_wallet_debits
  FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 고객 보류 자산은 실제 입금/현재 판단/원장 항목을 함께 확정한다. 거래 가능 잔액과 엔진 입력은 별도다.
+CREATE TABLE IF NOT EXISTS bitcoin_pending_deposits (
+ receipt_id uuid PRIMARY KEY REFERENCES bitcoin_deposit_receipts(id),decision_id bigint NOT NULL,
+ operation_key varchar(160) NOT NULL UNIQUE REFERENCES ledger_transactions(operation_key),
+ recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ FOREIGN KEY(decision_id,receipt_id) REFERENCES bitcoin_deposit_chain_decisions(id,receipt_id)
+);
+DROP TRIGGER IF EXISTS bitcoin_pending_deposit_no_change ON bitcoin_pending_deposits;
+CREATE TRIGGER bitcoin_pending_deposit_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_pending_deposits
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+CREATE OR REPLACE FUNCTION bitcoin_pending_ledger_verify(op varchar) RETURNS void LANGUAGE plpgsql AS $$
+DECLARE source record; entries integer;
+BEGIN
+ SELECT r.user_id,r.asset,r.amount INTO source
+  FROM bitcoin_pending_deposits f JOIN bitcoin_deposit_receipts r ON r.id=f.receipt_id
+  JOIN ledger_transactions t ON t.operation_key=f.operation_key AND t.kind='BTC_DEPOSIT_PENDING' AND t.created_txid=txid_current()
+  JOIN bitcoin_deposit_chain_decisions d ON d.id=f.decision_id AND d.receipt_id=r.id AND d.reason='CHAIN_READY' AND d.policy_id='BTC_CHAIN_V1'
+  JOIN bitcoin_deposit_chain_heads qh ON qh.receipt_id=r.id AND qh.decision_id=d.id
+  JOIN bitcoin_observation_heads oh ON oh.observation_id=d.observation_id JOIN bitcoin_transaction_observations o ON o.id=oh.observation_id
+  JOIN bitcoin_observation_wallet_debits w ON w.observation_id=o.id AND w.wallet_debit=false
+  WHERE f.operation_key=op AND f.operation_key='btc:pending:'||r.id::text
+   AND o.read_started_at<=clock_timestamp() AND o.read_started_at>=clock_timestamp()-interval '2 minutes'
+  FOR SHARE OF qh,oh;
+ IF NOT FOUND OR NOT EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key='opening') THEN
+  RAISE EXCEPTION '보류 원장은 최초 반입과 현재 검증된 입금 근거가 필요합니다';
+ END IF;
+ SELECT count(*) INTO entries FROM ledger_entries WHERE operation_key=op;
+ IF entries<>2 OR NOT EXISTS(SELECT 1 FROM ledger_entries WHERE operation_key=op AND owner_id=source.user_id AND bucket='PENDING' AND asset=source.asset AND delta=source.amount)
+   OR NOT EXISTS(SELECT 1 FROM ledger_entries WHERE operation_key=op AND owner_id=0 AND bucket='CUSTODY' AND asset=source.asset AND delta=-source.amount) THEN
+  RAISE EXCEPTION '보류 원장의 양쪽 항목은 같은 입금의 정확한 소유자/자산/금액이어야 합니다';
+ END IF;
+END $$;
+CREATE OR REPLACE FUNCTION bitcoin_pending_source_commit() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN PERFORM bitcoin_pending_ledger_verify(NEW.operation_key); RETURN NEW; END $$;
+DROP TRIGGER IF EXISTS bitcoin_pending_source_balanced ON bitcoin_pending_deposits;
+CREATE CONSTRAINT TRIGGER bitcoin_pending_source_balanced AFTER INSERT ON bitcoin_pending_deposits
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION bitcoin_pending_source_commit();
+DROP TRIGGER IF EXISTS bitcoin_pending_ledger_has_source ON ledger_transactions;
+CREATE CONSTRAINT TRIGGER bitcoin_pending_ledger_has_source AFTER INSERT ON ledger_transactions
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN(NEW.kind='BTC_DEPOSIT_PENDING') EXECUTE FUNCTION bitcoin_pending_source_commit();
+-- 일반 업무 키로 보류/수탁 계정을 만들어 입금 근거 검사를 우회하지 못한다.
+CREATE OR REPLACE FUNCTION bitcoin_pending_entry_kind() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key=NEW.operation_key AND kind='BTC_DEPOSIT_PENDING') THEN
+  RAISE EXCEPTION '보류/수탁 항목은 검증된 입금 반입 업무에서만 생성할 수 있습니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_pending_entry_bound ON ledger_entries;
+CREATE CONSTRAINT TRIGGER bitcoin_pending_entry_bound AFTER INSERT ON ledger_entries
+ DEFERRABLE INITIALLY DEFERRED FOR EACH ROW WHEN(NEW.bucket IN ('PENDING','CUSTODY')) EXECUTE FUNCTION bitcoin_pending_entry_kind();

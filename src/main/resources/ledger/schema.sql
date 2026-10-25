@@ -13,8 +13,16 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
     asset VARCHAR(50) NOT NULL,
     delta NUMERIC(38,9) NOT NULL CHECK(delta<>0),
     UNIQUE(operation_key,owner_id,bucket,asset),
-    CHECK ((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED')) OR (owner_id=0 AND bucket IN ('FEE','OPENING')))
+    CONSTRAINT ledger_entry_bucket_owner CHECK ((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED','PENDING')) OR (owner_id=0 AND bucket IN ('FEE','OPENING','CUSTODY')))
 );
+-- 기존 금융 행을 보존한 채 새 계정 제약을 먼저 검증한 뒤 이전 익명 제약을 제거한다. 시작마다 전체 재검증하지 않는다.
+DO $$ BEGIN
+    IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='ledger_entry_bucket_owner' AND conrelid='ledger_entries'::regclass) THEN
+        ALTER TABLE ledger_entries ADD CONSTRAINT ledger_entry_bucket_owner CHECK
+         ((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED','PENDING')) OR (owner_id=0 AND bucket IN ('FEE','OPENING','CUSTODY')));
+    END IF;
+END $$;
+ALTER TABLE ledger_entries DROP CONSTRAINT IF EXISTS ledger_entries_check;
 CREATE INDEX IF NOT EXISTS idx_ledger_account ON ledger_entries(owner_id,asset,bucket);
 CREATE OR REPLACE FUNCTION cex_ledger_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN RAISE EXCEPTION '확정 원장은 변경하거나 삭제할 수 없습니다'; END $$;

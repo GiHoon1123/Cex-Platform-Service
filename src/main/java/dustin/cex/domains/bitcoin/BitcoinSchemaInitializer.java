@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /** 기존 불변 원본 트리거와 사용자 표가 준비된 일반 서버에서 주소 표를 초기화한다. */
 @Component
-@DependsOn("kycSchemaInitializer")
+@DependsOn({"kycSchemaInitializer","ledgerService"})
 public class BitcoinSchemaInitializer {
     private final JdbcTemplate jdbc;
     public BitcoinSchemaInitializer(JdbcTemplate jdbc){this.jdbc=jdbc;}

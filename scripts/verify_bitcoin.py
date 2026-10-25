@@ -127,6 +127,8 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "jobs":["*BitcoinDepositObservationJobsIntegrationTest"],
             "observation-worker":["*BitcoinDepositObservationWorkerTest","*BitcoinDepositObservationWorkerIntegrationTest"],
             "qualification":["*BitcoinDepositQualificationTest","*BitcoinDepositQualificationIntegrationTest"],
+            "pending-ledger":["*BitcoinPendingDepositIntegrationTest"],
+            "ledger":["*OrderLedgerTest"],
         }
         result["groups"]=[]
         for group,patterns in groups.items():
@@ -143,6 +145,14 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                         time.sleep(.1)
                     result["qualification_scenario"]={"tip_height":rpc("getblockcount"),"confirmed_confirmations":rpc("gettransaction",[confirmed,True,True],"cex_watch")["confirmations"]}
                     assert result["qualification_scenario"]["confirmed_confirmations"]==6
+                if group=="pending-ledger":
+                    rpc("generatetoaddress",[3,mining])
+                    deadline=time.monotonic()+10
+                    while rpc("getwalletinfo",[],"cex_watch")["lastprocessedblock"]["hash"]!=rpc("getbestblockhash"):
+                        if time.monotonic()>deadline:raise RuntimeError("보류 원장 시험의 추가 블록 반영 대기 실패")
+                        time.sleep(.1)
+                    result["pending_ledger_scenario"]={"tip_height":rpc("getblockcount"),"internal_confirmations":rpc("gettransaction",[internal,True,True],"cex_watch")["confirmations"]}
+                    assert result["pending_ledger_scenario"]["internal_confirmations"]>=6
                 subprocess.run([docker,"run","--detach","--rm","--name",database,"--publish","127.0.0.1::5432",
                     "--tmpfs","/var/lib/postgresql/data","-e","POSTGRES_USER=root","-e","POSTGRES_PASSWORD=1234",
                     "-e","POSTGRES_DB=cex_test","postgres:16"],check=True,stdout=subprocess.DEVNULL)
@@ -157,7 +167,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                     SPRING_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:1",BOT_BOT_COUNT="0",ORDER_DISPATCH_ENABLED="false",ENGINE_HTTP_URL="http://127.0.0.1:1")
                 env.update(CEX_BITCOIN_TEST_URL="http://127.0.0.1:"+str(rpc_port),CEX_BITCOIN_TEST_USER=credentials["username"],
                     CEX_BITCOIN_TEST_PASSWORD=credentials["password"],
-                    CEX_BITCOIN_TEST_CONFIRMED_TX=confirmed,CEX_BITCOIN_TEST_CONFLICTED_TX=conflicted,
+                    CEX_BITCOIN_TEST_CONFIRMED_TX=confirmed,CEX_BITCOIN_TEST_CONFLICTED_TX=conflicted,CEX_BITCOIN_TEST_REPLACEMENT_TX=replacement,
                     CEX_BITCOIN_TEST_UNCONFIRMED_TX=unconfirmed,CEX_BITCOIN_TEST_COINBASE_TX=coinbase,
                     CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_INTERNAL_TX=internal,CEX_BITCOIN_TEST_ADDRESS=watch,
                     CEX_BITCOIN_TEST_SCRIPT=script,CEX_BITCOIN_TEST_EMPTY_SCRIPT=empty_script,

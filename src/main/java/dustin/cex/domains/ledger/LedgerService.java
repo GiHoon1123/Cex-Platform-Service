@@ -13,7 +13,7 @@ import dustin.cex.shared.model.ExactAmount;
 
 /**
  * 금융 상태 변경과 같은 트랜잭션에 자산 이동의 양쪽을 기록한다.
- * 잔고를 복사한 로그가 아니라 고객 사용 가능·예약·수수료·최초 반입 상대 계정 사이의 이동이다.
+ * 잔고를 복사한 로그가 아니라 고객 사용 가능·예약·보류와 수수료·수탁 자산·최초 반입 상대 계정 사이의 이동이다.
  * 확정 기록의 정정은 새 역거래로 해야 하며 이 서비스에는 수정·삭제 기능이 없다.
  */
 @Service
@@ -26,7 +26,7 @@ public class LedgerService {
     public record Posting(long owner, String bucket, String asset, BigDecimal delta) {
         public Posting {
             if(owner<0 || asset==null || asset.isBlank() || asset.length()>50
-                    || !(owner==0 ? Set.of("FEE","OPENING") : Set.of("AVAILABLE","LOCKED")).contains(bucket))
+                    || !(owner==0 ? Set.of("FEE","OPENING","CUSTODY") : Set.of("AVAILABLE","LOCKED","PENDING")).contains(bucket))
                 throw new IllegalArgumentException("잘못된 원장 계정");
             ExactAmount.requireNonNegative(delta.abs(),"원장 이동액");
         }

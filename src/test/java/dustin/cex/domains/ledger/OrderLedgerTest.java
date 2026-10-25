@@ -164,4 +164,19 @@ class OrderLedgerTest {
         assertEquals("MATCHED",reconciliation.run().status());
     }
 
+    @Test void accountConstraintExpansionPreservesCommittedRows() throws Exception {
+        var before=jdbc.queryForList("SELECT * FROM ledger_entries ORDER BY id");
+        // 이전 제약만 있는 소유 시험 스키마를 구성한다. 금융 행과 불변 트리거는 바꾸지 않는다.
+        jdbc.execute("ALTER TABLE ledger_entries DROP CONSTRAINT ledger_entry_bucket_owner");
+        jdbc.execute("ALTER TABLE ledger_entries ADD CONSTRAINT ledger_entries_check CHECK((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED')) OR(owner_id=0 AND bucket IN ('FEE','OPENING')))");
+        ledger.schema();assertEquals(before,jdbc.queryForList("SELECT * FROM ledger_entries ORDER BY id"));
+        String definition=jdbc.queryForObject("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='ledger_entry_bucket_owner' AND conrelid='ledger_entries'::regclass",String.class);
+        assertTrue(definition.contains("PENDING"));assertTrue(definition.contains("CUSTODY"));assertEquals("MATCHED",reconciliation.run().status());
+    }
+    @Test void customerCustodyAndSystemPendingAreInvalidAccounts() {
+        assertThrows(IllegalArgumentException.class,()->p(1,"CUSTODY","BTC",n("1")));
+        assertThrows(IllegalArgumentException.class,()->p(0,"PENDING","BTC",n("1")));
+        assertEquals("PENDING",p(1,"PENDING","BTC",n("1")).bucket());assertEquals("CUSTODY",p(0,"CUSTODY","BTC",n("-1")).bucket());
+    }
+
 }
