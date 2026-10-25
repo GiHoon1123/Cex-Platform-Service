@@ -19,7 +19,7 @@ logs = ARTIFACTS / "deposit-monitoring" / run_id
 logs.mkdir(parents=True)
 source = ROOT / "src/test/java/dustin/cex/domains/kyc/DepositMonitoringIntegrationTest.java"
 methods = re.findall(r"@Test\s+void\s+(\w+)\(", source.read_text())
-assert len(methods) == 14 and len(set(methods)) == 14
+assert len(methods) == 16 and len(set(methods)) == 16
 result = {"container": name, "run_id": run_id, "groups": [], "cases": []}
 try:
     subprocess.run([DOCKER,"run","--detach","--rm","--name",name,"--publish","127.0.0.1::5432",
@@ -59,7 +59,7 @@ try:
         shutil.copytree(ROOT/"build/test-results/test",logs/(method+"-xml"))
         print(method + ": 1 통과",flush=True)
     result["tests"] = {key:sum(g["tests"][key] for g in result["groups"]) for key in ["tests","failures","errors","skipped"]}
-    assert len({(c["class"],c["name"]) for c in result["cases"]})==14
+    assert len({(c["class"],c["name"]) for c in result["cases"]})==16
     result["exit"] = 0
 finally:
     removed = subprocess.run([DOCKER,"rm","--force",name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)

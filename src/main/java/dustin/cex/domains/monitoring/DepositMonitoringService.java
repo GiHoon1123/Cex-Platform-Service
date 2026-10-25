@@ -37,12 +37,11 @@ public class DepositMonitoringService {
     }
     private Claim claim(){
         var rows=jdbc.queryForList("""
-            SELECT j.user_id FROM deposit_monitoring_jobs j LEFT JOIN deposit_monitoring_heads h ON h.user_id=j.user_id
-             LEFT JOIN deposit_monitoring_assessments a ON a.id=h.assessment_id
-             WHERE (j.target_cursor>j.observed_cursor OR a.policy_id IS DISTINCT FROM ?)
+            SELECT j.user_id FROM deposit_monitoring_jobs j
+             WHERE j.target_cursor>j.observed_cursor
               AND(j.lease_until IS NULL OR j.lease_until<=clock_timestamp())
              ORDER BY j.target_cursor,j.user_id LIMIT 1 FOR UPDATE OF j SKIP LOCKED
-            """,Long.class,SmallDepositMonitoringPolicy.POLICY);
+            """,Long.class);
         if(rows.isEmpty())return null;long user=rows.getFirst();UUID lease=UUID.randomUUID();
         jdbc.update("UPDATE deposit_monitoring_jobs SET lease_id=?,lease_until=clock_timestamp()+interval '2 minutes',updated_at=clock_timestamp() WHERE user_id=?",lease,user);
         audit.record(null,"DEPOSIT_MONITORING_CLAIMED","monitoring-customer:"+user,"SUCCESS","LEASE:"+lease);
@@ -50,9 +49,11 @@ public class DepositMonitoringService {
     }
     private Optional<Assessment> process(Claim claim){
         users.lockById(claim.user()).orElseThrow(()->new IllegalStateException("모니터링 고객 원본이 없습니다"));
-        var jobs=jdbc.queryForList("SELECT lease_id FROM deposit_monitoring_jobs WHERE user_id=? FOR UPDATE",claim.user());
+        var jobs=jdbc.queryForList("SELECT lease_id,observed_cursor FROM deposit_monitoring_jobs WHERE user_id=? FOR UPDATE",claim.user());
         if(jobs.size()!=1||!claim.lease().equals(jobs.getFirst().get("lease_id")))return Optional.empty();
-        var anchor=jdbc.queryForMap("SELECT input_cursor,recognized_at FROM deposit_monitoring_inputs WHERE user_id=? ORDER BY input_cursor DESC LIMIT 1",claim.user());
+        // 최신 위치로 건너뛰면 밀린 입력의 과거 시간 창이 사라진다. 미처리 원장 입력을 하나씩 확정한다.
+        long observed=((Number)jobs.getFirst().get("observed_cursor")).longValue();
+        var anchor=jdbc.queryForMap("SELECT input_cursor,recognized_at FROM deposit_monitoring_inputs WHERE user_id=? AND input_cursor>? ORDER BY input_cursor LIMIT 1",claim.user(),observed);
         long cursor=((Number)anchor.get("input_cursor")).longValue();Instant reference=((Timestamp)anchor.get("recognized_at")).toInstant();
         // 최근 입력부터 상한+1개를 읽는다. 시계가 뒤로 움직인 과거 입력도 읽어 불완전으로 판정하며 몰래 제외하지 않는다.
         var rows=jdbc.queryForList("""

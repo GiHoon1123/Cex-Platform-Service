@@ -76,6 +76,15 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM deposit_monitoring_inputs WHERE user_id=NEW.user_id AND input_cursor=NEW.target_cursor)
   OR(TG_OP='UPDATE' AND(NEW.user_id<>OLD.user_id OR NEW.target_cursor<OLD.target_cursor OR NEW.observed_cursor<OLD.observed_cursor OR NEW.created_at<>OLD.created_at)) THEN
   RAISE EXCEPTION '모니터링 작업과 수탁 입력이 다릅니다';END IF;
+ -- 처리 위치는 바로 다음 실제 입력과 같은 트랜잭션의 확정 평가로만 전진한다. 임대·목표 변경은 이 검사를 우회하지 않는다.
+ IF TG_OP='INSERT' THEN
+  IF NEW.observed_cursor<>0 THEN RAISE EXCEPTION '새 모니터링 작업은 미처리 위치에서 시작해야 합니다';END IF;
+ ELSIF NEW.observed_cursor<>OLD.observed_cursor THEN
+  IF NEW.observed_cursor IS DISTINCT FROM (SELECT min(input_cursor) FROM deposit_monitoring_inputs WHERE user_id=NEW.user_id AND input_cursor>OLD.observed_cursor)
+   OR NOT EXISTS(SELECT 1 FROM deposit_monitoring_assessments a JOIN deposit_monitoring_heads h ON h.assessment_id=a.id
+    WHERE a.user_id=NEW.user_id AND h.user_id=NEW.user_id AND a.input_cursor=NEW.observed_cursor AND a.created_txid=txid_current()) THEN
+   RAISE EXCEPTION '모니터링 처리 위치는 다음 입력의 확정 평가가 필요합니다';END IF;
+ END IF;
  RETURN NEW;
 END $$;
 DROP TRIGGER IF EXISTS deposit_monitoring_job_binding_check ON deposit_monitoring_jobs;
