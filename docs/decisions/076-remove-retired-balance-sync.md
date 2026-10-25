@@ -89,7 +89,7 @@ python3 scripts/verify_market_path.py
 
 각 스크립트는 해당 저장소에서 실행했다. 상위 실행은 개인 CDD/EDD/Didit/메일/BITCOIN 환경을 제거했다. 첫 Java179개 중 정산 기동9개가 실패했다. 두 H2 컨텍스트 경계를 고친 뒤 해당9개를 먼저 통과시키고 전체179개를 다시 통과시켰다. 실패/중간 실행을 최종 합계에 더하지 않는다.
 
-**최종 Java179개 + Rust 고유148개(선택 실행161회) + 실제 시장 연결1개 = 고유328개 통과. 최종 실패/오류/제외0개.** 전체 테스트 소스 컴파일, Rust 제품 build, Java bootJar/operatorAdminJar 통과다. 새 BTC 입금이 원장까지 반영되는 시험은 아니며 기존 거래가 살아 있는지를 확인한 연결 시험이다. 봇0·소비자 자동 시작 금지·소유 자원 종료/제거를 확인했다.
+**최종 Java179개 + Rust 고유152개(선택 실행165회) + 실제 시장 연결1개 = 고유332개 통과. 최종 실패/오류/제외0개.** 전체 테스트 소스 컴파일, Rust 제품 build, Java bootJar/operatorAdminJar 통과다. 새 BTC 입금이 원장까지 반영되는 시험은 아니며 기존 거래가 살아 있는지를 확인한 연결 시험이다. 봇0·소비자 자동 시작 금지·소유 자원 종료/제거를 확인했다.
 
 기존 Java deprecated/unchecked/JVM 계측 안내, Rust bin59개(중복7개 포함)·SQLx0.6.3 미래 호환 경고가 남아 있다. 새 의존성/보안 전체 감사/처리량 측정은 없다.
 
@@ -105,3 +105,5 @@ python3 scripts/verify_market_path.py
 
 - [H2 시험 경계 수정 7486c3f](https://github.com/GiHoon1123/Cex-Platform-Service/commit/7486c3f)
 - [엔진 경로 제거 417613a](https://github.com/GiHoon1123/Cex-Engine/commit/417613a)
+
+092 집계 정정: Rust 시작 시험4개의 이름/ok 사이에 Kafka 로그가 끼어 당시 합계가4개 적었다. 보존된076 로그 재집계에 따라 위 수치를152/165·전체332로 정정했다. 당시 JSON 증적은 그대로 보존하며 [엔진020의 원인·집계 회귀·정정 증적](../../../Cex-Engine/docs/decisions/020-typed-deposit-outcomes.md)을 확인한다. 제품 동작을 과거 시점에 추가한 변경은 아니다.
