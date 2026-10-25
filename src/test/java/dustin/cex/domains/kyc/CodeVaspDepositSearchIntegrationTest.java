@@ -39,6 +39,7 @@ class CodeVaspDepositSearchIntegrationTest {
     @Autowired ObjectMapper json;
     @Autowired AuditService audit;
     @Autowired dustin.cex.domains.auth.repository.UserRepository users;
+    boolean executionExpected;
     CodeVaspSettings config;CodeVaspDirectoryService directory;CodeVaspDepositSearches searches;BitcoinDepositFixtures.Seed receipt;
     final String key=Base64.getEncoder().encodeToString(new byte[32]);
     CodeVaspDirectoryService directory(CodeVaspSettings settings){return new CodeVaspDirectoryService(settings,client,jdbc,json,audit,manager);}
@@ -51,7 +52,7 @@ class CodeVaspDepositSearchIntegrationTest {
         directory=directory(config);searches=new CodeVaspDepositSearches(directory,jdbc,audit,manager);
         doAnswer(i->new CodeVaspDirectoryClient.Directory(Instant.now(),Instant.now(),List.of())).when(client).read();directory.refresh();
     }
-    @AfterEach void noFinancialOrExternalSearch(){verifyNoInteractions(transactions,engine,producer);assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM user_balances",Long.class));}
+    @AfterEach void noFinancialOrExternalSearch(){if(!executionExpected)verifyNoInteractions(transactions);verifyNoInteractions(engine,producer);assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM user_balances",Long.class));}
     long count(){return jdbc.queryForObject("SELECT count(*) FROM codevasp_deposit_searches WHERE receipt_id=?",Long.class,receipt.id());}
     @Test void reservationBindsStableRequestToImmutableReceiptWithoutExternalSubmission(){
         var stored=searches.reserve(receipt.id());assertEquals(receipt.id(),stored.receiptId());assertEquals(stored.id(),stored.request().requestId());assertEquals(receipt.txid(),stored.request().txid());assertEquals(receipt.address(),stored.request().beneficiaryAddress());assertEquals("bitcoin-regtest",stored.network());assertEquals(directory.current().attemptId(),stored.directoryAttemptId());assertEquals(stored,searches.get(stored.id()));assertEquals(1,count());assertFalse(stored.toString().contains(receipt.address()));
@@ -109,5 +110,84 @@ class CodeVaspDepositSearchIntegrationTest {
     @Test void ambientTransactionAndDisabledSourceDoNotReserve(){
         assertThrows(IllegalStateException.class,()->new TransactionTemplate(manager).execute(t->searches.reserve(receipt.id())));
         var disabled=new CodeVaspDepositSearches(directory(new CodeVaspSettings("","","","")),jdbc,audit,manager);assertEquals(503,assertThrows(ResponseStatusException.class,()->disabled.reserve(receipt.id())).getStatusCode().value());assertEquals(0,count());
+    }
+    CodeVaspDepositSearchExecution execution(AuditService recorder){
+        executionExpected=true;
+        return new CodeVaspDepositSearchExecution(searches,transactions,jdbc,recorder,json,manager);
+    }
+    CodeVaspTransactionClient.Result found(UUID id){return new CodeVaspTransactionClient.Result(id,CodeVaspTransactionClient.Status.FOUND,"origin",List.of(new CodeVaspTransactionClient.Analysis("origin","FOUND")));}
+    String hash(String value){try{return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}}
+    // 중단/지난 시각은 새 원본을 처음부터 그 시각으로 구성한다. 실제 이력 수정이나 불변 트리거 해제로 시간을 이동하지 않는다.
+    long pastAttempt(CodeVaspDepositSearches.Search search,String phase,int startedAge,String status,int recordedAge,CodeVaspTransactionClient.Result result){return new TransactionTemplate(manager).execute(t->{
+        long attempt=jdbc.queryForObject("INSERT INTO codevasp_search_attempts(search_id,phase,started_at) VALUES(?,?,clock_timestamp()-make_interval(secs=>?)) RETURNING id",Long.class,search.id(),phase,startedAge);
+        jdbc.update("INSERT INTO codevasp_search_heads(search_id,attempt_id) VALUES(?,?) ON CONFLICT(search_id) DO UPDATE SET attempt_id=excluded.attempt_id",search.id(),attempt);
+        if(status!=null){String payload=result==null?null:json.writeValueAsString(result);jdbc.update("INSERT INTO codevasp_search_results(attempt_id,status,failure_code,payload,payload_hash,recorded_at) VALUES(?,?,?,?,?,clock_timestamp()-make_interval(secs=>?))",attempt,status,Set.of("SUBMIT_NOT_SENT","SUBMIT_UNKNOWN","POLL_FAILED").contains(status)?"PROVIDER_UNAVAILABLE":null,payload,payload==null?null:hash(payload),recordedAge);}
+        return attempt;
+    });}
+    AuditService failingAudit(String action){var recorder=mock(AuditService.class);doAnswer(i->{if(i.getArgument(1).equals(action))throw new IllegalStateException("격리 필수 감사 장애");audit.record(i.getArgument(0),i.getArgument(1),i.getArgument(2),i.getArgument(3),i.getArgument(4));return null;}).when(recorder).record(any(),anyString(),anyString(),anyString(),anyString());return recorder;}
+
+    @Test void executionSubmitsOriginalRequestOnceAndPersistsAcknowledgement(){
+        var search=searches.reserve(receipt.id());var execution=execution(audit);assertEquals("UNSTARTED",execution.current(search.id()).status());
+        doAnswer(i->{assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());assertEquals(search.request(),i.getArgument(0));assertEquals("RUNNING",execution.current(search.id()).status());return null;}).when(transactions).submit(any());
+        var result=execution.refresh(search.id());assertEquals("SUBMIT_ACKNOWLEDGED",result.status());assertNull(result.result());assertEquals(result,execution.current(search.id()));assertEquals(result,new CodeVaspDepositSearchExecution(searches,transactions,jdbc,audit,json,manager).current(search.id()));verify(transactions).submit(search.request());verify(transactions,never()).result(any());
+    }
+    @Test void concurrentExecutionCannotSubmitTwiceWhileFirstProviderCallIsPending()throws Exception{
+        var search=searches.reserve(receipt.id());var execution=execution(audit);var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
+        doAnswer(i->{assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());entered.countDown();assertTrue(release.await(5,TimeUnit.SECONDS));return null;}).when(transactions).submit(any());
+        try(var pool=Executors.newSingleThreadExecutor()){
+            var first=pool.submit(()->execution.refresh(search.id()));try{assertTrue(entered.await(5,TimeUnit.SECONDS));assertEquals("RUNNING",execution.current(search.id()).status());assertEquals(409,assertThrows(ResponseStatusException.class,()->execution.refresh(search.id())).getStatusCode().value());}finally{release.countDown();}
+            assertEquals("SUBMIT_ACKNOWLEDGED",first.get(5,TimeUnit.SECONDS).status());
+        }verify(transactions,times(1)).submit(any());
+    }
+    @Test void executionStartAuditFailureCannotReachProvider(){
+        var search=searches.reserve(receipt.id());var execution=execution(failingAudit("CODE_DEPOSIT_SEARCH_STARTED"));assertThrows(IllegalStateException.class,()->execution.refresh(search.id()));assertEquals("UNSTARTED",execution.current(search.id()).status());verifyNoInteractions(transactions);
+    }
+    @Test void executionFinishAuditFailureRetainsRunningStartWithoutSecondSubmission(){
+        var search=searches.reserve(receipt.id());var execution=execution(failingAudit("CODE_DEPOSIT_SEARCH_FINISHED"));assertThrows(IllegalStateException.class,()->execution.refresh(search.id()));assertEquals("RUNNING",execution.current(search.id()).status());assertEquals(409,assertThrows(ResponseStatusException.class,()->execution.refresh(search.id())).getStatusCode().value());verify(transactions,times(1)).submit(any());assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM codevasp_search_results r JOIN codevasp_search_attempts a ON a.id=r.attempt_id WHERE a.search_id=?",Long.class,search.id()));
+    }
+    @Test void orphanedSubmissionIsRecoveredByPollingAndLateAckCannotMoveCurrentHead(){
+        var search=searches.reserve(receipt.id());long orphan=pastAttempt(search,"SUBMIT",181,null,0,null);var execution=execution(audit);when(transactions.result(search.id())).thenAnswer(i->{assertFalse(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());return found(search.id());});
+        var result=execution.refresh(search.id());assertEquals("POLL",result.phase());assertEquals("FOUND",result.status());assertEquals(found(search.id()),result.result());jdbc.update("INSERT INTO codevasp_search_results(attempt_id,status) VALUES(?,'SUBMIT_ACKNOWLEDGED')",orphan);assertEquals(result,execution.current(search.id()));verify(transactions,never()).submit(any());verify(transactions).result(search.id());
+    }
+    @Test void lostSubmissionResponseIsUnknownAndDoesNotTriggerImmediateResubmission(){
+        var search=searches.reserve(receipt.id());var execution=execution(audit);doThrow(new ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"격리 공급사 원문")).when(transactions).submit(any());var result=execution.refresh(search.id());assertEquals("SUBMIT_UNKNOWN",result.status());assertEquals("PROVIDER_UNAVAILABLE",result.failureCode());assertFalse(result.toString().contains("공급사 원문"));assertEquals(409,assertThrows(ResponseStatusException.class,()->execution.refresh(search.id())).getStatusCode().value());verify(transactions,times(1)).submit(any());
+    }
+    @Test void latestRunningAndFailedPollCannotExposeEarlierFound(){
+        var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",241,"SUBMIT_ACKNOWLEDGED",181,null);pastAttempt(search,"POLL",121,"FOUND",61,found(search.id()));var execution=execution(audit);assertEquals("FOUND",execution.current(search.id()).status());
+        when(transactions.result(search.id())).thenAnswer(i->{assertEquals("RUNNING",execution.current(search.id()).status());throw new ResponseStatusException(org.springframework.http.HttpStatus.BAD_GATEWAY,"격리 공급사 장애");});
+        var result=execution.refresh(search.id());assertEquals("POLL_FAILED",result.status());assertNull(result.result());assertEquals(result,execution.current(search.id()));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM codevasp_search_results r JOIN codevasp_search_attempts a ON a.id=r.attempt_id WHERE a.search_id=? AND r.status='FOUND'",Long.class,search.id()));
+    }
+    @Test void malformedPollReplyKeepsBoundedInvalidSourceFailure(){
+        var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",181,null,0,null);var execution=execution(audit);when(transactions.result(search.id())).thenReturn(found(UUID.randomUUID()));var result=execution.refresh(search.id());assertEquals("POLL_FAILED",result.status());assertEquals("INVALID_SOURCE",result.failureCode());assertNull(result.result());
+    }
+    @Test void completedAttemptEnforcesPollingIntervalAndDirectResubmissionIsRejected(){
+        var search=searches.reserve(receipt.id());var execution=execution(audit);execution.refresh(search.id());assertEquals(409,assertThrows(ResponseStatusException.class,()->execution.refresh(search.id())).getStatusCode().value());
+        for(String phase:List.of("SUBMIT","POLL"))assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO codevasp_search_attempts(search_id,phase,started_at) VALUES(?,?,clock_timestamp()-interval '3 minutes')",search.id(),phase));verify(transactions,times(1)).submit(any());
+    }
+    @Test void immutableResultsAndPayloadBindingRejectDirectDatabaseBypass(){
+        var search=searches.reserve(receipt.id());long original=pastAttempt(search,"SUBMIT",241,"SUBMIT_ACKNOWLEDGED",181,null);long poll=pastAttempt(search,"POLL",61,null,0,null);String wrong=json.writeValueAsString(found(UUID.randomUUID()));
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO codevasp_search_results(attempt_id,status,payload,payload_hash) VALUES(?,'FOUND',?,?)",poll,wrong,hash(wrong)));
+        String valid=json.writeValueAsString(found(search.id()));assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO codevasp_search_results(attempt_id,status,payload,payload_hash) VALUES(?,'FOUND',?,?)",poll,valid,"0".repeat(64)));
+        for(String table:List.of("codevasp_search_attempts","codevasp_search_results"))for(String sql:List.of("UPDATE "+table+" SET "+(table.endsWith("results")?"status=status":"id=id"),"DELETE FROM "+table,"TRUNCATE "+table+" CASCADE"))assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.execute(sql));
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("UPDATE codevasp_search_heads SET attempt_id=? WHERE search_id=?",original,search.id()));assertEquals("RUNNING",execution(audit).current(search.id()).status());verifyNoInteractions(transactions);
+    }
+    @Test void resultPhaseCannotPretendSubmissionWasCompletedSearch(){
+        var search=searches.reserve(receipt.id());long original=pastAttempt(search,"SUBMIT",181,null,0,null);String payload=json.writeValueAsString(found(search.id()));var failure=assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO codevasp_search_results(attempt_id,status,payload,payload_hash) VALUES(?,'FOUND',?,?)",original,payload,hash(payload)));assertTrue(failure.getMostSpecificCause().getMessage().contains("실행 단계"));
+    }
+    @Test void executionCannotUseAmbientTransactionForProviderIo(){
+        var search=searches.reserve(receipt.id());var execution=execution(audit);assertThrows(IllegalStateException.class,()->new TransactionTemplate(manager).execute(t->execution.refresh(search.id())));assertEquals("UNSTARTED",execution.current(search.id()).status());verifyNoInteractions(transactions);
+    }
+    @Test void futureExecutionTimesCannotBeInsertedAsFreshHistory(){
+        var search=searches.reserve(receipt.id());
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO codevasp_search_attempts(search_id,phase,started_at) VALUES(?,'SUBMIT',clock_timestamp()+interval '1 minute')",search.id()));
+        long attempt=pastAttempt(search,"SUBMIT",181,null,0,null);
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO codevasp_search_results(attempt_id,status,recorded_at) VALUES(?,'SUBMIT_ACKNOWLEDGED',clock_timestamp()+interval '1 minute')",attempt));
+    }
+    @Test void provenNonSendIsStoredSeparatelyWithoutImmediateRetryBurst(){
+        var search=searches.reserve(receipt.id());var execution=execution(audit);doThrow(new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.NOT_SENT)).when(transactions).submit(any());
+        var result=execution.refresh(search.id());assertEquals("SUBMIT_NOT_SENT",result.status());assertEquals(409,assertThrows(ResponseStatusException.class,()->execution.refresh(search.id())).getStatusCode().value());verify(transactions,times(1)).submit(search.request());
+    }
+    @Test void provenNonSendCanRetrySameRequestAfterIntervalWithoutPollingUnknownIdentity(){
+        var search=searches.reserve(receipt.id());pastAttempt(search,"SUBMIT",61,"SUBMIT_NOT_SENT",31,null);var execution=execution(audit);var result=execution.refresh(search.id());assertEquals("SUBMIT",result.phase());assertEquals("SUBMIT_ACKNOWLEDGED",result.status());verify(transactions).submit(search.request());verify(transactions,never()).result(any());
     }
 }

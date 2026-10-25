@@ -92,3 +92,76 @@ DROP TRIGGER IF EXISTS codevasp_search_source ON codevasp_deposit_searches;
 CREATE TRIGGER codevasp_search_source BEFORE INSERT ON codevasp_deposit_searches FOR EACH ROW EXECUTE FUNCTION codevasp_deposit_search_source();
 DROP TRIGGER IF EXISTS codevasp_search_immutable ON codevasp_deposit_searches;
 CREATE TRIGGER codevasp_search_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_deposit_searches FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 접수의 시작을 잃지 않는다. 게이트웨이 미전송을 증명한 경우만 재접수하며 불명·중단은 같은 ID의 결과 조회다.
+CREATE TABLE IF NOT EXISTS codevasp_search_attempts (
+ id bigserial PRIMARY KEY,search_id uuid NOT NULL REFERENCES codevasp_deposit_searches(id),
+ phase varchar(8) NOT NULL CHECK(phase IN ('SUBMIT','POLL')),started_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ created_txid bigint NOT NULL DEFAULT txid_current(),UNIQUE(id,search_id)
+);
+CREATE TABLE IF NOT EXISTS codevasp_search_heads (
+ search_id uuid PRIMARY KEY REFERENCES codevasp_deposit_searches(id),attempt_id bigint NOT NULL,
+ FOREIGN KEY(attempt_id,search_id) REFERENCES codevasp_search_attempts(id,search_id)
+);
+CREATE TABLE IF NOT EXISTS codevasp_search_results (
+ attempt_id bigint PRIMARY KEY REFERENCES codevasp_search_attempts(id),status varchar(32) NOT NULL,
+ failure_code varchar(32),payload text,payload_hash varchar(64),recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ CHECK(status IN ('SUBMIT_ACKNOWLEDGED','SUBMIT_UNKNOWN','SUBMIT_NOT_SENT','FOUND','NOT_FOUND','PROCESSING','UNKNOWN_REQUEST','AMBIGUOUS','POLL_FAILED')),
+ CHECK((status IN ('SUBMIT_UNKNOWN','SUBMIT_NOT_SENT','POLL_FAILED') AND failure_code IS NOT NULL AND failure_code IN ('PROVIDER_UNAVAILABLE','INVALID_SOURCE','INTERNAL_FAILURE') AND payload IS NULL AND payload_hash IS NULL)
+  OR(status='SUBMIT_ACKNOWLEDGED' AND failure_code IS NULL AND payload IS NULL AND payload_hash IS NULL)
+  OR(status IN ('FOUND','NOT_FOUND','PROCESSING','UNKNOWN_REQUEST','AMBIGUOUS') AND failure_code IS NULL AND payload IS NOT NULL AND payload_hash IS NOT NULL
+     AND octet_length(payload)<=4194304 AND payload_hash=encode(sha256(convert_to(payload,'UTF8')),'hex')
+     AND jsonb_typeof(payload::jsonb)='object' AND payload::jsonb->>'status'=status))
+);
+CREATE OR REPLACE FUNCTION codevasp_search_attempt_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE latest record; prior boolean;
+BEGIN
+ IF NEW.started_at>clock_timestamp() THEN RAISE EXCEPTION '검색 시작 시각이 미래입니다'; END IF;
+ -- 불변 검색 원본의 행을 잠깐 고정해 직접 SQL의 동시 최초 접수도 직렬화한다.
+ PERFORM id FROM codevasp_deposit_searches WHERE id=NEW.search_id FOR UPDATE;
+ SELECT EXISTS(SELECT 1 FROM codevasp_search_attempts WHERE search_id=NEW.search_id) INTO prior;
+ SELECT a.started_at,r.recorded_at,r.status INTO latest FROM codevasp_search_heads h
+  JOIN codevasp_search_attempts a ON a.id=h.attempt_id LEFT JOIN codevasp_search_results r ON r.attempt_id=a.id WHERE h.search_id=NEW.search_id;
+ IF (NOT prior AND NEW.phase<>'SUBMIT') OR(prior AND NEW.phase<>CASE WHEN latest.status='SUBMIT_NOT_SENT' THEN 'SUBMIT' ELSE 'POLL' END) THEN
+  RAISE EXCEPTION '미전송이 확인된 경우만 재접수하고 이후에는 결과를 조회합니다';
+ END IF;
+ IF latest.started_at IS NOT NULL AND ((latest.recorded_at IS NULL AND latest.started_at>clock_timestamp()-interval '2 minutes')
+   OR(latest.recorded_at IS NOT NULL AND latest.recorded_at>clock_timestamp()-interval '30 seconds')) THEN
+  RAISE EXCEPTION '진행 중이거나 재조회 간격이 지나지 않은 검색입니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_search_attempt_guard ON codevasp_search_attempts;
+CREATE TRIGGER codevasp_search_attempt_guard BEFORE INSERT ON codevasp_search_attempts FOR EACH ROW EXECUTE FUNCTION codevasp_search_attempt_guard();
+CREATE OR REPLACE FUNCTION codevasp_search_head_forward() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='UPDATE' AND (NEW.search_id<>OLD.search_id OR NEW.attempt_id<=OLD.attempt_id) THEN RAISE EXCEPTION '검색의 최신 시도를 되돌릴 수 없습니다'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM codevasp_search_attempts a WHERE a.id=NEW.attempt_id AND a.search_id=NEW.search_id AND a.created_txid=txid_current()) THEN
+  RAISE EXCEPTION '검색 현재 위치는 시작 원본과 같은 트랜잭션에서 작성해야 합니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_search_head_forward ON codevasp_search_heads;
+CREATE TRIGGER codevasp_search_head_forward BEFORE INSERT OR UPDATE ON codevasp_search_heads FOR EACH ROW EXECUTE FUNCTION codevasp_search_head_forward();
+CREATE OR REPLACE FUNCTION codevasp_search_result_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE original record;
+BEGIN
+ SELECT phase,search_id,started_at INTO original FROM codevasp_search_attempts WHERE id=NEW.attempt_id;
+ IF NOT FOUND OR NEW.recorded_at>clock_timestamp() OR NEW.recorded_at<original.started_at
+  OR(original.phase='SUBMIT' AND NEW.status NOT IN ('SUBMIT_ACKNOWLEDGED','SUBMIT_UNKNOWN','SUBMIT_NOT_SENT'))
+  OR(original.phase='POLL' AND NEW.status IN ('SUBMIT_ACKNOWLEDGED','SUBMIT_UNKNOWN','SUBMIT_NOT_SENT')) THEN
+  RAISE EXCEPTION '검색 결과의 실행 단계 또는 기록 시각이 다릅니다';
+ END IF;
+ IF NEW.payload IS NOT NULL AND (NEW.payload::jsonb->>'requestId' IS NULL OR NEW.payload::jsonb->>'requestId'<>original.search_id::text OR NEW.payload::jsonb->>'status' IS NULL) THEN
+  RAISE EXCEPTION '검색 결과의 요청 식별자 또는 상태가 다릅니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS codevasp_search_result_guard ON codevasp_search_results;
+CREATE TRIGGER codevasp_search_result_guard BEFORE INSERT ON codevasp_search_results FOR EACH ROW EXECUTE FUNCTION codevasp_search_result_guard();
+DROP TRIGGER IF EXISTS codevasp_search_attempt_immutable ON codevasp_search_attempts;
+CREATE TRIGGER codevasp_search_attempt_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_search_attempts FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS codevasp_search_result_immutable ON codevasp_search_results;
+CREATE TRIGGER codevasp_search_result_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON codevasp_search_results FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+DROP TRIGGER IF EXISTS codevasp_search_head_no_delete ON codevasp_search_heads;
+CREATE TRIGGER codevasp_search_head_no_delete BEFORE DELETE OR TRUNCATE ON codevasp_search_heads FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
