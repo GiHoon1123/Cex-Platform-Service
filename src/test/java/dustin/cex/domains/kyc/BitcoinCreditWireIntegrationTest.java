@@ -47,6 +47,8 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
     @Autowired dustin.cex.domains.monitoring.DepositMonitoringService monitoring;
     @Autowired BitcoinDepositReconciliationService reconciliation;
     @Autowired BitcoinCreditProcessing processing;
+    @Autowired BitcoinChainRecoveryProofs recoveryProofs;
+    @Autowired BitcoinObservationService observations;
     @Autowired BitcoinCreditDispatches dispatch;
     @Autowired EngineDepositClient actualEngine;
     @Autowired dustin.cex.domains.reconciliation.EngineAuditClient actualAudit;
@@ -128,4 +130,13 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
         await(()->attempted.get()&&listeners.getListenerContainers().stream().anyMatch(c->!c.isRunning()),25);pendingOnly();
         doCallRealMethod().when(audit).record(isNull(),eq("BTC_DEPOSIT_CREDITED"),anyString(),anyString(),anyString());listeners.start();settled();assertEquals(1,rows("bitcoin_credit_dispatch_attempts"));
     }
+    @Test void realJournalReconciliationBuildsRecoveryEvidenceWithoutClearingTheRisk()throws Exception{
+        assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,processing.processNext().orElseThrow().transportOutcome());listeners.start();settled();
+        String original=originalEvent();long through=actualAudit.page(0,null,null).path("through").longValue();
+        var normal=node.inspect(receipt.txid());when(node.inspect(receipt.txid())).thenReturn(new BitcoinDepositReader.Observation(normal.network(),normal.txid(),BitcoinDepositReader.Status.UNCONFIRMED,0,false,false,null,null,normal.tipHash(),normal.tipHeight(),normal.outputs()));
+        observations.refresh(receipt.txid());when(node.inspect(receipt.txid())).thenReturn(normal);
+        var report=recoveryProofs.prepare(maker.user().getId(),maker.sid(),receipt.id(),UUID.randomUUID());assertEquals("READY",report.state());assertEquals(1,rows("bitcoin_credit_dispatch_attempts"));assertEquals(1,rows("bitcoin_credited_deposits"));assertEquals(1,rows("bitcoin_credit_chain_risks"));assertEquals(original,originalEvent());assertEquals(through,actualAudit.page(0,null,null).path("through").longValue());
+        new org.springframework.transaction.support.TransactionTemplate(manager).executeWithoutResult(t->assertFalse(eligibility.permitted(users.lockById(customer.getId()).orElseThrow())));settled();
+    }
+
 }

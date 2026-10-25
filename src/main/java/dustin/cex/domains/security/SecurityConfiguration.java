@@ -52,6 +52,9 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/monitoring-cases","/api/admin/monitoring-cases/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 // 탐지 원본의 명시적 처리 요청도 현재 운영 업무다. 감사자에게 작업 생성 권한을 부여하지 않는다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                // 새 복구 검증은 업무 담당자/승인자만 시작한다. 감사자는 만들어진 최소 근거만 읽는다.
+                .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/chain-recovery-probes").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/chain-recovery-probes/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.GET,"/api/customer/deposits/BTC","/api/customer/deposits/BTC/*").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/customer/deposit-addresses/BTC").access(audited(audit,sessions,"CUSTOMER"))
