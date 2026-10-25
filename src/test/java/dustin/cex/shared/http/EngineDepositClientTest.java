@@ -13,6 +13,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import tools.jackson.databind.ObjectMapper;
 
 /** 실소유 루프백 HTTP에서 요청 원본·응답 결합·크기/시간 제한을 검증한다. 실제 엔진의 내구성 시험과 구분한다. */
+// 전역 프록시 선택기를 바꾸는 시험이 있어 다른 클래스와 병렬 실행하지 않고 원래 값을 반드시 복구한다.
+@org.junit.jupiter.api.parallel.Isolated
 class EngineDepositClientTest {
     final ObjectMapper json=new ObjectMapper();
     final UUID id=UUID.randomUUID();
@@ -67,6 +69,17 @@ class EngineDepositClientTest {
     @Test void nonJsonContentTypeCannotConfirmFinancialState(){for(String content:List.of("text/plain","text/html","application/jsonp")){type=content;unknown();}type=null;unknown();}
     @Test void declaredJsonWithCharsetIsSupported(){type="Application/JSON; charset=UTF-8";assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,call());}
     @Test void oversizedResponseIsCancelledAndRemainsUnknown(){response=new byte[5000];Arrays.fill(response,(byte)'x');unknown();assertEquals(1,requests.get());}
+    @Test void globalProxyCannotReceiveTheInternalServiceKey(){
+        var previous=java.net.ProxySelector.getDefault();var selections=new AtomicInteger();client.close();
+        try{
+            java.net.ProxySelector.setDefault(new java.net.ProxySelector(){
+                @Override public List<java.net.Proxy> select(java.net.URI uri){selections.incrementAndGet();return List.of(new java.net.Proxy(java.net.Proxy.Type.HTTP,new InetSocketAddress("127.0.0.1",1)));}
+                @Override public void connectFailed(java.net.URI uri,java.net.SocketAddress address,java.io.IOException failure){}
+            });
+            // 기본 선택기가 바뀐 뒤 새 클라이언트를 만들어 전역 설정을 실제로 상속할 위험을 재현한다.
+            client=new EngineDepositClient(origin,2000,"isolated-engine-service-token-32-bytes");assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,call());assertEquals(0,selections.get());assertEquals(1,requests.get());
+        }finally{java.net.ProxySelector.setDefault(previous);}
+    }
     @Test void redirectDoesNotForwardTheServiceSecret(){status=307;location=origin+"/redirect-target";unknown();assertEquals(1,requests.get());assertEquals(0,redirected.get());}
     @Test void deadlineIncludesWaitingForResponseHeaders(){client.close();client=new EngineDepositClient(origin,500,"isolated-engine-service-token-32-bytes");waitBeforeHeaders=true;unknown();assertEquals(1,requests.get());}
     @Test void deadlineIncludesTheIncompleteBody(){client.close();client=new EngineDepositClient(origin,500,"isolated-engine-service-token-32-bytes");waitInsideBody=true;unknown();assertEquals(1,requests.get());}

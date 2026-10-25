@@ -39,7 +39,8 @@ public class EngineDepositClient implements AutoCloseable {
         if(!("http".equals(base.getScheme())||"https".equals(base.getScheme()))||base.getHost()==null||base.getUserInfo()!=null||base.getQuery()!=null||base.getFragment()!=null
             ||!(base.getPath().isEmpty()||base.getPath().equals("/"))||timeout<=0||token==null||token.length()<32||token.length()>1024||token.chars().anyMatch(c->c<33||c>126))throw new IllegalArgumentException("엔진 명령 주소·대기 시간·서비스 키를 확인하세요");
         endpoint=base.resolve("/api/cex/deposits/credits");this.timeout=timeout;this.token=token;
-        http=HttpClient.newBuilder().connectTimeout(Duration.ofMillis(timeout)).followRedirects(HttpClient.Redirect.NEVER).version(HttpClient.Version.HTTP_1_1).build();
+        // 내부 서비스 키를 JVM의 전역 프록시에 전달하지 않는다. 설정한 엔진 주소로만 직접 연결한다.
+        http=HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(Duration.ofMillis(timeout)).followRedirects(HttpClient.Redirect.NEVER).version(HttpClient.Version.HTTP_1_1).build();
     }
     public Outcome credit(Credit credit){
         // 금융 의도는 먼저 영속화하고 잠금을 놓은 뒤 전송한다. 네트워크 대기를 금융 DB 트랜잭션에 포함하지 않는다.
