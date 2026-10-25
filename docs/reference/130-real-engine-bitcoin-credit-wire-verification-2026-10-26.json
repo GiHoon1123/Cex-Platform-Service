@@ -1,0 +1,76 @@
+{
+  "cycle": 130,
+  "implementation_commit": "f521e86be263c5a22dae8dc5c4cf48eaf6f7cd54",
+  "verification": {
+    "run_id": "ad28f6ac6d86",
+    "engine_commit": "ff36d7f843516bc3a0354233409f3b80e02a68f7",
+    "groups": [
+      {
+        "method": "actualHttpAcknowledgementWaitsForKafkaAndDuplicateDeliveryDoesNotCreditTwice",
+        "database_container": "cex-credit-wire-ad28f6ac6d86-0",
+        "broker_container": "cex-credit-wire-ad28f6ac6d86-0-kafka-a22b6c717b",
+        "database_host_clock_difference_seconds": 0.0067331790924072266,
+        "exit": 0,
+        "tests": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "broker_removed": true,
+        "database_removed": true
+      },
+      {
+        "method": "lostHttpSuccessAndForcedEngineRestartPreserveTheSameDepositAndEvent",
+        "database_container": "cex-credit-wire-ad28f6ac6d86-1",
+        "broker_container": "cex-credit-wire-ad28f6ac6d86-1-kafka-221ad1d7f1",
+        "database_host_clock_difference_seconds": 0.006137847900390625,
+        "exit": 0,
+        "tests": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "broker_removed": true,
+        "database_removed": true
+      },
+      {
+        "method": "requiredAuditFailureStopsTheRealConsumerAndReplaysWithoutLosingFunds",
+        "database_container": "cex-credit-wire-ad28f6ac6d86-2",
+        "broker_container": "cex-credit-wire-ad28f6ac6d86-2-kafka-969619ee3b",
+        "database_host_clock_difference_seconds": 0.006311893463134766,
+        "exit": 0,
+        "tests": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "broker_removed": true,
+        "database_removed": true
+      }
+    ],
+    "cases": [
+      {
+        "class": "dustin.cex.domains.kyc.BitcoinCreditWireIntegrationTest",
+        "name": "actualHttpAcknowledgementWaitsForKafkaAndDuplicateDeliveryDoesNotCreditTwice()"
+      },
+      {
+        "class": "dustin.cex.domains.kyc.BitcoinCreditWireIntegrationTest",
+        "name": "lostHttpSuccessAndForcedEngineRestartPreserveTheSameDepositAndEvent()"
+      },
+      {
+        "class": "dustin.cex.domains.kyc.BitcoinCreditWireIntegrationTest",
+        "name": "requiredAuditFailureStopsTheRealConsumerAndReplaysWithoutLosingFunds()"
+      }
+    ],
+    "tests": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "exit": 0
+  }
+}
