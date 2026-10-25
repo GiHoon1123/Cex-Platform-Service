@@ -30,7 +30,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
     rpc_port=port()
     config=data/"bitcoin.conf"
     config.write_text("\n".join(["regtest=1","server=1","listen=0","networkactive=0","dnsseed=0","discover=0",
-        "walletbroadcast=0","printtoconsole=0","rpcauth="+credentials["rpcauth"],"rpcwhitelistdefault=0",
+        "walletbroadcast=0","addresstype=bech32","changetype=bech32","printtoconsole=0","rpcauth="+credentials["rpcauth"],"rpcwhitelistdefault=0",
         "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getnewaddress,getaddressinfo,gettransaction,getblockheader,getblockhash,getdescriptoractivity",
         "[regtest]","rpcbind=127.0.0.1","rpcallowip=127.0.0.1","rpcport="+str(rpc_port)])+"\n")
     config.chmod(0o600)
@@ -60,11 +60,14 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
         # 로컬 시험용 키다. 공개 디스크립터만 관찰 지갑으로 반입하고 개인키는 Java에 넘기지 않는다.
         rpc("createwallet",["fixture_keys"])
         public=rpc("listdescriptors",[False],"fixture_keys")["descriptors"]
-        descriptor=next(d for d in public if d["active"] and not d["internal"] and d["desc"].startswith("wpkh("))
+        descriptors=[d for d in public if d["active"] and d["desc"].startswith("wpkh(")]
+        assert len(descriptors)==2 and {d["internal"] for d in descriptors}=={False,True}
         rpc("createwallet",["cex_watch",True,True])
-        imported=rpc("importdescriptors",[[{"desc":descriptor["desc"],"timestamp":"now","active":True,"internal":False,"range":[0,1000]}]],"cex_watch")
-        if not imported[0]["success"]:raise RuntimeError("관찰 지갑 디스크립터 반입 실패")
-        mining=rpc("getnewaddress",[],"fixture_keys")
+        imported=rpc("importdescriptors",[[{"desc":d["desc"],"timestamp":"now","active":True,"internal":d["internal"],"range":[0,1000]} for d in descriptors]],"cex_watch")
+        if not all(d["success"] for d in imported):raise RuntimeError("관찰 지갑 디스크립터 반입 실패")
+        # 외부 자금 지갑과 수탁 키 지갑을 구분한다. 수탁의 수신/거스름돈 분기 모두 관찰하고 외부 지갑의 키는 반입하지 않는다.
+        rpc("createwallet",["funding_keys"])
+        mining=rpc("getnewaddress",[],"funding_keys")
         rpc("generatetoaddress",[1,mining])
         info=rpc("getblockchaininfo")
         assert info["chain"]=="regtest" and not info["initialblockdownload"]
@@ -75,19 +78,21 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
         # 개별 준비 호출도 제한 시간 안에 끝나도록 작은 묶음으로 생성한다. 시간 초과한 생성 명령을 재시도하지 않는다.
         for _ in range(10):rpc("generatetoaddress",[10,mining])
         watch=rpc("getnewaddress",[],"cex_watch")
-        def broadcast(txid):
+        def broadcast(txid,wallet="funding_keys"):
             # 자동 전파는 끈 채 시험 프로세스가 서명된 공개 거래만 로컬 mempool에 명시적으로 넣는다.
-            raw=rpc("gettransaction",[txid,True],"fixture_keys")["hex"]
+            raw=rpc("gettransaction",[txid,True],wallet)["hex"]
             assert rpc("sendrawtransaction",[raw])==txid
         def send(amount):
-            txid=rpc("sendtoaddress",{"address":watch,"amount":amount,"fee_rate":20,"replaceable":True},"fixture_keys")
+            txid=rpc("sendtoaddress",{"address":watch,"amount":amount,"fee_rate":20,"replaceable":True},"funding_keys")
             broadcast(txid)
             return txid
         confirmed=send("0.12345678");rpc("generatetoaddress",[1,mining])
         conflicted=send("0.23456789")
-        replacement=rpc("bumpfee",[conflicted,{"fee_rate":40}],"fixture_keys")["txid"]
+        replacement=rpc("bumpfee",[conflicted,{"fee_rate":40}],"funding_keys")["txid"]
         broadcast(replacement)
         rpc("generatetoaddress",[1,mining])
+        internal=rpc("sendtoaddress",{"address":watch,"amount":"0.01","fee_rate":20},"fixture_keys")
+        broadcast(internal,"fixture_keys")
         coinbase_block=rpc("generatetoaddress",[1,watch])[0]
         coinbase=rpc("getblock",[coinbase_block,1])["tx"][0]
         reorg=send("0.34567891");orphan_block=rpc("generatetoaddress",[1,mining])[0]
@@ -102,7 +107,10 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             time.sleep(.1)
         result["chain_scenarios"]={"reorg_before_confirmations":before_reorg,"reorg_after_confirmations":after_reorg,
             "confirmed_confirmations":rpc("gettransaction",[confirmed,True,True],"cex_watch")["confirmations"],
-            "conflicted_confirmations":rpc("gettransaction",[conflicted,True,True],"cex_watch")["confirmations"]}
+            "conflicted_confirmations":rpc("gettransaction",[conflicted,True,True],"cex_watch")["confirmations"],
+            "ordinary_wallet_debit": "fee" in rpc("gettransaction",[confirmed,True,True],"cex_watch"),
+            "internal_wallet_debit": "fee" in rpc("gettransaction",[internal,True,True],"cex_watch")}
+        assert not result["chain_scenarios"]["ordinary_wallet_debit"] and result["chain_scenarios"]["internal_wallet_debit"]
 
         script=rpc("getaddressinfo",[watch],"cex_watch")["scriptPubKey"]
         empty_address=rpc("getnewaddress",["unused_discovery","bech32"],"cex_watch")
@@ -151,7 +159,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                     CEX_BITCOIN_TEST_PASSWORD=credentials["password"],
                     CEX_BITCOIN_TEST_CONFIRMED_TX=confirmed,CEX_BITCOIN_TEST_CONFLICTED_TX=conflicted,
                     CEX_BITCOIN_TEST_UNCONFIRMED_TX=unconfirmed,CEX_BITCOIN_TEST_COINBASE_TX=coinbase,
-                    CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_ADDRESS=watch,
+                    CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_INTERNAL_TX=internal,CEX_BITCOIN_TEST_ADDRESS=watch,
                     CEX_BITCOIN_TEST_SCRIPT=script,CEX_BITCOIN_TEST_EMPTY_SCRIPT=empty_script,
                     CEX_BITCOIN_TEST_CONFIRMED_HEIGHT=str(confirmed_height))
                 env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")

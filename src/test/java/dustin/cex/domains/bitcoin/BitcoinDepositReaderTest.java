@@ -40,6 +40,13 @@ class BitcoinDepositReaderTest {
                         if(mode.equals("DEPTH_OVERFLOW"))result.put("confirmations",new java.math.BigInteger("9223372036854775808"));
                         if(mode.equals("BAD_GENERATED"))result.put("generated",true);
                         if(mode.equals("UNCONFIRMED")||mode.equals("CONFLICTED")){result.put("confirmations",mode.equals("CONFLICTED")?-2:0);result.remove("blockhash");result.remove("blockheight");}
+                        if(mode.startsWith("FEE_")||mode.equals("SEND_AND_FEE")||mode.equals("COINBASE_WITH_FEE")){
+                            Object fee=switch(mode){case "FEE_NULL"->null;case "FEE_STRING"->"-0.0001";case "FEE_PRECISION"->new BigDecimal("0.000000001");case "FEE_OVERFLOW"->new BigDecimal("21000001");case "FEE_POSITIVE"->new BigDecimal("0.25");default->new BigDecimal("-0.0001");};
+                            result.put("fee",fee);
+                        }
+                        if(mode.equals("SEND_AND_FEE")||mode.equals("SEND_WITHOUT_FEE"))result.put("details",List.of(detail,Map.of("category","send","vout",0,"amount",new BigDecimal("-0.12345678"))));
+                        if(mode.equals("UNKNOWN_CATEGORY"))result.put("details",List.of(Map.of("category","unknown")));
+                        if(mode.equals("COINBASE_WITH_FEE")){result.put("generated",true);result.put("decoded",Map.of("txid",TX,"vin",List.of(Map.of("coinbase","00")),"vout",List.of(output)));}
                         yield result;
                     }
                     case "getblockheader"->Map.of("hash",BLOCK,"height",102,"confirmations",mode.equals("HEADER_DEPTH")?2:3);
@@ -84,6 +91,16 @@ class BitcoinDepositReaderTest {
         TransactionSynchronizationManager.setActualTransactionActive(true);
         try{assertThrows(IllegalStateException.class,()->reader.inspect(TX));}finally{TransactionSynchronizationManager.setActualTransactionActive(false);}
         assertEquals(0,transactions.get());
+    }
+    @Test void feeAndSendSignalsNeverBecomeApparentlyExternalReceive(){
+        assertFalse(reader.inspect(TX).walletDebit());
+        for(String marker:List.of("SEND_AND_FEE","FEE_ONLY")){mode=marker;assertTrue(reader.inspect(TX).walletDebit());}
+    }
+    @Test void missingContradictoryAndUnparseableWalletDebitSignalsAreRejected(){
+        for(String invalid:List.of("SEND_WITHOUT_FEE","UNKNOWN_CATEGORY","FEE_NULL","FEE_STRING","FEE_PRECISION","FEE_OVERFLOW","COINBASE_WITH_FEE")){mode=invalid;unavailable();}
+    }
+    @Test void signedFeeEvidenceIsSeparateFromReceivedFinancialAmount(){
+        mode="FEE_POSITIVE";var result=reader.inspect(TX);assertTrue(result.walletDebit());assertEquals(new BigDecimal("0.12345678"),result.outputs().getFirst().amount());
     }
     void unavailable(){assertEquals(503,assertThrows(ResponseStatusException.class,()->reader.inspect(TX)).getStatusCode().value());}
 }

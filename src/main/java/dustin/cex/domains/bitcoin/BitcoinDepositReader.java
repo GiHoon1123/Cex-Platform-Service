@@ -10,7 +10,7 @@ import static dustin.cex.domains.bitcoin.BitcoinRpcClient.*;
 public class BitcoinDepositReader {
     public enum Status {UNCONFIRMED,CONFIRMED,CONFLICTED}
     public record Output(int vout,String address,String scriptPubKey,BigDecimal amount){}
-    public record Observation(String network,String txid,Status status,long confirmations,boolean coinbase,
+    public record Observation(String network,String txid,Status status,long confirmations,boolean coinbase,boolean walletDebit,
             String blockHash,Long blockHeight,String tipHash,long tipHeight,List<Output> outputs){
         public Observation{outputs=List.copyOf(outputs);}
     }
@@ -33,6 +33,15 @@ public class BitcoinDepositReader {
         long confirmations=integer(transaction,"confirmations");
         boolean coinbase=decoded.path("vin").get(0).path("coinbase").isString();
         if(transaction.has("generated")&&(!transaction.path("generated").isBoolean()||transaction.path("generated").booleanValue()!=coinbase))throw unavailable();
+        // fee 존재는 Core가 이 지갑의 자산 사용을 감지했다는 표지다. 실제 수수료 정산액이나 외부 송금자 신원으로 사용하지 않는다.
+        boolean walletDebit=transaction.has("fee"),sent=false;
+        if(walletDebit)BitcoinAmounts.signedFromNode(transaction.path("fee"));
+        for(var detail:transaction.path("details")){
+            String category=text(detail,"category");
+            if(!Set.of("receive","generate","immature","orphan","send").contains(category))throw unavailable();
+            if(category.equals("send"))sent=true;
+        }
+        if((sent&&!walletDebit)||(coinbase&&walletDebit))throw unavailable();
         Status status=confirmations>0?Status.CONFIRMED:confirmations<0?Status.CONFLICTED:Status.UNCONFIRMED;
         String block=null;Long blockHeight=null;
         if(status==Status.CONFIRMED){
@@ -68,7 +77,7 @@ public class BitcoinDepositReader {
         // 읽기 도중 블록이 바뀌면 일관된 관찰로 저장하지 않는다. 다음 조회가 같은 거래를 다시 확인한다.
         if(!hash(after,"bestblockhash").equals(tip)||integer(after,"blocks")!=height||!isFalse(after,"initialblockdownload")
                 ||!text(after,"chain").equals(settings.network.chain))throw unavailable();
-        return new Observation(settings.network.id,txid,status,confirmations,coinbase,block,blockHeight,tip,height,received);
+        return new Observation(settings.network.id,txid,status,confirmations,coinbase,walletDebit,block,blockHeight,tip,height,received);
     }
     private static long integer(tools.jackson.databind.JsonNode node,String field){
         var value=node.path(field);if(!value.isIntegralNumber()||!value.canConvertToLong())throw unavailable();return value.longValue();

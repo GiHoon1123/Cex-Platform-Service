@@ -46,7 +46,7 @@ class BitcoinObservationIntegrationTest {
     long count(){return jdbc.queryForObject("SELECT count(*) FROM bitcoin_transaction_observations",Long.class);}
     long head(){return jdbc.queryForObject("SELECT observation_id FROM bitcoin_observation_heads WHERE network='bitcoin-regtest' AND txid=?",Long.class,txid());}
     @Test void actualObservationCommitsSourceCurrentPointerAndAuditWithoutCredit(){
-        var result=observations.refresh(txid());assertEquals(result.id(),head());
+        var result=observations.refresh(txid());assertEquals(result.id(),head());assertFalse(jdbc.queryForObject("SELECT wallet_debit FROM bitcoin_observation_wallet_debits WHERE observation_id=?",Boolean.class,result.id()));
         assertEquals("CONFIRMED",jdbc.queryForObject("SELECT status FROM bitcoin_transaction_observations WHERE id=?",String.class,result.id()));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM ledger_transactions",Long.class));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM user_balances",Long.class));
@@ -134,4 +134,20 @@ class BitcoinObservationIntegrationTest {
         assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("UPDATE bitcoin_observation_heads SET observation_id=? WHERE txid=?",detached,txid()));
         assertEquals(original.id(),head());
     }
+    @Test void walletDebitEvidenceIsAtomicImmutableAndCannotBeAttachedToOldObservation(){
+        var internal=observations.refresh(System.getenv("CEX_BITCOIN_TEST_INTERNAL_TX"));
+        assertTrue(jdbc.queryForObject("SELECT wallet_debit FROM bitcoin_observation_wallet_debits WHERE observation_id=?",Boolean.class,internal.id()));
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("UPDATE bitcoin_observation_wallet_debits SET wallet_debit=false WHERE observation_id=?",internal.id()));
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("DELETE FROM bitcoin_observation_wallet_debits WHERE observation_id=?",internal.id()));
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.execute("TRUNCATE bitcoin_observation_wallet_debits"));
+        // 과거 원본의 금융 사실은 그대로 남긴다. 새 근거 없는 분류를 나중에 붙이는 것만 거부한다.
+        long detached=jdbc.queryForObject("""
+            INSERT INTO bitcoin_transaction_observations(network,wallet,txid,status,confirmations,coinbase,block_hash,block_height,tip_hash,tip_height,outputs,read_started_at)
+             SELECT network,wallet,txid,status,confirmations,coinbase,block_hash,block_height,tip_hash,tip_height,outputs,read_started_at
+              FROM bitcoin_transaction_observations WHERE id=? RETURNING id
+            """,Long.class,internal.id());
+        assertThrows(org.springframework.dao.DataAccessException.class,()->jdbc.update("INSERT INTO bitcoin_observation_wallet_debits(observation_id,wallet_debit) VALUES(?,false)",detached));
+        assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM bitcoin_observation_wallet_debits WHERE observation_id=?",Long.class,detached));
+    }
+
 }

@@ -83,7 +83,7 @@ class BitcoinDepositQualificationIntegrationTest {
             new BitcoinDepositReader.Output(original.vout()+1,original.address(),original.scriptPubKey(),original.amount()));
         var variants=new ArrayList<List<BitcoinDepositReader.Output>>();for(var output:wrong)variants.add(List.of(output));variants.add(List.of(original,original));
         for(var outputs:variants){
-            var changed=new BitcoinDepositReader.Observation(real.network(),real.txid(),real.status(),real.confirmations(),real.coinbase(),real.blockHash(),real.blockHeight(),real.tipHash(),real.tipHeight(),outputs);
+            var changed=new BitcoinDepositReader.Observation(real.network(),real.txid(),real.status(),real.confirmations(),real.coinbase(),real.walletDebit(),real.blockHash(),real.blockHeight(),real.tipHash(),real.tipHeight(),outputs);
             doReturn(changed).when(reader).inspect(txid());refresh(txid());assertEquals("OUTPUT_MISMATCH",reason(txid()));
         }
     }

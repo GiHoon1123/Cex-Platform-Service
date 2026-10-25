@@ -49,6 +49,8 @@ public class BitcoinObservationService {
                     """,network,settings.wallet,txid,observation.status().name(),observation.confirmations(),observation.coinbase(),
                     observation.blockHash(),observation.blockHeight(),observation.tipHash(),observation.tipHeight(),outputs,Timestamp.from(started.at()));
                 long id=((Number)saved.get("id")).longValue();
+                // 지갑 사용 근거도 같은 새 관찰 TX에 확정한다. 과거 원본에 false를 추측해 채우지 않는다.
+                jdbc.update("INSERT INTO bitcoin_observation_wallet_debits(observation_id,wallet_debit) VALUES(?,?)",id,observation.walletDebit());
                 jdbc.update("""
                     INSERT INTO bitcoin_observation_heads(network,txid,observation_id) VALUES(?,?,?)
                     ON CONFLICT(network,txid) DO UPDATE SET observation_id=excluded.observation_id

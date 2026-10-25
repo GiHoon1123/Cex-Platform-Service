@@ -257,3 +257,23 @@ CREATE TRIGGER bitcoin_chain_head_original BEFORE INSERT OR UPDATE ON bitcoin_de
 DROP TRIGGER IF EXISTS bitcoin_chain_head_no_delete ON bitcoin_deposit_chain_heads;
 CREATE TRIGGER bitcoin_chain_head_no_delete BEFORE DELETE OR TRUNCATE ON bitcoin_deposit_chain_heads
  FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();
+
+-- 현재 관찰의 지갑 사용 표지를 별도 불변 근거로 남긴다. 이 근거가 없는 과거 관찰은 외부 입금으로 추측하지 않는다.
+CREATE TABLE IF NOT EXISTS bitcoin_observation_wallet_debits (
+ observation_id bigint PRIMARY KEY REFERENCES bitcoin_transaction_observations(id),wallet_debit boolean NOT NULL,
+ recorded_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+CREATE OR REPLACE FUNCTION bitcoin_wallet_debit_new_observation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM bitcoin_transaction_observations o WHERE o.id=NEW.observation_id AND o.created_txid=txid_current()
+   AND NOT(o.coinbase AND NEW.wallet_debit)) THEN
+  RAISE EXCEPTION '지갑 사용 근거는 모순 없는 새 관찰과 같은 트랜잭션에서 확정해야 합니다';
+ END IF;
+ RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_wallet_debit_fresh ON bitcoin_observation_wallet_debits;
+CREATE TRIGGER bitcoin_wallet_debit_fresh BEFORE INSERT ON bitcoin_observation_wallet_debits
+ FOR EACH ROW EXECUTE FUNCTION bitcoin_wallet_debit_new_observation();
+DROP TRIGGER IF EXISTS bitcoin_wallet_debit_no_change ON bitcoin_observation_wallet_debits;
+CREATE TRIGGER bitcoin_wallet_debit_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON bitcoin_observation_wallet_debits
+ FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable();

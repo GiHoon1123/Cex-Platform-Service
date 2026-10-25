@@ -17,7 +17,7 @@ class BitcoinDepositReaderIntegrationTest {
     }
     @Test void realConfirmedReceiveMatchesDecodedOutputAndCanonicalBlock(){
         var result=inspect("CEX_BITCOIN_TEST_CONFIRMED_TX");assertEquals(BitcoinDepositReader.Status.CONFIRMED,result.status());
-        assertTrue(result.confirmations()>0);assertNotNull(result.blockHash());assertNotNull(result.blockHeight());assertFalse(result.coinbase());
+        assertTrue(result.confirmations()>0);assertNotNull(result.blockHash());assertNotNull(result.blockHeight());assertFalse(result.coinbase());assertFalse(result.walletDebit());
         assertEquals(result.tipHeight()-result.blockHeight()+1,result.confirmations());
         var output=result.outputs().stream().filter(o->o.address().equals(System.getenv("CEX_BITCOIN_TEST_ADDRESS"))).findFirst().orElseThrow();
         assertEquals(new BigDecimal("0.12345678"),output.amount());assertTrue(output.scriptPubKey().matches("0014[0-9a-f]{40}"));
@@ -37,4 +37,9 @@ class BitcoinDepositReaderIntegrationTest {
     @Test void realCoinbaseIsMarkedSeparatelyFromOrdinaryDeposit(){
         var result=inspect("CEX_BITCOIN_TEST_COINBASE_TX");assertTrue(result.coinbase());assertTrue(result.confirmations()>0);assertFalse(result.outputs().isEmpty());
     }
+    @Test void actualCustodyWalletSpendRetainsDebitEvidenceAlongsideReceive(){
+        var result=inspect("CEX_BITCOIN_TEST_INTERNAL_TX");assertTrue(result.walletDebit());assertFalse(result.coinbase());assertTrue(result.confirmations()>0);
+        assertTrue(result.outputs().stream().anyMatch(o->o.address().equals(System.getenv("CEX_BITCOIN_TEST_ADDRESS"))&&o.amount().compareTo(new BigDecimal("0.01"))==0));
+    }
+
 }
