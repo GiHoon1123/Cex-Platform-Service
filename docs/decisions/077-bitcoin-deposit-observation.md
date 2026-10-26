@@ -40,7 +40,7 @@ Observation은 네트워크, txid, 관찰 상태/확정 수, 코인베이스 여
 
 ## 실제 코드와 문법
 
-출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L28), 현재 소스의 부분 발췌.
+출처: [BitcoinJsonRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinJsonRpcClient.java#L23), 156에서 역할별 클라이언트가 공유하도록 옮긴 현재 소스의 부분 발췌.
 
 ```java
         tree=json.reader(JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS)

@@ -319,3 +319,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [154. 선택한 출금 입력을 확정 입금 원장과 현재 근거에 연결](decisions/154-bitcoin-settled-input-provenance.md)
 
 - [155. 고정 BTC 지급 원본과 최초 서명 요청을 한 커밋으로 확정](decisions/155-bitcoin-fixed-payout-execution.md)
+
+- [156. 고정 BTC 요청을 별도 프로세스에서 실제 서명](decisions/156-isolated-bitcoin-signing.md)

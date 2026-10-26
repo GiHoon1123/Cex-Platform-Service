@@ -69,7 +69,7 @@ Bitcoin Core의 [PSBT 처리](https://bitcoincore.org/en/doc/31.0.0/rpc/wallet/w
 
 `TransactionTemplate.execute` 안의 반환값은 트랜잭션 결과다. 기존 확정 행이 있으면 암호화 실행 원본까지 인증하고 반환한다. 과거 업무 확정만 있고 새 실행 원본이 없는 상태를 호환 폴백으로 승인하지 않는다.
 
-출처: [payout-execution-schema.sql](../../src/main/resources/bitcoin/payout-execution-schema.sql#L15), 현재 소스의 부분 발췌.
+출처: [payout-execution-schema.sql](../../src/main/resources/bitcoin/payout-execution-schema.sql#L30), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE OR REPLACE FUNCTION bitcoin_native_execution_binding() RETURNS trigger LANGUAGE plpgsql AS $$

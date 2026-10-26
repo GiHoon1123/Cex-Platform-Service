@@ -42,7 +42,7 @@ RPC 응답은 JSON-RPC2.0·요청 ID·result 존재와 error 부재를 확인한
 
 ## 관련 코드와 문법
 
-출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L33), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
+출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L20), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
 
 ```java
         var chain=call("getblockchaininfo",List.of());
@@ -57,21 +57,20 @@ RPC 응답은 JSON-RPC2.0·요청 ID·result 존재와 error 부재를 확인한
 
 var는 초기화한 표현식의 정적 타입을 Java 컴파일러가 추론한다. TypeScript와 달리 실행 시 동적 타입으로 바뀌지 않는다. boolean 필드는 실제 JSON 불리언이어야 하며, 누락/문자열 값을 false로 추측하지 않는다. 네트워크나 지갑 검증 실패는 주소 파생 이전에 중단한다.
 
-출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L50), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
+출처: [BitcoinJsonRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinJsonRpcClient.java#L36), 156에서 준비·서명 역할이 공유하도록 분리한 현재 소스의 부분 발췌.
 
 ```java
             var pending=http.sendAsync(request,info->new LimitedResponseBody(limit));
             try{
-                // 헤더 도착과 구분해 본문 전체에도 제한 시간을 적용한다.
                 var response=pending.get(5,TimeUnit.SECONDS);
-                if(response.statusCode()!=200)throw unavailable();
+                if(response.statusCode()!=200)throw new IllegalStateException("노드 응답을 확인할 수 없습니다");
                 var body=tree.readTree(response.body());
-                if(body==null||!body.isObject()||!text(body,"jsonrpc").equals("2.0")||!text(body,"id").equals(id)
-                        ||body.has("error")||!body.has("result")||body.path("result").isNull())throw unavailable();
+                if(body==null||!body.isObject()||!"2.0".equals(text(body,"jsonrpc"))||!id.equals(text(body,"id"))
+                        ||body.has("error")||!body.has("result")||body.path("result").isNull())throw new IllegalStateException("노드 응답을 확인할 수 없습니다");
                 return body.path("result");
             }finally{if(!pending.isDone())pending.cancel(true);}
-        }catch(InterruptedException e){Thread.currentThread().interrupt();throw unavailable();}
-        catch(ExecutionException|TimeoutException|RuntimeException e){throw unavailable();}
+        }catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("노드 호출이 중단됐습니다");}
+        catch(ExecutionException|TimeoutException|RuntimeException e){throw new IllegalStateException("노드 응답을 확인할 수 없습니다");}
 ```
 
 sendAsync의 미래 값은 본문 전체 수신 완료를 포함한다. get의 시간 초과 뒤 아직 완료되지 않은 작업을 finally에서 취소한다. TypeScript Promise에도 유사한 비동기 결과가 있지만 Java InterruptedException은 스레드 중단 상태를 복원해야 한다. 이 대기는 엔진 코어와 DB 잠금 밖에서만 허용한다.
