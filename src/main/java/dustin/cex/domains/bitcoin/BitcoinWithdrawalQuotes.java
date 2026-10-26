@@ -70,6 +70,26 @@ public class BitcoinWithdrawalQuotes {
         try{return tx.execute(t->{sessions.require(actor,sid);if(id==null)throw denied(HttpStatus.BAD_REQUEST);var quote=read(actor,id);audit.record(actor,"BTC_WITHDRAWAL_QUOTE_READ","bitcoin-withdrawal-quote:"+id,"SUCCESS",quote.payloadHash());return quote;});}
         catch(ResponseStatusException failure){audit.denied(actor,"BTC_WITHDRAWAL_QUOTE_QUERY","restricted","POLICY_"+failure.getStatusCode().value());throw failure;}
     }
+    /** 이미 확정된 요청의 조회에는 과거의 KYC 상태를 새 금융 권한으로 재해석하지 않는다. */
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Quote historicalForWithdrawal(long actor,UUID sid,UUID id){
+        sessions.require(actor,sid);
+        if(id==null)throw denied(HttpStatus.BAD_REQUEST);
+        var rows=jdbc.queryForList("SELECT session_id FROM bitcoin_withdrawal_quotes WHERE id=? AND user_id=?",UUID.class,id,actor);
+        if(rows.size()!=1||!sid.equals(rows.getFirst()))throw denied(HttpStatus.NOT_FOUND);
+        return read(actor,id);
+    }
+    /** 출금 승인/예약의 상위 트랜잭션에서 현재 원본과 자격을 다시 검사한다. 과거 조회의 허용 범위와 구분한다. */
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Quote requireForWithdrawal(long actor,UUID sid,UUID id){
+        var customer=sessions.require(actor,sid);
+        if(id==null)throw denied(HttpStatus.BAD_REQUEST);
+        var quote=read(actor,id);
+        var bound=jdbc.queryForObject("SELECT session_id FROM bitcoin_withdrawal_quotes WHERE id=? AND user_id=?",UUID.class,id,actor);
+        if(!sid.equals(bound)||!"PRICED".equals(quote.state())||customer.getVersion()!=quote.payload().customerVersion()
+            ||!eligibility.permitted(customer))throw denied(HttpStatus.CONFLICT);
+        return quote;
+    }
     // 같은 키는 최초 원본의 재조회다. 만료됐어도 연장하지 않으며 다른 세션이나 변경 입력으로 재사용할 수 없다.
     private Quote existing(long actor,UUID sid,UUID key,String hash){
         var rows=jdbc.queryForList("SELECT id,session_id,input_hash FROM bitcoin_withdrawal_quotes WHERE user_id=? AND request_key=?",actor,key);if(rows.isEmpty())return null;var row=rows.getFirst();

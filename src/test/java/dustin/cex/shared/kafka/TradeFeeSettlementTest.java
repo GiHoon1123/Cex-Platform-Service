@@ -40,6 +40,8 @@ class TradeFeeSettlementTest {
     @MockitoBean EngineEventInbox inbox;
     // 체결/수수료 전용 H2 시험은 입금 서비스를 사용하지 않는다. 입금 금융 경로는 별도 실제 PG 시험이 검증한다.
     @MockitoBean dustin.cex.domains.bitcoin.BitcoinCreditedEvents deposits;
+    // 체결 전용 범위에는 출금 수신 서비스를 만들지 않는다. 실제 출금 원장/감사는 전용 PG 시험에서 검증한다.
+    @MockitoBean dustin.cex.domains.bitcoin.BitcoinWithdrawalEvents withdrawals;
     @Autowired KafkaOrderEventConsumer consumer;
     @Autowired UserRepository users; @Autowired OrderRepository orders;
     @Autowired OrderDispatchRepository dispatches;

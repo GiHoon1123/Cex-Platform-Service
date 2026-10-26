@@ -104,7 +104,7 @@ public class ReconciliationService {
             var receipts=jdbc.queryForList("SELECT payload_hash FROM engine_event_receipts WHERE event_id=?",String.class,event);
             if(receipts.isEmpty()) {issue(run,"EVENT_PENDING",event,"received","missing");return;}
             if(!receipts.getFirst().equals(row.getString(2))) issue(run,"EVENT_PAYLOAD",event,row.getString(2),receipts.getFirst());
-            try { var original=mapper.readTree(payload); checkPostings(run,"engine:"+event,expected(original)); checkTrade(run,original); checkDeposit(run,original,payload); }
+            try { var original=mapper.readTree(payload); checkPostings(run,"engine:"+event,expected(original)); checkTrade(run,original); checkDeposit(run,original,payload); checkWithdrawal(run,original,payload); }
             catch(Exception invalid) {issue(run,"EVENT_CONTRACT",event,"valid original",invalid.getClass().getSimpleName());}
         },run);
         jdbc.query("""
@@ -132,6 +132,28 @@ public class ReconciliationService {
                 reserved.merge(user+":"+asset,remaining,BigDecimal::add);
             }
         });
+        // 주문 예약과 고객 출금 예약은 같은 BTC 잠긴 잔고를 공유한다. 두 독립 원본의 남은 몫을 합산한다.
+        jdbc.query("""
+            SELECT w.id,w.user_id,w.asset,w.total,w.operation_key,w.quote_hash,q.payload_hash,
+                   a.withdrawal_id authorization_id,c.consumed,e.event_type
+              FROM bitcoin_withdrawals w JOIN bitcoin_withdrawal_quotes q ON q.id=w.id
+               LEFT JOIN customer_withdrawal_authorizations a ON a.withdrawal_id=w.id
+               LEFT JOIN customer_withdrawal_challenges c ON c.id=a.challenge_id
+               LEFT JOIN bitcoin_withdrawal_reservation_events e ON e.withdrawal_id=w.id
+            """,row->{
+                UUID id=(UUID)row.getObject("id");long owner=row.getLong("user_id");
+                String asset=row.getString("asset");BigDecimal gross=row.getBigDecimal("total");
+                if(!"BTC".equals(asset)||!row.getString("quote_hash").equals(row.getString("payload_hash"))
+                   ||!id.equals(row.getObject("authorization_id"))||!row.getBoolean("consumed"))
+                    issue(run,"WITHDRAWAL_ORIGINAL",id.toString(),"bound signed quote","missing or different");
+                checkPostings(run,row.getString("operation_key"),List.of(
+                    p(owner,"AVAILABLE",asset,gross.negate()),p(owner,"LOCKED",asset,gross)));
+                String result=row.getString("event_type");
+                if(result==null||result.equals("withdrawal_reserved"))reserved.merge(owner+":"+asset,gross,BigDecimal::add);
+                if(result==null)issue(run,"EVENT_PENDING","bitcoin-withdrawal:"+id,"durable reserve or rejection","pending");
+                else if(!result.equals("withdrawal_reserved")&&!result.equals("withdrawal_rejected"))
+                    issue(run,"WITHDRAWAL_STATE",id.toString(),"reserved or rejected",result);
+            });
         jdbc.query("SELECT user_id,mint_address,locked FROM user_balances",row->{
             String key=row.getLong(1)+":"+row.getString(2);difference(run,"RESERVATION",key,reserved.getOrDefault(key,BigDecimal.ZERO),row.getBigDecimal(3));reserved.remove(key);
         });
@@ -152,6 +174,17 @@ public class ReconciliationService {
             if(!receipt.toString().equals(e.path("deposit_id").asText())||owner!=e.path("user_id").asLong()||!asset.equals(e.path("asset").asText())||amount.compareTo(money(e,"amount"))!=0
                 ||!hash((String)r.get("intent_basis")).equals(r.get("intent_hash"))||!hash((String)r.get("authorization_basis")).equals(r.get("authorization_hash")))throw new IllegalArgumentException("입금 결과와 경제적 원본이 다릅니다");
             return List.of(p(owner,"PENDING",asset,amount.negate()),p(owner,"AVAILABLE",asset,amount));
+        }
+        if(type.equals("withdrawal_reserved")||type.equals("withdrawal_rejected")) {
+            UUID id=UUID.fromString(e.path("withdrawal_id").asText());
+            var rows=jdbc.queryForList("SELECT user_id,asset,total FROM bitcoin_withdrawals WHERE id=?",id);
+            if(rows.size()!=1)throw new IllegalArgumentException("출금 금융 원본 누락");
+            var original=rows.getFirst();long owner=((Number)original.get("user_id")).longValue();
+            BigDecimal gross=(BigDecimal)original.get("total");
+            if(owner!=integer(e,"user_id")||!original.get("asset").equals(e.path("asset").asText())
+                ||gross.compareTo(money(e,"amount"))!=0)throw new IllegalArgumentException("출금 결과와 예약 원본 불일치");
+            return type.equals("withdrawal_reserved")?List.of():List.of(
+                p(owner,"LOCKED","BTC",gross.negate()),p(owner,"AVAILABLE","BTC",gross));
         }
         if(type.equals("trade_executed")) {
             var buy=submissions.findByOrderId(e.path("buy_order_id").asLong()).orElseThrow();
@@ -193,6 +226,19 @@ public class ReconciliationService {
         if(!id.equals(row.get("event_id"))||!event.path("engine_id").asText().equals(row.get("engine_id").toString())||!hash(payload).equals(row.get("payload_hash"))
             ||!("engine:"+id).equals(row.get("operation_key"))||!event.path("timestamp").asText().equals(row.get("event_time")))
             issue(run,"DEPOSIT_EVENT_BINDING",id,"exact durable event","different financial receipt");
+    }
+    private void checkWithdrawal(UUID run,JsonNode event,String payload) throws Exception {
+        String type=event.path("event_type").asText();
+        if(!type.equals("withdrawal_reserved")&&!type.equals("withdrawal_rejected"))return;
+        String id=event.path("event_id").asText();
+        var rows=jdbc.queryForList("SELECT * FROM bitcoin_withdrawal_reservation_events WHERE withdrawal_id=?",
+            UUID.fromString(event.path("withdrawal_id").asText()));
+        if(rows.size()!=1){issue(run,"WITHDRAWAL_RECEIPT_MISSING",id,"one financial receipt","missing");return;}
+        var row=rows.getFirst();
+        if(!id.equals(row.get("event_id"))||!event.path("engine_id").asText().equals(row.get("engine_id").toString())
+            ||!type.equals(row.get("event_type"))||!hash(payload).equals(row.get("payload_hash"))
+            ||!("engine:"+id).equals(row.get("operation_key"))||!event.path("timestamp").asText().equals(row.get("event_time")))
+            issue(run,"WITHDRAWAL_EVENT_BINDING",id,"exact durable event","different financial receipt");
     }
     private void checkTrade(UUID run,JsonNode event) {
         if(!"trade_executed".equals(event.path("event_type").asText())) return;

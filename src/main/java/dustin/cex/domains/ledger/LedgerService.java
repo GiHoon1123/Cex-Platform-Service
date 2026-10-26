@@ -38,7 +38,7 @@ public class LedgerService {
     public void initializeOpening() {
         jdbc.execute("SELECT pg_advisory_xact_lock(71522026)");
         if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM ledger_transactions)",Boolean.class))
-                || List.of("orders","order_submissions","order_dispatches","trades","trade_fees","engine_event_receipts").stream()
+                || List.of("orders","order_submissions","order_dispatches","trades","trade_fees","engine_event_receipts","bitcoin_withdrawals","bitcoin_withdrawal_dispatch_attempts").stream()
                     .anyMatch(table->jdbc.queryForObject("SELECT count(*) FROM "+table,Long.class)!=0))
             throw new IllegalStateException("최초 원장은 금융 이력이 없는 환경에서만 반입할 수 있습니다");
         var postings=new ArrayList<Posting>();

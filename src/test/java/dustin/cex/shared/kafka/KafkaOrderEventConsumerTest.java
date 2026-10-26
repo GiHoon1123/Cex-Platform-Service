@@ -19,7 +19,7 @@ class KafkaOrderEventConsumerTest {
     final TradeRepository trades=mock(TradeRepository.class);
     final KafkaOrderEventConsumer consumer=new KafkaOrderEventConsumer(mock(dustin.cex.domains.ledger.LedgerService.class), inbox,trades,orders,
             mock(UserBalanceRepository.class),mock(UserPositionRepository.class),mock(dustin.cex.domains.order.repository.OrderSubmissionRepository.class),
-            mock(TradeFeeRepository.class),mock(UserRepository.class),mock(dustin.cex.domains.order.repository.OrderDispatchRepository.class),org.mockito.Mockito.mock(dustin.cex.domains.bitcoin.BitcoinCreditedEvents.class));
+            mock(TradeFeeRepository.class),mock(UserRepository.class),mock(dustin.cex.domains.order.repository.OrderDispatchRepository.class),org.mockito.Mockito.mock(dustin.cex.domains.bitcoin.BitcoinCreditedEvents.class),org.mockito.Mockito.mock(dustin.cex.domains.bitcoin.BitcoinWithdrawalEvents.class));
     final String message="""
             {"event_type":"order_cancelled","event_id":"engine:1:0","engine_id":"engine","order_id":1,"user_id":2,"base_mint":"SOL","quote_mint":"USDT"}
             """;

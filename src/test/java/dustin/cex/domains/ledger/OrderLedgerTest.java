@@ -34,6 +34,13 @@ class OrderLedgerTest {
         jdbc.execute("CREATE TABLE engine_event_receipts(event_id text PRIMARY KEY,engine_id text,payload_hash text)");
         jdbc.execute("CREATE TABLE trades(id bigserial PRIMARY KEY,engine_event_id text,buy_order_id bigint,sell_order_id bigint,amount numeric,price numeric)");
         for(String table:List.of("order_submissions","order_dispatches","trade_fees")) jdbc.execute("CREATE TABLE "+table+"(id bigint)");
+        // 주문 전용 독립 대사에도 다른 금융 예약의 빈 원본 표를 명시한다. 표 누락을 제품의 폴백으로 숨기지 않는다.
+        jdbc.execute("CREATE TABLE bitcoin_withdrawals(id uuid,user_id bigint,asset text,total numeric,operation_key text,quote_hash text)");
+        jdbc.execute("CREATE TABLE bitcoin_withdrawal_dispatch_attempts(id uuid)");
+        jdbc.execute("CREATE TABLE bitcoin_withdrawal_quotes(id uuid,payload_hash text)");
+        jdbc.execute("CREATE TABLE customer_withdrawal_authorizations(withdrawal_id uuid,challenge_id uuid)");
+        jdbc.execute("CREATE TABLE customer_withdrawal_challenges(id uuid,consumed boolean)");
+        jdbc.execute("CREATE TABLE bitcoin_withdrawal_reservation_events(withdrawal_id uuid,event_type text)");
         ledger=new LedgerService(jdbc);ledger.schema();
         jdbc.execute("INSERT INTO user_balances VALUES(1,'USDT',1000,0),(2,'BTC',1,0)");
         // 최초 반입 전 시나리오는 처음부터 빈 원장으로 시작한다. 확정 원본을 지워 시험 상태를 만들지 않는다.

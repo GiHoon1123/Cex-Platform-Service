@@ -46,6 +46,7 @@ public class KafkaOrderEventConsumer {
     private final UserRepository userRepository;
     private final dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
     private final dustin.cex.domains.bitcoin.BitcoinCreditedEvents deposits;
+    private final dustin.cex.domains.bitcoin.BitcoinWithdrawalEvents withdrawals;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @KafkaListener(topics = "order-events", groupId = "cex-consumer-group", containerFactory = "kafkaListenerContainerFactory")
@@ -55,12 +56,13 @@ public class KafkaOrderEventConsumer {
         try { event = mapper.readTree(message); }
         catch (Exception invalid) { throw new IllegalArgumentException("금융 이벤트 파싱 실패", invalid); }
         String type = event.path("event_type").asText();
-        if (!List.of("trade_executed", "order_cancelled", "market_order_completed", "order_rejected", "deposit_credited").contains(type)) {
+        if (!List.of("trade_executed", "order_cancelled", "market_order_completed", "order_rejected", "deposit_credited", "withdrawal_reserved", "withdrawal_rejected").contains(type)) {
             throw new IllegalArgumentException("지원하지 않는 금융 이벤트입니다");
         }
         if (!engineEventInbox.claim(event.path("event_id").asText(), event.path("engine_id").asText(), message)) return;
         switch (type) {
             case "deposit_credited" -> deposits.apply(message);
+            case "withdrawal_reserved", "withdrawal_rejected" -> withdrawals.apply(message);
             case "trade_executed" -> trade(event);
             case "market_order_completed" -> completeMarketOrder(event);
             case "order_cancelled" -> cancel(event);
