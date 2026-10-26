@@ -77,7 +77,7 @@ Set.of의 불변 지원 목록은 실제 노드로 검증한 종류만 허용한
 
 정규화는 다른 지급지 허용이 아니다. Base58은 정확히 같아야 하고, 지원 witness의 전체 대문자 입력만 같은 정규 소문자 주소로 결합한다. Locale.ROOT로 서버 언어 설정에 따라 비교가 달라지지 않게 한다.
 
-출처: [BitcoinJsonRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinJsonRpcClient.java#L20), 156에서 준비·서명 역할이 공유하도록 옮긴 현재 소스의 부분 발췌.
+출처: [BitcoinJsonRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinJsonRpcClient.java#L22), 156에서 준비·서명 역할이 공유하도록 옮긴 현재 소스의 부분 발췌.
 
 ```java
     private final HttpClient http=HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();

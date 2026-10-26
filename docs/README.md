@@ -321,3 +321,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [155. 고정 BTC 지급 원본과 최초 서명 요청을 한 커밋으로 확정](decisions/155-bitcoin-fixed-payout-execution.md)
 
 - [156. 고정 BTC 요청을 별도 프로세스에서 실제 서명](decisions/156-isolated-bitcoin-signing.md)
+
+- [157. 서명된 BTC 거래를 별도 프로세스에서 안전하게 방송](decisions/157-isolated-bitcoin-broadcast.md)

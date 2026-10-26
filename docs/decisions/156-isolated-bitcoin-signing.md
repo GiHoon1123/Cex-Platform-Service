@@ -83,7 +83,7 @@ public final class BitcoinSignerEnvelopeCrypto {
 
 ## 남은 한계와 다음 연결
 
-서명된 원시 거래는 아직 네트워크에 공개되지 않았다. 다음은 별도 방송 역할이 저장 원시 거래만 읽고 `testmempoolaccept`와 안정적 거래 ID로 방송·응답 유실 재확인을 수행하는 단계다. 그 뒤 체인 확정, 엔진 `COMPLETE`, 고객 잠금 차감과 회사 비용 원장 정산을 연결해야 BTC 출금이 끝난다.
+서명 자체의 다음 연결인 별도 방송과 응답 유실 재확인은 [157](157-isolated-bitcoin-broadcast.md)에서 구현했다. 체인 확정, 엔진 `COMPLETE`, 고객 잠금 차감과 회사 비용 원장 정산은 아직 남아 있으며 이를 연결해야 BTC 출금이 끝난다.
 
 ## 관련 커밋과 증적
 

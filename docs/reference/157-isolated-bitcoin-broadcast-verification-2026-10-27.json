@@ -1,0 +1,19 @@
+{
+  "cycle": 157,
+  "implementation_commits": ["35c2cd1"],
+  "executed_at": "2026-10-27",
+  "verification": {
+    "broadcast_service": {"tests": 8, "failures": 0, "errors": 0, "skipped": 0, "container_removed": true},
+    "actual_core_broadcaster": {"core_version": 310100, "tests": 3, "failures": 0, "errors": 0, "skipped": 0, "connections": 0, "node_stopped": true},
+    "actual_core_signer_regression": {"core_version": 310100, "tests": 3, "failures": 0, "errors": 0, "skipped": 0, "connections": 0, "node_stopped": true},
+    "watch_only_regression": {"core_version": 310100, "tests": 66, "failures": 0, "errors": 0, "skipped": 0, "node_stopped": true},
+    "unique_tests": 80,
+    "executions": 80,
+    "boot_jar": "passed",
+    "operator_admin_jar": "passed",
+    "bitcoin_signer_jar": "passed",
+    "bitcoin_broadcaster_jar": "passed",
+    "broadcast_performed": true,
+    "chain_completion_performed": false
+  }
+}
