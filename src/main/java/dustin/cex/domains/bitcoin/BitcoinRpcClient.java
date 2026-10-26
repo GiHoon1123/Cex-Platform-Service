@@ -24,7 +24,10 @@ final class BitcoinRpcClient implements AutoCloseable {
     BitcoinRpcClient(BitcoinSettings settings,ObjectMapper json){
         this.settings=settings;this.json=json;
         // 노드는 금액을 JSON 숫자로 보낸다. 이 전용 판독기의 소수 토큰은 이진 부동소수점을 거치지 않는다.
-        tree=json.reader(JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+        // 같은 키를 두 번 보내거나 끝난 JSON 뒤에 문서를 덧붙여 결과를 바꾸는 응답도 거절한다.
+        tree=json.reader(JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .with(tools.jackson.core.StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+            .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     }
     Ready ready(){
         var chain=call("getblockchaininfo",List.of());
