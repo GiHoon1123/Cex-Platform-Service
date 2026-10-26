@@ -50,7 +50,7 @@
 
 현재 소스의 부분 발췌다. 검증된 인증 자료를 소비하고 서명 지문을 원본 UUID에 연결한다. `MANDATORY`는 이미 열린 상위 금융 트랜잭션 안에서만 실행하라는 뜻이다. TypeScript의 비동기 함수 호출과 달리 프록시의 전파 규칙으로 같은 DB 커밋을 공유하며, 오류가 나면 카운터/소비 상태/금융 예약을 함께 되돌린다.
 
-출처: [BitcoinWithdrawalRequests.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalRequests.java#L120), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalRequests.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalRequests.java#L122), 현재 소스의 부분 발췌.
 
 ```java
         authorization.authorize(actor, sid, quoteId, proof);

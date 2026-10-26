@@ -52,7 +52,7 @@ sequenceDiagram
 ```java
         actual=new EngineWithdrawalClient("http://127.0.0.1:"+PROXY_PORT,10000,SERVICE);
         var dispatch=new BitcoinWithdrawalDispatches(jdbc,users,audit,actual,manager);
-        realRequests=new BitcoinWithdrawalRequests(jdbc,quotes,authorization,balances,ledger,audit,dispatch,manager);
+        realRequests=new BitcoinWithdrawalRequests(jdbc,quotes,authorization,balances,ledger,audit,dispatch,withdrawalValuations,manager);
         realCancellations=new BitcoinWithdrawalCancellations(jdbc,users,quotes,realRequests,actual,audit,manager);
         assertFalse(org.mockito.Mockito.mockingDetails(actual).isMock());
 ```

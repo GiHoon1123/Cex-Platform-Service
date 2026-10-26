@@ -42,7 +42,7 @@ BTC 지급 전 상대 사업자에게 실제 지급액과 당사자 정보를 �
 
 현재 소스의 부분 발췌다. BigDecimal의 toPlainString은 지수나 이진 실수로 바꾸지 않는다. 고객 수수료 포함 총액 대신 실제 지급액을 사용하고 모듈이 돌려준 서명 본문의 필드 값이 하나라도 달라지면 게이트웨이 전송 전에 실패한다.
 
-출처: [CodeVaspWithdrawalAuthorizationClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspWithdrawalAuthorizationClient.java#L64), 현재 소스의 부분 발췌.
+출처: [CodeVaspWithdrawalAuthorizationClient.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspWithdrawalAuthorizationClient.java#L65), 현재 소스의 부분 발췌.
 
 ```java
             var decoded=transport.decrypt(response,request.key());var ivms=decoded.identity().path("ivms101");

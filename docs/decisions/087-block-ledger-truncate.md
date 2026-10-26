@@ -44,7 +44,7 @@ END $$;
 
 TRUNCATE는 표 전체에 대한 문장이므로 FOR EACH STATEMENT로 막는다. 직접 ledger_entries를 비우거나 ledger_transactions CASCADE로 두 표를 비우려 해도 원본 변경 전에 예외가 발생한다. 현재 스키마의 표를 regclass로 확인해 다른 시험 스키마의 같은 이름 트리거와 혼동하지 않는다.
 
-출처: [OrderLedgerTest.java](../../src/test/java/dustin/cex/domains/ledger/OrderLedgerTest.java#L48), 현재 소스의 부분 발췌.
+출처: [OrderLedgerTest.java](../../src/test/java/dustin/cex/domains/ledger/OrderLedgerTest.java#L50), 현재 소스의 부분 발췌.
 
 ```java
         // 최초 반입 전 시나리오는 처음부터 빈 원장으로 시작한다. 확정 원본을 지워 시험 상태를 만들지 않는다.
@@ -53,7 +53,7 @@ TRUNCATE는 표 전체에 대한 문장이므로 FOR EACH STATEMENT로 막는다
 
 JUnit TestInfo의 태그를 읽어 without-opening 시나리오는 최초 반입을 실행하지 않는다. TypeScript 테스트의 beforeEach 조건과 비슷하지만 금융 원본을 뒤에서 지우는 준비 대신 각 테스트가 소유한 새 PG 스키마의 초기 상태를 명시한다.
 
-출처: [OrderLedgerTest.java](../../src/test/java/dustin/cex/domains/ledger/OrderLedgerTest.java#L166), 현재 소스의 부분 발췌.
+출처: [OrderLedgerTest.java](../../src/test/java/dustin/cex/domains/ledger/OrderLedgerTest.java#L168), 현재 소스의 부분 발췌.
 
 ```java
     @Test void committedLedgerCannotBeTruncatedDirectlyOrThroughCascade() {
