@@ -77,7 +77,10 @@ abstract class BitcoinWithdrawalTestSupport extends CustomerMailTestSupport {
     }
 
     dustin.cex.domains.valuation.BitcoinKrwPriceClient.Quote referenceQuote(BigDecimal price) {
-        var read=java.time.Instant.now();var provider=java.time.Instant.ofEpochMilli(read.toEpochMilli());var trade=provider.minusSeconds(1);
+        // 외부 가격은 이 시험에서만 합성한다. 호스트와 격리 DB의 수 ms 차이를 미래 가격으로 잘못 만드는
+        // fixture 경합을 피하려고 기준 시각을 DB에서 읽는다. 제품의 미래 가격 거절 조건은 그대로 검증한다.
+        var read=jdbc.queryForObject("SELECT clock_timestamp()",java.sql.Timestamp.class).toInstant();
+        var provider=java.time.Instant.ofEpochMilli(read.toEpochMilli());var trade=provider.minusSeconds(1);
         String raw=json.writeValueAsString(java.util.List.of(java.util.Map.of("market","KRW-BTC","trade_price",price,"trade_timestamp",trade.toEpochMilli(),"timestamp",provider.toEpochMilli())));
         return new dustin.cex.domains.valuation.BitcoinKrwPriceClient.Quote(price,trade,provider,read,read,raw,sha(raw));
     }
