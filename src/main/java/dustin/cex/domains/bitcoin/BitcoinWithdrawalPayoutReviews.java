@@ -92,6 +92,15 @@ public class BitcoinWithdrawalPayoutReviews {
             jdbc.update("INSERT INTO bitcoin_withdrawal_payout_decisions(review_id,approver_id,session_id,approved,payload_hash,authorization_id) VALUES(?,?,?,?,?,?)",id,actor,sid,approve,hash,proof.challengeId());
             audit.record(actor,"BTC_PAYOUT_REVIEW_DECIDED","bitcoin-payout-review:"+id,"SUCCESS",hash);return read(id);});
     }
+    /** 준비 시도/후보를 저장하는 같은 TX에서 현재 서명 범위를 다시 검사한다. 운영자 세션을 가장하지 않는다. */
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Request currentForPreparation(UUID id) {
+        var meta=meta(id);var people=lock(number(meta,"requester_id"),number(meta,"checker_id"),number(meta,"user_id"));var r=read(id);var p=r.payload();
+        requirePeople(p,people);
+        if(!"APPROVED".equals(r.status())||!p.expiresAt().isAfter(now())||!latest(meta)||committed(p.basis().funds().withdrawalId()))throw denied(HttpStatus.CONFLICT);
+        var current=basis.require(people.get(p.basis().funds().customerId()),p.basis().transfer().intentId());
+        if(!current.scopeHash().equals(p.basis().scopeHash()))throw denied(HttpStatus.CONFLICT);return r;
+    }
     /** 신뢰된 지급 워커가 사용할 내부 경계다. 현재 근거를 다시 검사하고 취소와 같은 고객 잠금에서 한 쪽만 확정한다. */
     public Request commit(UUID id) {
         boundary();return tx.execute(t->{var meta=meta(id);var people=lock(number(meta,"requester_id"),number(meta,"checker_id"),number(meta,"user_id"));

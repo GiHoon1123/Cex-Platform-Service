@@ -24,5 +24,7 @@ public class BitcoinWithdrawalSchemaInitializer {
             .getContentAsString(StandardCharsets.UTF_8));
         jdbc.execute(new ClassPathResource("bitcoin/withdrawal-payout-review-schema.sql")
             .getContentAsString(StandardCharsets.UTF_8));
+        jdbc.execute(new ClassPathResource("bitcoin/payout-candidate-schema.sql")
+            .getContentAsString(StandardCharsets.UTF_8));
     }
 }
