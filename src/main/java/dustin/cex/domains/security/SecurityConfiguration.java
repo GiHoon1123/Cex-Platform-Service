@@ -52,6 +52,10 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/monitoring-cases","/api/admin/monitoring-cases/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 // 탐지 원본의 명시적 처리 요청도 현재 운영 업무다. 감사자에게 작업 생성 권한을 부여하지 않는다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                // 체인 제한 해제는 요청 담당자와 지정 승인자의 역할을 분리하고 내용 결합 서명을 별도로 요구한다.
+                .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/chain-clearances").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/chain-clearances/*").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/chain-clearances/*/approve/options","/api/admin/deposits/BTC/chain-clearances/*/reject/options","/api/admin/deposits/BTC/chain-clearances/*/approve","/api/admin/deposits/BTC/chain-clearances/*/reject").access(audited(audit,sessions,"APPROVER"))
                 // 새 복구 검증은 업무 담당자/승인자만 시작한다. 감사자는 만들어진 최소 근거만 읽는다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/chain-recovery-probes").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/chain-recovery-probes/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))

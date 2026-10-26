@@ -1,7 +1,7 @@
 -- 실행 권한의 시작 관찰 이후, 같은 네트워크·지갑·출력의 근거 상실을 찾는다.
 -- 판단 워커가 실패해도 이미 확정한 노드 관찰을 놓치지 않으며 과거 금융 원본은 바꾸지 않는다.
 CREATE INDEX IF NOT EXISTS bitcoin_credit_authorizations_owner ON bitcoin_credit_authorizations(user_id);
-CREATE OR REPLACE VIEW bitcoin_credit_chain_risks AS
+CREATE OR REPLACE VIEW bitcoin_credit_chain_risk_history AS
  SELECT a.receipt_id,a.user_id,a.asset,a.amount,o.id AS observation_id,risk.reason,o.recorded_at
   FROM bitcoin_credit_authorizations a JOIN bitcoin_deposit_receipts r ON r.id=a.receipt_id
   JOIN bitcoin_deposit_addresses addr ON addr.id=r.address_id
@@ -37,7 +37,7 @@ CREATE TRIGGER bitcoin_observation_execution_guard BEFORE INSERT ON bitcoin_tran
 -- 후속 체인 판단의 실패로 이미 저장한 위험 사실을 없는 것으로 되돌리지 않는다.
 CREATE OR REPLACE FUNCTION bitcoin_observation_execution_risk_audit() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
- IF EXISTS(SELECT 1 FROM bitcoin_credit_chain_risks WHERE observation_id=NEW.id) THEN
+ IF EXISTS(SELECT 1 FROM bitcoin_credit_chain_risk_history WHERE observation_id=NEW.id) THEN
   IF NOT EXISTS(SELECT 1 FROM bitcoin_observation_heads h WHERE h.network=NEW.network AND h.txid=NEW.txid AND h.observation_id=NEW.id)
    OR NOT EXISTS(SELECT 1 FROM bitcoin_observation_wallet_debits w WHERE w.observation_id=NEW.id)
    OR NOT EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id IS NULL AND a.action='BTC_TRANSACTION_OBSERVED'

@@ -13,15 +13,16 @@ CREATE OR REPLACE FUNCTION bitcoin_chain_recovery_quiet(owner bigint) RETURNS bo
 $$;
 -- 원본은 한 입금으로 고정한다. 반복 관찰이 늘면 범위 해시가 달라져 이전 복구 근거를 재사용할 수 없다.
 CREATE OR REPLACE FUNCTION bitcoin_chain_recovery_basis(receipt uuid) RETURNS TABLE(user_id bigint,authorization_hash text,
- engine_id uuid,event_id text,payload_hash text,risk_count bigint,first_risk_id bigint,last_risk_id bigint,scope_hash text,ledger_hash text) LANGUAGE sql STABLE AS $$
- SELECT a.user_id,a.basis_hash::text,c.engine_id,c.event_id::text,c.payload_hash::text,
+ engine_id uuid,event_id text,payload_hash text,risk_count bigint,first_risk_id bigint,last_risk_id bigint,scope_hash text,ledger_hash text) LANGUAGE plpgsql STABLE AS $$
+BEGIN
+ RETURN QUERY SELECT a.user_id,a.basis_hash::text,c.engine_id,c.event_id::text,c.payload_hash::text,
   s.n,s.first_id,s.last_id,encode(sha256(convert_to(jsonb_build_object('receipt',a.receipt_id,'authorization',a.basis_hash,
    'event',c.event_id,'count',s.n,'first',s.first_id,'last',s.last_id)::text,'UTF8')),'hex'),bitcoin_chain_recovery_ledger_fingerprint(a.user_id)
  FROM bitcoin_credit_authorizations a JOIN bitcoin_credited_deposits c ON c.receipt_id=a.receipt_id
  CROSS JOIN LATERAL(SELECT count(*) n,min(observation_id) first_id,max(observation_id) last_id
   FROM bitcoin_credit_chain_risks r WHERE r.receipt_id=a.receipt_id) s
  WHERE a.receipt_id=receipt AND s.n>0 AND bitcoin_chain_recovery_quiet(a.user_id);
-$$;
+END $$;
 CREATE TABLE IF NOT EXISTS bitcoin_chain_recovery_probes (
  id uuid PRIMARY KEY,receipt_id uuid NOT NULL REFERENCES bitcoin_credited_deposits(receipt_id),user_id bigint NOT NULL REFERENCES users(id),
  actor_id bigint NOT NULL REFERENCES users(id),actor_person uuid NOT NULL,actor_version bigint NOT NULL,session_id uuid NOT NULL,request_key uuid NOT NULL,
