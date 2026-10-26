@@ -212,3 +212,11 @@ tasks.register('bitcoinBroadcasterJar', org.springframework.boot.gradle.tasks.bu
     mainClass = 'dustin.broadcaster.BitcoinBroadcasterApplication'
     classpath = sourceSets.main.runtimeClasspath
 }
+
+// 공개 노드의 체인 사실 확인은 방송·서명 권한과 분리한 읽기 전용 실행 파일에서 수행한다.
+tasks.register('bitcoinConfirmerJar', org.springframework.boot.gradle.tasks.bundling.BootJar) {
+    archiveClassifier = 'bitcoin-confirmer'
+    targetJavaVersion = JavaVersion.VERSION_21
+    mainClass = 'dustin.confirmer.BitcoinConfirmerApplication'
+    classpath = sourceSets.main.runtimeClasspath
+}

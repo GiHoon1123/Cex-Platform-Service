@@ -68,6 +68,63 @@ CREATE TABLE IF NOT EXISTS bitcoin_payout_broadcast_heads (
  request_id uuid PRIMARY KEY REFERENCES bitcoin_payout_sign_heads(request_id),attempt_id uuid NOT NULL UNIQUE REFERENCES bitcoin_payout_broadcast_results(attempt_id),
  txid varchar(64) NOT NULL CHECK(txid~'^[0-9a-f]{64}$')
 );
+-- 방송 수신과 블록 확정을 구분한다. 완료 권한은 읽기 전용 노드가 같은 거래의 여섯 확인을 증명한 뒤에만 생긴다.
+CREATE TABLE IF NOT EXISTS bitcoin_payout_chain_attempts (
+ id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES bitcoin_payout_broadcast_heads(request_id),position integer NOT NULL,
+ started_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),UNIQUE(request_id,position),CHECK(position BETWEEN 1 AND 1000000)
+);
+CREATE TABLE IF NOT EXISTS bitcoin_payout_chain_results (
+ attempt_id uuid PRIMARY KEY REFERENCES bitcoin_payout_chain_attempts(id),status varchar(16) NOT NULL CHECK(status IN('CONFIRMED','WAITING','UNKNOWN','CONFLICT')),
+ txid varchar(64),block_hash varchar(64),block_height bigint,confirmations integer,observed_tip varchar(64),
+ recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),
+ CHECK((status='CONFIRMED' AND txid~'^[0-9a-f]{64}$' AND block_hash~'^[0-9a-f]{64}$' AND block_height>=0 AND confirmations>=6 AND observed_tip~'^[0-9a-f]{64}$')
+    OR(status<>'CONFIRMED' AND txid IS NULL AND block_hash IS NULL AND block_height IS NULL AND confirmations IS NULL AND observed_tip IS NULL))
+);
+CREATE TABLE IF NOT EXISTS bitcoin_payout_chain_heads (
+ request_id uuid PRIMARY KEY REFERENCES bitcoin_payout_broadcast_heads(request_id),attempt_id uuid NOT NULL UNIQUE REFERENCES bitcoin_payout_chain_results(attempt_id),
+ txid varchar(64) NOT NULL,block_hash varchar(64) NOT NULL,block_height bigint NOT NULL,confirmations integer NOT NULL CHECK(confirmations>=6)
+);
+CREATE OR REPLACE FUNCTION bitcoin_payout_chain_attempt_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE latest record;
+BEGIN
+ SELECT a.position,a.started_at,r.status,r.recorded_at INTO latest FROM bitcoin_payout_chain_attempts a LEFT JOIN bitcoin_payout_chain_results r ON r.attempt_id=a.id
+  WHERE a.request_id=NEW.request_id ORDER BY a.position DESC LIMIT 1;
+ IF NEW.created_txid<>txid_current() OR NEW.started_at<clock_timestamp()-interval '10 seconds' OR NEW.started_at>clock_timestamp()
+  OR EXISTS(SELECT 1 FROM bitcoin_payout_chain_heads WHERE request_id=NEW.request_id)
+  OR(latest.position IS NOT NULL AND(NEW.position<>latest.position+1 OR latest.status='CONFIRMED' OR latest.status='CONFLICT'
+    OR(latest.status IS NULL AND latest.started_at>clock_timestamp()-interval '10 seconds') OR(latest.status IN('WAITING','UNKNOWN') AND latest.recorded_at>clock_timestamp()-interval '60 seconds')))
+  OR(latest.position IS NULL AND NEW.position<>1) THEN RAISE EXCEPTION '현재 방송 거래의 다음 체인 관찰만 시작할 수 있습니다';END IF;RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_payout_chain_attempt_binding_check ON bitcoin_payout_chain_attempts;
+CREATE TRIGGER bitcoin_payout_chain_attempt_binding_check BEFORE INSERT ON bitcoin_payout_chain_attempts FOR EACH ROW EXECUTE FUNCTION bitcoin_payout_chain_attempt_binding();
+CREATE OR REPLACE FUNCTION bitcoin_payout_chain_result_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE a record;b record;
+BEGIN
+ SELECT * INTO a FROM bitcoin_payout_chain_attempts WHERE id=NEW.attempt_id;SELECT * INTO b FROM bitcoin_payout_broadcast_heads WHERE request_id=a.request_id;
+ IF NEW.created_txid<>txid_current() OR NEW.recorded_at<a.started_at OR NEW.recorded_at>clock_timestamp()
+  OR(NEW.status='CONFIRMED' AND NEW.txid<>b.txid) THEN RAISE EXCEPTION '체인 관찰이 고정 방송 거래와 다릅니다';END IF;RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_payout_chain_result_binding_check ON bitcoin_payout_chain_results;
+CREATE TRIGGER bitcoin_payout_chain_result_binding_check BEFORE INSERT ON bitcoin_payout_chain_results FOR EACH ROW EXECUTE FUNCTION bitcoin_payout_chain_result_binding();
+CREATE OR REPLACE FUNCTION bitcoin_payout_chain_complete() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE a record;r record;action_name text;
+BEGIN
+ IF TG_TABLE_NAME='bitcoin_payout_chain_results' THEN r:=NEW;SELECT * INTO a FROM bitcoin_payout_chain_attempts WHERE id=r.attempt_id;
+ ELSE SELECT * INTO r FROM bitcoin_payout_chain_results WHERE attempt_id=NEW.attempt_id;SELECT * INTO a FROM bitcoin_payout_chain_attempts WHERE id=NEW.attempt_id;END IF;
+ action_name:=CASE r.status WHEN 'CONFIRMED' THEN 'BTC_NATIVE_PAYOUT_CHAIN_CONFIRMED' ELSE 'BTC_NATIVE_PAYOUT_CHAIN_OBSERVED' END;
+ IF r.created_txid<>txid_current() OR NOT EXISTS(SELECT 1 FROM security_audit x WHERE x.actor_id IS NULL AND x.action=action_name AND x.target='bitcoin-chain-attempt:'||a.id
+   AND x.outcome=CASE r.status WHEN 'CONFIRMED' THEN 'SUCCESS' ELSE 'FAILURE' END AND x.detail=r.status AND x.occurred_at>=r.recorded_at)
+  OR(r.status='CONFIRMED' AND NOT EXISTS(SELECT 1 FROM bitcoin_payout_chain_heads h WHERE h.request_id=a.request_id AND h.attempt_id=a.id AND h.txid=r.txid AND h.block_hash=r.block_hash AND h.block_height=r.block_height AND h.confirmations=r.confirmations))
+  OR(r.status<>'CONFIRMED' AND EXISTS(SELECT 1 FROM bitcoin_payout_chain_heads h WHERE h.attempt_id=a.id)) THEN RAISE EXCEPTION '체인 관찰·확정 머리·필수 감사는 같은 커밋이어야 합니다';END IF;RETURN NULL;
+END $$;
+DO $$ DECLARE relation text;BEGIN
+ FOREACH relation IN ARRAY ARRAY['bitcoin_payout_chain_results','bitcoin_payout_chain_heads'] LOOP
+  EXECUTE format('DROP TRIGGER IF EXISTS bitcoin_payout_chain_complete_check ON %I',relation);EXECUTE format('CREATE CONSTRAINT TRIGGER bitcoin_payout_chain_complete_check AFTER INSERT ON %I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION bitcoin_payout_chain_complete()',relation);
+ END LOOP;
+ FOREACH relation IN ARRAY ARRAY['bitcoin_payout_chain_attempts','bitcoin_payout_chain_results','bitcoin_payout_chain_heads'] LOOP
+  EXECUTE format('DROP TRIGGER IF EXISTS financial_preserve ON %I',relation);EXECUTE format('CREATE TRIGGER financial_preserve BEFORE UPDATE OR DELETE OR TRUNCATE ON %I FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable()',relation);
+ END LOOP;
+END $$;
 CREATE OR REPLACE FUNCTION bitcoin_payout_broadcast_attempt_binding() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE latest record;
 BEGIN

@@ -1,0 +1,27 @@
+package dustin.cex.domains.kyc;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import dustin.broadcaster.*;
+import dustin.cex.domains.bitcoin.BitcoinSignerEnvelopeCrypto;
+import dustin.confirmer.*;
+import java.util.*;
+import java.util.concurrent.*;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+
+/** 실제 지급·서명·방송 머리 위에서 체인 확인 결과와 동시 소비·불변 경계를 검증한다. */
+class BitcoinConfirmationServiceIntegrationTest extends BitcoinPayoutCandidatesTestSupport {
+    @Autowired BitcoinSignerEnvelopeCrypto signerCrypto;BitcoinConfirmationRpcClient observer;BitcoinConfirmationService service;String txid;
+    @BeforeEach void broadcastReady(){var candidate=readyNative(approved.payload().id());payouts.commit(approved.payload().id());txid=candidate.payload().prepared().unsignedTxid();var signer=mock(dustin.signer.BitcoinSignerRpcClient.class);when(signer.sign(any())).thenReturn(new dustin.signer.BitcoinSignerRpcClient.Signed(txid,"020000000001"+"00".repeat(100),"cHNidP8BAAA="));new dustin.signer.BitcoinSigningService(jdbc,signerCrypto,json,audit,signer,manager).processNext();var broadcaster=mock(BitcoinBroadcastRpcClient.class);when(broadcaster.publish(anyString(),anyString())).thenReturn(new BitcoinBroadcastRpcClient.Result(BitcoinBroadcastRpcClient.Status.ACCEPTED,txid));new BitcoinBroadcastService(jdbc,signerCrypto,audit,broadcaster,manager).processNext();observer=mock(BitcoinConfirmationRpcClient.class);service=new BitcoinConfirmationService(jdbc,audit,observer,manager);when(observer.observe(txid)).thenReturn(new BitcoinConfirmationRpcClient.Result(BitcoinConfirmationRpcClient.Status.CONFIRMED,txid,"a".repeat(64),100,6,"b".repeat(64)));}
+    @Test void sixConfirmationsProduceOneChainHead(){assertEquals("CONFIRMED",service.processNext().orElseThrow().status());assertEquals(1,count("bitcoin_payout_chain_attempts"));assertEquals(1,count("bitcoin_payout_chain_results"));assertEquals(1,count("bitcoin_payout_chain_heads"));org.mockito.Mockito.verify(observer).observe(txid);}
+    @Test void repeatedPollCannotConfirmTheSameHeadTwice(){service.processNext();assertTrue(service.processNext().isEmpty());org.mockito.Mockito.verify(observer,times(1)).observe(txid);}
+    @Test void waitingResultDoesNotInventAConfirmation(){when(observer.observe(txid)).thenReturn(new BitcoinConfirmationRpcClient.Result(BitcoinConfirmationRpcClient.Status.WAITING,null,null,-1,0,null));assertEquals("WAITING",service.processNext().orElseThrow().status());assertEquals(0,count("bitcoin_payout_chain_heads"));}
+    @Test void unknownResultDoesNotInventAConfirmation(){when(observer.observe(txid)).thenReturn(new BitcoinConfirmationRpcClient.Result(BitcoinConfirmationRpcClient.Status.UNKNOWN,null,null,-1,0,null));assertEquals("UNKNOWN",service.processNext().orElseThrow().status());assertEquals(0,count("bitcoin_payout_chain_heads"));}
+    @Test void conflictIsHeldWithoutAutomaticRetry(){when(observer.observe(txid)).thenReturn(new BitcoinConfirmationRpcClient.Result(BitcoinConfirmationRpcClient.Status.CONFLICT,null,null,-1,0,null));assertEquals("CONFLICT",service.processNext().orElseThrow().status());assertTrue(service.processNext().isEmpty());}
+    @Test void missingConfirmedAuditRollsBackResultAndHead(){doNothing().when(audit).record(isNull(),eq("BTC_NATIVE_PAYOUT_CHAIN_CONFIRMED"),anyString(),eq("SUCCESS"),eq("CONFIRMED"));try{assertThrows(DataAccessException.class,service::processNext);}finally{reset(audit);}assertEquals(1,count("bitcoin_payout_chain_attempts"));assertEquals(0,count("bitcoin_payout_chain_results"));assertEquals(0,count("bitcoin_payout_chain_heads"));}
+    @Test void directConfirmationForAnotherTransactionIsRejected(){UUID attempt=UUID.randomUUID();new org.springframework.transaction.support.TransactionTemplate(manager).executeWithoutResult(t->{jdbc.update("INSERT INTO bitcoin_payout_chain_attempts(id,request_id,position) VALUES(?,?,1)",attempt,withdrawal);audit.record(null,"BTC_NATIVE_CHAIN_OBSERVATION_STARTED","bitcoin-chain-attempt:"+attempt,"SUCCESS","POSITION:1");});assertThrows(DataAccessException.class,()->new org.springframework.transaction.support.TransactionTemplate(manager).executeWithoutResult(t->jdbc.update("INSERT INTO bitcoin_payout_chain_results(attempt_id,status,txid,block_hash,block_height,confirmations,observed_tip) VALUES(?,'CONFIRMED',?,?,100,6,?)",attempt,"f".repeat(64),"a".repeat(64),"b".repeat(64))));}
+    @Test void chainEvidenceCannotBeChangedOrDeleted(){service.processNext();for(String table:List.of("bitcoin_payout_chain_attempts","bitcoin_payout_chain_results","bitcoin_payout_chain_heads"))for(String sql:List.of("UPDATE "+table+" SET created_txid=0","DELETE FROM "+table,"TRUNCATE "+table+" CASCADE"))assertThrows(DataAccessException.class,()->jdbc.execute(sql));}
+    @Test void twoConsumersClaimTheBroadcastHeadOnlyOnce()throws Exception{try(var pool=Executors.newFixedThreadPool(2)){var start=new CountDownLatch(1);Callable<Optional<BitcoinConfirmationService.Outcome>> call=()->{start.await();return service.processNext();};var one=pool.submit(call);var two=pool.submit(call);start.countDown();assertEquals(1,List.of(one.get(15,TimeUnit.SECONDS),two.get(15,TimeUnit.SECONDS)).stream().filter(Optional::isPresent).count());}assertEquals(1,count("bitcoin_payout_chain_heads"));org.mockito.Mockito.verify(observer,times(1)).observe(txid);}
+}
