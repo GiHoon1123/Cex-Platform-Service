@@ -303,3 +303,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [146. 신원 제공 전에 선택한 사업자의 BTC 지급 주소 소속 확인](decisions/146-codevasp-withdrawal-address-verification.md)
 
 - [147. 고정 BTC 출금의 주소 확인 뒤 신원 제공과 미해결 전송 보존](decisions/147-bitcoin-withdrawal-transfer-review.md)
+
+- [148. BTC 지급 근거의 독립 서명 승인과 고객 취소·실행 확정의 배타성](decisions/148-bitcoin-independent-payout-review.md)

@@ -41,7 +41,7 @@
 
 ## 이해에 필요한 실제 코드
 
-출처: [BitcoinWithdrawalRequests.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalRequests.java#L119), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalRequests.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalRequests.java#L122), 현재 소스의 부분 발췌.
 
 ```java
         // 신청 전에 이미 관찰된 서버 가격만 고정한다. 가격 부재를 나중의 심사 시세로 보충하지 않는다.

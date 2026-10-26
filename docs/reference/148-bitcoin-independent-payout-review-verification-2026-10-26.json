@@ -1,0 +1,3116 @@
+{
+  "cycle": 148,
+  "implementation_commit": "3f3fb1c674e31ec99b3f3b4ecc38b982b0285f80",
+  "verification": {
+    "tests": {
+      "tests": 528,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "groups": {
+      "cancellations": {
+        "groups": [
+          {
+            "database": "monitoring_case_0",
+            "method": "confirmedReleaseAloneReturnsTheOriginalGrossIncludingTheFee",
+            "exit": 0,
+            "clock_difference_seconds": 0.007997989654541016,
+            "duration_seconds": 8.05327296257019,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/confirmedReleaseAloneReturnsTheOriginalGrossIncludingTheFee.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_1",
+            "method": "cancellationBeforeReserveConfirmationWaitsWithoutSendingRelease",
+            "exit": 0,
+            "clock_difference_seconds": 0.005363941192626953,
+            "duration_seconds": 7.679302930831909,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/cancellationBeforeReserveConfirmationWaitsWithoutSendingRelease.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_2",
+            "method": "firstReserveRejectionFinishesPendingCancellationWithoutASecondRefund",
+            "exit": 0,
+            "clock_difference_seconds": 0.0065271854400634766,
+            "duration_seconds": 7.939785003662109,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/firstReserveRejectionFinishesPendingCancellationWithoutASecondRefund.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_3",
+            "method": "duplicateCancellationAndDuplicateReleaseCannotRefundTwice",
+            "exit": 0,
+            "clock_difference_seconds": 0.006362199783325195,
+            "duration_seconds": 7.737083911895752,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/duplicateCancellationAndDuplicateReleaseCannotRefundTwice.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_4",
+            "method": "releaseWithoutCustomerCancellationRollsBackItsInboxReceipt",
+            "exit": 0,
+            "clock_difference_seconds": 0.005913972854614258,
+            "duration_seconds": 7.682815074920654,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/releaseWithoutCustomerCancellationRollsBackItsInboxReceipt.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_5",
+            "method": "releaseFromAnotherEngineOrAnEarlierPositionCannotRefund",
+            "exit": 0,
+            "clock_difference_seconds": 0.0052947998046875,
+            "duration_seconds": 8.17793607711792,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/releaseFromAnotherEngineOrAnEarlierPositionCannotRefund.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_6",
+            "method": "uncertainReleaseHttpKeepsTheHoldAndTheSameDurableAttempt",
+            "exit": 0,
+            "clock_difference_seconds": 0.00533294677734375,
+            "duration_seconds": 7.7196879386901855,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/uncertainReleaseHttpKeepsTheHoldAndTheSameDurableAttempt.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_7",
+            "method": "genericReleaseRejectionCannotRefundOrBecomeFinancialRejection",
+            "exit": 0,
+            "clock_difference_seconds": 0.005529165267944336,
+            "duration_seconds": 7.5945518016815186,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/genericReleaseRejectionCannotRefundOrBecomeFinancialRejection.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_8",
+            "method": "mandatoryAuditFailureRollsBackTheReleaseAndCanRetryTheSameEvent",
+            "exit": 0,
+            "clock_difference_seconds": 0.00531315803527832,
+            "duration_seconds": 7.561412811279297,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/mandatoryAuditFailureRollsBackTheReleaseAndCanRetryTheSameEvent.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_9",
+            "method": "cancellationOriginalAndReleaseHistoryCannotBeRewrittenOrTruncated",
+            "exit": 0,
+            "clock_difference_seconds": 0.005571842193603516,
+            "duration_seconds": 7.591516971588135,
+            "log": "bitcoin-withdrawal-cancellations/bdb4d7515c78/cancellationOriginalAndReleaseHistoryCannotBeRewrittenOrTruncated.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_0",
+            "method": "cancellationWithoutItsMandatoryAuditCannotCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.005096912384033203,
+            "duration_seconds": 8.630521059036255,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/cancellationWithoutItsMandatoryAuditCannotCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_1",
+            "method": "renewedCustomerSessionCanReadAndCancelItsHistoricalWithdrawal",
+            "exit": 0,
+            "clock_difference_seconds": 0.005645036697387695,
+            "duration_seconds": 8.107933044433594,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/renewedCustomerSessionCanReadAndCancelItsHistoricalWithdrawal.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_2",
+            "method": "wrongOwnerAndRevokedSessionCannotCreateCancellationIntent",
+            "exit": 0,
+            "clock_difference_seconds": 0.007997989654541016,
+            "duration_seconds": 7.521565914154053,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/wrongOwnerAndRevokedSessionCannotCreateCancellationIntent.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_3",
+            "method": "customerHttpCancellationAcceptsOnlyAnEmptyBody",
+            "exit": 0,
+            "clock_difference_seconds": 0.005528926849365234,
+            "duration_seconds": 7.656399250030518,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/customerHttpCancellationAcceptsOnlyAnEmptyBody.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_4",
+            "method": "concurrentCancellationRequestsCreateOneReleaseAttempt",
+            "exit": 0,
+            "clock_difference_seconds": 0.0058400630950927734,
+            "duration_seconds": 7.930010795593262,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/concurrentCancellationRequestsCreateOneReleaseAttempt.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_5",
+            "method": "independentReconciliationSeparatesPendingCancellationAndConfirmedRefund",
+            "exit": 0,
+            "clock_difference_seconds": 0.006196022033691406,
+            "duration_seconds": 8.97921895980835,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/independentReconciliationSeparatesPendingCancellationAndConfirmedRefund.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_6",
+            "method": "databaseRejectsReleaseAttemptBeforeTheReservationIsConfirmed",
+            "exit": 0,
+            "clock_difference_seconds": 0.0062410831451416016,
+            "duration_seconds": 7.783226728439331,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/databaseRejectsReleaseAttemptBeforeTheReservationIsConfirmed.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_7",
+            "method": "alteredGrossOrExtraReleaseFieldsCannotRefund",
+            "exit": 0,
+            "clock_difference_seconds": 0.006158113479614258,
+            "duration_seconds": 7.644437074661255,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/alteredGrossOrExtraReleaseFieldsCannotRefund.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_8",
+            "method": "uncertainReleaseRetriesOnlyTheSameIdAndGrossAfterTheDurableDelay",
+            "exit": 0,
+            "clock_difference_seconds": 0.005747079849243164,
+            "duration_seconds": 12.730347156524658,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/uncertainReleaseRetriesOnlyTheSameIdAndGrossAfterTheDurableDelay.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_9",
+            "method": "releaseReceiptAndLedgerWithoutMandatoryAuditCannotCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.006183147430419922,
+            "duration_seconds": 7.637662887573242,
+            "log": "bitcoin-withdrawal-cancellations/5063b39286cb/releaseReceiptAndLedgerWithoutMandatoryAuditCannotCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          }
+        ],
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "confirmedReleaseAloneReturnsTheOriginalGrossIncludingTheFee()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "cancellationBeforeReserveConfirmationWaitsWithoutSendingRelease()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "firstReserveRejectionFinishesPendingCancellationWithoutASecondRefund()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "duplicateCancellationAndDuplicateReleaseCannotRefundTwice()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "releaseWithoutCustomerCancellationRollsBackItsInboxReceipt()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "releaseFromAnotherEngineOrAnEarlierPositionCannotRefund()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "uncertainReleaseHttpKeepsTheHoldAndTheSameDurableAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "genericReleaseRejectionCannotRefundOrBecomeFinancialRejection()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "mandatoryAuditFailureRollsBackTheReleaseAndCanRetryTheSameEvent()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "cancellationOriginalAndReleaseHistoryCannotBeRewrittenOrTruncated()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "cancellationWithoutItsMandatoryAuditCannotCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "renewedCustomerSessionCanReadAndCancelItsHistoricalWithdrawal()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "wrongOwnerAndRevokedSessionCannotCreateCancellationIntent()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "customerHttpCancellationAcceptsOnlyAnEmptyBody()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "concurrentCancellationRequestsCreateOneReleaseAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "independentReconciliationSeparatesPendingCancellationAndConfirmedRefund()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "databaseRejectsReleaseAttemptBeforeTheReservationIsConfirmed()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "alteredGrossOrExtraReleaseFieldsCannotRefund()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "uncertainReleaseRetriesOnlyTheSameIdAndGrossAfterTheDurableDelay()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalCancellationIntegrationTest",
+            "name": "releaseReceiptAndLedgerWithoutMandatoryAuditCannotCommit()"
+          }
+        ],
+        "tests": {
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "container_removed": true,
+        "exit": 0,
+        "selection": "첫10개 통과 뒤 시각 사전검사가 다음 시험 개시를 거절. 동일 제품 소스와 시각 제한을 유지한 새 소유 PG에서 남은10개 선택 실행을 합산."
+      },
+      "valuations": {
+        "container": "cex-bitcoin-withdrawal-valuations-36c2e03b6b0e",
+        "run_id": "36c2e03b6b0e",
+        "groups": [
+          {
+            "database": "monitoring_case_0",
+            "method": "exactReferenceUsesNetPaymentAndPreservesTheFullProduct",
+            "exit": 0,
+            "clock_difference_seconds": 0.006023883819580078,
+            "duration_seconds": 8.202441215515137,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/exactReferenceUsesNetPaymentAndPreservesTheFullProduct.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_1",
+            "method": "duplicateRequestDoesNotRevalueAnOriginalAfterThePriceHeadFails",
+            "exit": 0,
+            "clock_difference_seconds": 0.0064771175384521484,
+            "duration_seconds": 7.673174142837524,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/duplicateRequestDoesNotRevalueAnOriginalAfterThePriceHeadFails.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_2",
+            "method": "failedCurrentPriceCannotUseAHistoricalSuccessOrConsumeTheSignature",
+            "exit": 0,
+            "clock_difference_seconds": 0.005057096481323242,
+            "duration_seconds": 7.683659076690674,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/failedCurrentPriceCannotUseAHistoricalSuccessOrConsumeTheSignature.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_3",
+            "method": "newUnfinishedPriceHeadCannotFallBackToItsPreviousSuccess",
+            "exit": 0,
+            "clock_difference_seconds": 0.00597381591796875,
+            "duration_seconds": 7.639654874801636,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/newUnfinishedPriceHeadCannotFallBackToItsPreviousSuccess.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_4",
+            "method": "staleProviderTradeCannotCreateANewFinancialReservation",
+            "exit": 0,
+            "clock_difference_seconds": 0.006074190139770508,
+            "duration_seconds": 7.725767135620117,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/staleProviderTradeCannotCreateANewFinancialReservation.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_5",
+            "method": "valuationAuditFailureRollsBackTheOriginalSignatureAndHold",
+            "exit": 0,
+            "clock_difference_seconds": 0.005704164505004883,
+            "duration_seconds": 7.979238986968994,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/valuationAuditFailureRollsBackTheOriginalSignatureAndHold.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_6",
+            "method": "exactFinancialHoldWithoutItsValuationCannotCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.006459951400756836,
+            "duration_seconds": 7.986591100692749,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/exactFinancialHoldWithoutItsValuationCannotCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_7",
+            "method": "valuationWithoutItsMandatoryAuditCannotCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.005744218826293945,
+            "duration_seconds": 8.066205024719238,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/valuationWithoutItsMandatoryAuditCannotCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_8",
+            "method": "storedPriceAndAmountCannotUseAnUnboundSourceHash",
+            "exit": 0,
+            "clock_difference_seconds": 0.00630497932434082,
+            "duration_seconds": 7.6536688804626465,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/storedPriceAndAmountCannotUseAnUnboundSourceHash.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_9",
+            "method": "valuationCannotBeRewrittenDeletedOrTruncated",
+            "exit": 0,
+            "clock_difference_seconds": 0.005881071090698242,
+            "duration_seconds": 8.324738025665283,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/valuationCannotBeRewrittenDeletedOrTruncated.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_10",
+            "method": "laterReferencePriceDoesNotReplaceTheHistoricalRequestValuation",
+            "exit": 0,
+            "clock_difference_seconds": 0.006819009780883789,
+            "duration_seconds": 7.662747859954834,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/laterReferencePriceDoesNotReplaceTheHistoricalRequestValuation.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_11",
+            "method": "independentReconciliationUsesTheHistoricalSourceAfterAHeadChange",
+            "exit": 0,
+            "clock_difference_seconds": 0.006949901580810547,
+            "duration_seconds": 7.60657811164856,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/independentReconciliationUsesTheHistoricalSourceAfterAHeadChange.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_12",
+            "method": "cancellationPreservesTheValuationWhileReturningTheOriginalGross",
+            "exit": 0,
+            "clock_difference_seconds": 0.0061457157135009766,
+            "duration_seconds": 7.818217992782593,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/cancellationPreservesTheValuationWhileReturningTheOriginalGross.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_13",
+            "method": "pastRequestCannotAcquireANewValuationInALaterTransaction",
+            "exit": 0,
+            "clock_difference_seconds": 0.0061719417572021484,
+            "duration_seconds": 7.771735668182373,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/pastRequestCannotAcquireANewValuationInALaterTransaction.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_14",
+            "method": "futureProviderTimestampCannotBecomeTheEarlierRequestReference",
+            "exit": 0,
+            "clock_difference_seconds": 0.005630970001220703,
+            "duration_seconds": 7.896114110946655,
+            "log": "bitcoin-withdrawal-valuations/36c2e03b6b0e/futureProviderTimestampCannotBecomeTheEarlierRequestReference.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          }
+        ],
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "exactReferenceUsesNetPaymentAndPreservesTheFullProduct()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "duplicateRequestDoesNotRevalueAnOriginalAfterThePriceHeadFails()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "failedCurrentPriceCannotUseAHistoricalSuccessOrConsumeTheSignature()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "newUnfinishedPriceHeadCannotFallBackToItsPreviousSuccess()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "staleProviderTradeCannotCreateANewFinancialReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "valuationAuditFailureRollsBackTheOriginalSignatureAndHold()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "exactFinancialHoldWithoutItsValuationCannotCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "valuationWithoutItsMandatoryAuditCannotCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "storedPriceAndAmountCannotUseAnUnboundSourceHash()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "valuationCannotBeRewrittenDeletedOrTruncated()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "laterReferencePriceDoesNotReplaceTheHistoricalRequestValuation()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "independentReconciliationUsesTheHistoricalSourceAfterAHeadChange()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "cancellationPreservesTheValuationWhileReturningTheOriginalGross()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "pastRequestCannotAcquireANewValuationInALaterTransaction()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalValuationIntegrationTest",
+            "name": "futureProviderTimestampCannotBecomeTheEarlierRequestReference()"
+          }
+        ],
+        "tests": {
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 0,
+        "container_removed": true
+      },
+      "payouts": {
+        "container": "cex-bitcoin-withdrawal-payout-reviews-864e8bc5571f",
+        "run_id": "864e8bc5571f",
+        "groups": [
+          {
+            "database": "monitoring_case_0",
+            "method": "independentSignatureApprovesExactFundsAndCommitDoesNotPay",
+            "exit": 0,
+            "clock_difference_seconds": 0.007838964462280273,
+            "duration_seconds": 9.734810829162598,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/independentSignatureApprovesExactFundsAndCommitDoesNotPay.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_1",
+            "method": "approvalRemainsCancellableUntilExecutionCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.0054509639739990234,
+            "duration_seconds": 9.58193588256836,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/approvalRemainsCancellableUntilExecutionCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_2",
+            "method": "databaseAlsoRejectsCancellationAfterExecutionCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.005491971969604492,
+            "duration_seconds": 9.316344022750854,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/databaseAlsoRejectsCancellationAfterExecutionCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_3",
+            "method": "simultaneousCancellationAndExecutionCommitHaveExactlyOneWinner",
+            "exit": 0,
+            "clock_difference_seconds": 0.005281925201416016,
+            "duration_seconds": 9.418996095657349,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/simultaneousCancellationAndExecutionCommitHaveExactlyOneWinner.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_4",
+            "method": "aNewCustomerRestrictionBlocksPreviouslyApprovedExecution",
+            "exit": 0,
+            "clock_difference_seconds": 0.007849693298339844,
+            "duration_seconds": 8.907925128936768,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/aNewCustomerRestrictionBlocksPreviouslyApprovedExecution.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_5",
+            "method": "changedCustomerVersionInvalidatesTheUnsignedReviewBeforeSignatureConsumption",
+            "exit": 0,
+            "clock_difference_seconds": 0.005699872970581055,
+            "duration_seconds": 9.168967008590698,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/changedCustomerVersionInvalidatesTheUnsignedReviewBeforeSignatureConsumption.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_6",
+            "method": "checkerMustInspectTheExactPayloadInItsCurrentSession",
+            "exit": 0,
+            "clock_difference_seconds": 0.005243062973022461,
+            "duration_seconds": 8.70257306098938,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/checkerMustInspectTheExactPayloadInItsCurrentSession.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_7",
+            "method": "anotherOperatorCannotInspectTheEncryptedOpinion",
+            "exit": 0,
+            "clock_difference_seconds": 0.006469249725341797,
+            "duration_seconds": 8.845365762710571,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/anotherOperatorCannotInspectTheEncryptedOpinion.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_8",
+            "method": "separateAccountsForTheSamePersonCannotSelfApprove",
+            "exit": 0,
+            "clock_difference_seconds": 0.006072044372558594,
+            "duration_seconds": 9.033104181289673,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/separateAccountsForTheSamePersonCannotSelfApprove.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_9",
+            "method": "missingProofCannotApproveAnInspectedReview",
+            "exit": 0,
+            "clock_difference_seconds": 0.00585627555847168,
+            "duration_seconds": 8.729768991470337,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/missingProofCannotApproveAnInspectedReview.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_10",
+            "method": "rejectionSignatureCannotBeUsedAsPayoutApproval",
+            "exit": 0,
+            "clock_difference_seconds": 0.006058931350708008,
+            "duration_seconds": 9.065017938613892,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/rejectionSignatureCannotBeUsedAsPayoutApproval.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_11",
+            "method": "changedHashCannotConsumeTheOriginalSignature",
+            "exit": 0,
+            "clock_difference_seconds": 0.005853891372680664,
+            "duration_seconds": 8.465436935424805,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/changedHashCannotConsumeTheOriginalSignature.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_12",
+            "method": "sameRequestKeyReplaysTheSameOpinionButCannotChangeIt",
+            "exit": 0,
+            "clock_difference_seconds": 0.00602412223815918,
+            "duration_seconds": 8.851972818374634,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/sameRequestKeyReplaysTheSameOpinionButCannotChangeIt.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_13",
+            "method": "newRequestKeyCannotSupersedeAPendingOrApprovedReview",
+            "exit": 0,
+            "clock_difference_seconds": 0.01056218147277832,
+            "duration_seconds": 8.531924962997437,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/newRequestKeyCannotSupersedeAPendingOrApprovedReview.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_14",
+            "method": "rejectionPreservesFundsAndAllowsANewExplicitReview",
+            "exit": 0,
+            "clock_difference_seconds": 0.005272865295410156,
+            "duration_seconds": 8.352989912033081,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/rejectionPreservesFundsAndAllowsANewExplicitReview.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_15",
+            "method": "missingProposalAuditRollsBackTheEncryptedReviewAndBinding",
+            "exit": 0,
+            "clock_difference_seconds": 0.005036830902099609,
+            "duration_seconds": 7.8829028606414795,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/missingProposalAuditRollsBackTheEncryptedReviewAndBinding.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_16",
+            "method": "missingInspectAuditCannotSatisfyTheApprovalPrerequisite",
+            "exit": 0,
+            "clock_difference_seconds": 0.0047588348388671875,
+            "duration_seconds": 7.860181093215942,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/missingInspectAuditCannotSatisfyTheApprovalPrerequisite.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_17",
+            "method": "decisionAuditFailureRollsBackBothTheDecisionAndConsumedSignature",
+            "exit": 0,
+            "clock_difference_seconds": 0.00473785400390625,
+            "duration_seconds": 7.993595838546753,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/decisionAuditFailureRollsBackBothTheDecisionAndConsumedSignature.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_18",
+            "method": "silentlyOmittedDecisionAuditCannotCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.005499124526977539,
+            "duration_seconds": 7.937306880950928,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/silentlyOmittedDecisionAuditCannotCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_19",
+            "method": "missingExecutionAuditLeavesTheCustomerFreeToCancel",
+            "exit": 0,
+            "clock_difference_seconds": 0.0049591064453125,
+            "duration_seconds": 8.011620283126831,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/missingExecutionAuditLeavesTheCustomerFreeToCancel.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_20",
+            "method": "encryptedOpinionAndAllApprovalFactsAreImmutable",
+            "exit": 0,
+            "clock_difference_seconds": 0.0051267147064208984,
+            "duration_seconds": 7.94310188293457,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/encryptedOpinionAndAllApprovalFactsAreImmutable.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_21",
+            "method": "simultaneousDecisionConsumesTheBoundSignatureOnlyOnce",
+            "exit": 0,
+            "clock_difference_seconds": 0.0061740875244140625,
+            "duration_seconds": 7.989993095397949,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/simultaneousDecisionConsumesTheBoundSignatureOnlyOnce.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_22",
+            "method": "routineDirectoryRefreshDoesNotChangeTheApprovedEconomicScope",
+            "exit": 0,
+            "clock_difference_seconds": 0.005553007125854492,
+            "duration_seconds": 8.394922971725464,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/routineDirectoryRefreshDoesNotChangeTheApprovedEconomicScope.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_23",
+            "method": "corruptedMaterializedBalanceCannotBecomeAPayoutPermission",
+            "exit": 0,
+            "clock_difference_seconds": 0.00568389892578125,
+            "duration_seconds": 7.898086071014404,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/corruptedMaterializedBalanceCannotBecomeAPayoutPermission.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_24",
+            "method": "laterMarketReferenceDoesNotChangeTheSignedWithdrawal",
+            "exit": 0,
+            "clock_difference_seconds": 0.0052340030670166016,
+            "duration_seconds": 8.176581144332886,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/laterMarketReferenceDoesNotChangeTheSignedWithdrawal.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_25",
+            "method": "missingCurrentCounterpartyBlocksNewPayoutPermission",
+            "exit": 0,
+            "clock_difference_seconds": 0.005228996276855469,
+            "duration_seconds": 7.985114097595215,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/missingCurrentCounterpartyBlocksNewPayoutPermission.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_26",
+            "method": "strictHttpRejectsInjectedFundsUnknownFieldsAndPublicCommitRoute",
+            "exit": 0,
+            "clock_difference_seconds": 0.005137920379638672,
+            "duration_seconds": 7.98247504234314,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/strictHttpRejectsInjectedFundsUnknownFieldsAndPublicCommitRoute.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_27",
+            "method": "headlessHttpUsesTheAssignedInspectionAndActualBoundSignature",
+            "exit": 0,
+            "clock_difference_seconds": 0.005198955535888672,
+            "duration_seconds": 7.815032005310059,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/headlessHttpUsesTheAssignedInspectionAndActualBoundSignature.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_28",
+            "method": "recognizedButUnmonitoredNativeFundsBlockNewPayoutReview",
+            "exit": 0,
+            "clock_difference_seconds": 0.005154848098754883,
+            "duration_seconds": 8.02230191230774,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/recognizedButUnmonitoredNativeFundsBlockNewPayoutReview.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_29",
+            "method": "aNewNativeInputAfterApprovalBlocksExecutionUntilANewReview",
+            "exit": 0,
+            "clock_difference_seconds": 0.005930185317993164,
+            "duration_seconds": 8.053735971450806,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/aNewNativeInputAfterApprovalBlocksExecutionUntilANewReview.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_30",
+            "method": "anOpenNativeMonitoringCaseCannotBeOverriddenByAPayoutOpinion",
+            "exit": 0,
+            "clock_difference_seconds": 0.006067991256713867,
+            "duration_seconds": 7.8648669719696045,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/anOpenNativeMonitoringCaseCannotBeOverriddenByAPayoutOpinion.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_31",
+            "method": "databaseCannotCommitAnApprovalAfterTheCurrentKycExpires",
+            "exit": 0,
+            "clock_difference_seconds": 0.005261898040771484,
+            "duration_seconds": 7.963428258895874,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/databaseCannotCommitAnApprovalAfterTheCurrentKycExpires.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_32",
+            "method": "databaseCannotCommitPastAnUnprocessedNativeInput",
+            "exit": 0,
+            "clock_difference_seconds": 0.005616903305053711,
+            "duration_seconds": 7.902897834777832,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/databaseCannotCommitPastAnUnprocessedNativeInput.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_33",
+            "method": "temporaryChallengeCleanupPreservesThePermanentBoundDecision",
+            "exit": 0,
+            "clock_difference_seconds": 0.005558013916015625,
+            "duration_seconds": 8.022281885147095,
+            "log": "bitcoin-withdrawal-payout-reviews/864e8bc5571f/temporaryChallengeCleanupPreservesThePermanentBoundDecision.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          }
+        ],
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "independentSignatureApprovesExactFundsAndCommitDoesNotPay()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "approvalRemainsCancellableUntilExecutionCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "databaseAlsoRejectsCancellationAfterExecutionCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "simultaneousCancellationAndExecutionCommitHaveExactlyOneWinner()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "aNewCustomerRestrictionBlocksPreviouslyApprovedExecution()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "changedCustomerVersionInvalidatesTheUnsignedReviewBeforeSignatureConsumption()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "checkerMustInspectTheExactPayloadInItsCurrentSession()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "anotherOperatorCannotInspectTheEncryptedOpinion()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "separateAccountsForTheSamePersonCannotSelfApprove()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "missingProofCannotApproveAnInspectedReview()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "rejectionSignatureCannotBeUsedAsPayoutApproval()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "changedHashCannotConsumeTheOriginalSignature()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "sameRequestKeyReplaysTheSameOpinionButCannotChangeIt()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "newRequestKeyCannotSupersedeAPendingOrApprovedReview()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "rejectionPreservesFundsAndAllowsANewExplicitReview()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "missingProposalAuditRollsBackTheEncryptedReviewAndBinding()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "missingInspectAuditCannotSatisfyTheApprovalPrerequisite()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "decisionAuditFailureRollsBackBothTheDecisionAndConsumedSignature()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "silentlyOmittedDecisionAuditCannotCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "missingExecutionAuditLeavesTheCustomerFreeToCancel()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "encryptedOpinionAndAllApprovalFactsAreImmutable()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "simultaneousDecisionConsumesTheBoundSignatureOnlyOnce()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "routineDirectoryRefreshDoesNotChangeTheApprovedEconomicScope()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "corruptedMaterializedBalanceCannotBecomeAPayoutPermission()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "laterMarketReferenceDoesNotChangeTheSignedWithdrawal()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "missingCurrentCounterpartyBlocksNewPayoutPermission()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "strictHttpRejectsInjectedFundsUnknownFieldsAndPublicCommitRoute()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "headlessHttpUsesTheAssignedInspectionAndActualBoundSignature()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "recognizedButUnmonitoredNativeFundsBlockNewPayoutReview()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "aNewNativeInputAfterApprovalBlocksExecutionUntilANewReview()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "anOpenNativeMonitoringCaseCannotBeOverriddenByAPayoutOpinion()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "databaseCannotCommitAnApprovalAfterTheCurrentKycExpires()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "databaseCannotCommitPastAnUnprocessedNativeInput()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalPayoutReviewIntegrationTest",
+            "name": "temporaryChallengeCleanupPreservesThePermanentBoundDecision()"
+          }
+        ],
+        "tests": {
+          "tests": 34,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 0,
+        "container_removed": true
+      },
+      "reservations": {
+        "container": "cex-bitcoin-withdrawal-reservations-0fe8d4dd1536",
+        "run_id": "0fe8d4dd1536",
+        "groups": [
+          {
+            "database": "monitoring_case_0",
+            "method": "exactSignatureReservesTheGrossAmountAndKeepsTheQuoteNetAmount",
+            "exit": 0,
+            "clock_difference_seconds": 0.00627589225769043,
+            "duration_seconds": 8.071929931640625,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/exactSignatureReservesTheGrossAmountAndKeepsTheQuoteNetAmount.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_1",
+            "method": "loginAndQuoteWithoutOneTimeSignatureCannotReserve",
+            "exit": 0,
+            "clock_difference_seconds": 0.005908012390136719,
+            "duration_seconds": 8.070808172225952,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/loginAndQuoteWithoutOneTimeSignatureCannotReserve.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_2",
+            "method": "signatureForAnotherQuoteCannotMoveTheGrossDebit",
+            "exit": 0,
+            "clock_difference_seconds": 0.005897045135498047,
+            "duration_seconds": 7.69392991065979,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/signatureForAnotherQuoteCannotMoveTheGrossDebit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_3",
+            "method": "duplicateRequestCannotConsumeTheProofOrReserveTwice",
+            "exit": 0,
+            "clock_difference_seconds": 0.005390167236328125,
+            "duration_seconds": 7.987993955612183,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/duplicateRequestCannotConsumeTheProofOrReserveTwice.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_4",
+            "method": "confirmedReserveDoesNotDebitTwiceAndSecondEngineEventRollsBack",
+            "exit": 0,
+            "clock_difference_seconds": 0.005331993103027344,
+            "duration_seconds": 7.932708024978638,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/confirmedReserveDoesNotDebitTwiceAndSecondEngineEventRollsBack.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_5",
+            "method": "durableFinancialRejectionAloneReleasesTheOriginalGrossOnce",
+            "exit": 0,
+            "clock_difference_seconds": 0.005151987075805664,
+            "duration_seconds": 8.131941080093384,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/durableFinancialRejectionAloneReleasesTheOriginalGrossOnce.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_6",
+            "method": "insufficientGrossBalanceDoesNotConsumeTheSignatureOrWriteAnOriginal",
+            "exit": 0,
+            "clock_difference_seconds": 0.005440950393676758,
+            "duration_seconds": 7.751418113708496,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/insufficientGrossBalanceDoesNotConsumeTheSignatureOrWriteAnOriginal.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_7",
+            "method": "auditFailureRollsBackTheProofAndTheEntireFinancialHold",
+            "exit": 0,
+            "clock_difference_seconds": 0.0060749053955078125,
+            "duration_seconds": 7.693669080734253,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/auditFailureRollsBackTheProofAndTheEntireFinancialHold.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_8",
+            "method": "revokedSessionCannotUseAnAlreadyCreatedWithdrawalChallenge",
+            "exit": 0,
+            "clock_difference_seconds": 0.0058329105377197266,
+            "duration_seconds": 7.513372182846069,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/revokedSessionCannotUseAnAlreadyCreatedWithdrawalChallenge.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_9",
+            "method": "uncertainEngineResponsePreservesTheSameLockedFundsAndDurableAttempt",
+            "exit": 0,
+            "clock_difference_seconds": 0.00596308708190918,
+            "duration_seconds": 7.986057758331299,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/uncertainEngineResponsePreservesTheSameLockedFundsAndDurableAttempt.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_10",
+            "method": "httpAcceptsOnlyTheCurrentCustomersSignedQuoteWithoutInputFee",
+            "exit": 0,
+            "clock_difference_seconds": 0.00664520263671875,
+            "duration_seconds": 7.69822096824646,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/httpAcceptsOnlyTheCurrentCustomersSignedQuoteWithoutInputFee.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_11",
+            "method": "httpRejectsInjectedAmountDuplicateJsonAndOperatorAccess",
+            "exit": 0,
+            "clock_difference_seconds": 0.0052411556243896484,
+            "duration_seconds": 7.504168272018433,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/httpRejectsInjectedAmountDuplicateJsonAndOperatorAccess.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_12",
+            "method": "unsignedDirectFinancialOriginalCannotCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.005506992340087891,
+            "duration_seconds": 7.438703298568726,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/unsignedDirectFinancialOriginalCannotCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_13",
+            "method": "reservedOriginalSignatureAndDispatchHistoryCannotBeEditedOrDeleted",
+            "exit": 0,
+            "clock_difference_seconds": 0.005727052688598633,
+            "duration_seconds": 7.727028131484985,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/reservedOriginalSignatureAndDispatchHistoryCannotBeEditedOrDeleted.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_14",
+            "method": "forgedEngineValueAndReasonCannotReleaseOrAcknowledgeTheHold",
+            "exit": 0,
+            "clock_difference_seconds": 0.005934000015258789,
+            "duration_seconds": 7.688475131988525,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/forgedEngineValueAndReasonCannotReleaseOrAcknowledgeTheHold.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_15",
+            "method": "twoDistinctQuotesCannotSpendTheSameAvailableSatoshis",
+            "exit": 0,
+            "clock_difference_seconds": 0.005305051803588867,
+            "duration_seconds": 7.661369800567627,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/twoDistinctQuotesCannotSpendTheSameAvailableSatoshis.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_16",
+            "method": "eventWithoutItsMandatoryAuditCannotCommitEvenWithReceiptAndLedger",
+            "exit": 0,
+            "clock_difference_seconds": 0.005652904510498047,
+            "duration_seconds": 7.591192007064819,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/eventWithoutItsMandatoryAuditCannotCommitEvenWithReceiptAndLedger.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_17",
+            "method": "independentLedgerReconciliationSeesThePendingAndConfirmedReserve",
+            "exit": 0,
+            "clock_difference_seconds": 0.005421161651611328,
+            "duration_seconds": 7.997716903686523,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/independentLedgerReconciliationSeesThePendingAndConfirmedReserve.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_18",
+            "method": "independentLedgerReconciliationSeesTheExactRejectionRefund",
+            "exit": 0,
+            "clock_difference_seconds": 0.005991935729980469,
+            "duration_seconds": 7.721449851989746,
+            "log": "bitcoin-withdrawal-reservations/0fe8d4dd1536/independentLedgerReconciliationSeesTheExactRejectionRefund.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          }
+        ],
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "exactSignatureReservesTheGrossAmountAndKeepsTheQuoteNetAmount()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "loginAndQuoteWithoutOneTimeSignatureCannotReserve()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "signatureForAnotherQuoteCannotMoveTheGrossDebit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "duplicateRequestCannotConsumeTheProofOrReserveTwice()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "confirmedReserveDoesNotDebitTwiceAndSecondEngineEventRollsBack()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "durableFinancialRejectionAloneReleasesTheOriginalGrossOnce()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "insufficientGrossBalanceDoesNotConsumeTheSignatureOrWriteAnOriginal()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "auditFailureRollsBackTheProofAndTheEntireFinancialHold()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "revokedSessionCannotUseAnAlreadyCreatedWithdrawalChallenge()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "uncertainEngineResponsePreservesTheSameLockedFundsAndDurableAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "httpAcceptsOnlyTheCurrentCustomersSignedQuoteWithoutInputFee()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "httpRejectsInjectedAmountDuplicateJsonAndOperatorAccess()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "unsignedDirectFinancialOriginalCannotCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "reservedOriginalSignatureAndDispatchHistoryCannotBeEditedOrDeleted()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "forgedEngineValueAndReasonCannotReleaseOrAcknowledgeTheHold()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "twoDistinctQuotesCannotSpendTheSameAvailableSatoshis()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "eventWithoutItsMandatoryAuditCannotCommitEvenWithReceiptAndLedger()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "independentLedgerReconciliationSeesThePendingAndConfirmedReserve()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalReservationIntegrationTest",
+            "name": "independentLedgerReconciliationSeesTheExactRejectionRefund()"
+          }
+        ],
+        "tests": {
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 0,
+        "container_removed": true
+      },
+      "approvals": {
+        "container": "cex-bound-approvals-9ede93f096ec",
+        "run_id": "9ede93f096ec",
+        "groups": [
+          {
+            "name": "bound",
+            "database": "approval_bound",
+            "exit": 0,
+            "tests": {
+              "tests": 62,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            },
+            "log": "bound-approvals/9ede93f096ec/bound.log",
+            "cases": [
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "oldPendingRequestWithoutBindingRemainsReadableButCannotExecute()"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "independentApproverApprovalAndRejectionRaceHasOneFinalDecision(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "independentApproverApprovalAndRejectionRaceHasOneFinalDecision(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "independentApproverApprovalAndRejectionRaceHasOneFinalDecision(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "independentApproverApprovalAndRejectionRaceHasOneFinalDecision(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "hashExpiryAndSuccessfulReplayAreChecked(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "hashExpiryAndSuccessfulReplayAreChecked(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "hashExpiryAndSuccessfulReplayAreChecked(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "hashExpiryAndSuccessfulReplayAreChecked(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "loginSignatureAndMissingUserVerificationCannotExecute(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "loginSignatureAndMissingUserVerificationCannotExecute(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "loginSignatureAndMissingUserVerificationCannotExecute(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "loginSignatureAndMissingUserVerificationCannotExecute(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "onlyApproverCanObtainWorkflowOptions(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "onlyApproverCanObtainWorkflowOptions(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "onlyApproverCanObtainWorkflowOptions(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "onlyApproverCanObtainWorkflowOptions(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "newOptionsInAnotherWorkflowInvalidateOldChallenge(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "newOptionsInAnotherWorkflowInvalidateOldChallenge(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "newOptionsInAnotherWorkflowInvalidateOldChallenge(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "newOptionsInAnotherWorkflowInvalidateOldChallenge(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "fiveInvalidProofsSharePersistentMfaLimit(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "fiveInvalidProofsSharePersistentMfaLimit(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "fiveInvalidProofsSharePersistentMfaLimit(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "fiveInvalidProofsSharePersistentMfaLimit(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "eachWorkflowRequiresItsOwnSignature(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "eachWorkflowRequiresItsOwnSignature(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "eachWorkflowRequiresItsOwnSignature(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "eachWorkflowRequiresItsOwnSignature(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "businessAuditFailureRestoresProofCounterAndBusinessState(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "businessAuditFailureRestoresProofCounterAndBusinessState(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "businessAuditFailureRestoresProofCounterAndBusinessState(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "businessAuditFailureRestoresProofCounterAndBusinessState(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "realHttpRequiresProofReturnsServerContentAndNeverCaches(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "realHttpRequiresProofReturnsServerContentAndNeverCaches(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "realHttpRequiresProofReturnsServerContentAndNeverCaches(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "realHttpRequiresProofReturnsServerContentAndNeverCaches(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "proofCannotExecuteAnotherRequestInSameWorkflow(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "proofCannotExecuteAnotherRequestInSameWorkflow(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "proofCannotExecuteAnotherRequestInSameWorkflow(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "proofCannotExecuteAnotherRequestInSameWorkflow(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "concurrentApprovalsHaveExactlyOneWinner(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "concurrentApprovalsHaveExactlyOneWinner(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "concurrentApprovalsHaveExactlyOneWinner(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "concurrentApprovalsHaveExactlyOneWinner(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "signatureCannotMoveToRefreshedSession(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "signatureCannotMoveToRefreshedSession(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "signatureCannotMoveToRefreshedSession(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "signatureCannotMoveToRefreshedSession(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "requesterRoleRoundTripInvalidatesExistingProof(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "requesterRoleRoundTripInvalidatesExistingProof(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "requesterRoleRoundTripInvalidatesExistingProof(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "requesterRoleRoundTripInvalidatesExistingProof(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "identicalIdsAndHashesAcrossWorkflowsDoNotShareProof()"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "bindingHistoryCannotBeChangedOrDeleted(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "bindingHistoryCannotBeChangedOrDeleted(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "bindingHistoryCannotBeChangedOrDeleted(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "bindingHistoryCannotBeChangedOrDeleted(ApprovalKind) [4] TRADING_RESTRICTION"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "rejectionHasIndependentSignatureAndNoBusinessEffect(ApprovalKind) [1] ROLE"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "rejectionHasIndependentSignatureAndNoBusinessEffect(ApprovalKind) [2] MFA_RECOVERY"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "rejectionHasIndependentSignatureAndNoBusinessEffect(ApprovalKind) [3] ACCESS_REVIEW"
+              },
+              {
+                "class": "dustin.cex.domains.security.BoundApprovalTest",
+                "name": "rejectionHasIndependentSignatureAndNoBusinessEffect(ApprovalKind) [4] TRADING_RESTRICTION"
+              }
+            ]
+          },
+          {
+            "name": "roles",
+            "database": "approval_roles",
+            "exit": 0,
+            "tests": {
+              "tests": 51,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            },
+            "log": "bound-approvals/9ede93f096ec/roles.log",
+            "cases": [
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "positiveOrLockedBalanceCannotBecomeOperator()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "requesterRoleRoundTripStillInvalidatesOlderRequest()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "customerDeclarationWithoutFinancialHistoryCannotBecomeOperator()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "expiredRequestCannotIssueOptionsOrExecute()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "restrictedOrPreviouslyUsedOperatorCandidateCannotBeGranted()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "disabledOrExpiredApproverCannotExecuteSignedRequest()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "oldCustomerAccessCannotCreateOrderAfterApprovedRoleChange()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "disabledRecoveryLockedAndSameRoleTargetsAreDenied()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "grantRequiresNewPasswordSigninRegistrationAndSignature()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "changedRoleKeepsKeysButRecallsAllSessionsAndPendingOptions()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "rejectionNeedsItsOwnSignatureAndDoesNotChangeTarget()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "proofCannotMoveToAnotherApprover()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "expiredChallengeCannotExecute()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "recentMfaAndPasswordAloneCannotApprove()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "concurrentApprovalHasOneWinnerAndOneEnrollment()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "fiveInvalidProofsLimitFurtherOptionsAndDecision()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "authorizationHelpersCannotRunOutsideBusinessTransaction()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "changedRequesterIdentityOrRevokedRightsBlockPreviouslySignedApproval()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "targetVersionChangeAfterOptionsBlocksEffect()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "requestHashAndIdAreBoundToProof()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "customerIdentityAttemptWithoutFinancialHistoryCannotBecomeOperator()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "deadlineRoleAndEvidenceAreStrictlyValidated()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "secretIsHashedNeverLoggedOrReadBackAndDecisionCannotReplay()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "zeroCurrentBalanceDoesNotHideHistoricalLedgerEntries()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "proofCannotMoveToRefreshedSession()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "requestAuditFailureLeavesNoPendingRequest()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "existingPersonCannotBeReassignedByRoleChange()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[1] role = OPERATOR"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[2] role = APPROVER"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[3] role = AUDITOR"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "newCustomerDeclarationAfterRoleRequestPreventsApprovalWithoutVersionChange()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "cancelledOrderHistoryCannotBeErasedByZeroBalanceRoleConversion()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "immutableRequestCannotBeEditedDeletedTruncatedOrReopened()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "httpRolesDenyCustomerMakerAndAuditorApprovalOptions()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "ordinaryLoginAssertionCannotAuthorizeRole()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "actualHttpRoleFlowRejectsUnsignedAndUsesNoStore()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "storedPayloadHashMatchesReturnedMicrosecondPrecisionJson()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "financialStateCreatedAfterRequestPreventsGrant()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "approveAndRejectProofsAreNotInterchangeable()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "requesterCheckerAndTargetMustBeDifferentActualPeople()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "realHttpServerBindsApprovalAndRejectsOldCustomerSession()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[1] mutation = \"ORIGIN\""
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[2] mutation = \"UV\""
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[3] mutation = \"SIGNATURE\""
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[4] mutation = \"OWNER\""
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[5] mutation = \"COUNTER\""
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "[6] mutation = \"CLIENT_CHALLENGE\""
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "competingRequestCannotOverwriteNewRole()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "newOptionsInvalidatePreviousChallengeAndDoNotExtendSessionMfa()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "staleAndRevokedSessionCannotBypassWithDirectServiceCalls()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorRoleTest",
+                "name": "auditFailureRollsBackRoleSessionEnrollmentCounterAndProofConsumption()"
+              }
+            ]
+          },
+          {
+            "name": "lifecycle",
+            "database": "approval_lifecycle",
+            "exit": 0,
+            "tests": {
+              "tests": 37,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            },
+            "log": "bound-approvals/9ede93f096ec/lifecycle.log",
+            "cases": [
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "expiredRequestAndWrongHashCannotRecover()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "reissuedRecoveryInvalidatesOlderRequest()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "concurrentRecoveryApprovalsHaveOneWinner()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "missingOperatorExpiryFailsClosed()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "revocationAuditFailureRollsBackDisabledStateAndKeys()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "requestReadsAreBoundedAndUnknownRoutesRemainDenied()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "actualHttpAuthorizationRecoveryAndApprovalReturnNoCachedSecret()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "customerCannotBeRecoveryTargetOrReceiveOperatorExpiryRules()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "backupKeyCanRevokeLostKeyAndAllSessionsAreRecalled()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "rejectionDoesNotRestoreReportedCompromisedKeyAccess()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "lastKeyAndCurrentlyAuthenticatedKeyCannotBeDeleted()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "reviewAuditFailureDoesNotExtendRightsOrRevokeExistingSession()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "recoveryImmediatelyBlocksSessionsRefreshSigninAndOldChallenges()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "emergencyRevocationDisablesAccountKeysAndSessionsWithoutWaitingForApproval()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "approvedRecoveryRequiresPasswordNewRegistrationAndNewSignature()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "deviceRevocationAuditFailureRestoresKeyAndSession()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "currentKeyCannotDeleteItselfEvenWhenBackupExists()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "revokedTargetCannotBeRestoredByPreviouslyApprovedIntent()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "changedTargetVersionAndRevokedRequesterInvalidateDecision()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "selfOrSamePersonRevocationIsDenied()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "accessExpiryBlocksSigninRefreshApiAndPendingApproval()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "securityRequestEvidenceAndPayloadCannotBeMutatedOrDeleted()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "approvedReviewRenewsExpiredRightsButRequiresNewSigninAndMfa()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "approvalResponseContainsSecretOnlyOnceAndReadsNeverExposeIt()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "recoveryApprovalAuditFailureRollsBackKeysGrantAndAccountState()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "requesterApproverAndTargetMustBeDifferentPeople()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "reviewExpiryIsBoundedAndSameExpiryReviewsStillChangeVersion()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "refreshPreservesSigningKeyFingerprint()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "makerIdentityChangeAndCheckerSessionRevocationInvalidateApproval()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "samePersonsSeparateRequesterAndTargetAccountsAreDenied()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "evidenceMustBePresentAndContainsReferenceRatherThanRawIdentityDocuments()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "regularServerHasNoBootstrapRunnerOrManagementConfiguration()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "recoveryRequestAuditFailureDoesNotSuspendAccount()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorLifecycleTest",
+                "name": "staleOrRevokedSessionCannotBypassControllerWithDirectServiceCall()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorSessionPolicyTest",
+                "name": "differentUserIdNeverReceivesOwnersSession()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorSessionPolicyTest",
+                "name": "equalLargeUserIdsAreAcceptedAcrossSeparateBoxedInstances()"
+              },
+              {
+                "class": "dustin.cex.domains.security.OperatorSessionPolicyTest",
+                "name": "revokedStaleOrUnboundSessionsCannotAuthenticate()"
+              }
+            ]
+          },
+          {
+            "name": "security",
+            "database": "approval_security",
+            "exit": 0,
+            "tests": {
+              "tests": 41,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            },
+            "log": "bound-approvals/9ede93f096ec/security.log",
+            "cases": [
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "concurrentApprovalsExecuteExactlyOnce()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "apiNeverRedirectsToLoginPageOrChallengesBasic()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "bootstrapRejectsCustomerWithFinancialState()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "restrictionCanBeLiftedOnlyByAnotherApprovedRequest()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "bootstrapAuditFailureRollsBackRoleEnrollmentAndSessionRevocation()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "changedPayloadAndMissingProofAreRejected()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "corsAllowsOnlyConfiguredFrontendAndReviewedHeaders()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "auditFailureRollsBackOrderReservationLedgerAndDispatch()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "fakeSessionAndWrongTokenPurposeAreRejected()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "auditReadsAreBoundedAndContainNoCredentials()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "customerAndOperatorCannotEscalateRoles()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "missingAndWeakSecretsFailImmediately()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "roleChangeAndDisableAffectExistingAccessToken()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "loginPasswordGuessingIsBoundedAndDoesNotRevokeExistingSession()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "settlementAndPrivateTradeDataAreNotPublic()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "completedRequestCannotExecuteAgain()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "wrongAudiencePurposeAlgorithmAndTokenLifetimeAreRejected()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "logoutRevokesAccessAndRefreshTogether()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "bootstrapRejectsZeroBalanceWithHistoricalLedgerEntries()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "auditUsesPeerAddressAndPreservesRoleSnapshot()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "oldUnapprovedSettlementWritesAndUnknownRoutesAreDenied()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "expiredApprovalCannotExecute()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "approvalRunsThroughActualHttpAndAudit()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "bootstrapIsExplicitRevokesSessionsAndAuditsRoleGrant()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "rejectionDoesNotApplyRestrictionAndCannotBeReused()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "restrictionBlocksNewReservationButKeepsOriginalReplay()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "logoutCannotRevokeAnotherPersonsSession()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "publicSignupCannotChooseOperatorRole()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "newPathMatchingDoesNotOpenSimilarOrNestedPrivateRoutes()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "approvalProofGuessingIsBoundedWithoutApplyingEffect()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "changedTargetVersionAndRevokedRequesterInvalidateApproval()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "mandatoryAuditFailureRollsBackApprovalAndCustomerState()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "refreshRotationHasOneWinnerUnderConcurrency()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "concurrentSignupAllocatesOneEmailAddress()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "bootstrapRejectsShortEnrollmentSecretWithoutGrantingRole()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "differentAccountsOfSamePersonCannotApprove()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "requiredSigninAuditFailureDoesNotRevokeOrIssueSessions()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "missingApprovalFieldsAndUnboundedPagesAreRejected()"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "[1] identityExpired = true"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "[2] identityExpired = false"
+              },
+              {
+                "class": "dustin.cex.domains.security.PlatformSecurityTest",
+                "name": "auditAndApprovalPayloadCannotBeMutated()"
+              }
+            ]
+          }
+        ],
+        "exit": 0,
+        "tests": {
+          "tests": 191,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "container_removed": true
+      },
+      "finance": {
+        "container": "cex-inbox-6e10340a7c05",
+        "exit": 0,
+        "tests": {
+          "tests": 217,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "container_removed": true
+      },
+      "wire": {
+        "run_id": "2b4e5d7f57de",
+        "engine_commit": "013cd6889fe4e9c75874d4e4aa3cf0681054fad1",
+        "groups": [
+          {
+            "method": "realSignedReservationAndCancellationWaitForKafkaAndConsumeDuplicatesOnce",
+            "database_container": "cex-withdrawal-wire-2b4e5d7f57de-0",
+            "broker_container": "cex-withdrawal-wire-2b4e5d7f57de-0-kafka-26fdfa704b",
+            "database_host_clock_difference_seconds": 0.006379127502441406,
+            "exit": 0,
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            },
+            "broker_removed": true,
+            "database_removed": true
+          },
+          {
+            "method": "lostReserveResponseAndRestartPreserveEarlyCancellationAndTheOriginalEvents",
+            "database_container": "cex-withdrawal-wire-2b4e5d7f57de-1",
+            "broker_container": "cex-withdrawal-wire-2b4e5d7f57de-1-kafka-dcb62cc89a",
+            "database_host_clock_difference_seconds": 0.00669097900390625,
+            "exit": 0,
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            },
+            "broker_removed": true,
+            "database_removed": true
+          },
+          {
+            "method": "lostReleaseResponseAndRestartKeepFundsLockedUntilTheSameDurableKafkaEvent",
+            "database_container": "cex-withdrawal-wire-2b4e5d7f57de-2",
+            "broker_container": "cex-withdrawal-wire-2b4e5d7f57de-2-kafka-84733bc78a",
+            "database_host_clock_difference_seconds": 0.006333827972412109,
+            "exit": 0,
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            },
+            "broker_removed": true,
+            "database_removed": true
+          }
+        ],
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalWireIntegrationTest",
+            "name": "realSignedReservationAndCancellationWaitForKafkaAndConsumeDuplicatesOnce()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalWireIntegrationTest",
+            "name": "lostReserveResponseAndRestartPreserveEarlyCancellationAndTheOriginalEvents()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalWireIntegrationTest",
+            "name": "lostReleaseResponseAndRestartKeepFundsLockedUntilTheSameDurableKafkaEvent()"
+          }
+        ],
+        "tests": {
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 0
+      },
+      "transfers": {
+        "container": "cex-bitcoin-withdrawal-transfer-reviews-ff88887dbd70",
+        "run_id": "ff88887dbd70",
+        "groups": [
+          {
+            "database": "monitoring_case_0",
+            "method": "confirmedAddressPrecedesExactNetIdentityExchangeWithoutMovingMoney",
+            "exit": 0,
+            "clock_difference_seconds": 0.006884098052978516,
+            "duration_seconds": 7.971423864364624,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/confirmedAddressPrecedesExactNetIdentityExchangeWithoutMovingMoney.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_1",
+            "method": "originalIntentAndObservedIdentityAreEncryptedAndMacBound",
+            "exit": 0,
+            "clock_difference_seconds": 0.005593061447143555,
+            "duration_seconds": 7.6360249519348145,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/originalIntentAndObservedIdentityAreEncryptedAndMacBound.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_2",
+            "method": "sameRequestKeyReplaysMetadataButChangedInputIsRejected",
+            "exit": 0,
+            "clock_difference_seconds": 0.006143808364868164,
+            "duration_seconds": 7.914489984512329,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/sameRequestKeyReplaysMetadataButChangedInputIsRejected.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_3",
+            "method": "duplicateExecutionCannotRepeatAVerifiedTransfer",
+            "exit": 0,
+            "clock_difference_seconds": 0.006342172622680664,
+            "duration_seconds": 7.842588901519775,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/duplicateExecutionCannotRepeatAVerifiedTransfer.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_4",
+            "method": "deniedAddressCannotDiscloseIdentityOrBeTreatedAsPaymentApproval",
+            "exit": 0,
+            "clock_difference_seconds": 0.005102872848510742,
+            "duration_seconds": 7.956840991973877,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/deniedAddressCannotDiscloseIdentityOrBeTreatedAsPaymentApproval.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_5",
+            "method": "knownInvalidAddressAllowsANewExplicitIntentWithoutErasingTheOldOne",
+            "exit": 0,
+            "clock_difference_seconds": 0.004865884780883789,
+            "duration_seconds": 7.922391176223755,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/knownInvalidAddressAllowsANewExplicitIntentWithoutErasingTheOldOne.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_6",
+            "method": "unknownTransferCannotRetryOrEscapeThroughANewIntentId",
+            "exit": 0,
+            "clock_difference_seconds": 0.006529092788696289,
+            "duration_seconds": 8.309441089630127,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/unknownTransferCannotRetryOrEscapeThroughANewIntentId.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_7",
+            "method": "provenNonSendIsSavedAndImmediateRetryIsSuppressed",
+            "exit": 0,
+            "clock_difference_seconds": 0.006088972091674805,
+            "duration_seconds": 8.334439992904663,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/provenNonSendIsSavedAndImmediateRetryIsSuppressed.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_8",
+            "method": "malformedVerifiedIdentityBecomesUnknownAndCannotRetry",
+            "exit": 0,
+            "clock_difference_seconds": 0.006069183349609375,
+            "duration_seconds": 7.9275712966918945,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/malformedVerifiedIdentityBecomesUnknownAndCannotRetry.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_9",
+            "method": "wrongAddressEntityCannotStartThePrivateStage",
+            "exit": 0,
+            "clock_difference_seconds": 0.006136178970336914,
+            "duration_seconds": 7.563521146774292,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/wrongAddressEntityCannotStartThePrivateStage.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_10",
+            "method": "currentCustomerRestrictionBlocksOpeningTheStoredIdentity",
+            "exit": 0,
+            "clock_difference_seconds": 0.006182193756103516,
+            "duration_seconds": 7.458561897277832,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/currentCustomerRestrictionBlocksOpeningTheStoredIdentity.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_11",
+            "method": "cancellationBeforeStartBlocksBothStages",
+            "exit": 0,
+            "clock_difference_seconds": 0.008877992630004883,
+            "duration_seconds": 7.543150901794434,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/cancellationBeforeStartBlocksBothStages.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_12",
+            "method": "cancellationDuringAddressIoPreservesTheFactButBlocksIdentity",
+            "exit": 0,
+            "clock_difference_seconds": 0.0061991214752197266,
+            "duration_seconds": 7.64004111289978,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/cancellationDuringAddressIoPreservesTheFactButBlocksIdentity.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_13",
+            "method": "cancellationDuringTransferPreservesTheReplyWithoutPaying",
+            "exit": 0,
+            "clock_difference_seconds": 0.00505375862121582,
+            "duration_seconds": 7.91390323638916,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/cancellationDuringTransferPreservesTheReplyWithoutPaying.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_14",
+            "method": "currentOperatorSessionAndOriginalPersonAreRequired",
+            "exit": 0,
+            "clock_difference_seconds": 0.004889249801635742,
+            "duration_seconds": 8.308481216430664,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/currentOperatorSessionAndOriginalPersonAreRequired.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_15",
+            "method": "prepareAuditFailureRollsBackTheIntentBeforeAnyIo",
+            "exit": 0,
+            "clock_difference_seconds": 0.005774974822998047,
+            "duration_seconds": 7.766986846923828,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/prepareAuditFailureRollsBackTheIntentBeforeAnyIo.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_16",
+            "method": "missingPrepareAuditIsRejectedAtCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.005132198333740234,
+            "duration_seconds": 7.5768420696258545,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/missingPrepareAuditIsRejectedAtCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_17",
+            "method": "startAuditFailureCannotSendEvenTheAddress",
+            "exit": 0,
+            "clock_difference_seconds": 0.006108999252319336,
+            "duration_seconds": 7.573499917984009,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/startAuditFailureCannotSendEvenTheAddress.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_18",
+            "method": "privateReplyCommitFailureLeavesAnUnresolvedAttemptAndCannotResend",
+            "exit": 0,
+            "clock_difference_seconds": 0.0058519840240478516,
+            "duration_seconds": 7.87425684928894,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/privateReplyCommitFailureLeavesAnUnresolvedAttemptAndCannotResend.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_19",
+            "method": "immutableIntentAttemptAndReplyCannotBeRewrittenOrRemoved",
+            "exit": 0,
+            "clock_difference_seconds": 0.0058231353759765625,
+            "duration_seconds": 7.950698137283325,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/immutableIntentAttemptAndReplyCannotBeRewrittenOrRemoved.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_20",
+            "method": "simultaneousExecutionStartsEachStageOnlyOnce",
+            "exit": 0,
+            "clock_difference_seconds": 0.005918979644775391,
+            "duration_seconds": 7.836909055709839,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/simultaneousExecutionStartsEachStageOnlyOnce.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_21",
+            "method": "laterPriceDropDoesNotRewriteTheOriginalPrivacyPurpose",
+            "exit": 0,
+            "clock_difference_seconds": 0.005343198776245117,
+            "duration_seconds": 7.8057029247283936,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/laterPriceDropDoesNotRewriteTheOriginalPrivacyPurpose.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_22",
+            "method": "strictOperatorHttpRejectsUnknownDuplicateAndInjectedFields",
+            "exit": 0,
+            "clock_difference_seconds": 0.0054247379302978516,
+            "duration_seconds": 7.8923139572143555,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/strictOperatorHttpRejectsUnknownDuplicateAndInjectedFields.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_23",
+            "method": "headlessHttpCanPrepareExecuteAndReadOnlyMinimalMetadata",
+            "exit": 0,
+            "clock_difference_seconds": 0.005239963531494141,
+            "duration_seconds": 8.077007293701172,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/headlessHttpCanPrepareExecuteAndReadOnlyMinimalMetadata.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_24",
+            "method": "belowPurposeThresholdDoesNotBorrowTheOlderLargerRequest",
+            "exit": 0,
+            "clock_difference_seconds": 0.004953861236572266,
+            "duration_seconds": 7.9266979694366455,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/belowPurposeThresholdDoesNotBorrowTheOlderLargerRequest.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_25",
+            "method": "httpAcknowledgementWithoutCanonicalReserveCannotDiscloseIdentity",
+            "exit": 0,
+            "clock_difference_seconds": 0.005426168441772461,
+            "duration_seconds": 7.999567270278931,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/httpAcknowledgementWithoutCanonicalReserveCannotDiscloseIdentity.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_26",
+            "method": "changedCustomerVersionInvalidatesTheOriginalSignedPurpose",
+            "exit": 0,
+            "clock_difference_seconds": 0.005207061767578125,
+            "duration_seconds": 7.778740882873535,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/changedCustomerVersionInvalidatesTheOriginalSignedPurpose.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_27",
+            "method": "disabledPrivateTransferStopsAfterAddressValidation",
+            "exit": 0,
+            "clock_difference_seconds": 0.004686117172241211,
+            "duration_seconds": 8.057233095169067,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/disabledPrivateTransferStopsAfterAddressValidation.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_28",
+            "method": "provenNonSendCanRetryOnlyAfterDurableDelayWithTheSameTransferId",
+            "exit": 0,
+            "clock_difference_seconds": 0.006047964096069336,
+            "duration_seconds": 38.0582058429718,
+            "log": "bitcoin-withdrawal-transfer-reviews/ff88887dbd70/provenNonSendCanRetryOnlyAfterDurableDelayWithTheSameTransferId.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          }
+        ],
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "confirmedAddressPrecedesExactNetIdentityExchangeWithoutMovingMoney()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "originalIntentAndObservedIdentityAreEncryptedAndMacBound()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "sameRequestKeyReplaysMetadataButChangedInputIsRejected()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "duplicateExecutionCannotRepeatAVerifiedTransfer()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "deniedAddressCannotDiscloseIdentityOrBeTreatedAsPaymentApproval()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "knownInvalidAddressAllowsANewExplicitIntentWithoutErasingTheOldOne()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "unknownTransferCannotRetryOrEscapeThroughANewIntentId()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "provenNonSendIsSavedAndImmediateRetryIsSuppressed()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "malformedVerifiedIdentityBecomesUnknownAndCannotRetry()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "wrongAddressEntityCannotStartThePrivateStage()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "currentCustomerRestrictionBlocksOpeningTheStoredIdentity()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "cancellationBeforeStartBlocksBothStages()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "cancellationDuringAddressIoPreservesTheFactButBlocksIdentity()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "cancellationDuringTransferPreservesTheReplyWithoutPaying()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "currentOperatorSessionAndOriginalPersonAreRequired()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "prepareAuditFailureRollsBackTheIntentBeforeAnyIo()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "missingPrepareAuditIsRejectedAtCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "startAuditFailureCannotSendEvenTheAddress()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "privateReplyCommitFailureLeavesAnUnresolvedAttemptAndCannotResend()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "immutableIntentAttemptAndReplyCannotBeRewrittenOrRemoved()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "simultaneousExecutionStartsEachStageOnlyOnce()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "laterPriceDropDoesNotRewriteTheOriginalPrivacyPurpose()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "strictOperatorHttpRejectsUnknownDuplicateAndInjectedFields()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "headlessHttpCanPrepareExecuteAndReadOnlyMinimalMetadata()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "belowPurposeThresholdDoesNotBorrowTheOlderLargerRequest()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "httpAcknowledgementWithoutCanonicalReserveCannotDiscloseIdentity()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "changedCustomerVersionInvalidatesTheOriginalSignedPurpose()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "disabledPrivateTransferStopsAfterAddressValidation()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalTransferReviewIntegrationTest",
+            "name": "provenNonSendCanRetryOnlyAfterDurableDelayWithTheSameTransferId()"
+          }
+        ],
+        "tests": {
+          "tests": 29,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "exit": 0,
+        "container_removed": true
+      }
+    }
+  }
+}

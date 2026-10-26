@@ -43,7 +43,7 @@
 
 ## 구현과 관련 코드·문법
 
-출처: [BitcoinWithdrawalCancellations.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalCancellations.java#L53), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalCancellations.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalCancellations.java#L56), 현재 소스의 부분 발췌.
 
 ```java
             int inserted=jdbc.update("""
