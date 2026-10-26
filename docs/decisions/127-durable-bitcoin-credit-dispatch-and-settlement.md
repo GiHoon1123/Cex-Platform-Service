@@ -81,12 +81,13 @@ BitcoinCreditedEvents는 엔진이 보낸 정확한8개 필드·문자열 금액
 
 이 코드는 앞선 TransactionTemplate 콜백이 끝나 커밋된 뒤 실행된다. TypeScript에서 HTTP await를 DB TX 콜백 안에 넣으면 잠금이 저절로 해제되지 않는 것과 같다. JDK 클라이언트는 이 호출 스레드를 기다리게 하지만 엔진 매칭 코어나 고객 DB 잠금을 붙잡지 않는다.
 
-출처: [KafkaOrderEventConsumer.java](../../src/main/java/dustin/cex/shared/kafka/KafkaOrderEventConsumer.java#L61), 현재 소스의 부분 발췌.
+출처: [KafkaOrderEventConsumer.java](../../src/main/java/dustin/cex/shared/kafka/KafkaOrderEventConsumer.java#L62), 현재 소스의 부분 발췌.
 
 ```java
         if (!engineEventInbox.claim(event.path("event_id").asText(), event.path("engine_id").asText(), message)) return;
         switch (type) {
             case "deposit_credited" -> deposits.apply(message);
+            case "withdrawal_reserved", "withdrawal_rejected" -> withdrawals.apply(message);
             case "trade_executed" -> trade(event);
 ```
 

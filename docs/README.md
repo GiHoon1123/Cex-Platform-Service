@@ -289,3 +289,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [139. 고정 Bitcoin Core로 출금 목적지의 주소·네트워크·스크립트를 결합](decisions/139-bitcoin-withdrawal-destination-validation.md)
 
 - [140. 고정0.01% 수수료와 고객 출금 견적 원본·감사를 함께 확정](decisions/140-bitcoin-fixed-fee-withdrawal-quotes.md)
+
+- [141. 고객의 일회 패스키 서명과 BTC 총액 예약·확정 수신](decisions/141-bitcoin-signed-withdrawal-reservations.md)
