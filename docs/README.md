@@ -305,3 +305,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [147. 고정 BTC 출금의 주소 확인 뒤 신원 제공과 미해결 전송 보존](decisions/147-bitcoin-withdrawal-transfer-review.md)
 
 - [148. BTC 지급 근거의 독립 서명 승인과 고객 취소·실행 확정의 배타성](decisions/148-bitcoin-independent-payout-review.md)
+
+- [149. 관찰 전용 Core의 정확한 미서명 BTC 지급 거래 준비](decisions/149-bitcoin-watch-only-payout-preparation.md)

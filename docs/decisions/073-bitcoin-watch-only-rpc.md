@@ -42,7 +42,7 @@ RPC 응답은 JSON-RPC2.0·요청 ID·result 존재와 error 부재를 확인한
 
 ## 관련 코드와 문법
 
-출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L30), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
+출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L33), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
 
 ```java
         var chain=call("getblockchaininfo",List.of());
@@ -57,7 +57,7 @@ RPC 응답은 JSON-RPC2.0·요청 ID·result 존재와 error 부재를 확인한
 
 var는 초기화한 표현식의 정적 타입을 Java 컴파일러가 추론한다. TypeScript와 달리 실행 시 동적 타입으로 바뀌지 않는다. boolean 필드는 실제 JSON 불리언이어야 하며, 누락/문자열 값을 false로 추측하지 않는다. 네트워크나 지갑 검증 실패는 주소 파생 이전에 중단한다.
 
-출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L47), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
+출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L50), 077에서 두 노드 업무가 공유하도록 분리한 현재 소스의 부분 발췌.
 
 ```java
             var pending=http.sendAsync(request,info->new LimitedResponseBody(limit));

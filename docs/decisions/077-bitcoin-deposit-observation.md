@@ -40,13 +40,15 @@ Observation은 네트워크, txid, 관찰 상태/확정 수, 코인베이스 여
 
 ## 실제 코드와 문법
 
-출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L27), 현재 소스의 부분 발췌.
+출처: [BitcoinRpcClient.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinRpcClient.java#L28), 현재 소스의 부분 발췌.
 
 ```java
-        tree=json.reader(JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS);
+        tree=json.reader(JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+            .with(tools.jackson.core.StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+            .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 ```
 
-ObjectReader는 이 통신에만 적용하는 해독 설정이다. TypeScript의 Number나 JSON.parse 결과를 금액 계산에 바로 쓰는 것과 달리 소수 원문을 BigDecimal로 보존한다. 다른 업무의 전역 매퍼를 변경하거나 자체 숫자 파서를 만들지 않는다.
+ObjectReader는 이 통신에만 적용하는 해독 설정이다. TypeScript의 Number나 JSON.parse 결과를 금액 계산에 바로 쓰는 것과 달리 소수 원문을 BigDecimal로 보존한다. 다른 업무의 전역 매퍼를 변경하거나 자체 숫자 파서를 만들지 않는다.149에서 공통 RPC 판독기는 중복 키와 문서 뒤 추가 JSON도 거절하도록 강화했다. 아래 금액 보존 원칙은 그대로 유지한다.
 
 출처: [BitcoinDepositReader.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinDepositReader.java#L28), 현재 소스의 부분 발췌.
 
