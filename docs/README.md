@@ -295,3 +295,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [142. 고객 출금 취소 의도와 확정 해제 뒤 총 예약금 반환](decisions/142-bitcoin-withdrawal-cancellation-and-release.md)
 
 - [143. 실제 고객 서명부터 Rust·WAL·Kafka까지 출금 예약과 취소 검증](decisions/143-real-engine-bitcoin-withdrawal-wire.md)
+
+- [144. 실제 BTC 지급액과 당사자를 결합한 이전 승인 클라이언트](decisions/144-strict-codevasp-withdrawal-authorization.md)

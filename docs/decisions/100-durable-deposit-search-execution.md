@@ -66,7 +66,7 @@ current()는 최신 위치를 FOR SHARE로 고정해 새 SQL에서 해당 불변
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L52), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L53), 현재 소스의 부분 발췌.
 
 ```java
             // 이 표시 이후의 예외는 실제 미접수를 증명하지 않는다. 서명 모듈 단계의 실패와 구분한다.

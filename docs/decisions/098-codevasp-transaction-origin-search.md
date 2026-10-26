@@ -49,7 +49,7 @@
 
 ## 이해에 필요한 문법과 원리
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L47), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L48), 현재 소스의 부분 발췌.
 
 ```java
                 String body=text(signed.raw(),"body",65536);

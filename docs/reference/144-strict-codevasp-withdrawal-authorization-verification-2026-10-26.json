@@ -1,0 +1,308 @@
+{
+  "cycle": 144,
+  "implementation_commit": "f8390fae57993174620b3041b03a8f95ef5788f0",
+  "verification": {
+    "command": "JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home ./gradlew test --tests *CodeVaspWithdrawalAuthorizationClientTest --tests *CodeVaspTransferDataClientTest --tests *CodeVaspTransactionClientTest --tests *CodeVaspDirectoryClientTest bootJar operatorAdminJar --console=plain",
+    "tests": {
+      "tests": 66,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "groups": [
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "tests": 13,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "tests": 15,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "tests": 18,
+        "failures": 0,
+        "skipped": 0
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "tests": 20,
+        "failures": 0,
+        "skipped": 0
+      }
+    ],
+    "cases": [
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "submissionRedirectIsNotFollowed()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "mismatchedSignedBodyNeverReachesGateway()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "databaseTransactionCannotSubmitOrPoll()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "invalidInputNeverRequestsSigningMaterial()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "foundResultIsBoundToRequestedIdAndOneConsistentOrigin()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "notFoundWithPositiveAnalysisAndUnknownReasonsAreRejected()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "signedSubmissionPreservesExactBodyAndStableRequestIdentity()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "acknowledgementMustEchoSuccessAndSameRequestId()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "typedAdmissionSeparatesProvenCurrentNonSendFromUnknownGatewayOutcome()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "inconsistentOrUnknownResultsNeverBecomeFound()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "unresolvedResultsRemainSeparateWithoutClaimingPersonalWalletOrFinancialApproval()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "providerErrorsAreNotRetriedOrExposed()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransactionClientTest",
+        "name": "submissionTimeoutDoesNotProveRequestWasNeverReceived()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "absentSettingsNeverCallAnyDefaultProvider()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "alteredButWellFormedSignatureIsRejectedByGateway()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "gatewayErrorsHaveNoApplicationRetryOrRawBodyDisclosure()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "malformedDirectoryNeverBecomesPartialOrEmptySuccess()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "unavailableCounterpartyAndExpiredKeyArePreservedWithoutApprovingThem()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "redirectsAreNotFollowedAcrossSigningAndGatewayBoundaries()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "documentedUtcExpiryWithoutOffsetDoesNotUseJvmLocalTimezone()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "cipherAndGatewayBodiesAreBounded()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "emptySuccessfulDirectoryIsDifferentFromFailedCall()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "officialCipherAndGatewayContractPreservesRealSignatureAndTypedDirectory()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "ambientDatabaseTransactionCannotPerformProviderIo()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "eachReadObtainsNewSigningMaterialInsteadOfReusingNonce()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "invalidCipherMaterialNeverReachesGateway()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "stalledCipherBodyHasAbsoluteDeadline()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspDirectoryClientTest",
+        "name": "stalledGatewayBodyHasAbsoluteDeadline()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "technicallyReachableButUnapprovedPeerCannotDiscloseIdentity()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "sensitiveDtosDoNotEchoNamesBirthOrAccounts()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "cipherCannotChangePublicBindingOrLeakPlainPersonalFields()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "missingSettingsNeverSendPrivateData()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "gatewayBodyDeadlineIsUnknownAndDoesNotDecrypt()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "invalidIdentityOrSubSatoshiExpectationNeverStartsIo()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "requiredNaturalPersonFieldsAndRecipientAccountCannotBeGuessed()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "signedEncryptedRequestAndBoundPrivateReplyUseFixedContract()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "unsupportedPeerOrKeyNeverStartsIo()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "publicReplyMustMatchBeforeDecryption()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "unknownErrorAndMalformedCiphertextAreUnusable()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "decryptBodyDeadlineIsUnknownAfterOneGatewayRequest()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "signingBodyDeadlineIsKnownNotSent()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "decryptedObjectAndOriginalStringMustAgree()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "parsedNamesAreFactsAndDoNotPerformCurrentKycApproval()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "databaseTransactionCannotDisclosePrivateIdentity()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "gatewayFailureAndRedirectAreNotRetriedOrFollowed()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspTransferDataClientTest",
+        "name": "documentedErrorReasonsKeepNoRawMessageOrDecryptedData()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "invalidNameBirthOrIdentifierCannotStartIo()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "missingSettingsCannotStartAnAuthorization()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "gatewayBodyDeadlineIsUnknownAndNeverRetries()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "globalProxyCannotObserveModuleOrGatewayIdentity()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "privateSenderAndBeneficiaryMustMatchEvenBelowTheThreshold()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "signerCannotChangeTheWithdrawalOrDisclosePlainNames()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "decodedBodyAndOriginalBytesCannotDisagree()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "unapprovedCounterpartyNeverReceivesIdentity()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "sensitiveRecordsDoNotPrintIdentityOrAccount()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "exactNetAmountAndPrivateIdentityAreBoundToTheApprovedCounterparty()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "databaseTransactionCannotKeepLocksDuringDisclosure()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "signingBodyDeadlineIsKnownNotSent()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "documentedDenialsDoNotReturnRawMessagesOrDecryptData()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "unknownDenialAndMalformedCiphertextStayUnconfirmed()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "subSatoshiOrUnboundedFiatCannotReachTheModule()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "unsupportedNetworkPeerOrExpiredKeyCannotConstructARequest()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "gatewayErrorAndRedirectCannotRetryOrLeakResponseText()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "malformedSignedBodyNeverReachesTheGateway()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "publicResponseMustMatchBeforeOpeningPrivateIdentity()"
+      },
+      {
+        "class": "dustin.cex.domains.travelrule.CodeVaspWithdrawalAuthorizationClientTest",
+        "name": "decryptBodyDeadlineIsUnknownAfterTheOnlyGatewayRequest()"
+      }
+    ],
+    "exit": 0,
+    "external_provider_called": false,
+    "external_database_used": false
+  }
+}

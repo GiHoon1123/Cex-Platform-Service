@@ -57,7 +57,7 @@ codevasp.public-key=
 
 ## 구현과 이해에 필요한 코드
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L63), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L64), 현재 소스의 부분 발췌.
 
 ```java
     private Signed sign(JsonNode command){
@@ -73,7 +73,7 @@ codevasp.public-key=
 
 098에서 목록/거래 검색이 공유하는 전송 경계로 옮긴 현재 코드다. 당시 세 가지 고정 호출을 제공했으며104에서 정보 교환을 추가했다. 현재도 외부 요청에서 임의 API 종류/URL을 받지 않는다. 서명 개인키는 공식 모듈에만 둔다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L73), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L74), 현재 소스의 부분 발췌.
 
 ```java
     private HttpRequest.Builder headers(String path,Signed signed){
@@ -95,7 +95,7 @@ codevasp.public-key=
 
 JDK 포맷터로 공식 UTC 유효기한을 읽는다. 시차가 없는 문서 예제도 UTC0으로 처리하며 JVM 로컬 시각이나 임의 시간대의 폴백으로 해석하지 않는다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L128), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L164), 현재 소스의 부분 발췌.
 
 ```java
             var pending=http.sendAsync(request.timeout(Duration.ofSeconds(5)).header("Accept","application/json").build(),info->new LimitedResponseBody(limit));

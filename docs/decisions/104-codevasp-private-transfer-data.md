@@ -42,7 +42,7 @@
 
 ## 이해에 필요한 문법과 실제 코드
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L91), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L92), 현재 소스의 부분 발췌.
 
 ```java
             var signed=sign(command);String raw=text(signed.raw(),"body",65536);var body=json.readTree(raw);
@@ -62,13 +62,13 @@ Jackson JsonNode는 TypeScript의 타입 단언과 달리 실제 수신 JSON의 
             BigDecimal amount=new BigDecimal(value).setScale(8,RoundingMode.UNNECESSARY);
             if(amount.compareTo(request.expectedAddressAmount())!=0)throw unavailable();
             // 공개 결합 필드가 다르면 개인정보를 복호화하기 전에 중단한다.
-            var reply=transport.decryptTransfer(request,response);
+            var reply=transport.decrypt(response,request.key());
             var ivms=reply.identity().path("ivms101");
 ```
 
 BigDecimal.setScale의 UNNECESSARY는9번째 소수 자리에 실제 값이 있으면 실패한다. 0으로 끝나는 추가 자리는 값 손실 없이8자리로 표현한다. float/double로 금액을 비교하지 않는다. 공개 필드가 다르면 복호화 호출이 없다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L115), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L151), 현재 소스의 부분 발췌.
 
 ```java
             var identity=decoded.path("body");String original=text(decoded,"bodyString",65536);
