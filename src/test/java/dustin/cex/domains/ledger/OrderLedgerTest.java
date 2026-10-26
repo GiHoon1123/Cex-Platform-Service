@@ -41,6 +41,8 @@ class OrderLedgerTest {
         jdbc.execute("CREATE TABLE customer_withdrawal_authorizations(withdrawal_id uuid,challenge_id uuid)");
         jdbc.execute("CREATE TABLE customer_withdrawal_challenges(id uuid,consumed boolean)");
         jdbc.execute("CREATE TABLE bitcoin_withdrawal_reservation_events(withdrawal_id uuid,event_type text)");
+        jdbc.execute("CREATE TABLE bitcoin_withdrawal_cancellations(withdrawal_id uuid)");
+        jdbc.execute("CREATE TABLE bitcoin_withdrawal_release_events(withdrawal_id uuid)");
         ledger=new LedgerService(jdbc);ledger.schema();
         jdbc.execute("INSERT INTO user_balances VALUES(1,'USDT',1000,0),(2,'BTC',1,0)");
         // 최초 반입 전 시나리오는 처음부터 빈 원장으로 시작한다. 확정 원본을 지워 시험 상태를 만들지 않는다.

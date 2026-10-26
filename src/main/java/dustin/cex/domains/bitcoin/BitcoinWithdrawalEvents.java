@@ -58,7 +58,7 @@ public class BitcoinWithdrawalEvents {
         JsonNode event = json.readTree(raw);
         if (event == null || !event.isObject()) throw new IllegalArgumentException("출금 금융 이벤트 형식이 다릅니다");
         String type = text(event, "event_type");
-        if (!("withdrawal_reserved".equals(type) && event.propertyNames().equals(RESERVED)
+        if (!(("withdrawal_reserved".equals(type)||"withdrawal_released".equals(type)) && event.propertyNames().equals(RESERVED)
                 || "withdrawal_rejected".equals(type) && event.propertyNames().equals(REJECTED)))
             throw new IllegalArgumentException("출금 금융 결과의 필드가 다릅니다");
         if (type.equals("withdrawal_rejected") && !"RESERVATION_REJECTED".equals(text(event, "reason_code")))
@@ -86,20 +86,16 @@ public class BitcoinWithdrawalEvents {
         if (((Number) original.get("user_id")).longValue() != owner
                 || !asset.equals(original.get("asset")) || gross.compareTo((BigDecimal) original.get("total")) != 0)
             throw new IllegalStateException("엔진 결과와 서명한 금융 원본이 다릅니다");
+        if(type.equals("withdrawal_released")) {
+            release(id,engine,eventId,timestamp,raw,owner,gross);
+            return;
+        }
         if (Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_reservation_events WHERE withdrawal_id=?)", Boolean.class, id)))
             throw new IllegalStateException("같은 출금에 서로 다른 최초 금융 결과가 도착했습니다");
         String operation = "engine:" + eventId;
         if (type.equals("withdrawal_rejected")) {
-            var balance = balances.findByUserIdAndMintAddressForUpdate(owner, "BTC")
-                .orElseThrow(() -> new IllegalStateException("반환할 BTC 잔액이 없습니다"));
-            BigDecimal locked = ExactAmount.requireNonNegative(balance.getLocked(), "잠긴 BTC 잔액");
-            if (locked.compareTo(gross) < 0) throw new IllegalStateException("출금 거절의 반환할 예약금이 부족합니다");
-            balance.setLocked(ExactAmount.requireNonNegative(locked.subtract(gross), "반환 후 잠긴 BTC"));
-            balance.setAvailable(ExactAmount.requireNonNegative(balance.getAvailable().add(gross), "반환 후 가용 BTC"));
-            balances.saveAndFlush(balance);
-            ledger.record(operation, "BTC_WITHDRAWAL_REJECTED", List.of(
-                p(owner, "LOCKED", "BTC", gross.negate()), p(owner, "AVAILABLE", "BTC", gross)));
+            refund(owner,gross,operation,"BTC_WITHDRAWAL_REJECTED");
         } else {
             // 이미 플랫폼에서 총액을 잠갔으므로 영속 예약 확인은 잔액을 또 움직이지 않는다.
             ledger.record(operation, "BTC_WITHDRAWAL_RESERVED", List.of());
@@ -111,6 +107,36 @@ public class BitcoinWithdrawalEvents {
             """, id, eventId, engine, type, timestamp, BitcoinWithdrawalQuotes.digest(raw), operation);
         audit.record(null, "BTC_WITHDRAWAL_ENGINE_RESULT", "bitcoin-withdrawal:" + id,
             "SUCCESS", "EVENT:" + eventId);
+    }
+
+    private void release(UUID id,UUID engine,String eventId,String timestamp,String raw,long owner,BigDecimal gross) {
+        // 최초 예약 결과가 같은 엔진에서 먼저 확정돼야 한다. 다른 엔진·순서·임의 해제로 반환하지 않는다.
+        var reserved=jdbc.queryForList("""
+            SELECT e.event_id FROM bitcoin_withdrawal_reservation_events e
+             JOIN bitcoin_withdrawal_cancellations c ON c.withdrawal_id=e.withdrawal_id
+             WHERE e.withdrawal_id=? AND e.engine_id=? AND e.event_type='withdrawal_reserved'
+            """,String.class,id,engine);
+        if(reserved.size()!=1||Long.parseLong(reserved.getFirst().split(":")[1])>=Long.parseLong(eventId.split(":")[1])
+                ||Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_release_events WHERE withdrawal_id=?)",Boolean.class,id)))
+            throw new IllegalStateException("출금 취소 의도와 선행 확정 예약·일회 반환을 확인하세요");
+        String operation="engine:"+eventId;
+        refund(owner,gross,operation,"BTC_WITHDRAWAL_RELEASED");
+        jdbc.update("""
+            INSERT INTO bitcoin_withdrawal_release_events(withdrawal_id,event_id,engine_id,event_time,payload_hash,operation_key)
+             VALUES(?,?,?,?,?,?)
+            """,id,eventId,engine,timestamp,BitcoinWithdrawalQuotes.digest(raw),operation);
+        audit.record(null,"BTC_WITHDRAWAL_RELEASED","bitcoin-withdrawal:"+id,"SUCCESS","EVENT:"+eventId);
+    }
+
+    private void refund(long owner,BigDecimal gross,String operation,String kind) {
+        var balance=balances.findByUserIdAndMintAddressForUpdate(owner,"BTC")
+            .orElseThrow(() -> new IllegalStateException("반환할 BTC 잔액이 없습니다"));
+        BigDecimal locked=ExactAmount.requireNonNegative(balance.getLocked(),"잠긴 BTC 잔액");
+        if(locked.compareTo(gross)<0)throw new IllegalStateException("출금의 반환할 예약금이 부족합니다");
+        balance.setLocked(ExactAmount.requireNonNegative(locked.subtract(gross),"반환 후 잠긴 BTC"));
+        balance.setAvailable(ExactAmount.requireNonNegative(balance.getAvailable().add(gross),"반환 후 가용 BTC"));
+        balances.saveAndFlush(balance);
+        ledger.record(operation,kind,List.of(p(owner,"LOCKED","BTC",gross.negate()),p(owner,"AVAILABLE","BTC",gross)));
     }
 
     private static String text(JsonNode json, String field) {

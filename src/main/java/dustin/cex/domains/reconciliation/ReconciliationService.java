@@ -135,11 +135,14 @@ public class ReconciliationService {
         // 주문 예약과 고객 출금 예약은 같은 BTC 잠긴 잔고를 공유한다. 두 독립 원본의 남은 몫을 합산한다.
         jdbc.query("""
             SELECT w.id,w.user_id,w.asset,w.total,w.operation_key,w.quote_hash,q.payload_hash,
-                   a.withdrawal_id authorization_id,c.consumed,e.event_type
+                   a.withdrawal_id authorization_id,c.consumed,e.event_type,
+                   f.withdrawal_id released,x.withdrawal_id cancellation_id
               FROM bitcoin_withdrawals w JOIN bitcoin_withdrawal_quotes q ON q.id=w.id
                LEFT JOIN customer_withdrawal_authorizations a ON a.withdrawal_id=w.id
                LEFT JOIN customer_withdrawal_challenges c ON c.id=a.challenge_id
                LEFT JOIN bitcoin_withdrawal_reservation_events e ON e.withdrawal_id=w.id
+               LEFT JOIN bitcoin_withdrawal_release_events f ON f.withdrawal_id=w.id
+               LEFT JOIN bitcoin_withdrawal_cancellations x ON x.withdrawal_id=w.id
             """,row->{
                 UUID id=(UUID)row.getObject("id");long owner=row.getLong("user_id");
                 String asset=row.getString("asset");BigDecimal gross=row.getBigDecimal("total");
@@ -149,10 +152,15 @@ public class ReconciliationService {
                 checkPostings(run,row.getString("operation_key"),List.of(
                     p(owner,"AVAILABLE",asset,gross.negate()),p(owner,"LOCKED",asset,gross)));
                 String result=row.getString("event_type");
-                if(result==null||result.equals("withdrawal_reserved"))reserved.merge(owner+":"+asset,gross,BigDecimal::add);
+                boolean released=row.getObject("released")!=null;
+                if((result==null||result.equals("withdrawal_reserved"))&&!released)reserved.merge(owner+":"+asset,gross,BigDecimal::add);
                 if(result==null)issue(run,"EVENT_PENDING","bitcoin-withdrawal:"+id,"durable reserve or rejection","pending");
                 else if(!result.equals("withdrawal_reserved")&&!result.equals("withdrawal_rejected"))
                     issue(run,"WITHDRAWAL_STATE",id.toString(),"reserved or rejected",result);
+                if(released&&(!"withdrawal_reserved".equals(result)||row.getObject("cancellation_id")==null))
+                    issue(run,"WITHDRAWAL_RELEASE",id.toString(),"cancelled prior reserve","invalid release binding");
+                if("withdrawal_reserved".equals(result)&&row.getObject("cancellation_id")!=null&&!released)
+                    issue(run,"EVENT_PENDING","bitcoin-withdrawal-cancellation:"+id,"durable release","pending");
             });
         jdbc.query("SELECT user_id,mint_address,locked FROM user_balances",row->{
             String key=row.getLong(1)+":"+row.getString(2);difference(run,"RESERVATION",key,reserved.getOrDefault(key,BigDecimal.ZERO),row.getBigDecimal(3));reserved.remove(key);
@@ -175,7 +183,7 @@ public class ReconciliationService {
                 ||!hash((String)r.get("intent_basis")).equals(r.get("intent_hash"))||!hash((String)r.get("authorization_basis")).equals(r.get("authorization_hash")))throw new IllegalArgumentException("입금 결과와 경제적 원본이 다릅니다");
             return List.of(p(owner,"PENDING",asset,amount.negate()),p(owner,"AVAILABLE",asset,amount));
         }
-        if(type.equals("withdrawal_reserved")||type.equals("withdrawal_rejected")) {
+        if(type.equals("withdrawal_reserved")||type.equals("withdrawal_rejected")||type.equals("withdrawal_released")) {
             UUID id=UUID.fromString(e.path("withdrawal_id").asText());
             var rows=jdbc.queryForList("SELECT user_id,asset,total FROM bitcoin_withdrawals WHERE id=?",id);
             if(rows.size()!=1)throw new IllegalArgumentException("출금 금융 원본 누락");
@@ -229,14 +237,16 @@ public class ReconciliationService {
     }
     private void checkWithdrawal(UUID run,JsonNode event,String payload) throws Exception {
         String type=event.path("event_type").asText();
-        if(!type.equals("withdrawal_reserved")&&!type.equals("withdrawal_rejected"))return;
+        if(!type.equals("withdrawal_reserved")&&!type.equals("withdrawal_rejected")&&!type.equals("withdrawal_released"))return;
         String id=event.path("event_id").asText();
-        var rows=jdbc.queryForList("SELECT * FROM bitcoin_withdrawal_reservation_events WHERE withdrawal_id=?",
+        // 표 이름은 고정된 두 분기에서만 고른다. 이벤트 입력을 SQL 식별자에 넣지 않는다.
+        boolean released=type.equals("withdrawal_released");
+        var rows=jdbc.queryForList("SELECT * FROM "+(released?"bitcoin_withdrawal_release_events":"bitcoin_withdrawal_reservation_events")+" WHERE withdrawal_id=?",
             UUID.fromString(event.path("withdrawal_id").asText()));
         if(rows.size()!=1){issue(run,"WITHDRAWAL_RECEIPT_MISSING",id,"one financial receipt","missing");return;}
         var row=rows.getFirst();
         if(!id.equals(row.get("event_id"))||!event.path("engine_id").asText().equals(row.get("engine_id").toString())
-            ||!type.equals(row.get("event_type"))||!hash(payload).equals(row.get("payload_hash"))
+            ||!released&&!type.equals(row.get("event_type"))||!hash(payload).equals(row.get("payload_hash"))
             ||!("engine:"+id).equals(row.get("operation_key"))||!event.path("timestamp").asText().equals(row.get("event_time")))
             issue(run,"WITHDRAWAL_EVENT_BINDING",id,"exact durable event","different financial receipt");
     }

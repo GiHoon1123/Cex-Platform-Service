@@ -82,12 +82,17 @@ public class BitcoinWithdrawalRequests {
         independent();
         return tx.execute(t -> {
             var quote = quotes.historicalForWithdrawal(actor, sid, quoteId);
-            var originals = jdbc.queryForList("SELECT id FROM bitcoin_withdrawals WHERE id=? AND user_id=? AND session_id=?",
-                quoteId, actor, sid);
+            var originals = jdbc.queryForList("SELECT id FROM bitcoin_withdrawals WHERE id=? AND user_id=?",
+                quoteId, actor);
             if (originals.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "출금 원본이 없습니다");
             var events = jdbc.queryForList("SELECT event_type FROM bitcoin_withdrawal_reservation_events WHERE withdrawal_id=?", String.class, quoteId);
             String state = events.isEmpty() ? "PENDING_ENGINE" :
                 events.getFirst().equals("withdrawal_reserved") ? "RESERVED" : "REJECTED";
+            if(!state.equals("REJECTED")&&Boolean.TRUE.equals(jdbc.queryForObject(
+                    "SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_cancellations WHERE withdrawal_id=?)",Boolean.class,quoteId)))
+                state=Boolean.TRUE.equals(jdbc.queryForObject(
+                    "SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_release_events WHERE withdrawal_id=?)",Boolean.class,quoteId))
+                    ?"CANCELLED":"CANCELLATION_PENDING";
             audit.record(actor, "BTC_WITHDRAWAL_READ", "bitcoin-withdrawal:" + quoteId, "SUCCESS", state);
             var p = quote.payload();
             return new Receipt(quoteId, state, p.network(), p.address(), p.amount(), p.fee(),

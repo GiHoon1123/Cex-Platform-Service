@@ -22,6 +22,7 @@ public class BitcoinWithdrawalWorker {
     private static final Logger log = LoggerFactory.getLogger(BitcoinWithdrawalWorker.class);
     private final BitcoinSettings settings;
     private final BitcoinWithdrawalDispatches dispatch;
+    private final BitcoinWithdrawalCancellations cancellations;
     private final boolean enabled;
     private final ExponentialBackOff backoff = new ExponentialBackOff(5000, 2);
     private ThreadPoolTaskScheduler scheduler;
@@ -29,10 +30,11 @@ public class BitcoinWithdrawalWorker {
     private volatile boolean active;
     private long failedAtNanos, delayNanos;
 
-    public BitcoinWithdrawalWorker(BitcoinSettings settings, BitcoinWithdrawalDispatches dispatch,
+    public BitcoinWithdrawalWorker(BitcoinSettings settings, BitcoinWithdrawalDispatches dispatch, BitcoinWithdrawalCancellations cancellations,
             @Value("${bitcoin.processing.enabled:true}") boolean enabled) {
         this.settings = settings;
         this.dispatch = dispatch;
+        this.cancellations = cancellations;
         this.enabled = enabled;
         backoff.setMaxInterval(60000);
     }
@@ -54,7 +56,9 @@ public class BitcoinWithdrawalWorker {
     private void tick() {
         if (!active || (delayNanos > 0 && System.nanoTime() - failedAtNanos < delayNanos)) return;
         while (active) {
-            var next = dispatch.processNext();
+            // 확정 예약의 취소를 먼저 진행한다. 아직 예약 결과가 없는 취소는 원래 예약 재확인을 계속 기다린다.
+            var next = cancellations.processNext();
+            if(next.isEmpty())next=dispatch.processNext();
             if (next.isEmpty()) return;
             var outcome = next.get().transport();
             if (outcome == EngineWithdrawalClient.Outcome.NOT_ACCEPTED

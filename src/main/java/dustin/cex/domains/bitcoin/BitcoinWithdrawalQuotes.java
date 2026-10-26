@@ -76,7 +76,8 @@ public class BitcoinWithdrawalQuotes {
         sessions.require(actor,sid);
         if(id==null)throw denied(HttpStatus.BAD_REQUEST);
         var rows=jdbc.queryForList("SELECT session_id FROM bitcoin_withdrawal_quotes WHERE id=? AND user_id=?",UUID.class,id,actor);
-        if(rows.size()!=1||!sid.equals(rows.getFirst()))throw denied(HttpStatus.NOT_FOUND);
+        // 과거 요청의 조회·취소는 갱신한 본인 세션에서도 허용한다. 신규 예약의 원래 세션 검사는 아래 별도 경계다.
+        if(rows.size()!=1)throw denied(HttpStatus.NOT_FOUND);
         return read(actor,id);
     }
     /** 출금 승인/예약의 상위 트랜잭션에서 현재 원본과 자격을 다시 검사한다. 과거 조회의 허용 범위와 구분한다. */

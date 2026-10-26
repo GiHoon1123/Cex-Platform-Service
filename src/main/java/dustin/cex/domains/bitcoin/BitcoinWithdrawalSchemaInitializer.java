@@ -16,5 +16,7 @@ public class BitcoinWithdrawalSchemaInitializer {
     @PostConstruct void initialize() throws Exception {
         jdbc.execute(new ClassPathResource("bitcoin/withdrawal-reservation-schema.sql")
             .getContentAsString(StandardCharsets.UTF_8));
+        jdbc.execute(new ClassPathResource("bitcoin/withdrawal-cancellation-schema.sql")
+            .getContentAsString(StandardCharsets.UTF_8));
     }
 }

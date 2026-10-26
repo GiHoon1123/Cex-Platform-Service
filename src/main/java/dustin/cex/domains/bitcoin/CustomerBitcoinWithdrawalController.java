@@ -20,6 +20,7 @@ import tools.jackson.databind.json.JsonMapper;
 @RequestMapping("/api/customer/withdrawals/BTC/quotes/{quoteId}")
 public class CustomerBitcoinWithdrawalController {
     private final BitcoinWithdrawalRequests withdrawals;
+    private final BitcoinWithdrawalCancellations cancellations;
     private final AuditService audit;
     private final ObjectMapper json = JsonMapper.builder(JsonFactory.builder()
         .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -27,8 +28,9 @@ public class CustomerBitcoinWithdrawalController {
             .maxStringLength(4096).maxNumberLength(64).build()).build())
         .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
 
-    public CustomerBitcoinWithdrawalController(BitcoinWithdrawalRequests withdrawals, AuditService audit) {
+    public CustomerBitcoinWithdrawalController(BitcoinWithdrawalRequests withdrawals, BitcoinWithdrawalCancellations cancellations, AuditService audit) {
         this.withdrawals = withdrawals;
+        this.cancellations = cancellations;
         this.audit = audit;
     }
 
@@ -66,5 +68,16 @@ public class CustomerBitcoinWithdrawalController {
     public BitcoinWithdrawalRequests.Receipt status(@RequestAttribute long userId,
             @RequestAttribute UUID sessionId, @PathVariable UUID quoteId) {
         return withdrawals.status(userId, sessionId, quoteId);
+    }
+
+    @PostMapping("/reservations/cancellation")
+    public BitcoinWithdrawalRequests.Receipt cancel(@RequestAttribute long userId,
+            @RequestAttribute UUID sessionId,@PathVariable UUID quoteId,HttpServletRequest request)throws IOException {
+        // 취소는 원래 총액의 반환만 허용한다. 새 금액·수수료·지급지 입력을 받지 않는다.
+        if(request.getInputStream().read()!=-1) {
+            audit.denied(userId,"BTC_WITHDRAWAL_CANCEL","bitcoin-withdrawal:"+quoteId,"UNEXPECTED_BODY");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"출금 취소에는 추가 본문을 보내지 마세요");
+        }
+        return cancellations.cancel(userId,sessionId,quoteId);
     }
 }
