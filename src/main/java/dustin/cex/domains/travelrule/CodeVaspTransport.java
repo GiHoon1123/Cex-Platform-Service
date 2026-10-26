@@ -106,6 +106,30 @@ final class CodeVaspTransport implements AutoCloseable {
             throw new CodeVaspSubmissionFailure(gatewayStarted?CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN:CodeVaspSubmissionFailure.Admission.NOT_SENT);
         }
     }
+    JsonNode verifyWithdrawalAddress(CodeVaspWithdrawalAddressClient.Request input){
+        if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("지급 주소 소속 조회는 DB 트랜잭션 밖에서 실행하세요");
+        if(!settings.configured())throw new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.NOT_SENT);
+        boolean gatewayStarted=false;
+        try{
+            // 이 단계의 타입에는 개인 이름·생일이 없다. 소속을 모르는 상대에게 신원 평문을 먼저 보내지 않는다.
+            var request=json.createObjectNode().put("currency","BTC").put("beneficiaryWalletAddress",input.address())
+                .put("address",input.address()).put("network","BTC");
+            var command=json.createObjectNode().put("allianceName","CODE").put("apiType","SEARCH_ADDRESS")
+                .put("remotePublicKey",input.key().publicKey()).set("request",request);
+            var signed=sign(command);String raw=text(signed.raw(),"body",65536);var body=json.readTree(raw);
+            if(body==null||!body.isObject()||body.size()!=4||!"BTC".equals(text(body,"currency",8))
+                ||!input.address().equals(text(body,"address",120))||!"BTC".equals(text(body,"network",8)))throw unavailable();
+            for(String field:body.propertyNames())if(!Set.of("currency","address","network","payload").contains(field))throw unavailable();
+            ciphertext(text(body,"payload",65536));if(!input.key().expiresAt().isAfter(Instant.now()))throw unavailable();
+            var httpRequest=headers("/v1/code/VerifyAddress/"+input.peer().entityId(),signed)
+                .header("X-Code-Req-Remote-PubKey",input.key().publicKey()).header("Content-Type","application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(raw));
+            gatewayStarted=true;
+            return call(httpRequest,65536);
+        }catch(Exception failure){
+            throw new CodeVaspSubmissionFailure(gatewayStarted?CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN:CodeVaspSubmissionFailure.Admission.NOT_SENT);
+        }
+    }
     JsonNode authorizeWithdrawal(CodeVaspWithdrawalAuthorizationClient.Request input){
         if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("출금 이전 승인은 DB 트랜잭션 밖에서 실행하세요");
         if(!settings.configured())throw new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.NOT_SENT);
