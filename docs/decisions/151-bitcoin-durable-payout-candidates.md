@@ -30,7 +30,7 @@
 
 `BitcoinWithdrawalPayoutReviews.currentForPreparation`은 이미 실제 내용 결합 서명으로 승인된 검토의 현재 담당자·다른 승인자·고객을 순서대로 잠근다. 암호 원본, 최신 승인·수명·미실행, 현재 KYC/CDD/거래 자격·원장·위험 범위를 다시 검사한다. 가짜 운영자 세션을 만들지 않고 내부 승인 권한을 검사한다.
 
-출처: [BitcoinPayoutCandidates.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPayoutCandidates.java#L47), 현재 소스의 부분 발췌.
+출처: [BitcoinPayoutCandidates.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPayoutCandidates.java#L48), 현재 소스의 부분 발췌.
 
 ```java
     public Result prepare(UUID reviewId) {
@@ -50,7 +50,7 @@
 
 `TransactionTemplate.execute` 안에서 현재 승인을 검사한다. 기존 후보가 있으면 암호 원본의 검토 해시·경제 범위·금융 원본까지 대조하고 그대로 반환한다. 새 시도는 별도 UUID로 노드 호출 전에 저장한다. TypeScript의 Promise 완료와 달리 이 콜백이 반환돼 DB 커밋까지 성공해야 다음 외부 호출로 넘어간다.
 
-출처: [BitcoinPayoutCandidates.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPayoutCandidates.java#L84), 현재 소스의 부분 발췌.
+출처: [BitcoinPayoutCandidates.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPayoutCandidates.java#L88), 현재 소스의 부분 발췌.
 
 ```java
                 var inputs=prepared.inputs().stream().sorted(Comparator.comparing(BitcoinPayoutClient.Input::txid).thenComparingInt(BitcoinPayoutClient.Input::vout)).toList();
@@ -65,7 +65,7 @@
 
 입력은 거래 ID와 숫자 출력 순번으로 정렬한다. 입력 이력과 전역 예약이 먼저 완성되고 출금의 활성 후보를 연결한다. 어느 INSERT라도 고유 제약에 걸리면 같은 트랜잭션의 앞선 입력 행도 함께 롤백된다. 이 경합은 Java 플랫폼 DB 업무이며 Rust 엔진 공유 락을 추가하지 않는다.
 
-출처: [payout-candidate-schema.sql](../../src/main/resources/bitcoin/payout-candidate-schema.sql#L37), 현재 소스의 부분 발췌.
+출처: [payout-candidate-schema.sql](../../src/main/resources/bitcoin/payout-candidate-schema.sql#L40), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE TABLE IF NOT EXISTS bitcoin_payout_input_reservations (
@@ -137,3 +137,5 @@ CREATE TABLE IF NOT EXISTS bitcoin_payout_input_reservations (
 
 - [구현 176756c](https://github.com/GiHoon1123/Cex-Platform-Service/commit/176756c66af9a64da734fd1588159f209befd921)
 - [격리 실행 증적](../reference/151-bitcoin-durable-payout-candidates-verification-2026-10-26.json)
+
+현재 연결: [154 선택 입력의 확정 출처와 비용 정책](154-bitcoin-settled-input-provenance.md)에서 서명 범위와 후보의 별도 불변 출처 근거를 보강했다. 이 문서의 기존 검증 수치는 해당 구현 시점의 결과다.

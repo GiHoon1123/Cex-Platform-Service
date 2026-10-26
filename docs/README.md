@@ -315,3 +315,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [152. 입력 잠금 관측과 미실행 후보의 안전한 배정 해제](decisions/152-bitcoin-candidate-wallet-lifecycle.md)
 
 - [153. 미실행 정리 뒤 동일 미서명 거래를 다시 준비할 수 있도록 수정](decisions/153-bitcoin-unsigned-candidate-reapproval.md)
+
+- [154. 선택한 출금 입력을 확정 입금 원장과 현재 근거에 연결](decisions/154-bitcoin-settled-input-provenance.md)

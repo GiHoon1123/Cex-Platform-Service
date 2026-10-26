@@ -28,7 +28,7 @@ BTC 출금의 암호 회신·원장·현재 고객/위험 근거를 다시 검�
 
 ## 구현과 실제 코드
 
-출처: [BitcoinWithdrawalPayoutBasis.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalPayoutBasis.java#L61), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalPayoutBasis.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalPayoutBasis.java#L64), 현재 소스의 부분 발췌.
 
 ```java
         var requested=json.reader(JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS).readTree(open(owner,attempt,row,"key_id","ciphertext","content_mac","attempt"));checkOriginal(requested,current);
@@ -169,3 +169,5 @@ python3 scripts/verify_bitcoin_withdrawal_wire.py
 
 - [구현 3f3fb1c](https://github.com/GiHoon1123/Cex-Platform-Service/commit/3f3fb1c674e31ec99b3f3b4ecc38b982b0285f80)
 - [격리 실행 증적](../reference/148-bitcoin-independent-payout-review-verification-2026-10-26.json)
+
+현재 연결: [154 선택 입력의 확정 출처와 비용 정책](154-bitcoin-settled-input-provenance.md)에서 서명 범위와 후보의 별도 불변 출처 근거를 보강했다. 이 문서의 기존 검증 수치는 해당 구현 시점의 결과다.

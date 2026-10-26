@@ -1,0 +1,770 @@
+{
+  "cycle": 154,
+  "implementation_commit": "360e5a2c39ea5681da9b320ced01fc0daa9ff109",
+  "verification": {
+    "sources": {
+      "container": "cex-bitcoin-payout-input-sources-122e0878eb93",
+      "run_id": "122e0878eb93",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "canonicalCreditAndCurrentChainRiskProduceTheExactOriginCertificate",
+          "exit": 0,
+          "clock_difference_seconds": 0.006227016448974609,
+          "duration_seconds": 9.143887996673584,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/canonicalCreditAndCurrentChainRiskProduceTheExactOriginCertificate.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_1",
+          "method": "anHttpAcknowledgementWithoutTheCanonicalFinancialEventIsNotSpendable",
+          "exit": 0,
+          "clock_difference_seconds": 0.005682229995727539,
+          "duration_seconds": 7.516193151473999,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/anHttpAcknowledgementWithoutTheCanonicalFinancialEventIsNotSpendable.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_2",
+          "method": "recognizedPendingFundsCannotBecomeASettlementCertificate",
+          "exit": 0,
+          "clock_difference_seconds": 0.005792140960693359,
+          "duration_seconds": 8.119515895843506,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/recognizedPendingFundsCannotBecomeASettlementCertificate.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_3",
+          "method": "unclassifiedWalletInputsHaveNoSourceFallback",
+          "exit": 0,
+          "clock_difference_seconds": 0.0060198307037353516,
+          "duration_seconds": 7.808773040771484,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/unclassifiedWalletInputsHaveNoSourceFallback.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_4",
+          "method": "selectedAmountMustMatchTheActualCustodyReceipt",
+          "exit": 0,
+          "clock_difference_seconds": 0.005319833755493164,
+          "duration_seconds": 7.309905767440796,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/selectedAmountMustMatchTheActualCustodyReceipt.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_5",
+          "method": "staleCurrentChainEvidenceCannotReuseThePastCredit",
+          "exit": 0,
+          "clock_difference_seconds": 0.005486726760864258,
+          "duration_seconds": 7.713766098022461,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/staleCurrentChainEvidenceCannotReuseThePastCredit.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_6",
+          "method": "newerUnprocessedMonitoringInputsHoldPreviouslyCreditedOutputs",
+          "exit": 0,
+          "clock_difference_seconds": 0.005815029144287109,
+          "duration_seconds": 7.386539936065674,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/newerUnprocessedMonitoringInputsHoldPreviouslyCreditedOutputs.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_7",
+          "method": "expiredOriginCustomerKycDoesNotEraseAlreadyRecordedFundsOrigin",
+          "exit": 0,
+          "clock_difference_seconds": 0.006908893585205078,
+          "duration_seconds": 7.490109920501709,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/expiredOriginCustomerKycDoesNotEraseAlreadyRecordedFundsOrigin.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_8",
+          "method": "aNormalNewObservationKeepsTheOriginalFundingIdentity",
+          "exit": 0,
+          "clock_difference_seconds": 0.005710124969482422,
+          "duration_seconds": 8.057692766189575,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/aNormalNewObservationKeepsTheOriginalFundingIdentity.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_9",
+          "method": "aMissingRiskViewCannotBeTreatedAsAClearInput",
+          "exit": 0,
+          "clock_difference_seconds": 0.0058879852294921875,
+          "duration_seconds": 7.9205169677734375,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/aMissingRiskViewCannotBeTreatedAsAClearInput.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_10",
+          "method": "inputOriginReadsRequireAnExistingFinancialTransaction",
+          "exit": 0,
+          "clock_difference_seconds": 0.005834102630615234,
+          "duration_seconds": 8.26511001586914,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/inputOriginReadsRequireAnExistingFinancialTransaction.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_11",
+          "method": "aChangedOriginReferenceCannotReuseTheStoredAuthentication",
+          "exit": 0,
+          "clock_difference_seconds": 0.0061838626861572266,
+          "duration_seconds": 8.030502796173096,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/aChangedOriginReferenceCannotReuseTheStoredAuthentication.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_12",
+          "method": "restoredConfirmationsCannotEraseAnUnclearedPostCreditRisk",
+          "exit": 0,
+          "clock_difference_seconds": 0.006161928176879883,
+          "duration_seconds": 8.308486700057983,
+          "log": "bitcoin-payout-input-sources/122e0878eb93/restoredConfirmationsCannotEraseAnUnclearedPostCreditRisk.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "canonicalCreditAndCurrentChainRiskProduceTheExactOriginCertificate()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "anHttpAcknowledgementWithoutTheCanonicalFinancialEventIsNotSpendable()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "recognizedPendingFundsCannotBecomeASettlementCertificate()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "unclassifiedWalletInputsHaveNoSourceFallback()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "selectedAmountMustMatchTheActualCustodyReceipt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "staleCurrentChainEvidenceCannotReuseThePastCredit()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "newerUnprocessedMonitoringInputsHoldPreviouslyCreditedOutputs()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "expiredOriginCustomerKycDoesNotEraseAlreadyRecordedFundsOrigin()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "aNormalNewObservationKeepsTheOriginalFundingIdentity()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "aMissingRiskViewCannotBeTreatedAsAClearInput()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "inputOriginReadsRequireAnExistingFinancialTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "aChangedOriginReferenceCannotReuseTheStoredAuthentication()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "restoredConfirmationsCannotEraseAnUnclearedPostCreditRisk()"
+        }
+      ],
+      "tests": {
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "candidates": {
+      "container": "cex-bitcoin-payout-candidates-94001ea381f8",
+      "run_id": "94001ea381f8",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "savedCandidateBindsOriginalApprovalPsbtAndAllInputsWithoutPaying",
+          "exit": 0,
+          "clock_difference_seconds": 0.006248950958251953,
+          "duration_seconds": 9.892843008041382,
+          "log": "bitcoin-payout-candidates/94001ea381f8/savedCandidateBindsOriginalApprovalPsbtAndAllInputsWithoutPaying.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_1",
+          "method": "repeatedPreparationReturnsTheImmutableCandidateWithoutAnotherNodeCall",
+          "exit": 0,
+          "clock_difference_seconds": 0.005970001220703125,
+          "duration_seconds": 9.65035891532898,
+          "log": "bitcoin-payout-candidates/94001ea381f8/repeatedPreparationReturnsTheImmutableCandidateWithoutAnotherNodeCall.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_2",
+          "method": "nodeFailurePreservesAttemptAndFailureAuditWithoutReservingInputs",
+          "exit": 0,
+          "clock_difference_seconds": 0.007937192916870117,
+          "duration_seconds": 8.962119817733765,
+          "log": "bitcoin-payout-candidates/94001ea381f8/nodeFailurePreservesAttemptAndFailureAuditWithoutReservingInputs.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_3",
+          "method": "immediateRetryCannotCreateFreshCoinSelectionAttempts",
+          "exit": 0,
+          "clock_difference_seconds": 0.005427122116088867,
+          "duration_seconds": 8.610702991485596,
+          "log": "bitcoin-payout-candidates/94001ea381f8/immediateRetryCannotCreateFreshCoinSelectionAttempts.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_4",
+          "method": "cancellationBeforePreparationCannotReachTheNode",
+          "exit": 0,
+          "clock_difference_seconds": 0.006406068801879883,
+          "duration_seconds": 8.532205820083618,
+          "log": "bitcoin-payout-candidates/94001ea381f8/cancellationBeforePreparationCannotReachTheNode.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_5",
+          "method": "cancellationDuringNodeIoPreservesTheObservationWithoutSavingACandidate",
+          "exit": 0,
+          "clock_difference_seconds": 0.005686044692993164,
+          "duration_seconds": 8.455742120742798,
+          "log": "bitcoin-payout-candidates/94001ea381f8/cancellationDuringNodeIoPreservesTheObservationWithoutSavingACandidate.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_6",
+          "method": "changedKycDuringNodeIoCannotCreateAnInputReservation",
+          "exit": 0,
+          "clock_difference_seconds": 0.0057659149169921875,
+          "duration_seconds": 8.302252054214478,
+          "log": "bitcoin-payout-candidates/94001ea381f8/changedKycDuringNodeIoCannotCreateAnInputReservation.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_7",
+          "method": "missingStartAuditPreventsNodeIo",
+          "exit": 0,
+          "clock_difference_seconds": 0.005911111831665039,
+          "duration_seconds": 8.722534894943237,
+          "log": "bitcoin-payout-candidates/94001ea381f8/missingStartAuditPreventsNodeIo.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_8",
+          "method": "omittedCandidateAuditRollsBackAllInputsButPreservesTheStartedAttempt",
+          "exit": 0,
+          "clock_difference_seconds": 0.006658077239990234,
+          "duration_seconds": 8.225391864776611,
+          "log": "bitcoin-payout-candidates/94001ea381f8/omittedCandidateAuditRollsBackAllInputsButPreservesTheStartedAttempt.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_9",
+          "method": "omittedResultAuditCannotPretendToHaveFinishedTheAttempt",
+          "exit": 0,
+          "clock_difference_seconds": 0.005609989166259766,
+          "duration_seconds": 8.318492889404297,
+          "log": "bitcoin-payout-candidates/94001ea381f8/omittedResultAuditCannotPretendToHaveFinishedTheAttempt.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_10",
+          "method": "storedPayloadIsEncryptedAuthenticatedAndHistoryCannotBeDeleted",
+          "exit": 0,
+          "clock_difference_seconds": 0.005493879318237305,
+          "duration_seconds": 8.472750186920166,
+          "log": "bitcoin-payout-candidates/94001ea381f8/storedPayloadIsEncryptedAuthenticatedAndHistoryCannotBeDeleted.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_11",
+          "method": "concurrentPreparationCreatesOneAttemptAndOneCandidate",
+          "exit": 0,
+          "clock_difference_seconds": 0.005266904830932617,
+          "duration_seconds": 8.143310785293579,
+          "log": "bitcoin-payout-candidates/94001ea381f8/concurrentPreparationCreatesOneAttemptAndOneCandidate.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_12",
+          "method": "twoApprovedWithdrawalsCannotReserveTheSameNativeInput",
+          "exit": 0,
+          "clock_difference_seconds": 0.005813121795654297,
+          "duration_seconds": 8.398446798324585,
+          "log": "bitcoin-payout-candidates/94001ea381f8/twoApprovedWithdrawalsCannotReserveTheSameNativeInput.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_13",
+          "method": "laterInputCollisionRollsBackEarlierInputAssignments",
+          "exit": 0,
+          "clock_difference_seconds": 0.005217075347900391,
+          "duration_seconds": 8.488667726516724,
+          "log": "bitcoin-payout-candidates/94001ea381f8/laterInputCollisionRollsBackEarlierInputAssignments.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_14",
+          "method": "currentApprovalCannotBeUsedFromAnOpenOuterTransaction",
+          "exit": 0,
+          "clock_difference_seconds": 0.005689859390258789,
+          "duration_seconds": 8.47647500038147,
+          "log": "bitcoin-payout-candidates/94001ea381f8/currentApprovalCannotBeUsedFromAnOpenOuterTransaction.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_15",
+          "method": "anUnverifiedSelectedInputCannotCreateACandidateOrAllocation",
+          "exit": 0,
+          "clock_difference_seconds": 0.0055539608001708984,
+          "duration_seconds": 8.095731973648071,
+          "log": "bitcoin-payout-candidates/94001ea381f8/anUnverifiedSelectedInputCannotCreateACandidateOrAllocation.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_16",
+          "method": "missingInputSourceAuditRollsBackTheCandidateAndAllSourceEvidence",
+          "exit": 0,
+          "clock_difference_seconds": 0.0054891109466552734,
+          "duration_seconds": 8.151360034942627,
+          "log": "bitcoin-payout-candidates/94001ea381f8/missingInputSourceAuditRollsBackTheCandidateAndAllSourceEvidence.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "savedCandidateBindsOriginalApprovalPsbtAndAllInputsWithoutPaying()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "repeatedPreparationReturnsTheImmutableCandidateWithoutAnotherNodeCall()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "nodeFailurePreservesAttemptAndFailureAuditWithoutReservingInputs()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "immediateRetryCannotCreateFreshCoinSelectionAttempts()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "cancellationBeforePreparationCannotReachTheNode()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "cancellationDuringNodeIoPreservesTheObservationWithoutSavingACandidate()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "changedKycDuringNodeIoCannotCreateAnInputReservation()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "missingStartAuditPreventsNodeIo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "omittedCandidateAuditRollsBackAllInputsButPreservesTheStartedAttempt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "omittedResultAuditCannotPretendToHaveFinishedTheAttempt()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "storedPayloadIsEncryptedAuthenticatedAndHistoryCannotBeDeleted()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "concurrentPreparationCreatesOneAttemptAndOneCandidate()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "twoApprovedWithdrawalsCannotReserveTheSameNativeInput()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "laterInputCollisionRollsBackEarlierInputAssignments()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "currentApprovalCannotBeUsedFromAnOpenOuterTransaction()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "anUnverifiedSelectedInputCannotCreateACandidateOrAllocation()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidatesIntegrationTest",
+          "name": "missingInputSourceAuditRollsBackTheCandidateAndAllSourceEvidence()"
+        }
+      ],
+      "tests": {
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "wallet": {
+      "container": "cex-bitcoin-payout-candidate-wallet-7c241e88474a",
+      "run_id": "7c241e88474a",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "lockObservationIsEncryptedAndBoundToTheOriginalCandidate",
+          "exit": 0,
+          "clock_difference_seconds": 0.005338907241821289,
+          "duration_seconds": 8.922502040863037,
+          "log": "bitcoin-payout-candidate-wallet/7c241e88474a/lockObservationIsEncryptedAndBoundToTheOriginalCandidate.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_1",
+          "method": "currentCancellationBeforeLockPreventsNodeIo",
+          "exit": 0,
+          "clock_difference_seconds": 0.00626683235168457,
+          "duration_seconds": 8.593297958374023,
+          "log": "bitcoin-payout-candidate-wallet/7c241e88474a/currentCancellationBeforeLockPreventsNodeIo.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_2",
+          "method": "neverLockedCancellationClosesOnlyCurrentAllocationsAndPreservesAllHistory",
+          "exit": 0,
+          "clock_difference_seconds": 0.0055828094482421875,
+          "duration_seconds": 9.045639038085938,
+          "log": "bitcoin-payout-candidate-wallet/7c241e88474a/neverLockedCancellationClosesOnlyCurrentAllocationsAndPreservesAllHistory.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_3",
+          "method": "changedInputSourceBlocksLockBeforeAnyExternalAttempt",
+          "exit": 0,
+          "clock_difference_seconds": 0.005643129348754883,
+          "duration_seconds": 8.920268774032593,
+          "log": "bitcoin-payout-candidate-wallet/7c241e88474a/changedInputSourceBlocksLockBeforeAnyExternalAttempt.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidateWalletIntegrationTest",
+          "name": "lockObservationIsEncryptedAndBoundToTheOriginalCandidate()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidateWalletIntegrationTest",
+          "name": "currentCancellationBeforeLockPreventsNodeIo()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidateWalletIntegrationTest",
+          "name": "neverLockedCancellationClosesOnlyCurrentAllocationsAndPreservesAllHistory()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidateWalletIntegrationTest",
+          "name": "changedInputSourceBlocksLockBeforeAnyExternalAttempt()"
+        }
+      ],
+      "tests": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "reapproval": {
+      "container": "cex-bitcoin-payout-candidate-reapproval-f64a35695b0d",
+      "run_id": "f64a35695b0d",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "aNewApprovalReusesTheUnsignedIdentityOnlyAfterTheOldAllocationIsReleased",
+          "exit": 0,
+          "clock_difference_seconds": 0.006211042404174805,
+          "duration_seconds": 9.22817611694336,
+          "log": "bitcoin-payout-candidate-reapproval/f64a35695b0d/aNewApprovalReusesTheUnsignedIdentityOnlyAfterTheOldAllocationIsReleased.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_1",
+          "method": "aNewReviewCannotReplaceAnUnreleasedActiveCandidate",
+          "exit": 0,
+          "clock_difference_seconds": 0.0050201416015625,
+          "duration_seconds": 8.525442838668823,
+          "log": "bitcoin-payout-candidate-reapproval/f64a35695b0d/aNewReviewCannotReplaceAnUnreleasedActiveCandidate.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "database": "monitoring_case_2",
+          "method": "anotherWithdrawalWithTheSameUnsignedIdentityStillWaitsForTheOldInputRelease",
+          "exit": 0,
+          "clock_difference_seconds": 0.00555872917175293,
+          "duration_seconds": 39.88955593109131,
+          "log": "bitcoin-payout-candidate-reapproval/f64a35695b0d/anotherWithdrawalWithTheSameUnsignedIdentityStillWaitsForTheOldInputRelease.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidateReapprovalIntegrationTest",
+          "name": "aNewApprovalReusesTheUnsignedIdentityOnlyAfterTheOldAllocationIsReleased()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidateReapprovalIntegrationTest",
+          "name": "aNewReviewCannotReplaceAnUnreleasedActiveCandidate()"
+        },
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutCandidateReapprovalIntegrationTest",
+          "name": "anotherWithdrawalWithTheSameUnsignedIdentityStillWaitsForTheOldInputRelease()"
+        }
+      ],
+      "tests": {
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    },
+    "lock_order": {
+      "container": "cex-bitcoin-payout-input-sources-b9fc8bd13afd",
+      "run_id": "b9fc8bd13afd",
+      "groups": [
+        {
+          "database": "monitoring_case_0",
+          "method": "sourceOwnersAreLockedTogetherWithTheReviewActorsInNumericOrder",
+          "exit": 0,
+          "clock_difference_seconds": 0.007202863693237305,
+          "duration_seconds": 8.679116010665894,
+          "log": "bitcoin-payout-input-sources/b9fc8bd13afd/sourceOwnersAreLockedTogetherWithTheReviewActorsInNumericOrder.log",
+          "tests": {
+            "tests": 1,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        }
+      ],
+      "cases": [
+        {
+          "class": "dustin.cex.domains.kyc.BitcoinPayoutInputSourcesIntegrationTest",
+          "name": "sourceOwnersAreLockedTogetherWithTheReviewActorsInNumericOrder()"
+        }
+      ],
+      "tests": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "exit": 0,
+      "container_removed": true
+    }
+  }
+}
