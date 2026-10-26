@@ -20,7 +20,7 @@ final class BitcoinRpcClient implements AutoCloseable {
     private final BitcoinSettings settings;
     private final ObjectMapper json;
     private final ObjectReader tree;
-    private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();
+    private final HttpClient http=HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();
     BitcoinRpcClient(BitcoinSettings settings,ObjectMapper json){
         this.settings=settings;this.json=json;
         // 노드는 금액을 JSON 숫자로 보낸다. 이 전용 판독기의 소수 토큰은 이진 부동소수점을 거치지 않는다.

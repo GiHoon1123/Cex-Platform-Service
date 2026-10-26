@@ -16,7 +16,9 @@ import xml.etree.ElementTree as ET
 # 운영 조회 변경은 실제 노드가 필요한 해당 묶음만 반복 검증할 수 있다.
 # 기본 실행은 기존 전체 검증이며, 선택 모드도 노드/DB 격리와 금융 원본을 그대로 사용한다.
 parser=argparse.ArgumentParser(description="소유 Bitcoin Core와 DB의 전체 또는 운영 입금 조회 검증")
-parser.add_argument("--deposit-review-only",action="store_true",help="운영 입금 조회의 기존 실제 PG 회귀만 실행")
+selection=parser.add_mutually_exclusive_group()
+selection.add_argument("--deposit-review-only",action="store_true",help="운영 입금 조회의 기존 실제 PG 회귀만 실행")
+selection.add_argument("--destinations-only",action="store_true",help="지급 주소 검증과 기존 제한 노드/본문 경계를 실제 노드로 실행")
 options=parser.parse_args()
 ROOT=Path(__file__).resolve().parent.parent
 ARTIFACTS=ROOT.parent/".local"
@@ -37,7 +39,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
     config=data/"bitcoin.conf"
     config.write_text("\n".join(["regtest=1","server=1","listen=0","networkactive=0","dnsseed=0","discover=0",
         "walletbroadcast=0","addresstype=bech32","changetype=bech32","printtoconsole=0","rpcauth="+credentials["rpcauth"],"rpcwhitelistdefault=0",
-        "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getnewaddress,getaddressinfo,gettransaction,getblockheader,getblockhash,getdescriptoractivity",
+        "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getnewaddress,getaddressinfo,gettransaction,getblockheader,getblockhash,getdescriptoractivity,validateaddress,decodescript",
         "[regtest]","rpcbind=127.0.0.1","rpcallowip=127.0.0.1","rpcport="+str(rpc_port)])+"\n")
     config.chmod(0o600)
     daemon=None
@@ -124,8 +126,19 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
         empty_address=rpc("getnewaddress",["unused_discovery","bech32"],"cex_watch")
         empty_script=rpc("getaddressinfo",[empty_address],"cex_watch")["scriptPubKey"]
         confirmed_height=rpc("gettransaction",[confirmed,True,True],"cex_watch")["blockheight"]
+        # 지급 주소의 인코딩/체크섬/스크립트는 공식 노드가 생성한다. 준비 프로세스만 시험 키를 소유한다.
+        destinations=[]
+        for address_type,script_type in [("legacy","pubkeyhash"),("p2sh-segwit","scripthash"),("bech32","witness_v0_keyhash"),("bech32m","witness_v1_taproot")]:
+            destination=rpc("getnewaddress",["withdrawal_fixture",address_type],"funding_keys")
+            validation=rpc("validateaddress",[destination]);decoded=rpc("decodescript",[validation["scriptPubKey"]]);assert validation["isvalid"] and decoded["type"]==script_type
+            destinations.append(dict(address=validation["address"],scriptPubKey=validation["scriptPubKey"],scriptType=script_type))
+        public_key=rpc("getaddressinfo",[destinations[0]["address"]],"funding_keys")["pubkey"]
+        multisig=rpc("createmultisig",[1,[public_key],"bech32"]);validation=rpc("validateaddress",[multisig["address"]]);assert rpc("decodescript",[validation["scriptPubKey"]])["type"]=="witness_v0_scripthash"
+        destinations.append(dict(address=validation["address"],scriptPubKey=validation["scriptPubKey"],scriptType="witness_v0_scripthash"))
+        unknown=rpc("decodescript",["5220"+"11"*32]);assert unknown["type"]=="witness_unknown" and rpc("validateaddress",[unknown["address"]])["isvalid"]
+        result["destination_scenarios"]={"supported_types":[item["scriptType"] for item in destinations],"unsupported_valid_type":"witness_unknown"}
         groups={
-            "addresses":["*BitcoinCoreClientTest","*BitcoinCoreIntegrationTest","*LimitedResponseBodyTest",
+            "addresses":["*BitcoinDestinationClientTest","*BitcoinDestinationIntegrationTest","*BitcoinCoreClientTest","*BitcoinCoreIntegrationTest","*LimitedResponseBodyTest",
                 "*BitcoinDepositAddressIntegrationTest","*BitcoinDepositReaderTest","*BitcoinDepositReaderIntegrationTest",
                 "*BitcoinBlockDiscoveryTest","*BitcoinBlockDiscoveryIntegrationTest"],
             "observations":["*BitcoinObservationIntegrationTest"],
@@ -145,7 +158,8 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "deposit-reconciliation":["*BitcoinDepositReconciliationTest","*BitcoinDepositReconciliationIntegrationTest"],
         }
         if options.deposit_review_only:groups={"deposit-review":groups["deposit-review"]}
-        result["selection_mode"]="deposit-review-only" if options.deposit_review_only else "full"
+        if options.destinations_only:groups={"destinations":["*BitcoinDestinationClientTest","*BitcoinDestinationIntegrationTest","*BitcoinCoreClientTest","*BitcoinCoreIntegrationTest","*LimitedResponseBodyTest"]}
+        result["selection_mode"]="destinations-only" if options.destinations_only else "deposit-review-only" if options.deposit_review_only else "full"
         result["groups"]=[]
         for group,patterns in groups.items():
             result["exit"]=None
@@ -189,7 +203,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
                     CEX_BITCOIN_TEST_REORG_TX=reorg,CEX_BITCOIN_TEST_INTERNAL_TX=internal,CEX_BITCOIN_TEST_ADDRESS=watch,
                     CEX_BITCOIN_TEST_SCRIPT=script,CEX_BITCOIN_TEST_EMPTY_SCRIPT=empty_script,
                     CEX_BITCOIN_TEST_SECOND_ADDRESS=second_watch,CEX_BITCOIN_TEST_SECOND_SCRIPT=rpc("getaddressinfo",[second_watch],"cex_watch")["scriptPubKey"],CEX_BITCOIN_TEST_SECOND_TX=second,
-                    CEX_BITCOIN_TEST_CONFIRMED_HEIGHT=str(confirmed_height))
+                    CEX_BITCOIN_TEST_CONFIRMED_HEIGHT=str(confirmed_height),CEX_BITCOIN_TEST_DESTINATIONS=json.dumps(destinations),CEX_BITCOIN_TEST_UNSUPPORTED_DESTINATION=unknown["address"])
                 env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
                 command=["./gradlew","test"]
                 for pattern in patterns:command.extend(["--tests",pattern])
