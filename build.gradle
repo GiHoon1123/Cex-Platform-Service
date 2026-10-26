@@ -196,3 +196,11 @@ tasks.register('operatorAdminJar', org.springframework.boot.gradle.tasks.bundlin
     mainClass = 'dustin.operator.OperatorAdminApplication'
     classpath = sourceSets.main.runtimeClasspath
 }
+
+// 개인키 RPC 자격은 웹 플랫폼과 분리한 이 실행 파일에만 제공한다. 방송 권한은 다음 별도 경계에서 다룬다.
+tasks.register('bitcoinSignerJar', org.springframework.boot.gradle.tasks.bundling.BootJar) {
+    archiveClassifier = 'bitcoin-signer'
+    targetJavaVersion = JavaVersion.VERSION_21
+    mainClass = 'dustin.signer.BitcoinSignerApplication'
+    classpath = sourceSets.main.runtimeClasspath
+}
