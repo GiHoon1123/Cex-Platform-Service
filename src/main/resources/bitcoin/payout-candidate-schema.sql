@@ -21,11 +21,14 @@ CREATE TABLE IF NOT EXISTS bitcoin_payout_candidates (
 ALTER TABLE bitcoin_payout_candidates DROP CONSTRAINT IF EXISTS bitcoin_payout_candidates_network_unsigned_txid_key;
 CREATE TABLE IF NOT EXISTS bitcoin_payout_preparation_results (
  preparation_id uuid PRIMARY KEY REFERENCES bitcoin_payout_preparations(id),
- status varchar(24) NOT NULL CHECK(status IN('SAVED','NODE_UNAVAILABLE','BASIS_CHANGED','INPUT_RESERVED')),
+ status varchar(24) NOT NULL CHECK(status IN('SAVED','NODE_UNAVAILABLE','BASIS_CHANGED','INPUT_RESERVED','INPUT_UNVERIFIED')),
  candidate_id uuid REFERENCES bitcoin_payout_candidates(id),observed_psbt_hash varchar(64),
  recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),
  CHECK((status='SAVED')=(candidate_id IS NOT NULL)),CHECK(observed_psbt_hash IS NULL OR observed_psbt_hash ~ '^[0-9a-f]{64}$')
 );
+-- 입력의 확정 출처를 확인하지 못한 준비 결과를 구분한다. 과거 결과 행과 금융 원본은 그대로 보존한다.
+ALTER TABLE bitcoin_payout_preparation_results DROP CONSTRAINT IF EXISTS bitcoin_payout_preparation_results_status_check;
+ALTER TABLE bitcoin_payout_preparation_results ADD CONSTRAINT bitcoin_payout_preparation_results_status_check CHECK(status IN('SAVED','NODE_UNAVAILABLE','BASIS_CHANGED','INPUT_RESERVED','INPUT_UNVERIFIED'));
 CREATE TABLE IF NOT EXISTS bitcoin_payout_candidate_inputs (
  candidate_id uuid NOT NULL REFERENCES bitcoin_payout_candidates(id),txid varchar(64) NOT NULL,vout integer NOT NULL CHECK(vout>=0),
  amount numeric(16,8) NOT NULL CHECK(amount>0),script_pub_key varchar(44) NOT NULL CHECK(script_pub_key ~ '^0014[0-9a-f]{40}$'),
@@ -39,6 +42,20 @@ CREATE TABLE IF NOT EXISTS bitcoin_payout_input_reservations (
  -- 같은 UTXO를 다른 지갑 이름으로 이중 배정하지 못한다. 지갑은 후보의 귀속 정보이고 UTXO의 식별자가 아니다.
  PRIMARY KEY(network,txid,vout),FOREIGN KEY(candidate_id,txid,vout) REFERENCES bitcoin_payout_candidate_inputs(candidate_id,txid,vout)
 );
+CREATE TABLE IF NOT EXISTS bitcoin_payout_candidate_sources (
+ candidate_id uuid PRIMARY KEY REFERENCES bitcoin_payout_candidates(id),key_id varchar(64) NOT NULL,ciphertext bytea NOT NULL,content_mac varchar(64) NOT NULL,
+ recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),
+ CHECK(key_id ~ '^[0-9a-f]{64}$' AND content_mac ~ '^[0-9a-f]{64}$' AND octet_length(ciphertext) BETWEEN 28 AND 131100)
+);
+CREATE OR REPLACE FUNCTION bitcoin_payout_sources_complete() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM bitcoin_payout_candidates c WHERE c.id=NEW.candidate_id AND c.created_txid=NEW.created_txid AND c.created_txid=txid_current())
+  OR NOT EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id IS NULL AND a.action='BTC_PAYOUT_INPUT_SOURCES_SAVED'
+   AND a.target='bitcoin-payout-candidate:'||NEW.candidate_id AND a.outcome='SUCCESS' AND a.detail=NEW.content_mac AND a.occurred_at>=NEW.recorded_at) THEN
+  RAISE EXCEPTION '새 후보와 입력 출처 증거·필수 감사는 같은 커밋이어야 합니다';END IF;RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_payout_sources_complete_check ON bitcoin_payout_candidate_sources;
+CREATE CONSTRAINT TRIGGER bitcoin_payout_sources_complete_check AFTER INSERT ON bitcoin_payout_candidate_sources DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION bitcoin_payout_sources_complete();
 CREATE OR REPLACE FUNCTION bitcoin_payout_preparation_binding() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE r record;prior record;
 BEGIN
@@ -73,6 +90,7 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM bitcoin_payout_active_candidates WHERE candidate_id=NEW.id AND withdrawal_id=NEW.withdrawal_id)
   OR(SELECT count(*) FROM bitcoin_payout_candidate_inputs WHERE candidate_id=NEW.id)<>NEW.input_count
   OR(SELECT count(*) FROM bitcoin_payout_input_reservations WHERE candidate_id=NEW.id)<>NEW.input_count
+  OR NOT EXISTS(SELECT 1 FROM bitcoin_payout_candidate_sources WHERE candidate_id=NEW.id AND created_txid=txid_current())
   OR NOT EXISTS(SELECT 1 FROM bitcoin_payout_preparation_results WHERE preparation_id=NEW.preparation_id AND candidate_id=NEW.id AND status='SAVED' AND created_txid=txid_current())
   OR NOT EXISTS(SELECT 1 FROM security_audit WHERE actor_id IS NULL AND action='BTC_PAYOUT_CANDIDATE_SAVED' AND target='bitcoin-payout-candidate:'||NEW.id AND outcome='SUCCESS' AND detail=NEW.payload_hash) THEN
   RAISE EXCEPTION '후보·입력 전체 배정·준비 결과·감사를 같은 커밋에 보존해야 합니다';END IF;RETURN NULL;
@@ -82,7 +100,7 @@ CREATE CONSTRAINT TRIGGER bitcoin_payout_candidate_complete_check AFTER INSERT O
 
 -- 과거 기록을 지우거나 현재 배정만 제거해 같은 입력을 재사용하지 못한다. 명시적 미실행 해제는 후속 업무다.
 DO $$ DECLARE relation text;BEGIN
- FOREACH relation IN ARRAY ARRAY['bitcoin_payout_preparations','bitcoin_payout_preparation_results','bitcoin_payout_candidates','bitcoin_payout_candidate_inputs','bitcoin_payout_active_candidates','bitcoin_payout_input_reservations'] LOOP
+ FOREACH relation IN ARRAY ARRAY['bitcoin_payout_preparations','bitcoin_payout_preparation_results','bitcoin_payout_candidates','bitcoin_payout_candidate_sources','bitcoin_payout_candidate_inputs','bitcoin_payout_active_candidates','bitcoin_payout_input_reservations'] LOOP
   EXECUTE format('DROP TRIGGER IF EXISTS financial_preserve ON %I',relation);
   EXECUTE format('CREATE TRIGGER financial_preserve BEFORE UPDATE OR DELETE OR TRUNCATE ON %I FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable()',relation);
  END LOOP;

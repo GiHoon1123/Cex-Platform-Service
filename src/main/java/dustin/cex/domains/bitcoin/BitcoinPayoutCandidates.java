@@ -34,13 +34,14 @@ public class BitcoinPayoutCandidates {
     private record Start(UUID attemptId,BitcoinWithdrawalPayoutReviews.Request review,Candidate existing){}
     private final BitcoinWithdrawalPayoutReviews reviews;
     private final BitcoinPayoutClient node;
+    private final BitcoinPayoutInputSources inputSources;
     private final JdbcTemplate jdbc;
     private final CddCrypto crypto;
     private final ObjectMapper json;
     private final AuditService audit;
     private final TransactionTemplate tx;
-    public BitcoinPayoutCandidates(BitcoinWithdrawalPayoutReviews reviews,BitcoinPayoutClient node,JdbcTemplate jdbc,CddCrypto crypto,ObjectMapper json,AuditService audit,PlatformTransactionManager manager) {
-        this.reviews=reviews;this.node=node;this.jdbc=jdbc;this.crypto=crypto;this.json=json;this.audit=audit;
+    public BitcoinPayoutCandidates(BitcoinWithdrawalPayoutReviews reviews,BitcoinPayoutClient node,BitcoinPayoutInputSources inputSources,JdbcTemplate jdbc,CddCrypto crypto,ObjectMapper json,AuditService audit,PlatformTransactionManager manager) {
+        this.reviews=reviews;this.node=node;this.inputSources=inputSources;this.jdbc=jdbc;this.crypto=crypto;this.json=json;this.audit=audit;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     /** 먼저 시도를 커밋하고 노드를 호출한다. 응답 후에는 현재 승인·취소·위험 범위를 다시 검사한다. */
@@ -70,16 +71,19 @@ public class BitcoinPayoutCandidates {
         }catch(ResponseStatusException unavailable){return finish(start,"NODE_UNAVAILABLE",null);}
         try {
             return tx.execute(t->{
+                // 출금 관련 운영자와 선택 입력의 원래 고객을 모두 수집해 같은 숫자 순서로 잠근다.
+                inputSources.lockForReview(reviewId,prepared.network(),prepared.wallet(),prepared.inputs().stream().map(i->new BitcoinPayoutInputSources.Point(i.txid(),i.vout())).toList());
                 var review=reviews.currentForPreparation(reviewId);
                 if(!review.payloadHash().equals(start.review().payloadHash())||!review.payload().basis().scopeHash().equals(start.review().payload().basis().scopeHash()))throw held();
                 var old=existing(reviewId);if(old!=null)throw held();
-                var f=review.payload().basis().funds();UUID id=UUID.randomUUID();
+                var certificates=inputSources.require(prepared);var f=review.payload().basis().funds();UUID id=UUID.randomUUID();
                 var payload=new Payload(id,reviewId,review.payloadHash(),review.payload().basis().scopeHash(),f,prepared);String plain=json.writeValueAsString(payload);
                 if(plain.getBytes(StandardCharsets.UTF_8).length>1048576)throw held();String hash=crypto.fingerprint("btc-payout-candidate-v1",plain);
                 jdbc.update("""
                     INSERT INTO bitcoin_payout_candidates(id,review_id,withdrawal_id,preparation_id,user_id,network,wallet,policy,amount,native_fee,input_count,psbt_hash,unsigned_txid,key_id,ciphertext,payload_hash)
                     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """,id,reviewId,f.withdrawalId(),start.attemptId(),f.customerId(),prepared.network(),prepared.wallet(),prepared.policy(),new BigDecimal(prepared.amount()),new BigDecimal(prepared.nativeFee()),prepared.inputs().size(),sha(prepared.psbt()),prepared.unsignedTxid(),crypto.keyId(),crypto.encrypt(f.customerId(),id,plain.getBytes(StandardCharsets.UTF_8)),hash);
+                inputSources.save(id,f.customerId(),certificates);
                 // 여러 입력을 예약할 때 순서를 고정해 서로 다른 출금의 교차 대기를 줄인다.
                 var inputs=prepared.inputs().stream().sorted(Comparator.comparing(BitcoinPayoutClient.Input::txid).thenComparingInt(BitcoinPayoutClient.Input::vout)).toList();
                 for(var input:inputs){
@@ -90,6 +94,7 @@ public class BitcoinPayoutCandidates {
                 audit.record(null,"BTC_PAYOUT_CANDIDATE_SAVED","bitcoin-payout-candidate:"+id,"SUCCESS",hash);
                 result(start,"SAVED",id,sha(prepared.psbt()));return new Result(start.attemptId(),"SAVED",read(id));
             });
+        }catch(BitcoinPayoutInputSources.Held unverified){return finish(start,"INPUT_UNVERIFIED",sha(prepared.psbt()));
         }catch(DuplicateKeyException collision){
             // 중복 배정 제약만 업무 결과로 분류한다. 다른 SQL/감사 실패를 노드 장애로 숨기지 않는다.
             String constraint=constraint(collision);
@@ -109,9 +114,15 @@ public class BitcoinPayoutCandidates {
     /** 새 잠금은 현재 유효한 승인과 원본을 다시 검사한다. 원문을 읽을 수 있다는 사실만으로 허가하지 않는다. */
     @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
     public Candidate forLock(UUID id) {
-        var ids=jdbc.queryForList("SELECT review_id FROM bitcoin_payout_candidates WHERE id=?",UUID.class,id);if(ids.size()!=1)throw held();
-        var review=reviews.currentForPreparation(ids.getFirst());var candidate=active(id);var p=candidate.payload();
-        if(!review.payloadHash().equals(p.reviewHash())||!review.payload().basis().scopeHash().equals(p.scopeHash())||!review.payload().basis().funds().equals(p.funds()))throw held();return candidate;
+        var rows=jdbc.queryForList("SELECT review_id,network,wallet FROM bitcoin_payout_candidates WHERE id=?",id);if(rows.size()!=1)throw held();var row=rows.getFirst();
+        var points=jdbc.queryForList("SELECT txid,vout FROM bitcoin_payout_candidate_inputs WHERE candidate_id=?",id).stream().map(i->new BitcoinPayoutInputSources.Point((String)i.get("txid"),((Number)i.get("vout")).intValue())).toList();
+        inputSources.lockForReview((UUID)row.get("review_id"),(String)row.get("network"),(String)row.get("wallet"),points);
+        var review=reviews.currentForPreparation((UUID)row.get("review_id"));var candidate=active(id);var p=candidate.payload();
+        if(!review.payloadHash().equals(p.reviewHash())||!review.payload().basis().scopeHash().equals(p.scopeHash())||!review.payload().basis().funds().equals(p.funds()))throw held();
+        var current=inputSources.require(p.prepared());
+        // 정상 재관찰/탐지 위치는 바뀔 수 있다. 출처의 불변 원본은 같아야 하고 현재 위험 검사는 새로 통과해야 한다.
+        var stored=inputSources.stored(id,p.funds().customerId(),p.prepared());
+        if(current.size()!=stored.size())throw held();for(int i=0;i<current.size();i++)if(!current.get(i).origin().equals(stored.get(i).origin()))throw held();return candidate;
     }
     // 원래 승인 상태가 바뀌었더라도 외부 호출의 결과 사실은 보존한다. 현재 허가를 복구하거나 자금을 풀지 않는다.
     private Result finish(Start start,String status,String psbtHash){return tx.execute(t->{result(start,status,null,psbtHash);return new Result(start.attemptId(),status,null);});}

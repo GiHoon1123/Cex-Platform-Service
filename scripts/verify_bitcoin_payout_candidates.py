@@ -20,7 +20,7 @@ logs = ARTIFACTS / "bitcoin-payout-candidates" / run_id
 logs.mkdir(parents=True)
 source = ROOT / "src/test/java/dustin/cex/domains/kyc/BitcoinPayoutCandidatesIntegrationTest.java"
 methods = re.findall(r"@Test\s+void\s+(\w+)\(", source.read_text())
-assert len(methods) == 15 and len(set(methods)) == 15
+assert len(methods) == 17 and len(set(methods)) == 17
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--method",action="append",choices=methods,help="선택한 메서드만 별도 DB에서 검증한다. 기본은 전체다.")
 selected=parser.parse_args().method

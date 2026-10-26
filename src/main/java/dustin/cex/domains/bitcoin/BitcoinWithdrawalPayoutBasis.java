@@ -22,7 +22,7 @@ import tools.jackson.databind.cfg.JsonNodeFeature;
 @DependsOn("bitcoinWithdrawalSchemaInitializer")
 @Transactional(propagation=Propagation.MANDATORY)
 public class BitcoinWithdrawalPayoutBasis {
-    public static final String POLICY="BTC_SELF_CODE_PAYOUT_REVIEW_V1";
+    public static final String POLICY="BTC_SELF_CODE_PAYOUT_REVIEW_V2";
     public record Funds(UUID withdrawalId,long customerId,long customerVersion,String network,String address,String scriptPubKey,
         String amount,String fee,String total,String quoteHash,String reservationEvent,String reservationHash,UUID engineId) {
         @Override public String toString(){return "WithdrawalPayoutFunds[금융 원본 생략]";}
@@ -31,7 +31,10 @@ public class BitcoinWithdrawalPayoutBasis {
         String directorySource,long currentDirectoryAttempt,String currentPolicyHash){}
     public record Risk(UUID declarationId,UUID assessmentId,UUID kycAttempt,String cddOutcome,String identityMac,String nativeInputCursor,
         UUID monitoringAssessment,String monitoringSourceHash,String closedCasesHash){}
-    public record Basis(String policy,Funds funds,Transfer transfer,Risk risk,String scopeHash) {
+    // 운영자가 승인하는 자동 준비 정책의 실제 상한이다. 상수가 바뀌면 서명 범위도 달라져야 한다.
+    public record NativePolicy(String preparationPolicy,String sourcePolicy,String maxRequestedSatPerVbyte,String maxMinerFee,
+        int maxInputs,int minimumConfirmations,String inputScript,String signatureHash,boolean signalReplaceable){}
+    public record Basis(String policy,NativePolicy nativePolicy,Funds funds,Transfer transfer,Risk risk,String scopeHash) {
         @Override public String toString(){return "WithdrawalPayoutBasis[지급·위험 근거 생략]";}
     }
     private final BitcoinWithdrawalTransferBasis source;
@@ -108,8 +111,9 @@ public class BitcoinWithdrawalPayoutBasis {
         var funds=new Funds(current.withdrawalId(),owner,customer.getVersion(),quote.network(),quote.address(),quote.scriptPubKey(),quote.amount(),quote.fee(),quote.total(),current.quoteHash(),(String)money.get("event_id"),(String)money.get("payload_hash"),(UUID)money.get("engine_id"));
         var transfer=new Transfer(intentId,attempt,current.meaningMac(),(String)intent.get("content_mac"),(String)row.get("content_mac"),(String)row.get("result_mac"),current.directorySource(),current.directoryAttempt(),current.policyHash());
         var risk=new Risk((UUID)identity.get("declaration_id"),(UUID)identity.get("assessment_id"),(UUID)identity.get("active_attempt"),(String)identity.get("outcome"),current.identityMac(),cursor==null?"NONE":cursor.toString(),assessment,monitoringHash,casesHash);
-        String hash=crypto.fingerprint("btc-payout-basis-v1",json.writeValueAsString(List.of(POLICY,funds,transfer.intentId(),transfer.attemptId(),transfer.meaningMac(),transfer.intentMac(),transfer.attemptMac(),transfer.resultMac(),transfer.directorySource(),transfer.currentPolicyHash(),risk)));
-        return new Basis(POLICY,funds,transfer,risk,hash);
+        var nativePolicy=new NativePolicy(BitcoinPayoutClient.POLICY,BitcoinPayoutInputSources.POLICY,BitcoinPayoutClient.MAX_RATE.toPlainString(),BitcoinPayoutClient.MAX_FEE.toPlainString(),BitcoinPayoutClient.MAX_INPUTS,6,"P2WPKH","ALL",false);
+        String hash=crypto.fingerprint("btc-payout-basis-v1",json.writeValueAsString(List.of(POLICY,nativePolicy,funds,transfer.intentId(),transfer.attemptId(),transfer.meaningMac(),transfer.intentMac(),transfer.attemptMac(),transfer.resultMac(),transfer.directorySource(),transfer.currentPolicyHash(),risk)));
+        return new Basis(POLICY,nativePolicy,funds,transfer,risk,hash);
     }
     private void checkOriginal(tools.jackson.databind.JsonNode original,BitcoinWithdrawalTransferBasis.Basis current) {
         var request=original.path("request");var expected=current.request();

@@ -45,4 +45,16 @@ class BitcoinPayoutCandidatesIntegrationTest extends BitcoinPayoutCandidatesTest
         var second=prepareCandidate();assertEquals("INPUT_RESERVED",second.status());assertNull(second.candidate());assertEquals(2,count("bitcoin_payout_preparations"));assertEquals(2,count("bitcoin_payout_preparation_results"));assertEquals(1,count("bitcoin_payout_candidates"));assertEquals(first.candidate().payload().id(),jdbc.queryForObject("SELECT candidate_id FROM bitcoin_payout_input_reservations",UUID.class));
     }
     @Test void currentApprovalCannotBeUsedFromAnOpenOuterTransaction(){var tx=new TransactionTemplate(manager);assertThrows(IllegalStateException.class,()->tx.execute(t->prepareCandidate()));verifyNoInteractions(node);assertEquals(0,count("bitcoin_payout_preparations"));}
+    @Test void anUnverifiedSelectedInputCannotCreateACandidateOrAllocation(){
+        doThrow(BitcoinPayoutInputSources.Held.class).when(inputSources).require(any());
+        assertEquals("INPUT_UNVERIFIED",prepareCandidate().status());assertEquals(1,count("bitcoin_payout_preparations"));assertEquals(1,count("bitcoin_payout_preparation_results"));
+        assertEquals(0,count("bitcoin_payout_candidates"));assertEquals(0,count("bitcoin_payout_input_reservations"));
+    }
+
+    @Test void missingInputSourceAuditRollsBackTheCandidateAndAllSourceEvidence(){
+        doNothing().when(audit).record(isNull(),eq("BTC_PAYOUT_INPUT_SOURCES_SAVED"),anyString(),eq("SUCCESS"),anyString());
+        try{assertThrows(DataAccessException.class,this::prepareCandidate);}finally{reset(audit);}
+        assertEquals(1,count("bitcoin_payout_preparations"));assertEquals(0,count("bitcoin_payout_candidates"));assertEquals(0,count("bitcoin_payout_candidate_sources"));assertEquals(0,count("bitcoin_payout_input_reservations"));
+    }
+
 }

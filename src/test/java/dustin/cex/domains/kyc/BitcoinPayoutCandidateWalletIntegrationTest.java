@@ -69,4 +69,10 @@ class BitcoinPayoutCandidateWalletIntegrationTest extends BitcoinPayoutCandidate
         assertThrows(ResponseStatusException.class,()->wallet.lock(id()));
     }
     @Test void outerDatabaseTransactionCannotStartWalletIo(){assertThrows(IllegalStateException.class,()->new TransactionTemplate(manager).execute(t->wallet.lock(id())));assertThrows(IllegalStateException.class,()->new TransactionTemplate(manager).execute(t->wallet.release(id())));verifyNoInteractions(lockNode);noPayment();}
+    @Test void changedInputSourceBlocksLockBeforeAnyExternalAttempt(){
+        doThrow(BitcoinPayoutInputSources.Held.class).when(inputSources).require(any());
+        assertThrows(BitcoinPayoutInputSources.Held.class,()->wallet.lock(id()));verifyNoInteractions(lockNode);
+        assertEquals(0,count("bitcoin_payout_wallet_attempts"));noPayment();
+    }
+
 }

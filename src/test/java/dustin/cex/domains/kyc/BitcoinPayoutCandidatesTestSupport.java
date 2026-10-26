@@ -20,10 +20,21 @@ import org.springframework.web.server.ResponseStatusException;
 abstract class BitcoinPayoutCandidatesTestSupport extends BitcoinWithdrawalPayoutTestSupport {
     @Autowired BitcoinPayoutCandidates candidates;
     @MockitoBean BitcoinPayoutClient node;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean BitcoinPayoutInputSources inputSources;
     BitcoinWithdrawalPayoutReviews.Request approved;
     static final String PSBT="cHNidP8BAAA=",INPUT="a".repeat(64);
     @BeforeEach void nodeFixture()throws Exception {
         approved=decide(proposal(),true);
+        // 출처 자격 판정만 대역으로 두고 암호화 저장·원본 검증·필수 감사는 실제 서비스를 사용한다.
+        inputSources=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(inputSources);
+        doNothing().when(inputSources).lockForReview(any(),anyString(),anyString(),anyList());
+        doAnswer(call->{var p=call.getArgument(0,BitcoinPayoutClient.Prepared.class);
+            return p.inputs().stream().map(i->{var point=new BitcoinPayoutInputSources.Point(i.txid(),i.vout());UUID root=UUID.nameUUIDFromBytes((i.txid()+":"+i.vout()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                String event="synthetic-credit:"+i.vout(),authorization="d".repeat(64),credit="e".repeat(64);
+                String mac=crypto.fingerprint("btc-native-input-origin-v1",json.writeValueAsString(List.of(BitcoinPayoutInputSources.POLICY,p.network(),p.wallet(),point,i.amount(),i.scriptPubKey(),root,customer.getId(),authorization,event,credit)));
+                return new BitcoinPayoutInputSources.Certificate(point,i.amount(),i.scriptPubKey(),new BitcoinPayoutInputSources.Origin(root,customer.getId(),authorization,event,credit,mac),
+                    new BitcoinPayoutInputSources.Chain(1,1,"b".repeat(64),0),new BitcoinPayoutInputSources.Risk(UUID.fromString("11111111-1111-1111-1111-111111111111"),"a".repeat(64),"a".repeat(64)));}).toList();
+        }).when(inputSources).require(any());
         when(node.quote()).thenAnswer(call->{assertFalse(TransactionSynchronizationManager.isActualTransactionActive());assertEquals(1,count("bitcoin_payout_preparations"));return fee();});
         when(node.prepare(any(),any())).thenAnswer(call->{assertFalse(TransactionSynchronizationManager.isActualTransactionActive());return prepared(call.getArgument(0));});
     }
