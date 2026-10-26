@@ -25,7 +25,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 엔진 저널의 예약·최초 금융 거절·고객 취소 해제를 같은 수신 키 트랜잭션으로 반영한다. HTTP409만으로 반환하지 않는다. */
+/** 엔진 저널의 예약·거절·해제·체인 확정 완료를 같은 수신 키 트랜잭션으로 반영한다. HTTP 응답만으로 금융 상태를 바꾸지 않는다. */
 @Service
 @DependsOn("bitcoinWithdrawalSchemaInitializer")
 public class BitcoinWithdrawalEvents {
@@ -58,7 +58,7 @@ public class BitcoinWithdrawalEvents {
         JsonNode event = json.readTree(raw);
         if (event == null || !event.isObject()) throw new IllegalArgumentException("출금 금융 이벤트 형식이 다릅니다");
         String type = text(event, "event_type");
-        if (!(("withdrawal_reserved".equals(type)||"withdrawal_released".equals(type)) && event.propertyNames().equals(RESERVED)
+        if (!(("withdrawal_reserved".equals(type)||"withdrawal_released".equals(type)||"withdrawal_completed".equals(type)) && event.propertyNames().equals(RESERVED)
                 || "withdrawal_rejected".equals(type) && event.propertyNames().equals(REJECTED)))
             throw new IllegalArgumentException("출금 금융 결과의 필드가 다릅니다");
         if (type.equals("withdrawal_rejected") && !"RESERVATION_REJECTED".equals(text(event, "reason_code")))
@@ -90,6 +90,7 @@ public class BitcoinWithdrawalEvents {
             release(id,engine,eventId,timestamp,raw,owner,gross);
             return;
         }
+        if(type.equals("withdrawal_completed")) {complete(id,engine,eventId,timestamp,raw,owner,gross);return;}
         if (Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_reservation_events WHERE withdrawal_id=?)", Boolean.class, id)))
             throw new IllegalStateException("같은 출금에 서로 다른 최초 금융 결과가 도착했습니다");
@@ -107,6 +108,14 @@ public class BitcoinWithdrawalEvents {
             """, id, eventId, engine, type, timestamp, BitcoinWithdrawalQuotes.digest(raw), operation);
         audit.record(null, "BTC_WITHDRAWAL_ENGINE_RESULT", "bitcoin-withdrawal:" + id,
             "SUCCESS", "EVENT:" + eventId);
+    }
+
+    private void complete(UUID id,UUID engine,String eventId,String timestamp,String raw,long owner,BigDecimal gross){
+        var source=jdbc.queryForList("SELECT w.amount,w.fee,e.company_exposure FROM bitcoin_withdrawals w JOIN bitcoin_payout_executions e ON e.withdrawal_id=w.id JOIN bitcoin_payout_chain_heads h ON h.request_id=w.id WHERE w.id=?",id);if(source.size()!=1)throw new IllegalStateException("여섯 확인 지급 원본이 없습니다");var money=source.getFirst();BigDecimal amount=(BigDecimal)money.get("amount"),fee=(BigDecimal)money.get("fee"),nativeFee=fee.add((BigDecimal)money.get("company_exposure"));
+        var reserved=jdbc.queryForList("SELECT event_id FROM bitcoin_withdrawal_reservation_events WHERE withdrawal_id=? AND engine_id=? AND event_type='withdrawal_reserved'",String.class,id,engine);if(reserved.size()!=1||Long.parseLong(reserved.getFirst().split(":")[1])>=Long.parseLong(eventId.split(":")[1])||Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_release_events WHERE withdrawal_id=?) OR EXISTS(SELECT 1 FROM bitcoin_withdrawal_completion_events WHERE withdrawal_id=?)",Boolean.class,id,id)))throw new IllegalStateException("선행 예약과 일회 체인 완료를 확인하세요");
+        var balance=balances.findByUserIdAndMintAddressForUpdate(owner,"BTC").orElseThrow();BigDecimal locked=ExactAmount.requireNonNegative(balance.getLocked(),"잠긴 BTC 잔액");if(locked.compareTo(gross)<0)throw new IllegalStateException("완료할 예약금이 부족합니다");balance.setLocked(ExactAmount.requireNonNegative(locked.subtract(gross),"완료 후 잠긴 BTC"));balances.saveAndFlush(balance);
+        String operation="engine:"+eventId,miner="btc:withdrawal:miner-fee:"+id;ledger.record(operation,"BTC_WITHDRAWAL_COMPLETE",List.of(p(owner,"LOCKED","BTC",gross.negate()),p(0,"FEE","BTC",fee),p(0,"CUSTODY","BTC",amount)));ledger.record(miner,"BTC_WITHDRAWAL_MINER_FEE",List.of(p(0,"FEE","BTC",nativeFee.negate()),p(0,"CUSTODY","BTC",nativeFee)));
+        jdbc.update("INSERT INTO bitcoin_withdrawal_completion_events(withdrawal_id,event_id,engine_id,event_time,payload_hash,operation_key,miner_operation_key) VALUES(?,?,?,?,?,?,?)",id,eventId,engine,timestamp,BitcoinWithdrawalQuotes.digest(raw),operation,miner);audit.record(null,"BTC_WITHDRAWAL_COMPLETED","bitcoin-withdrawal:"+id,"SUCCESS","EVENT:"+eventId);
     }
 
     private void release(UUID id,UUID engine,String eventId,String timestamp,String raw,long owner,BigDecimal gross) {

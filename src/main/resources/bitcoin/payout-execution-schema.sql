@@ -84,6 +84,80 @@ CREATE TABLE IF NOT EXISTS bitcoin_payout_chain_heads (
  request_id uuid PRIMARY KEY REFERENCES bitcoin_payout_broadcast_heads(request_id),attempt_id uuid NOT NULL UNIQUE REFERENCES bitcoin_payout_chain_results(attempt_id),
  txid varchar(64) NOT NULL,block_hash varchar(64) NOT NULL,block_height bigint NOT NULL,confirmations integer NOT NULL CHECK(confirmations>=6)
 );
+-- 여섯 확인 머리 뒤의 엔진 완료 전송과 Kafka 금융 완료를 각각 보존한다.
+CREATE TABLE IF NOT EXISTS bitcoin_payout_completion_attempts (
+ id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES bitcoin_payout_chain_heads(request_id),position integer NOT NULL CHECK(position BETWEEN 1 AND 100),
+ started_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),UNIQUE(request_id,position)
+);
+CREATE TABLE IF NOT EXISTS bitcoin_payout_completion_results (
+ attempt_id uuid PRIMARY KEY REFERENCES bitcoin_payout_completion_attempts(id),outcome varchar(32) NOT NULL CHECK(outcome IN('DURABLY_COMPLETED','DURABLY_REJECTED','NOT_ACCEPTED','OUTCOME_UNKNOWN')),
+ completed_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current()
+);
+CREATE TABLE IF NOT EXISTS bitcoin_withdrawal_completion_events (
+ withdrawal_id uuid PRIMARY KEY REFERENCES bitcoin_payout_chain_heads(request_id),event_id varchar(120) NOT NULL UNIQUE REFERENCES engine_event_receipts(event_id),engine_id uuid NOT NULL,
+ event_time text NOT NULL,payload_hash varchar(64) NOT NULL,operation_key varchar(160) NOT NULL UNIQUE REFERENCES ledger_transactions(operation_key) DEFERRABLE INITIALLY DEFERRED,
+ miner_operation_key varchar(160) NOT NULL UNIQUE REFERENCES ledger_transactions(operation_key) DEFERRABLE INITIALLY DEFERRED,created_txid bigint NOT NULL DEFAULT txid_current(),
+ CHECK(payload_hash~'^[0-9a-f]{64}$')
+);
+-- 기존 입금 전용 수탁 계정 보호를 유지하면서, 검증된 출금 완료의 정확한 외부 유출 두 항목만 추가 허용한다.
+CREATE OR REPLACE FUNCTION bitcoin_pending_entry_kind() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key=NEW.operation_key AND kind='BTC_DEPOSIT_PENDING') THEN RETURN NEW;END IF;
+ IF NEW.bucket='PENDING' AND NEW.delta<0 AND EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key=NEW.operation_key AND kind='BTC_DEPOSIT_CREDIT') THEN
+  IF EXISTS(SELECT 1 FROM bitcoin_credited_deposits c JOIN bitcoin_credit_authorizations a ON a.receipt_id=c.receipt_id WHERE c.operation_key=NEW.operation_key AND c.created_txid=txid_current() AND a.user_id=NEW.owner_id AND a.asset=NEW.asset AND NEW.delta=-a.amount) THEN RETURN NEW;END IF;
+ END IF;
+ IF NEW.owner_id=0 AND NEW.bucket='CUSTODY' AND NEW.asset='BTC' THEN
+  IF EXISTS(SELECT 1 FROM bitcoin_withdrawal_completion_events c JOIN bitcoin_withdrawals w ON w.id=c.withdrawal_id JOIN ledger_transactions t ON t.operation_key=c.operation_key WHERE c.operation_key=NEW.operation_key AND c.created_txid=txid_current() AND t.kind='BTC_WITHDRAWAL_COMPLETE' AND NEW.delta=w.amount) THEN RETURN NEW;END IF;
+  IF EXISTS(SELECT 1 FROM bitcoin_withdrawal_completion_events c JOIN bitcoin_withdrawals w ON w.id=c.withdrawal_id JOIN bitcoin_payout_executions e ON e.withdrawal_id=w.id JOIN ledger_transactions t ON t.operation_key=c.miner_operation_key WHERE c.miner_operation_key=NEW.operation_key AND c.created_txid=txid_current() AND t.kind='BTC_WITHDRAWAL_MINER_FEE' AND NEW.delta=w.fee+e.company_exposure) THEN RETURN NEW;END IF;
+ END IF;
+ RAISE EXCEPTION '보류/수탁 항목은 검증된 입금 또는 체인 확정 출금 업무에서만 생성할 수 있습니다';
+END $$;
+CREATE OR REPLACE FUNCTION bitcoin_payout_completion_attempt_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE latest record;
+BEGIN
+ SELECT a.position,a.started_at,r.outcome,r.completed_at INTO latest FROM bitcoin_payout_completion_attempts a LEFT JOIN bitcoin_payout_completion_results r ON r.attempt_id=a.id WHERE a.request_id=NEW.request_id ORDER BY a.position DESC LIMIT 1;
+ IF NEW.created_txid<>txid_current() OR NEW.started_at<clock_timestamp()-interval '10 seconds' OR NEW.started_at>clock_timestamp()
+  OR EXISTS(SELECT 1 FROM bitcoin_withdrawal_completion_events WHERE withdrawal_id=NEW.request_id)
+  OR(latest.position IS NOT NULL AND(NEW.position<>latest.position+1 OR latest.outcome IN('DURABLY_COMPLETED','DURABLY_REJECTED') OR(latest.outcome IS NULL AND latest.started_at>clock_timestamp()-interval '30 seconds') OR(latest.outcome IS NOT NULL AND latest.completed_at>clock_timestamp()-interval '5 seconds')))
+  OR(latest.position IS NULL AND NEW.position<>1) THEN RAISE EXCEPTION '체인 확정 출금의 다음 엔진 완료 시도만 시작할 수 있습니다';END IF;RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS bitcoin_payout_completion_attempt_binding_check ON bitcoin_payout_completion_attempts;
+CREATE TRIGGER bitcoin_payout_completion_attempt_binding_check BEFORE INSERT ON bitcoin_payout_completion_attempts FOR EACH ROW EXECUTE FUNCTION bitcoin_payout_completion_attempt_binding();
+CREATE OR REPLACE FUNCTION bitcoin_payout_completion_result_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE a record;
+BEGIN SELECT * INTO a FROM bitcoin_payout_completion_attempts WHERE id=NEW.attempt_id;IF NEW.created_txid<>txid_current() OR NEW.completed_at<a.started_at OR NEW.completed_at>clock_timestamp() THEN RAISE EXCEPTION '엔진 완료 결과의 시각·원본이 다릅니다';END IF;RETURN NEW;END $$;
+DROP TRIGGER IF EXISTS bitcoin_payout_completion_result_binding_check ON bitcoin_payout_completion_results;
+CREATE TRIGGER bitcoin_payout_completion_result_binding_check BEFORE INSERT ON bitcoin_payout_completion_results FOR EACH ROW EXECUTE FUNCTION bitcoin_payout_completion_result_binding();
+CREATE OR REPLACE FUNCTION bitcoin_payout_completion_dispatch_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE action_name text;target_name text;detail_value text;
+BEGIN IF TG_TABLE_NAME='bitcoin_payout_completion_attempts' THEN action_name:='BTC_WITHDRAWAL_COMPLETE_STARTED';target_name:='bitcoin-withdrawal-complete:'||NEW.id;detail_value:='WITHDRAWAL:'||NEW.request_id;
+ ELSE action_name:='BTC_WITHDRAWAL_COMPLETE_FINISHED';target_name:='bitcoin-withdrawal-complete:'||NEW.attempt_id;detail_value:='OUTCOME:'||NEW.outcome;END IF;
+ IF NOT EXISTS(SELECT 1 FROM security_audit WHERE actor_id IS NULL AND action=action_name AND target=target_name AND outcome='SUCCESS' AND detail=detail_value) THEN RAISE EXCEPTION '엔진 완료 전송과 필수 감사를 함께 보존해야 합니다';END IF;RETURN NULL;END $$;
+DROP TRIGGER IF EXISTS bitcoin_payout_completion_attempt_audit_check ON bitcoin_payout_completion_attempts;
+CREATE CONSTRAINT TRIGGER bitcoin_payout_completion_attempt_audit_check AFTER INSERT ON bitcoin_payout_completion_attempts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION bitcoin_payout_completion_dispatch_audit();
+DROP TRIGGER IF EXISTS bitcoin_payout_completion_result_audit_check ON bitcoin_payout_completion_results;
+CREATE CONSTRAINT TRIGGER bitcoin_payout_completion_result_audit_check AFTER INSERT ON bitcoin_payout_completion_results DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION bitcoin_payout_completion_dispatch_audit();
+CREATE OR REPLACE FUNCTION bitcoin_withdrawal_completion_event_commit() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE w record;e record;
+BEGIN SELECT * INTO w FROM bitcoin_withdrawals WHERE id=NEW.withdrawal_id;SELECT * INTO e FROM bitcoin_payout_executions WHERE withdrawal_id=NEW.withdrawal_id;
+ IF NEW.created_txid<>txid_current() OR NEW.operation_key<>'engine:'||NEW.event_id OR NEW.miner_operation_key<>'btc:withdrawal:miner-fee:'||NEW.withdrawal_id
+  OR NOT EXISTS(SELECT 1 FROM bitcoin_payout_chain_heads WHERE request_id=NEW.withdrawal_id)
+  OR NOT EXISTS(SELECT 1 FROM bitcoin_payout_completion_attempts WHERE request_id=NEW.withdrawal_id)
+  OR NOT EXISTS(SELECT 1 FROM bitcoin_withdrawal_reservation_events r WHERE r.withdrawal_id=NEW.withdrawal_id AND r.event_type='withdrawal_reserved' AND r.engine_id=NEW.engine_id AND split_part(r.event_id,':',2)::bigint<split_part(NEW.event_id,':',2)::bigint)
+  OR EXISTS(SELECT 1 FROM bitcoin_withdrawal_release_events WHERE withdrawal_id=NEW.withdrawal_id)
+  OR NOT EXISTS(SELECT 1 FROM engine_event_receipts r WHERE r.event_id=NEW.event_id AND r.engine_id=NEW.engine_id::text AND r.payload_hash=NEW.payload_hash)
+  OR NOT EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key=NEW.operation_key AND kind='BTC_WITHDRAWAL_COMPLETE' AND created_txid=txid_current())
+  OR NOT EXISTS(SELECT 1 FROM ledger_transactions WHERE operation_key=NEW.miner_operation_key AND kind='BTC_WITHDRAWAL_MINER_FEE' AND created_txid=txid_current())
+  OR(SELECT count(*) FROM ledger_entries WHERE operation_key=NEW.operation_key)<>3 OR(SELECT count(*) FROM ledger_entries WHERE operation_key=NEW.miner_operation_key)<>2
+  OR NOT EXISTS(SELECT 1 FROM ledger_entries WHERE operation_key=NEW.operation_key AND owner_id=w.user_id AND bucket='LOCKED' AND asset='BTC' AND delta=-w.total)
+  OR NOT EXISTS(SELECT 1 FROM ledger_entries WHERE operation_key=NEW.operation_key AND owner_id=0 AND bucket='FEE' AND asset='BTC' AND delta=w.fee)
+  OR NOT EXISTS(SELECT 1 FROM ledger_entries WHERE operation_key=NEW.operation_key AND owner_id=0 AND bucket='CUSTODY' AND asset='BTC' AND delta=w.amount)
+  OR NOT EXISTS(SELECT 1 FROM ledger_entries WHERE operation_key=NEW.miner_operation_key AND owner_id=0 AND bucket='FEE' AND asset='BTC' AND delta=-(w.fee+e.company_exposure))
+  OR NOT EXISTS(SELECT 1 FROM ledger_entries WHERE operation_key=NEW.miner_operation_key AND owner_id=0 AND bucket='CUSTODY' AND asset='BTC' AND delta=w.fee+e.company_exposure)
+  OR NOT EXISTS(SELECT 1 FROM security_audit WHERE actor_id IS NULL AND action='BTC_WITHDRAWAL_COMPLETED' AND target='bitcoin-withdrawal:'||NEW.withdrawal_id AND outcome='SUCCESS' AND detail='EVENT:'||NEW.event_id) THEN RAISE EXCEPTION '체인 확정 출금의 엔진 결과·정확한 원장·감사를 함께 확인하세요';END IF;RETURN NULL;END $$;
+DROP TRIGGER IF EXISTS bitcoin_withdrawal_completion_event_commit_check ON bitcoin_withdrawal_completion_events;
+CREATE CONSTRAINT TRIGGER bitcoin_withdrawal_completion_event_commit_check AFTER INSERT ON bitcoin_withdrawal_completion_events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION bitcoin_withdrawal_completion_event_commit();
+DO $$ DECLARE relation text;BEGIN FOREACH relation IN ARRAY ARRAY['bitcoin_payout_completion_attempts','bitcoin_payout_completion_results','bitcoin_withdrawal_completion_events'] LOOP EXECUTE format('DROP TRIGGER IF EXISTS financial_preserve ON %I',relation);EXECUTE format('CREATE TRIGGER financial_preserve BEFORE UPDATE OR DELETE OR TRUNCATE ON %I FOR EACH STATEMENT EXECUTE FUNCTION kyc_event_immutable()',relation);END LOOP;END $$;
 CREATE OR REPLACE FUNCTION bitcoin_payout_chain_attempt_binding() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE latest record;
 BEGIN

@@ -23,6 +23,7 @@ public class BitcoinWithdrawalWorker {
     private final BitcoinSettings settings;
     private final BitcoinWithdrawalDispatches dispatch;
     private final BitcoinWithdrawalCancellations cancellations;
+    private final BitcoinPayoutCompletionDispatches completions;
     private final boolean enabled;
     private final ExponentialBackOff backoff = new ExponentialBackOff(5000, 2);
     private ThreadPoolTaskScheduler scheduler;
@@ -30,11 +31,12 @@ public class BitcoinWithdrawalWorker {
     private volatile boolean active;
     private long failedAtNanos, delayNanos;
 
-    public BitcoinWithdrawalWorker(BitcoinSettings settings, BitcoinWithdrawalDispatches dispatch, BitcoinWithdrawalCancellations cancellations,
+    public BitcoinWithdrawalWorker(BitcoinSettings settings, BitcoinWithdrawalDispatches dispatch, BitcoinWithdrawalCancellations cancellations, BitcoinPayoutCompletionDispatches completions,
             @Value("${bitcoin.processing.enabled:true}") boolean enabled) {
         this.settings = settings;
         this.dispatch = dispatch;
         this.cancellations = cancellations;
+        this.completions = completions;
         this.enabled = enabled;
         backoff.setMaxInterval(60000);
     }
@@ -57,10 +59,10 @@ public class BitcoinWithdrawalWorker {
         if (!active || (delayNanos > 0 && System.nanoTime() - failedAtNanos < delayNanos)) return;
         while (active) {
             // 확정 예약의 취소를 먼저 진행한다. 아직 예약 결과가 없는 취소는 원래 예약 재확인을 계속 기다린다.
-            var next = cancellations.processNext();
-            if(next.isEmpty())next=dispatch.processNext();
-            if (next.isEmpty()) return;
-            var outcome = next.get().transport();
+            var completion=completions.processNext();
+            EngineWithdrawalClient.Outcome outcome;
+            if(completion.isPresent())outcome=completion.get().transport();
+            else {var next = cancellations.processNext();if(next.isEmpty())next=dispatch.processNext();if(next.isEmpty())return;outcome=next.get().transport();}
             if (outcome == EngineWithdrawalClient.Outcome.NOT_ACCEPTED
                     || outcome == EngineWithdrawalClient.Outcome.OUTCOME_UNKNOWN) {
                 cooldown();
