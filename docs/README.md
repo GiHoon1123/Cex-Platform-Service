@@ -291,3 +291,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [140. 고정0.01% 수수료와 고객 출금 견적 원본·감사를 함께 확정](decisions/140-bitcoin-fixed-fee-withdrawal-quotes.md)
 
 - [141. 고객의 일회 패스키 서명과 BTC 총액 예약·확정 수신](decisions/141-bitcoin-signed-withdrawal-reservations.md)
+
+- [142. 고객 출금 취소 의도와 확정 해제 뒤 총 예약금 반환](decisions/142-bitcoin-withdrawal-cancellation-and-release.md)

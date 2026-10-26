@@ -87,7 +87,7 @@ BitcoinCreditedEvents는 엔진이 보낸 정확한8개 필드·문자열 금액
         if (!engineEventInbox.claim(event.path("event_id").asText(), event.path("engine_id").asText(), message)) return;
         switch (type) {
             case "deposit_credited" -> deposits.apply(message);
-            case "withdrawal_reserved", "withdrawal_rejected" -> withdrawals.apply(message);
+            case "withdrawal_reserved", "withdrawal_rejected", "withdrawal_released" -> withdrawals.apply(message);
             case "trade_executed" -> trade(event);
 ```
 

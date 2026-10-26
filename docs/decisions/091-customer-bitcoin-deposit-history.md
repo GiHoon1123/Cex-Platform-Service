@@ -94,7 +94,7 @@ Java Supplier<T>는 값을 반환하는 콜백으로 TypeScript의 () => T와 �
 
 Long과 Instant는 미관찰에서 null일 수 있다. Number.longValue는 DB의 정수 확인 수에만 사용한다. 금액은 BigDecimal.setScale(8,UNNECESSARY)로 정확한8자리 문자열을 만든다. 버림/반올림이 필요한 값이면 숨기지 않고 실패한다. TypeScript는 이 문자열을 Number로 강제 변환하면 정밀도를 잃을 수 있다.
 
-출처: [SecurityConfiguration.java](../../src/main/java/dustin/cex/domains/security/SecurityConfiguration.java#L68), 현재 소스의 부분 발췌.
+출처: [SecurityConfiguration.java](../../src/main/java/dustin/cex/domains/security/SecurityConfiguration.java#L69), 현재 소스의 부분 발췌.
 
 ```java
                 .requestMatchers(HttpMethod.GET,"/api/customer/deposits/BTC","/api/customer/deposits/BTC/*").access(audited(audit,sessions,"CUSTOMER"))

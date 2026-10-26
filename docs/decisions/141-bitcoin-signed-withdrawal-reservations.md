@@ -50,7 +50,7 @@
 
 현재 소스의 부분 발췌다. 검증된 인증 자료를 소비하고 서명 지문을 원본 UUID에 연결한다. `MANDATORY`는 이미 열린 상위 금융 트랜잭션 안에서만 실행하라는 뜻이다. TypeScript의 비동기 함수 호출과 달리 프록시의 전파 규칙으로 같은 DB 커밋을 공유하며, 오류가 나면 카운터/소비 상태/금융 예약을 함께 되돌린다.
 
-출처: [BitcoinWithdrawalRequests.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalRequests.java#L115), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalRequests.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalRequests.java#L120), 현재 소스의 부분 발췌.
 
 ```java
         authorization.authorize(actor, sid, quoteId, proof);
@@ -66,11 +66,12 @@
 
 서명 성공 후 정확한 BigDecimal 총액만 두 잔액과 복식 원장에 옮긴다. `subtract`/`add`는 기존 값을 변경하지 않고 새 값을 만든다. JS number의 이진 부동소수 금액과 다르다. `saveAndFlush`는 SQL 실행이지 최종 커밋이 아니며 뒤의 원본/감사 제약이 실패하면 전체가 롤백된다.
 
-출처: [BitcoinWithdrawalEvents.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalEvents.java#L101), 현재 소스의 부분 발췌.
+
+출처: [BitcoinWithdrawalEvents.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalEvents.java#L97), 현재 소스의 부분 발췌.
 
 ```java
-            ledger.record(operation, "BTC_WITHDRAWAL_REJECTED", List.of(
-                p(owner, "LOCKED", "BTC", gross.negate()), p(owner, "AVAILABLE", "BTC", gross)));
+        if (type.equals("withdrawal_rejected")) {
+            refund(owner,gross,operation,"BTC_WITHDRAWAL_REJECTED");
         } else {
             // 이미 플랫폼에서 총액을 잠갔으므로 영속 예약 확인은 잔액을 또 움직이지 않는다.
             ledger.record(operation, "BTC_WITHDRAWAL_RESERVED", List.of());
@@ -78,7 +79,7 @@
         jdbc.update("""
 ```
 
-최초 금융 거절은 원래 LOCKED 몫을 AVAILABLE로 반환한다. 예약 확정은 빈 이동으로 확정 이력만 남겨 이미 잠근 금액을 다시 차감하지 않는다. 같은 수신 ID는 inbox가 중복 차단하며, 다른 ID의 모순된 최초 결과는 원본별 단일 결과 제약이 거절한다.
+현재 소스의 부분 발췌다. 142에서 최초 거절과 고객 취소 해제의 정확한 반환을 작은 refund 메서드로 공유했다. 최초 금융 거절은 원래 LOCKED 몫을 AVAILABLE로 반환하고 예약 확정은 잔액을 다시 이동하지 않는다. 같은 수신 ID는 inbox가 중복 차단하며 다른 ID의 모순된 최초 결과는 원본별 단일 결과 제약이 거절한다. 아래 실행 결과는 141 당시 검증이며 현재 취소의 추가 결과는 142 기록을 따른다.
 
 ## 작성한 테스트와 기대 결과
 
