@@ -285,3 +285,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [136. 미해결 BTC 체인 위험을 시스템 근거와 영속 주문 취소에 연결](decisions/136-automatic-bitcoin-risk-order-cancellation.md)
 
 - [138. 출금 원본과 예약·해제·완료 단계를 함께 확인하는 플랫폼 클라이언트](decisions/138-strict-engine-withdrawal-http-client.md)
+
+- [139. 고정 Bitcoin Core로 출금 목적지의 주소·네트워크·스크립트를 결합](decisions/139-bitcoin-withdrawal-destination-validation.md)
