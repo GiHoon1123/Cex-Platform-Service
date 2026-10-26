@@ -133,13 +133,40 @@ class EngineHttpClientTest {
         var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         server.createContext("/api/cex/",exchange->{
             seen.add(exchange.getRequestHeaders().getFirst("x-engine-service-token"));
-            exchange.getRequestBody().readAllBytes();byte[] bytes=VALID_RECEIPT.getBytes(StandardCharsets.UTF_8);
-            exchange.sendResponseHeaders(202,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();
+            exchange.getRequestBody().readAllBytes();boolean cancel="DELETE".equals(exchange.getRequestMethod());
+            byte[] bytes=(cancel?"{\"id\":\"123\",\"user_id\":101,\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"}":VALID_RECEIPT).getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type","application/json");
+            exchange.sendResponseHeaders(cancel?200:202,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();
         });server.start();
         try {
             var client=client(server,2000);submit(client);client.cancelOrder(123L,101L,"BTC/USDT");
             assertThat(seen).containsExactly("isolated-engine-service-token-32-bytes","isolated-engine-service-token-32-bytes");
         } finally {server.stop(0);}
+    }
+
+
+    /** 실제 취소의 식별 범위가 다르거나 파싱이 모호하면 일정 재확인 대상으로 남아야 한다. */
+    @ParameterizedTest(name="ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [{index}] body={0}")
+    @ValueSource(strings={"", "{}", "<html>취소 성공처럼 보이는 화면</html>",
+        "{\"id\":123,\"user_id\":101,\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"}",
+        "{\"id\":\"124\",\"user_id\":101,\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"}",
+        "{\"id\":\"123\",\"user_id\":102,\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"}",
+        "{\"id\":\"123\",\"user_id\":\"101\",\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"}",
+        "{\"id\":\"123\",\"user_id\":101,\"base_mint\":\"ETH\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"}",
+        "{\"id\":\"123\",\"user_id\":101,\"base_mint\":\"BTC\",\"quote_mint\":\"USDC\",\"status\":\"cancelled\"}",
+        "{\"id\":\"123\",\"user_id\":101,\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"filled\"}",
+        "{\"id\":\"123\",\"id\":\"123\",\"user_id\":101,\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"}",
+        "{\"id\":\"123\",\"user_id\":101,\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"} {}"})
+    void ambiguousOrDifferentCancellationIsNeverAnAcknowledgement(String body)throws Exception{
+        var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/api/cex/orders/123",exchange->{exchange.getRequestBody().readAllBytes();byte[] bytes=body.getBytes(StandardCharsets.UTF_8);exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(200,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();});server.start();
+        try{assertThatThrownBy(()->client(server,2000).cancelOrder(123L,101L,"BTC/USDT")).isInstanceOf(IllegalStateException.class).hasMessage("엔진 취소 응답을 확인할 수 없습니다");}finally{server.stop(0);}
+    }
+    @ParameterizedTest(name="otherCancellationHttpStatusesDoNotBecomeDurableAcknowledgements [{index}] status={0}") @ValueSource(ints={201,202,204,400,500})
+    void otherCancellationHttpStatusesDoNotBecomeDurableAcknowledgements(int status)throws Exception{
+        var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/api/cex/orders/123",exchange->{exchange.getRequestBody().readAllBytes();byte[] bytes="{\"id\":\"123\",\"user_id\":101,\"base_mint\":\"BTC\",\"quote_mint\":\"USDT\",\"status\":\"cancelled\"}".getBytes(StandardCharsets.UTF_8);exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(status,status==204?-1:bytes.length);if(status!=204)exchange.getResponseBody().write(bytes);exchange.close();});server.start();
+        try{assertThatThrownBy(()->client(server,2000).cancelOrder(123L,101L,"BTC/USDT")).isInstanceOf(IllegalStateException.class);}finally{server.stop(0);}
     }
 
     private EngineHttpClient client(HttpServer server, int timeout) {

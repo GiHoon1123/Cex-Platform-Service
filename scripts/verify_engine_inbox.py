@@ -34,8 +34,9 @@ try:
     env["CEX_TEST_DATABASE_URL"]="jdbc:postgresql://"+address+"/cex_test"
     env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
     ARTIFACTS.mkdir(exist_ok=True)
+    # 업무 전용 PG 통합 시험은 별도 새 DB 실행기를 사용한다. 광범위한 이름 패턴으로 같은 DB에 끌어오지 않는다.
     with (ARTIFACTS/"wal-java-inbox.log").open("w") as log:
-        completed=subprocess.run(["./gradlew","test","--tests","*FrameworkContractTest","--tests","*EngineEventInboxTest","--tests","*FeeConfigServiceTest","--tests","*FeeRevenueTest","--tests","*TradeFeeSettlementTest","--tests","dustin.cex.domains.market.*","--tests","*BotSafetyTest","--tests","*KafkaOrderEventConsumerTest","--tests","*Order*Test","--tests","*EngineHttpClientTest","--tests","*PlatformBalanceStartupTest","--tests","*TradeSettlement*Test","bootJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+        completed=subprocess.run(["./gradlew","test","--tests","*FrameworkContractTest","--tests","*EngineEventInboxTest","--tests","*FeeConfigServiceTest","--tests","*FeeRevenueTest","--tests","*TradeFeeSettlementTest","--tests","dustin.cex.domains.market.*","--tests","*BotSafetyTest","--tests","*KafkaOrderEventConsumerTest","--tests","dustin.cex.domains.order.*","--tests","*OrderLedgerTest","--tests","*EngineHttpClientTest","--tests","*PlatformBalanceStartupTest","--tests","*TradeSettlement*Test","bootJar","--console=plain"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
     result["exit"]=completed.returncode
     if completed.returncode:
         raise RuntimeError("플랫폼 회귀 실패: .local/wal-java-inbox.log 확인")

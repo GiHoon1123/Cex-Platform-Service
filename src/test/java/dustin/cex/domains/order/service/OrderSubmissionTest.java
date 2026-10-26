@@ -56,10 +56,14 @@ class OrderSubmissionTest {
     @Configuration
     @EntityScan(basePackageClasses = {Order.class, UserBalance.class})
     @EnableJpaRepositories(basePackageClasses = {OrderRepository.class, UserBalanceRepository.class})
-    @Import({OrderService.class,OrderDispatchService.class})
+    @Import({OrderService.class,OrderDispatchService.class,OrderCancellationService.class})
     static class Persistence {}
 
     @Autowired OrderService service;
+    @Autowired OrderCancellationService cancellationService;
+    @Autowired dustin.cex.domains.order.repository.OrderCancellationRepository cancellations;
+    @MockitoBean dustin.cex.domains.security.AuditService cancelAudit;
+    @MockitoBean(name="orderCancellationSchemaInitializer") OrderCancellationSchemaInitializer cancelSchema;
     @Autowired dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
     @Autowired OrderDispatchService dispatch;
     @Autowired OrderRepository orders;
@@ -76,6 +80,7 @@ class OrderSubmissionTest {
     void seedIsolatedBalances() {
         when(feeService.getFeeConfig(anyString(), anyString())).thenReturn(
                 dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).feeType("both").build());
+        cancellations.deleteAll();
         dispatches.deleteAll();
         submissions.deleteAll();
         orders.deleteAll();
@@ -369,6 +374,8 @@ class OrderSubmissionTest {
     void cancellationAcceptanceDoesNotPreemptKafkaStateOrBalanceRelease() {
         var order=orders.saveAndFlush(Order.builder().userId(101L).orderType("sell").orderSide("limit")
             .baseMint("SOL").quoteMint("USDT").price(new BigDecimal("100")).amount(BigDecimal.ONE).build());
+        submissions.saveAndFlush(new dustin.cex.domains.order.model.entity.OrderSubmission(101L,java.util.UUID.randomUUID(),order.getId(),
+            new dustin.cex.domains.order.model.OrderCommand("sell","limit","SOL","USDT",new BigDecimal("100"),BigDecimal.ONE,null),new BigDecimal("0.001")));
         dispatches.saveAndFlush(new dustin.cex.domains.order.model.entity.OrderDispatch(order));
         when(engine.cancelOrder(order.getId(),101L,"SOL/USDT")).thenAnswer(invocation -> {
             assertThat(orders.findById(order.getId()).orElseThrow().getStatus()).isEqualTo("pending");
@@ -384,8 +391,12 @@ class OrderSubmissionTest {
     void failedCancellationPreservesOrderAndReservation() {
         var order=orders.saveAndFlush(Order.builder().userId(101L).orderType("sell").orderSide("limit")
             .baseMint("SOL").quoteMint("USDT").price(new BigDecimal("100")).amount(BigDecimal.ONE).build());
+        submissions.saveAndFlush(new dustin.cex.domains.order.model.entity.OrderSubmission(101L,java.util.UUID.randomUUID(),order.getId(),
+            new dustin.cex.domains.order.model.OrderCommand("sell","limit","SOL","USDT",new BigDecimal("100"),BigDecimal.ONE,null),new BigDecimal("0.001")));
+        dispatches.saveAndFlush(new dustin.cex.domains.order.model.entity.OrderDispatch(order));
         when(engine.cancelOrder(anyLong(),anyLong(),anyString())).thenThrow(new RuntimeException("응답 유실"));
-        assertThat(catchThrowable(()->service.cancelOrder(101L,order.getId()))).isInstanceOf(RuntimeException.class);
+        assertThat(service.cancelOrder(101L,order.getId()).getOrder().getStatus()).isEqualTo("pending");
+        var pending=cancellations.findById(order.getId()).orElseThrow();assertThat(pending.getAttempts()).isEqualTo(1);assertThat(pending.getAcknowledgedAt()).isNull();
         assertThat(orders.findById(order.getId()).orElseThrow().getStatus()).isEqualTo("pending");
         assertThat(balances.findByUserIdAndMintAddress(101L,"SOL").orElseThrow().getLocked()).isEqualByComparingTo("2");
     }

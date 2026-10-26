@@ -29,7 +29,6 @@ import dustin.cex.domains.order.model.dto.CreateOrderRequest;
 import dustin.cex.domains.order.model.dto.OrderResponse;
 import dustin.cex.domains.order.model.entity.Order;
 import dustin.cex.domains.order.repository.OrderRepository;
-import dustin.cex.shared.http.EngineHttpClient;
 import dustin.cex.shared.kafka.KafkaEventProducer;
 import lombok.extern.slf4j.Slf4j;
 
@@ -63,7 +62,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderSubmissionRepository submissionRepository;
     private final UserBalanceRepository userBalanceRepository;
-    private final EngineHttpClient engineHttpClient;
+    private final OrderCancellationService cancellations;
     private final KafkaEventProducer kafkaEventProducer;
     private final dustin.cex.domains.fee.service.FeeConfigService feeConfigService;
     private final TransactionTemplate transactionTemplate;
@@ -83,7 +82,7 @@ public class OrderService {
             OrderRepository orderRepository,
             OrderSubmissionRepository submissionRepository,
             UserBalanceRepository userBalanceRepository,
-            EngineHttpClient engineHttpClient,
+            OrderCancellationService cancellations,
             KafkaEventProducer kafkaEventProducer,
             PlatformTransactionManager transactionManager,
             dustin.cex.domains.fee.service.FeeConfigService feeConfigService,
@@ -94,7 +93,7 @@ public class OrderService {
         this.orderRepository = orderRepository;
         this.submissionRepository = submissionRepository;
         this.userBalanceRepository = userBalanceRepository;
-        this.engineHttpClient = engineHttpClient;
+        this.cancellations = cancellations;
         this.kafkaEventProducer = kafkaEventProducer;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         // 접수와 권한 변경은 같은 고객 행으로 순서를 정한다. 대기 후의 권한 조회가 새 커밋을 읽도록 고정한다.
@@ -305,29 +304,13 @@ public class OrderService {
      * 유지하고 네트워크 대기는 밖에서 수행한다. 최종 주문 상태·예약금 해제는
      * 순서가 보장된 엔진 결과 소비자가 함께 확정한다.
      */
+    @Transactional(propagation = Propagation.NEVER)
     public OrderResponse cancelOrder(Long userId, Long orderId) {
-        Order order = transactionTemplate.execute(status -> {
-            var owned=orderRepository.findByUserIdAndIdForUpdate(userId, orderId)
-                .orElseThrow(() -> new RuntimeException("주문을 찾을 수 없습니다: orderId=" + orderId));
-            // 외부 효과 이전에 의도를 영속 기록한다. 취소 확정은 엔진 결과로 따로 확인한다.
-            access.recordCancellationIntent(userId,orderId);
-            return owned;
-        });
-        if ("filled".equals(order.getStatus()) || "rejected".equals(order.getStatus()) || "expired".equals(order.getStatus())) {
-            throw new IllegalArgumentException("종료된 주문은 취소할 수 없습니다");
-        }
-        if (!"cancelled".equals(order.getStatus())) {
-            // HTTP 성공은 엔진 WAL의 취소 확정이다. 플랫폼 잔액과 주문 상태는
-            // 순서가 보장된 엔진 Kafka 결과를 소비하는 트랜잭션만 변경한다.
-            // 여기서 먼저 cancelled로 바꾸면 소비자가 잔액 해제 전에 종료 주문을
-            // 관찰하고 실패하거나, 앞선 체결 이벤트와 순서가 뒤집힐 수 있다.
-            if (!engineHttpClient.cancelOrder(orderId, userId, order.getBaseMint()+"/"+order.getQuoteMint())) {
-                throw new IllegalStateException("엔진이 주문 취소를 거부했습니다");
-            }
-        }
-        Order latest=orderRepository.findById(orderId).orElseThrow();
+        // 영속 취소 요청이 먼저 확정된다. HTTP 응답 유실은 재확인 대기이며 주문 종료/예약 해제의 근거가 아니다.
+        cancellations.request(userId,orderId);
+        Order latest=orderRepository.findByUserIdAndId(userId,orderId).orElseThrow();
         return OrderResponse.builder().order(convertToDto(latest))
-            .message("엔진 취소 확정. 플랫폼 상태는 결과 수신 후 반영됩니다.").build();
+            .message("취소 요청 접수. 주문 상태와 예약 해제는 엔진 결과 수신 후 반영됩니다.").build();
     }
 
     /**

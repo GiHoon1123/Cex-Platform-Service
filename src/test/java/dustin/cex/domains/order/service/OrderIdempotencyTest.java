@@ -49,6 +49,10 @@ import dustin.cex.shared.kafka.KafkaEventProducer;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class OrderIdempotencyTest {
     @Autowired OrderService service;
+    @Autowired OrderCancellationService cancellationService;
+    @Autowired dustin.cex.domains.order.repository.OrderCancellationRepository cancellations;
+    @MockitoBean dustin.cex.domains.security.AuditService cancelAudit;
+    @MockitoBean(name="orderCancellationSchemaInitializer") OrderCancellationSchemaInitializer cancelSchema;
     @Autowired dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
     @Autowired OrderDispatchService dispatch;
     @Autowired OrderRepository orders;
@@ -65,6 +69,7 @@ class OrderIdempotencyTest {
     void seed() {
         when(feeService.getFeeConfig(anyString(), anyString())).thenReturn(
                 dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).feeType("both").build());
+        cancellations.deleteAll();
         dispatches.deleteAll();
         submissions.deleteAll();
         orders.deleteAll();
@@ -230,7 +235,7 @@ class OrderIdempotencyTest {
         var key = UUID.randomUUID();
         service.createOrder(101L, key, limit());
         // 메모리 상태가 없는 새 서비스 인스턴스도 DB의 같은 접수 기록을 사용한다.
-        var fresh = new OrderService(orders, submissions, balances, engine, kafka, transactions, feeService, dispatches, dispatch, ledger, access);
+        var fresh = new OrderService(orders, submissions, balances, cancellationService, kafka, transactions, feeService, dispatches, dispatch, ledger, access);
         assertThat(fresh.createOrder(101L, key, limit()).created()).isFalse();
         assertSingleReservation();
     }

@@ -20,7 +20,7 @@ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 DOCKER=shutil.which('docker') or '/usr/local/bin/docker'
 run=uuid4().hex[:12];logs=ARTIFACTS/'bitcoin-credit-wire'/run;logs.mkdir(parents=True)
 source=ROOT/'src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java'
-methods=re.findall(r'@Test\s+void\s+(\w+)\(',source.read_text());assert len(methods)==4
+methods=re.findall(r'@Test\s+void\s+(\w+)\(',source.read_text());assert len(methods)==5
 # 형제 저장소는 현재 로컬 소스의 실행 파일을 새로 빌드한다. 결과를 과거 빌드로 대체하지 않는다.
 with (logs/'engine-build.log').open('w') as log:
     subprocess.run(['/Users/dustin/.cargo/bin/cargo','build','--locked','--offline','--bin','cex-engine'],cwd=ENGINE,stdout=log,stderr=subprocess.STDOUT,check=True)

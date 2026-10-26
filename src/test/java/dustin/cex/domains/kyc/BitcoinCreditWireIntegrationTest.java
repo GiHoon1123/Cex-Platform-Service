@@ -56,7 +56,7 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
     @Autowired KafkaListenerEndpointRegistry listeners;
     @Autowired KafkaTemplate<String,String> kafka;
     Process engineProcess;Path directory,engineLog;HttpServer proxy;ExecutorService proxyThreads;HttpClient forward;
-    final AtomicBoolean loseResponse=new AtomicBoolean();
+    final AtomicBoolean loseResponse=new AtomicBoolean(),loseCancellationResponse=new AtomicBoolean();
     @BeforeEach void preparedWire()throws Exception{
         assertFalse(org.mockito.Mockito.mockingDetails(actualEngine).isMock());assertFalse(org.mockito.Mockito.mockingDetails(actualAudit).isMock());
         assertNotEquals("127.0.0.1:9092",System.getenv("CEX_WIRE_KAFKA"));assertTrue(System.getenv("CEX_TEST_DATABASE_URL").endsWith("/cex"));
@@ -77,10 +77,11 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
             try{var request=HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+ENGINE_PORT+exchange.getRequestURI())).timeout(Duration.ofSeconds(10));
                 for(String name:List.of("Content-Type","x-engine-service-token","x-engine-audit-token")){String value=exchange.getRequestHeaders().getFirst(name);if(value!=null)request.header(name,value);}
                 var response=forward.send(request.method(exchange.getRequestMethod(),HttpRequest.BodyPublishers.ofByteArray(exchange.getRequestBody().readAllBytes())).build(),HttpResponse.BodyHandlers.ofByteArray());
-                boolean lost=exchange.getRequestURI().getPath().equals("/api/cex/deposits/credits")&&loseResponse.get();
+                boolean lostDeposit=exchange.getRequestURI().getPath().equals("/api/cex/deposits/credits")&&loseResponse.get();
+                boolean lostCancel="DELETE".equals(exchange.getRequestMethod())&&loseCancellationResponse.get();boolean lost=lostDeposit||lostCancel;
                 if(lost)assertEquals(200,response.statusCode());
-                byte[] body=lost?json.writeValueAsBytes(Map.of("code","OUTCOME_UNKNOWN","deposit_id",receipt.id())):response.body();
-                exchange.getResponseHeaders().set("Content-Type",response.headers().firstValue("Content-Type").orElse("application/json"));exchange.sendResponseHeaders(lost?504:response.statusCode(),body.length);exchange.getResponseBody().write(body);
+                byte[] body=lost?json.writeValueAsBytes(Map.of("code","OUTCOME_UNKNOWN","scope",lostCancel?"CANCELLATION":"DEPOSIT")):response.body();
+                response.headers().firstValue("Content-Type").ifPresent(value->exchange.getResponseHeaders().set("Content-Type",value));exchange.sendResponseHeaders(lost?504:response.statusCode(),body.length);exchange.getResponseBody().write(body);
             }catch(Exception failure){throw new IllegalStateException(failure);}finally{exchange.close();}
         });proxy.start();
     }
@@ -106,7 +107,7 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
     }
     @Override @AfterEach void noExternalOrFinancialRelease(){
         verifyNoInteractions(directoryClient,transactions,transfers,client,engine,producer,priceClient);
-        var total=jdbc.queryForObject("SELECT sum(r.amount) FROM bitcoin_pending_deposits p JOIN bitcoin_deposit_receipts r ON r.id=p.receipt_id WHERE r.user_id=?",BigDecimal.class,customer.getId());assertEquals(0,total.compareTo(money("PENDING").add(money("AVAILABLE"))));
+        var total=jdbc.queryForObject("SELECT sum(r.amount) FROM bitcoin_pending_deposits p JOIN bitcoin_deposit_receipts r ON r.id=p.receipt_id WHERE r.user_id=?",BigDecimal.class,customer.getId());assertEquals(0,total.compareTo(money("PENDING").add(money("AVAILABLE")).add(money("LOCKED"))));
     }
     @Test void actualHttpAcknowledgementWaitsForKafkaAndDuplicateDeliveryDoesNotCreditTwice()throws Exception{
         var result=processing.processNext().orElseThrow();assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,result.transportOutcome());assertEquals("WAITING_EVENT",result.state());pendingOnly();
@@ -139,4 +140,32 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
         new org.springframework.transaction.support.TransactionTemplate(manager).executeWithoutResult(t->assertFalse(eligibility.permitted(users.lockById(customer.getId()).orElseThrow())));settled();
     }
 
+
+    @Autowired dustin.cex.domains.order.repository.OrderRepository orderRows;
+    @Autowired dustin.cex.domains.order.repository.OrderSubmissionRepository orderSources;
+    @Autowired dustin.cex.domains.order.repository.OrderDispatchRepository orderDispatches;
+    @Autowired dustin.cex.domains.order.repository.OrderCancellationRepository orderCancellations;
+    @Autowired dustin.cex.domains.balance.repository.UserBalanceRepository realBalances;
+    @Test void cancellationResponseLossAndEngineRestartPreserveReservationUntilTheRealKafkaResult()throws Exception{
+        assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,processing.processNext().orElseThrow().transportOutcome());listeners.start();settled();listeners.stop();
+        // 기존 소유 HTTP 프록시와 실제 클라이언트를 연결한다. 공급사/비금융 로그 대역과 엔진 금융 호출을 섞지 않는다.
+        var realClient=new dustin.cex.shared.http.EngineHttpClient();org.springframework.test.util.ReflectionTestUtils.setField(realClient,"serviceToken",SERVICE);org.springframework.test.util.ReflectionTestUtils.setField(realClient,"engineBaseUrl","http://127.0.0.1:"+PROXY_PORT);org.springframework.test.util.ReflectionTestUtils.setField(realClient,"timeoutMs",10000);realClient.init();
+        var realDispatch=new dustin.cex.domains.order.service.OrderDispatchService(orderDispatches,orderSources,realClient,manager);
+        var realCancellation=new dustin.cex.domains.order.service.OrderCancellationService(orderRows,orderSources,orderCancellations,realClient,trading,audit,manager);
+        var realOrders=new dustin.cex.domains.order.service.OrderService(orderRows,orderSources,realBalances,realCancellation,producer,manager,fees,orderDispatches,realDispatch,ledger,trading);
+        when(fees.getFeeConfig("BTC","USDT")).thenReturn(dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).feeType("both").isActive(true).build());
+        var command=dustin.cex.domains.order.model.dto.CreateOrderRequest.builder().baseMint("BTC").quoteMint("USDT").orderType("sell").orderSide("limit").price(new BigDecimal("100000")).amount(new BigDecimal("0.01")).build();
+        long order=Long.parseLong(realOrders.createOrder(customer.getId(),UUID.randomUUID(),command).response().getOrder().getId());org.mockito.Mockito.verify(producer,times(1)).publishOrderCreated(anyString());clearInvocations(producer);
+        amount("0.11345678","AVAILABLE");amount("0.01","LOCKED");loseCancellationResponse.set(true);realOrders.cancelOrder(customer.getId(),order);assertNull(orderCancellations.findById(order).orElseThrow().getAcknowledgedAt());assertEquals("pending",orderRows.findById(order).orElseThrow().getStatus());amount("0.01","LOCKED");
+        var before=actualAudit.page(0,null,null);assertEquals(2,before.path("events").size());String cancellationEvent=before.path("events").get(1).asString();
+        // 실제 취소가 WAL에 확정된 뒤 응답만 유실됐다. 같은 WAL로 강제 종료/복원하고 같은 요청을 다시 확인한다.
+        engineProcess.destroyForcibly();assertTrue(engineProcess.waitFor(10,TimeUnit.SECONDS));startEngine();loseCancellationResponse.set(false);
+        await(()->{realCancellation.retryNext();return orderCancellations.findById(order).orElseThrow().getAcknowledgedAt()!=null;},10);assertEquals(2,orderCancellations.findById(order).orElseThrow().getAttempts());assertEquals("pending",orderRows.findById(order).orElseThrow().getStatus());amount("0.01","LOCKED");
+        var after=actualAudit.page(0,null,null);assertEquals(2,after.path("events").size());assertEquals(cancellationEvent,after.path("events").get(1).asString());listeners.start();await(()->"cancelled".equals(orderRows.findById(order).orElseThrow().getStatus()),20);
+        // 실제 취소 재발행의 소비 커밋 위치까지 확인한다. 잔액이 잠시 같다는 관찰로 중복 소비를 대신하지 않는다.
+        var duplicate=kafka.send("order-events",0,"same-cancellation",cancellationEvent).get(10,TimeUnit.SECONDS).getRecordMetadata();
+        try(var admin=AdminClient.create(Map.of("bootstrap.servers",System.getenv("CEX_WIRE_KAFKA")))){await(()->{try{var offset=admin.listConsumerGroupOffsets("cex-consumer-group").partitionsToOffsetAndMetadata().get(2,TimeUnit.SECONDS).get(new TopicPartition("order-events",0));return offset!=null&&offset.offset()>duplicate.offset();}catch(Exception waiting){return false;}},20);}
+        amount("0.12345678","AVAILABLE");amount("0","LOCKED");// 호가 스냅샷 수신 키도 같은 표에 저장된다. 금융 이벤트만 별도로 세어 재발행이 새 금융 결과를 만들지 않았는지 확인한다.
+        assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM engine_event_receipts WHERE event_id NOT LIKE '%:market'",Long.class));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM ledger_transactions WHERE kind='CANCELLED'",Long.class));assertEquals("MATCHED",financialReconciliation.run().status());
+    }
 }

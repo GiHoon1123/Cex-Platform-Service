@@ -475,7 +475,7 @@ public class OrderController {
             // 주문을 찾을 수 없거나 취소 불가능한 경우
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(OrderResponse.builder()
-                            .message("주문 취소 실패: " + e.getMessage())
+                            .message("주문 취소 요청의 본인 주문·현재 상태·저장 결과를 확인하세요")
                             .build());
         }
     }

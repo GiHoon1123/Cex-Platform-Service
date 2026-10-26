@@ -75,7 +75,10 @@ public class EngineHttpClient {
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
         this.restTemplate = new RestTemplate(requestFactory);
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = tools.jackson.databind.json.JsonMapper.builder(tools.jackson.core.json.JsonFactory.builder()
+                .enable(tools.jackson.core.StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+                .streamReadConstraints(tools.jackson.core.StreamReadConstraints.builder().maxNestingDepth(8).maxStringLength(1024).maxNumberLength(128).build()).build())
+                .enable(tools.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
         // 클라이언트 내부의 숨은 POST 재시도는 없다. 플랫폼의 영속 전송 서비스가
         // 같은 주문 식별자·불변 원본으로 재확인하며 엔진 저널의 중복 방지를 사용한다.
         // 이 시간은 연결·각 읽기의 제한이며 요청 전체의 절대 마감 시간은 아니다.
@@ -169,41 +172,27 @@ public class EngineHttpClient {
      */
     public boolean cancelOrder(Long orderId, Long userId, String tradingPair) {
         try {
-            // HTTP 헤더 설정
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("x-engine-service-token",serviceToken);
-            
-            HttpEntity<String> requestEntity = new HttpEntity<>(headers);
-            
-            // DELETE 요청 전송 (user_id를 쿼리 파라미터로 전달)
-            String[] pair = tradingPair.split("/", -1);
-            if (pair.length != 2) throw new IllegalArgumentException("잘못된 거래쌍입니다");
-            String url = org.springframework.web.util.UriComponentsBuilder
-                .fromUriString(engineBaseUrl + "/api/cex/orders/" + orderId)
-                .queryParam("user_id", userId).queryParam("base_mint", pair[0])
-                .queryParam("quote_mint", pair[1]).build().encode().toUriString();
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.DELETE,
-                    requestEntity,
-                    String.class
-            );
-            
-            // 응답 확인
-            if (response.getStatusCode().is2xxSuccessful()) {
-                return true;
-            } else {
-                throw new RuntimeException("엔진 주문 취소 실패: " + response.getStatusCode());
-            }
-            
-        } catch (RestClientException e) {
-            throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
-        } catch (Exception e) {
-            throw new RuntimeException("엔진 통신 실패: " + e.getMessage(), e);
-        }
+            if(orderId==null||orderId<=0||userId==null||userId<=0)throw new IllegalArgumentException("취소 원본 식별자를 확인하세요");
+            String[] pair=tradingPair.split("/",-1);
+            if(pair.length!=2||pair[0].isBlank()||pair[1].isBlank())throw new IllegalArgumentException("취소 거래쌍을 확인하세요");
+            HttpHeaders headers=new HttpHeaders();headers.setContentType(MediaType.APPLICATION_JSON);headers.set("x-engine-service-token",serviceToken);
+            String url=org.springframework.web.util.UriComponentsBuilder.fromUriString(engineBaseUrl+"/api/cex/orders/"+orderId)
+                .queryParam("user_id",userId).queryParam("base_mint",pair[0]).queryParam("quote_mint",pair[1]).build().encode().toUriString();
+            ResponseEntity<String> response=restTemplate.exchange(url,HttpMethod.DELETE,new HttpEntity<String>(headers),String.class);
+            // 엔진의 실제 계약은 확정 취소의 HTTP200/주문 JSON이다. 단순2xx·다른 주문·HTML을 확인된 취소로 승격하지 않는다.
+            if(response.getStatusCode().value()!=200||response.getHeaders().getContentType()==null
+                ||!MediaType.APPLICATION_JSON.isCompatibleWith(response.getHeaders().getContentType())||response.getBody()==null)throw new IllegalStateException("취소 응답 형식이 다릅니다");
+            JsonNode result=objectMapper.readTree(response.getBody());
+            if(!result.isObject()||!result.path("id").isString()||!orderId.toString().equals(result.path("id").asString())
+                ||!result.path("user_id").isIntegralNumber()||!result.path("user_id").canConvertToLong()||result.path("user_id").longValue()!=userId
+                ||!result.path("base_mint").isString()||!pair[0].equals(result.path("base_mint").asString())
+                ||!result.path("quote_mint").isString()||!pair[1].equals(result.path("quote_mint").asString())
+                ||!result.path("status").isString()||!"cancelled".equals(result.path("status").asString()))throw new IllegalStateException("취소 응답과 원본 범위가 다릅니다");
+            // 이 확인도 플랫폼 원장/예약의 변경 허가가 아니다. 금융 상태는 순서가 보장된 Kafka 결과만 반영한다.
+            return true;
+        }catch(Exception unknown){throw new IllegalStateException("엔진 취소 응답을 확인할 수 없습니다",unknown);}
     }
-    
+
     /**
      * 주문 제출 요청 본문 생성
      * Build submit order request body

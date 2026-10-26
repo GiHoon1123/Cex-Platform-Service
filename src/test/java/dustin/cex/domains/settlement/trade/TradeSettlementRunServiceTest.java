@@ -52,6 +52,8 @@ class TradeSettlementRunServiceTest {
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.monitoring.DepositMonitoringSchemaInitializer monitoringSchema;
     // 정산 기록 전용 H2 범위에는 입금 의도의 PG 스키마를 만들지 않는다. 실제 의도 제약은 별도 PG 시험이 검증한다.
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.bitcoin.BitcoinCreditSchemaInitializer creditSchema;
+    // 이 H2 시험은 정산 실행 기록만 다룬다. 취소의 원본·필수 감사 제약은 별도 실제 PG 시험이 검증한다.
+    @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.order.service.OrderCancellationSchemaInitializer cancellationSchema;
     @org.springframework.test.context.bean.override.mockito.MockitoBean dustin.cex.domains.valuation.BitcoinKrwPriceSchemaInitializer priceSchema;
 
     @Autowired
