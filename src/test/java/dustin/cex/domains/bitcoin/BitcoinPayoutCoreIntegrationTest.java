@@ -73,4 +73,16 @@ class BitcoinPayoutCoreIntegrationTest {
         assertEquals(503,assertThrows(ResponseStatusException.class,()->client.prepare(own,fixtureFee())).getStatusCode().value());
     }
 
+    @Test void aRealNoChangeTransactionCanHaveTheSameUnsignedIdentityBeforeAnySigning() {
+        // 시험 입력0.05BTC에서282사토시를 비용으로 남긴다. 실제 Core가 거스름돈 없는 출력을 만들었는지 확인한다.
+        // 서명/방송/입력 예약 없이 같은 내용을 다시 준비하면 거래 ID가 같을 수 있다는 회귀의 실제 근거다.
+        var c=command();var exact=new BitcoinPayoutClient.Command(c.withdrawalId(),c.network(),c.address(),c.scriptPubKey(),new BigDecimal("0.04999718"));
+        var first=client.prepare(exact,fixtureFee());var second=client.prepare(exact,fixtureFee());
+        assertNull(first.changeAddress());assertNull(first.changeScript());assertNull(first.changeAmount());
+        assertEquals(first.unsignedTxid(),second.unsignedTxid());assertEquals("0.00000282",first.nativeFee());
+        var decoded=rpc.call("decodepsbt",List.of(first.psbt()));assertEquals(1,decoded.path("tx").path("vout").size());
+        assertEquals("0.04999718",first.amount());assertTrue(rpc.call("listlockunspent",List.of()).isEmpty());
+        assertFalse(decoded.path("inputs").get(0).has("partial_signatures"));
+    }
+
 }

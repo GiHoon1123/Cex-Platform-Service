@@ -13,9 +13,12 @@ CREATE TABLE IF NOT EXISTS bitcoin_payout_candidates (
  input_count integer NOT NULL CHECK(input_count BETWEEN 1 AND 100),psbt_hash varchar(64) NOT NULL,unsigned_txid varchar(64) NOT NULL,
  key_id varchar(64) NOT NULL,ciphertext bytea NOT NULL,payload_hash varchar(64) NOT NULL,
  created_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),
- UNIQUE(network,unsigned_txid),CHECK(psbt_hash ~ '^[0-9a-f]{64}$' AND unsigned_txid ~ '^[0-9a-f]{64}$' AND key_id ~ '^[0-9a-f]{64}$' AND payload_hash ~ '^[0-9a-f]{64}$'),
+ CHECK(psbt_hash ~ '^[0-9a-f]{64}$' AND unsigned_txid ~ '^[0-9a-f]{64}$' AND key_id ~ '^[0-9a-f]{64}$' AND payload_hash ~ '^[0-9a-f]{64}$'),
  CHECK(octet_length(ciphertext) BETWEEN 28 AND 1048604)
 );
+-- 미실행 종료한 후보는 같은 지급 내용으로 다시 준비할 수 있다. 후보 이력의 거래 ID를 지급 확정 키로 사용하지 않는다.
+-- 현재 입력의 전역 기본 키와 미실행 해제 증거가 중복 배정을 막는다. 기존 금융/후보 기록은 삭제하지 않는다.
+ALTER TABLE bitcoin_payout_candidates DROP CONSTRAINT IF EXISTS bitcoin_payout_candidates_network_unsigned_txid_key;
 CREATE TABLE IF NOT EXISTS bitcoin_payout_preparation_results (
  preparation_id uuid PRIMARY KEY REFERENCES bitcoin_payout_preparations(id),
  status varchar(24) NOT NULL CHECK(status IN('SAVED','NODE_UNAVAILABLE','BASIS_CHANGED','INPUT_RESERVED')),

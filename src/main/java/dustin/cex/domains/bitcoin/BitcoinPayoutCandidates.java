@@ -93,7 +93,7 @@ public class BitcoinPayoutCandidates {
         }catch(DuplicateKeyException collision){
             // 중복 배정 제약만 업무 결과로 분류한다. 다른 SQL/감사 실패를 노드 장애로 숨기지 않는다.
             String constraint=constraint(collision);
-            if(!Set.of("bitcoin_payout_input_reservations_pkey","bitcoin_payout_active_candidates_pkey","bitcoin_payout_candidates_review_id_key","bitcoin_payout_candidates_network_unsigned_txid_key").contains(constraint))throw collision;
+            if(!Set.of("bitcoin_payout_input_reservations_pkey","bitcoin_payout_active_candidates_pkey","bitcoin_payout_candidates_review_id_key").contains(constraint))throw collision;
             return finish(start,"INPUT_RESERVED",sha(prepared.psbt()));
         }catch(ResponseStatusException changed){
             if(changed.getStatusCode().value()!=403&&changed.getStatusCode().value()!=409)throw changed;
