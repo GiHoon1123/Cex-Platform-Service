@@ -56,7 +56,7 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
     @Autowired KafkaListenerEndpointRegistry listeners;
     @Autowired KafkaTemplate<String,String> kafka;
     Process engineProcess;Path directory,engineLog;HttpServer proxy;ExecutorService proxyThreads;HttpClient forward;
-    final AtomicBoolean loseResponse=new AtomicBoolean(),loseCancellationResponse=new AtomicBoolean();
+    final AtomicBoolean loseResponse=new AtomicBoolean(),loseCancellationResponse=new AtomicBoolean(),loseWithdrawalResponse=new AtomicBoolean();
     @BeforeEach void preparedWire()throws Exception{
         assertFalse(org.mockito.Mockito.mockingDetails(actualEngine).isMock());assertFalse(org.mockito.Mockito.mockingDetails(actualAudit).isMock());
         assertNotEquals("127.0.0.1:9092",System.getenv("CEX_WIRE_KAFKA"));assertTrue(System.getenv("CEX_TEST_DATABASE_URL").endsWith("/cex"));
@@ -78,9 +78,9 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
                 for(String name:List.of("Content-Type","x-engine-service-token","x-engine-audit-token")){String value=exchange.getRequestHeaders().getFirst(name);if(value!=null)request.header(name,value);}
                 var response=forward.send(request.method(exchange.getRequestMethod(),HttpRequest.BodyPublishers.ofByteArray(exchange.getRequestBody().readAllBytes())).build(),HttpResponse.BodyHandlers.ofByteArray());
                 boolean lostDeposit=exchange.getRequestURI().getPath().equals("/api/cex/deposits/credits")&&loseResponse.get();
-                boolean lostCancel="DELETE".equals(exchange.getRequestMethod())&&loseCancellationResponse.get();boolean lost=lostDeposit||lostCancel;
+                boolean lostCancel="DELETE".equals(exchange.getRequestMethod())&&loseCancellationResponse.get();boolean lostWithdrawal=exchange.getRequestURI().getPath().equals("/api/cex/withdrawals/reservations")&&loseWithdrawalResponse.get();boolean lost=lostDeposit||lostCancel||lostWithdrawal;
                 if(lost)assertEquals(200,response.statusCode());
-                byte[] body=lost?json.writeValueAsBytes(Map.of("code","OUTCOME_UNKNOWN","scope",lostCancel?"CANCELLATION":"DEPOSIT")):response.body();
+                byte[] body=lost?json.writeValueAsBytes(Map.of("code","OUTCOME_UNKNOWN","scope",lostWithdrawal?"WITHDRAWAL":lostCancel?"CANCELLATION":"DEPOSIT")):response.body();
                 response.headers().firstValue("Content-Type").ifPresent(value->exchange.getResponseHeaders().set("Content-Type",value));exchange.sendResponseHeaders(lost?504:response.statusCode(),body.length);exchange.getResponseBody().write(body);
             }catch(Exception failure){throw new IllegalStateException(failure);}finally{exchange.close();}
         });proxy.start();
@@ -193,6 +193,29 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
         // 정상 관찰만으로 위험은 지워지지 않는다. 증거 작성은 가능하지만 별도 승인 전에는 거래 제한이 남는다.
         when(node.inspect(receipt.txid())).thenReturn(normal);assertEquals("READY",recoveryProofs.prepare(maker.user().getId(),maker.sid(),receipt.id(),UUID.randomUUID()).state());assertEquals(1,rows("bitcoin_credit_chain_risks"));
         new org.springframework.transaction.support.TransactionTemplate(manager).executeWithoutResult(t->assertFalse(eligibility.permitted(users.lockById(customer.getId()).orElseThrow())));
+    }
+
+    @Test void withdrawalClientConfirmsRealStagesAfterLostResponseAndRecoveryWithoutSettlingFromHttp()throws Exception{
+        assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,processing.processNext().orElseThrow().transportOutcome());listeners.start();settled();listeners.stop();
+        // 금융 소비는 아직 출금 원본과 연결하지 않았다. 실제 통신만 확인하며 HTTP로 원장을 쓰지 않는다.
+        long entries=rows("ledger_entries");
+        try(var actual=new dustin.cex.shared.http.EngineWithdrawalClient("http://127.0.0.1:"+PROXY_PORT,10000,SERVICE)){
+            UUID released=UUID.randomUUID(),completed=UUID.randomUUID(),rejected=UUID.randomUUID();
+            var reserve=new dustin.cex.shared.http.EngineWithdrawalClient.Command(released,customer.getId(),"BTC",new BigDecimal("0.01"),dustin.cex.shared.http.EngineWithdrawalClient.Action.RESERVE);
+            loseWithdrawalResponse.set(true);assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.OUTCOME_UNKNOWN,actual.execute(reserve));assertEquals(2,actualAudit.page(0,null,null).path("events").size());
+            engineProcess.destroyForcibly();assertTrue(engineProcess.waitFor(10,TimeUnit.SECONDS));startEngine();loseWithdrawalResponse.set(false);
+            // 같은 원본으로 명시적으로 재확인한다. 불명을 새 출금 UUID로 바꾸지 않는다.
+            await(()->actual.execute(reserve)==dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_RESERVED,10);assertEquals(2,actualAudit.page(0,null,null).path("events").size());
+            var release=new dustin.cex.shared.http.EngineWithdrawalClient.Command(released,customer.getId(),"BTC",new BigDecimal("0.01"),dustin.cex.shared.http.EngineWithdrawalClient.Action.RELEASE);
+            assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_RELEASED,actual.execute(release));assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_RELEASED,actual.execute(release));assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_REJECTED,actual.execute(reserve));
+            var second=new dustin.cex.shared.http.EngineWithdrawalClient.Command(completed,customer.getId(),"BTC",new BigDecimal("0.02"),dustin.cex.shared.http.EngineWithdrawalClient.Action.RESERVE);
+            assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_RESERVED,actual.execute(second));var complete=new dustin.cex.shared.http.EngineWithdrawalClient.Command(completed,customer.getId(),"BTC",new BigDecimal("0.02"),dustin.cex.shared.http.EngineWithdrawalClient.Action.COMPLETE);
+            assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_COMPLETED,actual.execute(complete));assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_COMPLETED,actual.execute(complete));
+            var insufficient=new dustin.cex.shared.http.EngineWithdrawalClient.Command(rejected,customer.getId(),"BTC",new BigDecimal("100"),dustin.cex.shared.http.EngineWithdrawalClient.Action.RESERVE);
+            assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_REJECTED,actual.execute(insufficient));assertEquals(dustin.cex.shared.http.EngineWithdrawalClient.Outcome.DURABLY_REJECTED,actual.execute(insufficient));
+            var events=actualAudit.page(0,null,null).path("events");assertEquals(6,events.size());assertEquals("withdrawal_rejected",json.readTree(events.get(5).asString()).path("event_type").asString());
+        }
+        assertEquals(entries,rows("ledger_entries"));assertEquals(1,rows("engine_event_receipts"));amount("0.12345678","AVAILABLE");amount("0","LOCKED");
     }
 
 }
