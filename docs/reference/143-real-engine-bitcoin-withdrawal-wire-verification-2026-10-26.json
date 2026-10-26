@@ -1,0 +1,76 @@
+{
+  "cycle": 143,
+  "implementation_commit": "d2c6b5747ed5d88ea15552761ee7664a2fdbcf0c",
+  "verification": {
+    "run_id": "b0f8bf1aac50",
+    "engine_commit": "013cd6889fe4e9c75874d4e4aa3cf0681054fad1",
+    "groups": [
+      {
+        "method": "realSignedReservationAndCancellationWaitForKafkaAndConsumeDuplicatesOnce",
+        "database_container": "cex-withdrawal-wire-b0f8bf1aac50-0",
+        "broker_container": "cex-withdrawal-wire-b0f8bf1aac50-0-kafka-c0f6d88eac",
+        "database_host_clock_difference_seconds": 0.006248950958251953,
+        "exit": 0,
+        "tests": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "broker_removed": true,
+        "database_removed": true
+      },
+      {
+        "method": "lostReserveResponseAndRestartPreserveEarlyCancellationAndTheOriginalEvents",
+        "database_container": "cex-withdrawal-wire-b0f8bf1aac50-1",
+        "broker_container": "cex-withdrawal-wire-b0f8bf1aac50-1-kafka-dccfcc8097",
+        "database_host_clock_difference_seconds": 0.007310152053833008,
+        "exit": 0,
+        "tests": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "broker_removed": true,
+        "database_removed": true
+      },
+      {
+        "method": "lostReleaseResponseAndRestartKeepFundsLockedUntilTheSameDurableKafkaEvent",
+        "database_container": "cex-withdrawal-wire-b0f8bf1aac50-2",
+        "broker_container": "cex-withdrawal-wire-b0f8bf1aac50-2-kafka-47962de8f4",
+        "database_host_clock_difference_seconds": 0.007766246795654297,
+        "exit": 0,
+        "tests": {
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "broker_removed": true,
+        "database_removed": true
+      }
+    ],
+    "cases": [
+      {
+        "class": "dustin.cex.domains.kyc.BitcoinWithdrawalWireIntegrationTest",
+        "name": "realSignedReservationAndCancellationWaitForKafkaAndConsumeDuplicatesOnce()"
+      },
+      {
+        "class": "dustin.cex.domains.kyc.BitcoinWithdrawalWireIntegrationTest",
+        "name": "lostReserveResponseAndRestartPreserveEarlyCancellationAndTheOriginalEvents()"
+      },
+      {
+        "class": "dustin.cex.domains.kyc.BitcoinWithdrawalWireIntegrationTest",
+        "name": "lostReleaseResponseAndRestartKeepFundsLockedUntilTheSameDurableKafkaEvent()"
+      }
+    ],
+    "tests": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "exit": 0
+  }
+}
