@@ -103,16 +103,16 @@ CREATE TRIGGER operator_role_requests_no_truncate BEFORE TRUNCATE ON operator_ro
 -- 승인 근거는 원래 요청과 별도로 불변 보관한다. 과거 업무·감사 표를 바꾸거나 이전하지 않는다.
 -- 요청 당시 담당자 버전까지 고정해 역할을 바꿨다 되돌려도 예전 요청이 살아나지 못하게 한다.
 CREATE TABLE IF NOT EXISTS operator_approval_bindings (
- kind varchar(24) NOT NULL CHECK(kind IN ('ROLE','MFA_RECOVERY','ACCESS_REVIEW','TRADING_RESTRICTION','EDD_REVIEW','EDD_ADDRESS_REVIEW','EDD_FUNDS_REVIEW','EDD_WEALTH_REVIEW','STR_REVIEW','STR_CUSTODY','RELATIONSHIP_EXIT','EXIT_RESCISSION','CUSTOMER_REVIEW_CUSTODY','CUSTOMER_REVIEW_FINAL','CUSTOMER_MAIL_RETRY','TM_CASE_REVIEW','TM_CASE_ACTION','BTC_CHAIN_RECOVERY')),
+ kind varchar(24) NOT NULL CHECK(kind IN ('ROLE','MFA_RECOVERY','ACCESS_REVIEW','TRADING_RESTRICTION','EDD_REVIEW','EDD_ADDRESS_REVIEW','EDD_FUNDS_REVIEW','EDD_WEALTH_REVIEW','STR_REVIEW','STR_CUSTODY','RELATIONSHIP_EXIT','EXIT_RESCISSION','CUSTOMER_REVIEW_CUSTODY','CUSTOMER_REVIEW_FINAL','CUSTOMER_MAIL_RETRY','TM_CASE_REVIEW','TM_CASE_ACTION','BTC_CHAIN_RECOVERY','BTC_WITHDRAWAL_PAYOUT')),
  request_id uuid NOT NULL, requester_id bigint NOT NULL REFERENCES users(id), requester_version bigint NOT NULL,
  payload_hash varchar(64) NOT NULL, expires_at timestamptz NOT NULL,
  PRIMARY KEY(kind,request_id)
 );
 -- 사용 중인 승인 이력을 보존하며 실제 새 업무 종류만 허용 목록에 추가한다. 과거 요청 내용·결정은 변환하지 않는다.
 DO $$ BEGIN
- IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='operator_approval_bindings'::regclass AND conname='operator_approval_bindings_kind_check' AND pg_get_constraintdef(oid) LIKE '%TM_CASE_ACTION%' AND pg_get_constraintdef(oid) LIKE '%TM_CASE_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%BTC_CHAIN_RECOVERY%') THEN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid='operator_approval_bindings'::regclass AND conname='operator_approval_bindings_kind_check' AND pg_get_constraintdef(oid) LIKE '%TM_CASE_ACTION%' AND pg_get_constraintdef(oid) LIKE '%TM_CASE_REVIEW%' AND pg_get_constraintdef(oid) LIKE '%BTC_CHAIN_RECOVERY%' AND pg_get_constraintdef(oid) LIKE '%BTC_WITHDRAWAL_PAYOUT%') THEN
   ALTER TABLE operator_approval_bindings DROP CONSTRAINT IF EXISTS operator_approval_bindings_kind_check;
-  ALTER TABLE operator_approval_bindings ADD CONSTRAINT operator_approval_bindings_kind_check CHECK(kind IN ('ROLE','MFA_RECOVERY','ACCESS_REVIEW','TRADING_RESTRICTION','EDD_REVIEW','EDD_ADDRESS_REVIEW','EDD_FUNDS_REVIEW','EDD_WEALTH_REVIEW','STR_REVIEW','STR_CUSTODY','RELATIONSHIP_EXIT','EXIT_RESCISSION','CUSTOMER_REVIEW_CUSTODY','CUSTOMER_REVIEW_FINAL','CUSTOMER_MAIL_RETRY','TM_CASE_REVIEW','TM_CASE_ACTION','BTC_CHAIN_RECOVERY'));
+  ALTER TABLE operator_approval_bindings ADD CONSTRAINT operator_approval_bindings_kind_check CHECK(kind IN ('ROLE','MFA_RECOVERY','ACCESS_REVIEW','TRADING_RESTRICTION','EDD_REVIEW','EDD_ADDRESS_REVIEW','EDD_FUNDS_REVIEW','EDD_WEALTH_REVIEW','STR_REVIEW','STR_CUSTODY','RELATIONSHIP_EXIT','EXIT_RESCISSION','CUSTOMER_REVIEW_CUSTODY','CUSTOMER_REVIEW_FINAL','CUSTOMER_MAIL_RETRY','TM_CASE_REVIEW','TM_CASE_ACTION','BTC_CHAIN_RECOVERY','BTC_WITHDRAWAL_PAYOUT'));
  END IF;
 END $$;
 DO $$ BEGIN

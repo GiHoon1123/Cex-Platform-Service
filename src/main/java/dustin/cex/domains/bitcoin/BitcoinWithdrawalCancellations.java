@@ -45,6 +45,9 @@ public class BitcoinWithdrawalCancellations {
             if (!Boolean.TRUE.equals(jdbc.queryForObject(
                     "SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawals WHERE id=? AND user_id=?)",Boolean.class,id,actor)))
                 throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,"출금 원본이 없습니다");
+            // 승인만 받은 요청은 아직 취소할 수 있다. 지급 워커가 실행을 확정한 뒤에는 반환 의도를 만들지 않는다.
+            if(Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_payout_commitments WHERE withdrawal_id=?)",Boolean.class,id)))
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"지급 실행이 확정되어 고객 취소할 수 없습니다");
             // 최초 예약이 거절됐으면 이미 전액 반환됐다. 같은 취소로 새 반환이나 해제를 만들지 않는다.
             if (Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_reservation_events
