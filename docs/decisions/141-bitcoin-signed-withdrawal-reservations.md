@@ -67,7 +67,7 @@
 서명 성공 후 정확한 BigDecimal 총액만 두 잔액과 복식 원장에 옮긴다. `subtract`/`add`는 기존 값을 변경하지 않고 새 값을 만든다. JS number의 이진 부동소수 금액과 다르다. `saveAndFlush`는 SQL 실행이지 최종 커밋이 아니며 뒤의 원본/감사 제약이 실패하면 전체가 롤백된다.
 
 
-출처: [BitcoinWithdrawalEvents.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalEvents.java#L97), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalEvents.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalEvents.java#L98), 현재 소스의 부분 발췌.
 
 ```java
         if (type.equals("withdrawal_rejected")) {

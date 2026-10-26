@@ -57,7 +57,7 @@
 
 현재 소스의 부분 발췌다. `ON CONFLICT ... DO NOTHING`은 같은 출금 UUID에 취소 의도 한 건만 허용한다. 고객 행 잠금 아래 실행하며 새 원본을 만든 때만 필수 감사를 추가한다. TS의 메모리 Set과 달리 프로세스 재시작과 여러 요청 사이에서도 DB가 중복을 막는다. 커밋 후에만 네트워크를 호출한다.
 
-출처: [BitcoinWithdrawalEvents.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalEvents.java#L122), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalEvents.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalEvents.java#L131), 현재 소스의 부분 발췌.
 
 ```java
         String operation="engine:"+eventId;
@@ -71,16 +71,16 @@
 
 같은 출금 ID의 선행 예약과 취소 의도를 확인한 뒤 실행하는 부분 발췌다. `refund`는 원래 총액만 LOCKED에서 AVAILABLE로 옮긴다. 메서드 호출을 따로 작성해도 상위 Kafka 리스너의 트랜잭션이 이어진다. 뒤의 기록/감사/지연 제약 실패는 반환과 수신 키까지 함께 롤백한다.
 
-출처: [BitcoinWithdrawalWorker.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalWorker.java#L60), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalWorker.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalWorker.java#L62), 현재 소스의 부분 발췌.
 
 ```java
-            var next = cancellations.processNext();
-            if(next.isEmpty())next=dispatch.processNext();
-            if (next.isEmpty()) return;
-            var outcome = next.get().transport();
+            var completion=completions.processNext();
+            EngineWithdrawalClient.Outcome outcome;
+            if(completion.isPresent())outcome=completion.get().transport();
+            else {var next = cancellations.processNext();if(next.isEmpty())next=dispatch.processNext();if(next.isEmpty())return;outcome=next.get().transport();}
 ```
 
-`Optional`이 비어 있으면 처리할 확정 취소가 없다는 뜻이다. 예약 확인을 계속 진행하므로 취소 의도가 아직 선행 예약을 받지 못했다고 예약 재확인 자체를 막지 않는다. 기존 한 장수 스레드를 사용한다. 네트워크 대기는 플랫폼 워커에 있고 Rust 매칭 코어에 넣지 않는다.
+159부터 여섯 확인 지급 완료를 먼저 처리하고, 없으면 취소 해제와 최초 예약을 차례로 확인한다. 각 `Optional`이 비어 있으면 그 단계의 처리 대상이 없다는 뜻이다. 취소 의도가 아직 선행 예약을 받지 못했다고 예약 재확인 자체를 막지 않는다. 기존 한 장수 스레드를 사용하며 네트워크 대기는 플랫폼 워커에 있고 Rust 매칭 코어에 넣지 않는다.
 
 ## 작성한 테스트와 결과
 

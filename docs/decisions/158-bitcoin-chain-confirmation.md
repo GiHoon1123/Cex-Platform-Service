@@ -55,7 +55,7 @@ Bitcoin Core31의 [`getrawtransaction`](https://bitcoincore.org/en/doc/31.0.0/rp
 
 ## 남은 한계와 다음 연결
 
-확정 머리는 아직 고객 원장을 바꾸지 않는다. 다음 단계에서 이 머리를 유일한 권한으로 삼아 엔진 `COMPLETE`를 같은 출금 ID·총액으로 영속 재확인하고, `withdrawal_completed` Kafka 금융 이벤트를 받은 트랜잭션에서만 고객 잠금 차감·고객 수수료·실제 광부 비용·수탁 자산 감소를 기록한다.
+확정 머리는 그 자체로 고객 원장을 바꾸지 않는다. 이 머리를 유일한 권한으로 삼은 엔진 `COMPLETE`와 `withdrawal_completed` Kafka 금융 정산은 [159](159-bitcoin-payout-financial-completion.md)에서 구현했다.
 
 ## 관련 커밋과 증적
 

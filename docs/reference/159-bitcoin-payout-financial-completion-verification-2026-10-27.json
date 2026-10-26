@@ -1,0 +1,16 @@
+{
+  "cycle": 159,
+  "implementation_commits": ["40fbf6d"],
+  "executed_at": "2026-10-27",
+  "verification": {
+    "completion_service_and_finance": {"tests": 9, "failures": 0, "errors": 0, "skipped": 0, "container_removed": true},
+    "withdrawal_reservation_regression": {"tests": 19, "failures": 0, "errors": 0, "skipped": 0},
+    "actual_rust_wal_kafka_regression": {"tests": 3, "failures": 0, "errors": 0, "skipped": 0, "owned_resources_removed": true},
+    "rust_core_completion": {"unique_tests": 1, "executions": 2, "failures": 0},
+    "unique_tests": 32,
+    "executions": 33,
+    "all_five_jars": "passed",
+    "single_test_core_to_kafka_to_ledger": false,
+    "mainnet_performed": false
+  }
+}
