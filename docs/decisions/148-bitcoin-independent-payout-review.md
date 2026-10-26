@@ -45,7 +45,7 @@ BTC 출금의 암호 회신·원장·현재 고객/위험 근거를 다시 검�
 
 현재 부분 발췌다. 기존 AES-GCM/HMAC으로 원본/회신을 열고 실제 이전 ID·이름·생일·계정·지급지를 현재 고객 원본과 대조한다. 과거 상대 키는 이미 만료됐을 수 있으므로 현재용 Request 생성자로 역직렬화하지 않는다. JSON 숫자는 JsonNodeFeature.USE_BIG_DECIMAL_FOR_FLOATS로 읽어 원화 곱의 끝자리를 이진 실수로 잃지 않는다.
 
-출처: [BitcoinWithdrawalPayoutReviews.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalPayoutReviews.java#L112), 현재 소스의 부분 발췌.
+출처: [BitcoinWithdrawalPayoutReviews.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinWithdrawalPayoutReviews.java#L121), 현재 소스의 부분 발췌.
 
 ```java
         if(!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawal_payout_views WHERE review_id=? AND actor_id=? AND actor_person=? AND actor_version=? AND session_id=? AND payload_hash=? AND viewed_at>=clock_timestamp()-interval '5 minutes')",Boolean.class,id,actor,p.checker().person(),p.checker().version(),sid,hash)))throw denied(HttpStatus.CONFLICT);

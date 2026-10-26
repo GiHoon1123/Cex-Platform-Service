@@ -309,3 +309,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [149. 관찰 전용 Core의 정확한 미서명 BTC 지급 거래 준비](decisions/149-bitcoin-watch-only-payout-preparation.md)
 
 - [150. 고정 수탁 입력의 영속 잠금과 실제 노드 재시작 검증](decisions/150-bitcoin-persistent-input-locks.md)
+
+- [151. 승인 원본과 미서명 후보의 불변 저장 및 입력 이중 배정 방지](decisions/151-bitcoin-durable-payout-candidates.md)
