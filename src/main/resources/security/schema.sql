@@ -3,9 +3,12 @@ CREATE TABLE IF NOT EXISTS security_audit (
  id uuid PRIMARY KEY, correlation_id uuid NOT NULL, actor_id bigint,
  action varchar(64) NOT NULL, target varchar(160) NOT NULL,
  actor_role varchar(16), actor_person uuid, source_address varchar(64) NOT NULL,
- outcome varchar(16) NOT NULL CHECK (outcome IN ('SUCCESS','DENIED','ALLOWED')),
+ outcome varchar(16) NOT NULL,
  detail varchar(500) NOT NULL, occurred_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
+-- 권한 거부와 외부 출처 장애는 다른 결과다. 기존 금융/감사 행을 바꾸지 않고 현재 허용 결과만 명시한다.
+ALTER TABLE security_audit DROP CONSTRAINT IF EXISTS security_audit_outcome_check;
+ALTER TABLE security_audit ADD CONSTRAINT security_audit_outcome_check CHECK(outcome IN ('SUCCESS','DENIED','ALLOWED','FAILURE'));
 CREATE INDEX IF NOT EXISTS security_audit_time ON security_audit(occurred_at,id);
 CREATE INDEX IF NOT EXISTS security_audit_actor_action ON security_audit(actor_id,action,occurred_at);
 CREATE OR REPLACE FUNCTION security_audit_immutable() RETURNS trigger AS $$

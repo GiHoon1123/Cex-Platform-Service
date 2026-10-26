@@ -60,6 +60,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/chain-recovery-probes").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/chain-recovery-probes/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/deposits/BTC/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/customer/withdrawals/BTC/quotes").access(audited(audit,sessions,"CUSTOMER"))
+                .requestMatchers(HttpMethod.GET,"/api/customer/withdrawals/BTC/quotes/*").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/customer/deposits/BTC","/api/customer/deposits/BTC/*").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.GET,"/api/customer/deposit-addresses/BTC").access(audited(audit,sessions,"CUSTOMER"))
                 .requestMatchers(HttpMethod.POST,"/api/customer/deposit-addresses/BTC").access(audited(audit,sessions,"CUSTOMER"))

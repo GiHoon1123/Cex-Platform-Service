@@ -16,7 +16,7 @@ public class BitcoinNetworkIdentity {
     private static final String FACTS="""
         SELECT network FROM bitcoin_deposit_addresses UNION ALL SELECT network FROM bitcoin_transaction_observations
          UNION ALL SELECT network FROM bitcoin_scan_registries UNION ALL SELECT network FROM bitcoin_block_scans
-         UNION ALL SELECT network FROM bitcoin_deposit_receipts
+         UNION ALL SELECT network FROM bitcoin_deposit_receipts UNION ALL SELECT network FROM bitcoin_withdrawal_quotes
         """;
     public BitcoinNetworkIdentity(JdbcTemplate jdbc,BitcoinSettings settings,AuditService audit,PlatformTransactionManager manager){
         this.jdbc=jdbc;this.settings=settings;this.audit=audit;tx=new TransactionTemplate(manager);tx.setTimeout(10);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
