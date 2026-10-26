@@ -36,12 +36,13 @@ public class BitcoinWithdrawalRequests {
     private final LedgerService ledger;
     private final AuditService audit;
     private final BitcoinWithdrawalDispatches dispatch;
+    private final BitcoinWithdrawalValuations valuations;
     private final TransactionTemplate tx;
 
     public BitcoinWithdrawalRequests(JdbcTemplate jdbc, BitcoinWithdrawalQuotes quotes,
             CustomerWithdrawalAuthorization authorization, UserBalanceRepository balances,
             LedgerService ledger, AuditService audit, BitcoinWithdrawalDispatches dispatch,
-            PlatformTransactionManager manager) {
+            BitcoinWithdrawalValuations valuations,PlatformTransactionManager manager) {
         this.jdbc = jdbc;
         this.quotes = quotes;
         this.authorization = authorization;
@@ -49,6 +50,7 @@ public class BitcoinWithdrawalRequests {
         this.ledger = ledger;
         this.audit = audit;
         this.dispatch = dispatch;
+        this.valuations = valuations;
         tx = new TransactionTemplate(manager);
         tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
         tx.setTimeout(10);
@@ -67,7 +69,7 @@ public class BitcoinWithdrawalRequests {
     public Receipt submit(long actor, UUID sid, UUID quoteId, CustomerWithdrawalAuthorization.Proof proof) {
         independent();
         try {
-            Receipt saved = tx.execute(t -> reserve(actor, sid, quoteId, proof));
+            tx.executeWithoutResult(t -> reserve(actor, sid, quoteId, proof));
             // 같은 UUID의 재시도와 응답 유실은 보존한 금융 원본을 다시 확인한다. HTTP 성공으로 반환을 확정하지 않는다.
             dispatch.execute(quoteId);
             return status(actor, sid, quoteId);
@@ -100,14 +102,12 @@ public class BitcoinWithdrawalRequests {
         });
     }
 
-    private Receipt reserve(long actor, UUID sid, UUID quoteId, CustomerWithdrawalAuthorization.Proof proof) {
+    private void reserve(long actor, UUID sid, UUID quoteId, CustomerWithdrawalAuthorization.Proof proof) {
         // 본인 세션을 잠근 뒤 같은 원본이 이미 있으면 서명을 다시 사용하지 않는다. 조회에도 현재 세션 검사는 남는다.
-        var historical = quotes.historicalForWithdrawal(actor, sid, quoteId);
+        quotes.historicalForWithdrawal(actor, sid, quoteId);
         if (Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM bitcoin_withdrawals WHERE id=? AND user_id=? AND session_id=?)",
                 Boolean.class, quoteId, actor, sid))) {
-            var p = historical.payload();
-            return new Receipt(quoteId, "PENDING_ENGINE", p.network(), p.address(), p.amount(),
-                p.fee(), p.total(), p.policy(), historical.payloadHash());
+            return;
         }
         var quote = quotes.requireForWithdrawal(actor, sid, quoteId);
         BigDecimal gross = ExactAmount.requirePositive(new BigDecimal(quote.payload().total()), "출금 총 차감액");
@@ -116,6 +116,8 @@ public class BitcoinWithdrawalRequests {
         BigDecimal available = ExactAmount.requireNonNegative(balance.getAvailable(), "사용 가능 BTC 잔액");
         BigDecimal locked = ExactAmount.requireNonNegative(balance.getLocked(), "잠긴 BTC 잔액");
         if (available.compareTo(gross) < 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "사용 가능 BTC 잔액을 확인하세요");
+        // 신청 전에 이미 관찰된 서버 가격만 고정한다. 가격 부재를 나중의 심사 시세로 보충하지 않는다.
+        var valuation=valuations.capture();
         // 부족한 자산에서 서명 카운터를 소비하지 않는다. 자산 확인 뒤 모든 변화는 같은 TX에서만 확정한다.
         authorization.authorize(actor, sid, quoteId, proof);
         balance.setAvailable(ExactAmount.requireNonNegative(available.subtract(gross), "예약 후 가용 BTC"));
@@ -130,10 +132,9 @@ public class BitcoinWithdrawalRequests {
             VALUES(?,?,?,?,?,?,?,?,?,?)
             """, quoteId, actor, sid, source.network(), "BTC", new BigDecimal(source.amount()),
             new BigDecimal(source.fee()), gross, quote.payloadHash(), operation);
+        valuations.record(quoteId,actor,valuation);
         audit.record(actor, "BTC_WITHDRAWAL_REQUESTED", "bitcoin-withdrawal:" + quoteId,
             "SUCCESS", quote.payloadHash());
-        return new Receipt(quoteId, "PENDING_ENGINE", source.network(), source.address(),
-            source.amount(), source.fee(), source.total(), source.policy(), quote.payloadHash());
     }
 
     private static void independent() {

@@ -18,5 +18,7 @@ public class BitcoinWithdrawalSchemaInitializer {
             .getContentAsString(StandardCharsets.UTF_8));
         jdbc.execute(new ClassPathResource("bitcoin/withdrawal-cancellation-schema.sql")
             .getContentAsString(StandardCharsets.UTF_8));
+        jdbc.execute(new ClassPathResource("bitcoin/withdrawal-valuation-schema.sql")
+            .getContentAsString(StandardCharsets.UTF_8));
     }
 }

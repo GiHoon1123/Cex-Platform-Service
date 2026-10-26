@@ -72,7 +72,7 @@ class BitcoinWithdrawalWireIntegrationTest extends BitcoinWithdrawalTestSupport 
         // 시험 기반의 HTTP 대역을 우회하고 제품의 실제 클라이언트·예약·해제 서비스를 직접 연결한다.
         actual=new EngineWithdrawalClient("http://127.0.0.1:"+PROXY_PORT,10000,SERVICE);
         var dispatch=new BitcoinWithdrawalDispatches(jdbc,users,audit,actual,manager);
-        realRequests=new BitcoinWithdrawalRequests(jdbc,quotes,authorization,balances,ledger,audit,dispatch,manager);
+        realRequests=new BitcoinWithdrawalRequests(jdbc,quotes,authorization,balances,ledger,audit,dispatch,withdrawalValuations,manager);
         realCancellations=new BitcoinWithdrawalCancellations(jdbc,users,quotes,realRequests,actual,audit,manager);
         assertFalse(org.mockito.Mockito.mockingDetails(actual).isMock());
     }

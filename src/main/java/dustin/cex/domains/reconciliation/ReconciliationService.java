@@ -136,19 +136,36 @@ public class ReconciliationService {
         jdbc.query("""
             SELECT w.id,w.user_id,w.asset,w.total,w.operation_key,w.quote_hash,q.payload_hash,
                    a.withdrawal_id authorization_id,c.consumed,e.event_type,
-                   f.withdrawal_id released,x.withdrawal_id cancellation_id
+                   f.withdrawal_id released,x.withdrawal_id cancellation_id,w.amount,w.created_at,
+                   v.withdrawal_id valuation_id,v.user_id valuation_owner,v.amount valuation_amount,v.price valuation_price,
+                   v.krw_value,v.source_hash valuation_hash,v.reference_at,v.policy valuation_policy,
+                   pr.price source_price,pr.payload_hash source_hash,pr.status source_status
               FROM bitcoin_withdrawals w JOIN bitcoin_withdrawal_quotes q ON q.id=w.id
                LEFT JOIN customer_withdrawal_authorizations a ON a.withdrawal_id=w.id
                LEFT JOIN customer_withdrawal_challenges c ON c.id=a.challenge_id
                LEFT JOIN bitcoin_withdrawal_reservation_events e ON e.withdrawal_id=w.id
                LEFT JOIN bitcoin_withdrawal_release_events f ON f.withdrawal_id=w.id
                LEFT JOIN bitcoin_withdrawal_cancellations x ON x.withdrawal_id=w.id
+               LEFT JOIN bitcoin_withdrawal_valuations v ON v.withdrawal_id=w.id
+               LEFT JOIN btc_krw_price_results pr ON pr.attempt_id=v.price_attempt_id
             """,row->{
                 UUID id=(UUID)row.getObject("id");long owner=row.getLong("user_id");
                 String asset=row.getString("asset");BigDecimal gross=row.getBigDecimal("total");
                 if(!"BTC".equals(asset)||!row.getString("quote_hash").equals(row.getString("payload_hash"))
                    ||!id.equals(row.getObject("authorization_id"))||!row.getBoolean("consumed"))
                     issue(run,"WITHDRAWAL_ORIGINAL",id.toString(),"bound signed quote","missing or different");
+                // 신청 당시의 불변 가격 원본을 비교한다. 현재 시세나 최신 머리로 과거 참고평가를 다시 계산하지 않는다.
+                if(row.getObject("valuation_id")==null||row.getLong("valuation_owner")!=owner
+                    ||!dustin.cex.domains.bitcoin.BitcoinWithdrawalValuations.POLICY.equals(row.getString("valuation_policy"))
+                    ||!"SUCCESS".equals(row.getString("source_status"))||row.getString("valuation_hash")==null
+                    ||!row.getString("valuation_hash").equals(row.getString("source_hash"))
+                    ||!row.getTimestamp("created_at").equals(row.getTimestamp("reference_at")))
+                    issue(run,"WITHDRAWAL_VALUATION",id.toString(),"original request-time reference","missing or different");
+                else {
+                    difference(run,"WITHDRAWAL_VALUATION_AMOUNT",id.toString(),row.getBigDecimal("amount"),row.getBigDecimal("valuation_amount"));
+                    difference(run,"WITHDRAWAL_VALUATION_PRICE",id.toString(),row.getBigDecimal("source_price"),row.getBigDecimal("valuation_price"));
+                    difference(run,"WITHDRAWAL_VALUATION_VALUE",id.toString(),row.getBigDecimal("amount").multiply(row.getBigDecimal("source_price")),row.getBigDecimal("krw_value"));
+                }
                 checkPostings(run,row.getString("operation_key"),List.of(
                     p(owner,"AVAILABLE",asset,gross.negate()),p(owner,"LOCKED",asset,gross)));
                 String result=row.getString("event_type");

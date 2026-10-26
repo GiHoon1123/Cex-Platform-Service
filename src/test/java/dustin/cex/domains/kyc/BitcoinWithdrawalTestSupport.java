@@ -28,6 +28,7 @@ abstract class BitcoinWithdrawalTestSupport extends CustomerMailTestSupport {
         r.add("bitcoin.rpc-password", () -> "isolated-withdrawal-reservation-password-32-bytes");
         r.add("bitcoin.wallet", () -> "watch");
         r.add("bitcoin.network", () -> "REGTEST");
+        r.add("valuation.upbit.enabled", () -> true);
     }
     @Autowired CustomerEmailVerification email;
     @Autowired CustomerMfaService factor;
@@ -37,9 +38,12 @@ abstract class BitcoinWithdrawalTestSupport extends CustomerMailTestSupport {
     @Autowired dustin.cex.domains.ledger.LedgerService ledger;
     @Autowired dustin.cex.domains.order.repository.OrderSubmissionRepository submissions;
     @Autowired dustin.cex.shared.kafka.EngineEventInbox inbox;
+    @Autowired dustin.cex.domains.bitcoin.BitcoinWithdrawalValuations withdrawalValuations;
+    @Autowired dustin.cex.domains.valuation.BitcoinKrwPriceService referencePrices;
     @Autowired dustin.cex.domains.balance.repository.UserBalanceRepository balances;
     @MockitoBean BitcoinDestinationClient destination;
     @MockitoBean EngineWithdrawalClient engineWithdrawal;
+    @MockitoBean dustin.cex.domains.valuation.BitcoinKrwPriceClient priceClient;
     SoftwareAuthenticator browser;
     static final String ADDRESS="bcrt1qwithdrawalsynthetic",SCRIPT="0014"+"ab".repeat(20);
     static final BigDecimal FUNDS=new BigDecimal("0.02000000"),GROSS=new BigDecimal("0.01000100");
@@ -67,6 +71,15 @@ abstract class BitcoinWithdrawalTestSupport extends CustomerMailTestSupport {
         balances.saveAndFlush(UserBalance.builder().userId(customer.getId()).mintAddress("BTC")
             .available(FUNDS).locked(BigDecimal.ZERO).build());
         new TransactionTemplate(manager).executeWithoutResult(t->ledger.initializeOpening());
+        // 새 예약은 신청 시점의 서버 참고가격을 요구한다. 실제 HTTP만 대역이며 원본/현재 위치 저장은 제품 서비스다.
+        when(priceClient.read()).thenAnswer(call->referenceQuote(new BigDecimal("100000000.12345678")));
+        assertEquals("SUCCESS",referencePrices.refresh().status());
+    }
+
+    dustin.cex.domains.valuation.BitcoinKrwPriceClient.Quote referenceQuote(BigDecimal price) {
+        var read=java.time.Instant.now();var provider=java.time.Instant.ofEpochMilli(read.toEpochMilli());var trade=provider.minusSeconds(1);
+        String raw=json.writeValueAsString(java.util.List.of(java.util.Map.of("market","KRW-BTC","trade_price",price,"trade_timestamp",trade.toEpochMilli(),"timestamp",provider.toEpochMilli())));
+        return new dustin.cex.domains.valuation.BitcoinKrwPriceClient.Quote(price,trade,provider,read,read,raw,sha(raw));
     }
 
     BitcoinWithdrawalQuotes.Quote price(){return quotes.prepare(customer.getId(),sid,UUID.randomUUID(),ADDRESS,"0.01");}
