@@ -17,19 +17,7 @@ import org.springframework.transaction.support.*;
 import org.springframework.web.server.ResponseStatusException;
 
 /** 실제 금융 원본과 내용 결합 서명을 사용하고 노드 입출력만 대역으로 바꾼다. */
-class BitcoinPayoutCandidatesIntegrationTest extends BitcoinWithdrawalPayoutTestSupport {
-    @Autowired BitcoinPayoutCandidates candidates;
-    @MockitoBean BitcoinPayoutClient node;
-    BitcoinWithdrawalPayoutReviews.Request approved;
-    static final String PSBT="cHNidP8BAAA=",INPUT="a".repeat(64);
-    @BeforeEach void nodeFixture()throws Exception {
-        approved=decide(proposal(),true);
-        when(node.quote()).thenAnswer(call->{assertFalse(TransactionSynchronizationManager.isActualTransactionActive());assertEquals(1,count("bitcoin_payout_preparations"));return fee();});
-        when(node.prepare(any(),any())).thenAnswer(call->{assertFalse(TransactionSynchronizationManager.isActualTransactionActive());return prepared(call.getArgument(0));});
-    }
-    BitcoinPayoutClient.FeeQuote fee(){return new BitcoinPayoutClient.FeeQuote("bitcoin-regtest","watch",new BigDecimal("2"),"b".repeat(64),200,Instant.now(),Instant.now());}
-    BitcoinPayoutClient.Prepared prepared(BitcoinPayoutClient.Command c){return new BitcoinPayoutClient.Prepared(c.withdrawalId(),BitcoinPayoutClient.POLICY,c.network(),"watch",PSBT,c.withdrawalId().toString().replace("-", "").repeat(2),c.amount().toPlainString(),"0.00000282","bcrt1qsyntheticchange","0014"+"ef".repeat(20),new BigDecimal("0.05").subtract(c.amount()).subtract(new BigDecimal("0.00000282")).toPlainString(),List.of(new BitcoinPayoutClient.Input(INPUT,0,OWN,"0014"+"cd".repeat(20),"0.05000000")),fee(),Instant.now());}
-    BitcoinPayoutCandidates.Result prepareCandidate(){return candidates.prepare(approved.payload().id());}
+class BitcoinPayoutCandidatesIntegrationTest extends BitcoinPayoutCandidatesTestSupport {
     @Test void savedCandidateBindsOriginalApprovalPsbtAndAllInputsWithoutPaying(){var r=prepareCandidate();assertEquals("SAVED",r.status());var p=r.candidate().payload();assertEquals(approved.payload().id(),p.reviewId());assertEquals(approved.payloadHash(),p.reviewHash());assertEquals(approved.payload().basis().scopeHash(),p.scopeHash());assertEquals(ADDRESS,p.funds().address());assertEquals("0.01000000",p.prepared().amount());assertEquals(1,count("bitcoin_payout_input_reservations"));assertEquals(1,count("bitcoin_payout_candidate_inputs"));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));assertEquals(0,count("bitcoin_withdrawal_cancellations"));}
     @Test void repeatedPreparationReturnsTheImmutableCandidateWithoutAnotherNodeCall(){var first=prepareCandidate();clearInvocations(node);var second=prepareCandidate();assertEquals(first.candidate(),second.candidate());assertNull(second.attemptId());verifyNoInteractions(node);assertEquals(1,count("bitcoin_payout_preparations"));}
     @Test void nodeFailurePreservesAttemptAndFailureAuditWithoutReservingInputs(){doThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE)).when(node).quote();assertEquals("NODE_UNAVAILABLE",prepareCandidate().status());assertEquals(1,count("bitcoin_payout_preparation_results"));assertEquals(0,count("bitcoin_payout_candidates"));assertEquals(0,count("bitcoin_payout_input_reservations"));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE action='BTC_PAYOUT_PREPARATION_FINISHED' AND detail='NODE_UNAVAILABLE'",Long.class));}

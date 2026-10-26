@@ -100,6 +100,19 @@ public class BitcoinPayoutCandidates {
             return finish(start,"BASIS_CHANGED",sha(prepared.psbt()));
         }
     }
+    /** 배정 귀속만 확인하는 내부 읽기다. 취소/만료 뒤의 안전한 정리에도 원래 암호 원문이 필요하다. */
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Candidate active(UUID id) {
+        var owners=jdbc.queryForList("SELECT user_id FROM bitcoin_payout_candidates WHERE id=?",Long.class,id);
+        if(owners.size()!=1)throw held();jdbc.queryForList("SELECT id FROM users WHERE id=? FOR UPDATE",owners.getFirst());return read(id);
+    }
+    /** 새 잠금은 현재 유효한 승인과 원본을 다시 검사한다. 원문을 읽을 수 있다는 사실만으로 허가하지 않는다. */
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public Candidate forLock(UUID id) {
+        var ids=jdbc.queryForList("SELECT review_id FROM bitcoin_payout_candidates WHERE id=?",UUID.class,id);if(ids.size()!=1)throw held();
+        var review=reviews.currentForPreparation(ids.getFirst());var candidate=active(id);var p=candidate.payload();
+        if(!review.payloadHash().equals(p.reviewHash())||!review.payload().basis().scopeHash().equals(p.scopeHash())||!review.payload().basis().funds().equals(p.funds()))throw held();return candidate;
+    }
     // 원래 승인 상태가 바뀌었더라도 외부 호출의 결과 사실은 보존한다. 현재 허가를 복구하거나 자금을 풀지 않는다.
     private Result finish(Start start,String status,String psbtHash){return tx.execute(t->{result(start,status,null,psbtHash);return new Result(start.attemptId(),status,null);});}
     private void result(Start start,String status,UUID candidate,String psbtHash){
