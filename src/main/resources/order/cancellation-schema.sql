@@ -21,7 +21,14 @@ CREATE TRIGGER order_cancellation_binding_check BEFORE INSERT OR UPDATE ON order
 CREATE OR REPLACE FUNCTION order_cancellation_audit() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE action_name text;required_detail text;stamp timestamptz;actor bigint;
 BEGIN
- IF TG_OP='INSERT' THEN action_name:='ORDER_CANCEL_REQUESTED';required_detail:='INTENT_ONLY_ENGINE_RESULT_FOLLOWS';stamp:=NEW.requested_at;actor:=NEW.user_id;
+ IF TG_OP='INSERT' THEN
+  -- 고객이 직접 남긴 요청과 검증된 시스템 위험 조치를 구분한다. 시스템을 고객으로 위장해 기록하지 않는다.
+  IF EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id=NEW.user_id AND a.action='ORDER_CANCEL_REQUESTED' AND a.target='order:'||NEW.order_id::text
+   AND a.outcome='SUCCESS' AND a.detail='INTENT_ONLY_ENGINE_RESULT_FOLLOWS' AND a.occurred_at>=NEW.requested_at AND length(a.source_address)>0) THEN RETURN NULL;END IF;
+  IF EXISTS(SELECT 1 FROM bitcoin_chain_risk_order_cancellations c JOIN security_audit a ON a.actor_id IS NULL AND a.action='BTC_CHAIN_RISK_CANCEL_PLANNED'
+   AND a.target='order:'||NEW.order_id::text AND a.detail=c.audit_detail AND a.outcome='SUCCESS' AND a.occurred_at>=NEW.requested_at AND length(a.source_address)>0
+   WHERE c.order_id=NEW.order_id AND c.user_id=NEW.user_id AND c.created_txid=txid_current()) THEN RETURN NULL;END IF;
+  RAISE EXCEPTION '취소 요청에는 고객의 실제 의도 또는 검증된 시스템 위험 근거·감사가 필요합니다';
  ELSE
   stamp:=NEW.updated_at;actor:=NULL;
   IF NEW.attempts>OLD.attempts THEN action_name:='ORDER_CANCEL_ATTEMPT_STARTED';required_detail:='ATTEMPT:'||NEW.attempts::text;

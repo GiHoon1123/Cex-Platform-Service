@@ -28,7 +28,7 @@ public class OrderCancellation {
     public OrderCancellation(Order order,OrderSubmission original,Instant now){
         this.order=order;orderId=java.util.Objects.requireNonNull(order.getId());userId=original.getUserId();
         if(!orderId.equals(original.getOrderId())||!userId.equals(order.getUserId()))throw new IllegalArgumentException("취소 원본과 주문이 다릅니다");
-        baseMint=original.getBaseMint();quoteMint=original.getQuoteMint();requestedAt=now;updatedAt=now;nextAttemptAt=now.plusSeconds(30);
+        baseMint=original.getBaseMint();quoteMint=original.getQuoteMint();requestedAt=now;updatedAt=now;nextAttemptAt=now;
     }
     @PreUpdate void updated(){updatedAt=Instant.now();}
     /** 즉시 요청과 워커의 중복 경쟁은 같은 행 잠금에서 정한다. 만료 뒤 중복 전달은 엔진의 영속 취소 멱등성이 처리한다. */

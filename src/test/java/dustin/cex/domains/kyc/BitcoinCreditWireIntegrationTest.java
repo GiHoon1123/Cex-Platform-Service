@@ -148,11 +148,7 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
     @Autowired dustin.cex.domains.balance.repository.UserBalanceRepository realBalances;
     @Test void cancellationResponseLossAndEngineRestartPreserveReservationUntilTheRealKafkaResult()throws Exception{
         assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,processing.processNext().orElseThrow().transportOutcome());listeners.start();settled();listeners.stop();
-        // 기존 소유 HTTP 프록시와 실제 클라이언트를 연결한다. 공급사/비금융 로그 대역과 엔진 금융 호출을 섞지 않는다.
-        var realClient=new dustin.cex.shared.http.EngineHttpClient();org.springframework.test.util.ReflectionTestUtils.setField(realClient,"serviceToken",SERVICE);org.springframework.test.util.ReflectionTestUtils.setField(realClient,"engineBaseUrl","http://127.0.0.1:"+PROXY_PORT);org.springframework.test.util.ReflectionTestUtils.setField(realClient,"timeoutMs",10000);realClient.init();
-        var realDispatch=new dustin.cex.domains.order.service.OrderDispatchService(orderDispatches,orderSources,realClient,manager);
-        var realCancellation=new dustin.cex.domains.order.service.OrderCancellationService(orderRows,orderSources,orderCancellations,realClient,trading,audit,manager);
-        var realOrders=new dustin.cex.domains.order.service.OrderService(orderRows,orderSources,realBalances,realCancellation,producer,manager,fees,orderDispatches,realDispatch,ledger,trading);
+        var services=realOrderServices();var realOrders=services.orders();var realCancellation=services.cancellations();
         when(fees.getFeeConfig("BTC","USDT")).thenReturn(dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).feeType("both").isActive(true).build());
         var command=dustin.cex.domains.order.model.dto.CreateOrderRequest.builder().baseMint("BTC").quoteMint("USDT").orderType("sell").orderSide("limit").price(new BigDecimal("100000")).amount(new BigDecimal("0.01")).build();
         long order=Long.parseLong(realOrders.createOrder(customer.getId(),UUID.randomUUID(),command).response().getOrder().getId());org.mockito.Mockito.verify(producer,times(1)).publishOrderCreated(anyString());clearInvocations(producer);
@@ -168,4 +164,35 @@ class BitcoinCreditWireIntegrationTest extends CodeVaspTransferTestSupport {
         amount("0.12345678","AVAILABLE");amount("0","LOCKED");// 호가 스냅샷 수신 키도 같은 표에 저장된다. 금융 이벤트만 별도로 세어 재발행이 새 금융 결과를 만들지 않았는지 확인한다.
         assertEquals(2,jdbc.queryForObject("SELECT count(*) FROM engine_event_receipts WHERE event_id NOT LIKE '%:market'",Long.class));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM ledger_transactions WHERE kind='CANCELLED'",Long.class));assertEquals("MATCHED",financialReconciliation.run().status());
     }
+    record RealOrderServices(dustin.cex.domains.order.service.OrderService orders,dustin.cex.domains.order.service.OrderCancellationService cancellations,BitcoinChainRiskOrderCancellations risk){}
+    RealOrderServices realOrderServices(){
+        // 기존 소유 HTTP 프록시와 실제 클라이언트를 연결한다. 공급사/비금융 로그 대역과 엔진 금융 호출을 섞지 않는다.
+        var realClient=new dustin.cex.shared.http.EngineHttpClient();org.springframework.test.util.ReflectionTestUtils.setField(realClient,"serviceToken",SERVICE);org.springframework.test.util.ReflectionTestUtils.setField(realClient,"engineBaseUrl","http://127.0.0.1:"+PROXY_PORT);org.springframework.test.util.ReflectionTestUtils.setField(realClient,"timeoutMs",10000);realClient.init();
+        var realDispatch=new dustin.cex.domains.order.service.OrderDispatchService(orderDispatches,orderSources,realClient,manager);
+        var realCancellation=new dustin.cex.domains.order.service.OrderCancellationService(orderRows,orderSources,orderCancellations,realClient,trading,audit,manager);
+        var realOrders=new dustin.cex.domains.order.service.OrderService(orderRows,orderSources,realBalances,realCancellation,producer,manager,fees,orderDispatches,realDispatch,ledger,trading);
+        var risk=new BitcoinChainRiskOrderCancellations(jdbc,users,orderRows,orderCancellations,realCancellation,audit,manager);
+        return new RealOrderServices(realOrders,realCancellation,risk);
+    }
+    @Test void unresolvedChainRiskReachesTheRealEngineAndOnlyKafkaReleasesTheReservation()throws Exception{
+        assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,processing.processNext().orElseThrow().transportOutcome());listeners.start();settled();listeners.stop();
+        var services=realOrderServices();
+        when(fees.getFeeConfig("BTC","USDT")).thenReturn(dustin.cex.domains.fee.model.entity.FeeConfig.builder().feeRate(new BigDecimal("0.001")).feeType("both").isActive(true).build());
+        var command=dustin.cex.domains.order.model.dto.CreateOrderRequest.builder().baseMint("BTC").quoteMint("USDT").orderType("sell").orderSide("limit").price(new BigDecimal("100000")).amount(new BigDecimal("0.01")).build();
+        long order=Long.parseLong(services.orders().createOrder(customer.getId(),UUID.randomUUID(),command).response().getOrder().getId());org.mockito.Mockito.verify(producer).publishOrderCreated(anyString());clearInvocations(producer);
+        var normal=node.inspect(receipt.txid());when(node.inspect(receipt.txid())).thenReturn(new BitcoinDepositReader.Observation(normal.network(),normal.txid(),BitcoinDepositReader.Status.UNCONFIRMED,0,false,false,null,null,normal.tipHash(),normal.tipHeight(),normal.outputs()));
+        long observation=observations.refresh(receipt.txid()).id();long ledgerBefore=rows("ledger_entries");
+        var plan=services.risk().stageNext().orElseThrow();assertEquals(order,plan.orderId());assertEquals(observation,plan.observationId());assertTrue(services.risk().stageNext().isEmpty());assertEquals(ledgerBefore,rows("ledger_entries"));
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE actor_id IS NULL AND action='BTC_CHAIN_RISK_CANCEL_PLANNED' AND target=?",Long.class,"order:"+order));
+        // 고객 요청과 구분하는 시스템 조치다. 고객의 취소 클릭이나 원장 반전을 만들어 내지 않는다.
+        assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM security_audit WHERE action='ORDER_CANCEL_REQUESTED'",Long.class));
+        assertTrue(services.cancellations().retryNext());assertNotNull(orderCancellations.findById(order).orElseThrow().getAcknowledgedAt());assertEquals("pending",orderRows.findById(order).orElseThrow().getStatus());amount("0.01","LOCKED");
+        var journal=actualAudit.page(0,null,null);assertEquals(2,journal.path("events").size());assertEquals("order_cancelled",json.readTree(journal.path("events").get(1).asString()).path("event_type").asString());
+        listeners.start();await(()->"cancelled".equals(orderRows.findById(order).orElseThrow().getStatus()),20);amount("0.12345678","AVAILABLE");amount("0","LOCKED");
+        assertEquals(1,rows("bitcoin_chain_risk_order_cancellations"));assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM ledger_transactions WHERE kind='CANCELLED'",Long.class));assertEquals("MATCHED",financialReconciliation.run().status());
+        // 정상 관찰만으로 위험은 지워지지 않는다. 증거 작성은 가능하지만 별도 승인 전에는 거래 제한이 남는다.
+        when(node.inspect(receipt.txid())).thenReturn(normal);assertEquals("READY",recoveryProofs.prepare(maker.user().getId(),maker.sid(),receipt.id(),UUID.randomUUID()).state());assertEquals(1,rows("bitcoin_credit_chain_risks"));
+        new org.springframework.transaction.support.TransactionTemplate(manager).executeWithoutResult(t->assertFalse(eligibility.permitted(users.lockById(customer.getId()).orElseThrow())));
+    }
+
 }

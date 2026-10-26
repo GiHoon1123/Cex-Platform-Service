@@ -35,11 +35,7 @@ public class OrderCancellationService {
             var owned=orders.findByUserIdAndIdForUpdate(userId,orderId).orElseThrow(()->new IllegalArgumentException("본인 주문을 확인하세요"));
             if("cancelled".equals(owned.getStatus()))return false;
             if(TERMINAL.contains(owned.getStatus()))throw new IllegalArgumentException("종료된 주문은 취소할 수 없습니다");
-            var existing=cancellations.findForUpdate(orderId);
-            if(existing.isEmpty()){
-                var original=submissions.findByOrderId(orderId).orElseThrow(()->new IllegalStateException("취소할 불변 접수 원본이 없습니다"));
-                cancellations.saveAndFlush(new OrderCancellation(owned,original,Instant.now()));
-            }
+            ensureQueued(owned);
             access.recordCancellationIntent(userId,orderId);return true;
         }));
         if(pending){
@@ -47,6 +43,23 @@ public class OrderCancellationService {
             // 그 접수를 되돌리지 않는다. 응답은 계속 접수202이며 확인되지 않은 시도는 저장된 일정으로 이어간다.
             try{attempt(orderId,true);}catch(RuntimeException pendingDelivery){log.error("취소 요청 접수는 보존됐으나 즉시 재확인 기록을 완료하지 못했습니다: orderId={}",orderId);}
         }
+    }
+    /**
+     * 검증한 업무가 같은 TX에 취소 원본만 예약하는 내부 경계다. 외부 호출은 하지 않는다.
+     * 권한 근거/필수 감사는 호출 업무가 함께 남겨야 하며 DB 제약이 빠진 근거의 커밋을 거부한다.
+     */
+    @Transactional(propagation=Propagation.MANDATORY)
+    public boolean stage(long userId,long orderId){
+        if(!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("취소 예약은 검증 업무의 트랜잭션 안에서 실행하세요");
+        var owned=orders.findByUserIdAndIdForUpdate(userId,orderId).orElseThrow(()->new IllegalArgumentException("취소할 원본 주문을 확인하세요"));
+        if(TERMINAL.contains(owned.getStatus()))return false;
+        return ensureQueued(owned);
+    }
+    private boolean ensureQueued(Order owned){
+        if(cancellations.findForUpdate(owned.getId()).isPresent())return false;
+        var original=submissions.findByOrderId(owned.getId()).orElseThrow(()->new IllegalStateException("취소할 불변 접수 원본이 없습니다"));
+        // 최초 요청은 즉시 재확인할 수 있다. 실제 전송 청구가 성공했을 때만30초 임대가 시작된다.
+        cancellations.saveAndFlush(new OrderCancellation(owned,original,Instant.now()));return true;
     }
     private void attempt(long id,boolean immediate){
         Claim claim=tx.execute(t->{

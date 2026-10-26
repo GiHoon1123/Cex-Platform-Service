@@ -73,4 +73,19 @@ class OrderCancellationTest {
             try{assertThat(orders.cancelOrder(101L,order.getId()).getOrder().getStatus()).isEqualTo("pending");}finally{release.countDown();}assertThat(first.get(5,TimeUnit.SECONDS).getOrder().getStatus()).isEqualTo("pending");
         }assertThat(cancellations.count()).isEqualTo(1);verify(engine,times(1)).cancelOrder(order.getId(),101L,"BTC/USDT");
     }
+    @Test void theOutputWorkerMayClaimTheNewIntentBeforeTheApiWithoutASecondHttpCall()throws Exception{
+        // 커밋 직후 별도 스레드가 먼저 선점해도 API가 같은 명령을 중복 전송하지 않아야 한다.
+        var entered=new CountDownLatch(1);var release=new CountDownLatch(1);
+        var task=new java.util.concurrent.atomic.AtomicReference<Future<Boolean>>();
+        try(var pool=Executors.newSingleThreadExecutor()){
+            when(engine.cancelOrder(order.getId(),101L,"BTC/USDT")).thenAnswer(call->{entered.countDown();assertThat(release.await(5,TimeUnit.SECONDS)).isTrue();return true;});
+            doAnswer(call->{TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){
+                @Override public void afterCommit(){task.set(pool.submit(service::retryNext));try{assertThat(entered.await(3,TimeUnit.SECONDS)).isTrue();}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IllegalStateException("격리 취소 선점 검증 중단",e);}}
+            });return null;}).when(access).recordCancellationIntent(101L,order.getId());
+            try{assertThat(orders.cancelOrder(101L,order.getId()).getOrder().getStatus()).isEqualTo("pending");assertThat(cancellations.findById(order.getId()).orElseThrow().getAttempts()).isEqualTo(1);}finally{release.countDown();}
+            assertThat(task.get().get(5,TimeUnit.SECONDS)).isTrue();
+        }finally{release.countDown();}
+        assertThat(cancellations.count()).isEqualTo(1);assertThat(cancellations.findById(order.getId()).orElseThrow().getAcknowledgedAt()).isNotNull();verify(engine,times(1)).cancelOrder(order.getId(),101L,"BTC/USDT");
+    }
+
 }
