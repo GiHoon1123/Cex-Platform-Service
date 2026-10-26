@@ -204,3 +204,11 @@ tasks.register('bitcoinSignerJar', org.springframework.boot.gradle.tasks.bundlin
     mainClass = 'dustin.signer.BitcoinSignerApplication'
     classpath = sourceSets.main.runtimeClasspath
 }
+
+// 서명 결과를 공개망에 내보내는 권한은 개인키 서명 프로세스와 분리한 실행 파일에만 제공한다.
+tasks.register('bitcoinBroadcasterJar', org.springframework.boot.gradle.tasks.bundling.BootJar) {
+    archiveClassifier = 'bitcoin-broadcaster'
+    targetJavaVersion = JavaVersion.VERSION_21
+    mainClass = 'dustin.broadcaster.BitcoinBroadcasterApplication'
+    classpath = sourceSets.main.runtimeClasspath
+}
