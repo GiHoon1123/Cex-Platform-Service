@@ -1,6 +1,6 @@
 package dustin.signer;
 
-import dustin.cex.domains.cdd.CddCrypto;
+import dustin.cex.domains.bitcoin.BitcoinSignerEnvelopeCrypto;
 import dustin.cex.domains.security.AuditService;
 import java.util.Map;
 import org.springframework.boot.*;
@@ -18,11 +18,11 @@ import tools.jackson.databind.ObjectMapper;
     org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,
     org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class})
 @EnableScheduling
-@Import({CddCrypto.class,AuditService.class})
+@Import({BitcoinSignerEnvelopeCrypto.class,AuditService.class})
 public class BitcoinSignerApplication {
     @Bean BitcoinSignerSettings signerSettings(org.springframework.core.env.Environment e){return new BitcoinSignerSettings(e.getRequiredProperty("bitcoin.signer.rpc-url"),e.getRequiredProperty("bitcoin.signer.rpc-user"),e.getRequiredProperty("bitcoin.signer.rpc-password"),e.getRequiredProperty("bitcoin.signer.wallet"),e.getProperty("bitcoin.signer.network","REGTEST"));}
     @Bean(destroyMethod="close") BitcoinSignerRpcClient signerRpc(BitcoinSignerSettings settings,ObjectMapper json){return new BitcoinSignerRpcClient(settings,json);}
-    @Bean BitcoinSigningService signing(JdbcTemplate jdbc,CddCrypto crypto,ObjectMapper json,AuditService audit,BitcoinSignerRpcClient rpc,PlatformTransactionManager manager){return new BitcoinSigningService(jdbc,crypto,json,audit,rpc,manager);}
+    @Bean BitcoinSigningService signing(JdbcTemplate jdbc,BitcoinSignerEnvelopeCrypto crypto,ObjectMapper json,AuditService audit,BitcoinSignerRpcClient rpc,PlatformTransactionManager manager){return new BitcoinSigningService(jdbc,crypto,json,audit,rpc,manager);}
     @Bean BitcoinSignerWorker worker(BitcoinSigningService signing){return new BitcoinSignerWorker(signing);}
     public static void main(String[] args){
         var app=new SpringApplication(BitcoinSignerApplication.class);app.setWebApplicationType(WebApplicationType.NONE);

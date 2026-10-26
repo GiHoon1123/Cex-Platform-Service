@@ -44,6 +44,8 @@ abstract class EddTestSupport {
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r) {
         r.add("customer-mail.dispatch-enabled",()->false);
         r.add("edd.evidence-key",()->"AwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        r.add("bitcoin.signer.envelope-encryption-key",()->"BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        r.add("bitcoin.signer.envelope-fingerprint-key",()->"BQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         r.add("spring.datasource.url",()->System.getenv("CEX_TEST_DATABASE_URL"));r.add("spring.datasource.driver-class-name",()->"org.postgresql.Driver");
         r.add("spring.datasource.username",()->"root");r.add("spring.datasource.password",()->"1234");
         r.add("spring.jpa.properties.hibernate.dialect",()->"org.hibernate.dialect.PostgreSQLDialect");r.add("spring.jpa.hibernate.ddl-auto",()->"create-drop");

@@ -29,8 +29,8 @@ public class BitcoinPayoutExecutionRecords {
         public Payload {sources=List.copyOf(sources);}
         @Override public String toString(){return "BitcoinPayoutExecution[고정 지급 원본 생략]";}
     }
-    private final JdbcTemplate jdbc;private final CddCrypto crypto;private final ObjectMapper json;private final AuditService audit;
-    public BitcoinPayoutExecutionRecords(JdbcTemplate jdbc,CddCrypto crypto,ObjectMapper json,AuditService audit){this.jdbc=jdbc;this.crypto=crypto;this.json=json;this.audit=audit;}
+    private final JdbcTemplate jdbc;private final CddCrypto crypto;private final BitcoinSignerEnvelopeCrypto signer;private final ObjectMapper json;private final AuditService audit;
+    public BitcoinPayoutExecutionRecords(JdbcTemplate jdbc,CddCrypto crypto,BitcoinSignerEnvelopeCrypto signer,ObjectMapper json,AuditService audit){this.jdbc=jdbc;this.crypto=crypto;this.signer=signer;this.json=json;this.audit=audit;}
     /** 호출자는 관련 사용자 잠금과 현재 검토·입력 출처 검사를 끝낸 상태여야 한다. 키/노드는 여기서 호출하지 않는다. */
     public void create(BitcoinWithdrawalPayoutReviews.Request review,BitcoinPayoutCandidates.Candidate candidate,List<BitcoinPayoutInputSources.Certificate> sources){
         var p=candidate.payload();var f=p.funds();var prepared=p.prepared();var lock=lock(candidate);
@@ -51,7 +51,8 @@ public class BitcoinPayoutExecutionRecords {
              VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
             """,f.withdrawalId(),review.payload().id(),p.id(),f.customerId(),prepared.network(),prepared.unsignedTxid(),lock.get("id"),exposure,crypto.keyId(),crypto.encrypt(f.customerId(),f.withdrawalId(),raw.getBytes(StandardCharsets.UTF_8)),mac,Timestamp.from(at));
         // 원래 출금 UUID가 서명 요청의 안정적 식별자다. 재확인 때 새 요청/금액/목적지를 만들지 않는다.
-        jdbc.update("INSERT INTO bitcoin_payout_sign_requests(id,withdrawal_id,execution_mac) VALUES(?,?,?)",f.withdrawalId(),f.withdrawalId(),mac);
+        String signerMac=signer.fingerprint(raw);byte[] signerCipher=signer.encrypt(f.customerId(),f.withdrawalId(),raw.getBytes(StandardCharsets.UTF_8));
+        jdbc.update("INSERT INTO bitcoin_payout_sign_requests(id,withdrawal_id,execution_mac,signer_key_id,ciphertext,content_mac) VALUES(?,?,?,?,?,?)",f.withdrawalId(),f.withdrawalId(),mac,signer.keyId(),signerCipher,signerMac);
         audit.record(null,"BTC_NATIVE_PAYOUT_AUTHORIZED","bitcoin-withdrawal:"+f.withdrawalId(),"SUCCESS",mac);
         audit.record(null,"BTC_NATIVE_SIGN_REQUESTED","bitcoin-sign-request:"+f.withdrawalId(),"SUCCESS",mac);
     }

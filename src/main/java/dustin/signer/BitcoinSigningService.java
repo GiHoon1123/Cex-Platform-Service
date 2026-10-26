@@ -1,7 +1,6 @@
 package dustin.signer;
 
-import dustin.cex.domains.bitcoin.BitcoinPayoutExecutionRecords;
-import dustin.cex.domains.cdd.CddCrypto;
+import dustin.cex.domains.bitcoin.*;
 import dustin.cex.domains.security.AuditService;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
@@ -16,8 +15,8 @@ public final class BitcoinSigningService {
     public record Outcome(UUID request,UUID attempt,String status,String txid){}
     public record StoredSigned(String txid,String rawTransaction){}
     private record Start(UUID request,UUID attempt,long owner,String executionMac,BitcoinPayoutExecutionRecords.Payload payload){}
-    private final JdbcTemplate jdbc;private final CddCrypto crypto;private final ObjectMapper json;private final AuditService audit;private final BitcoinSignerRpcClient node;private final TransactionTemplate tx;
-    public BitcoinSigningService(JdbcTemplate jdbc,CddCrypto crypto,ObjectMapper json,AuditService audit,BitcoinSignerRpcClient node,PlatformTransactionManager manager){
+    private final JdbcTemplate jdbc;private final BitcoinSignerEnvelopeCrypto crypto;private final ObjectMapper json;private final AuditService audit;private final BitcoinSignerRpcClient node;private final TransactionTemplate tx;
+    public BitcoinSigningService(JdbcTemplate jdbc,BitcoinSignerEnvelopeCrypto crypto,ObjectMapper json,AuditService audit,BitcoinSignerRpcClient node,PlatformTransactionManager manager){
         this.jdbc=jdbc;this.crypto=crypto;this.json=json;this.audit=audit;this.node=node;tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Optional<Outcome> processNext(){
@@ -26,7 +25,8 @@ public final class BitcoinSigningService {
     }
     private Start start(){
         var rows=jdbc.queryForList("""
-            SELECT q.id request_id,q.execution_mac,e.* FROM bitcoin_payout_sign_requests q
+            SELECT q.id request_id,q.execution_mac,q.signer_key_id,q.ciphertext signer_ciphertext,q.content_mac signer_content_mac,
+                   e.withdrawal_id,e.review_id,e.candidate_id,e.user_id,e.network,e.unsigned_txid,e.authorized_at FROM bitcoin_payout_sign_requests q
              JOIN bitcoin_payout_executions e ON e.withdrawal_id=q.withdrawal_id
              WHERE NOT EXISTS(SELECT 1 FROM bitcoin_payout_sign_heads h WHERE h.request_id=q.id)
               AND(SELECT count(*) FROM bitcoin_payout_sign_attempts a WHERE a.request_id=q.id)<100
@@ -43,7 +43,7 @@ public final class BitcoinSigningService {
     }
     private Outcome finish(Start start,BitcoinSignerRpcClient.Signed signed){
         return tx.execute(t->{var current=lock(start);if(jdbc.queryForObject("SELECT count(*) FROM bitcoin_payout_sign_heads WHERE request_id=?",Long.class,start.request())!=0)throw new IllegalStateException("이미 확정한 서명 요청입니다");
-            String mac=crypto.fingerprint("btc-native-signed-transaction-v1",signed.rawTransaction());
+            String mac=crypto.fingerprint(signed.rawTransaction());
             byte[] cipher=crypto.encrypt(start.owner(),start.attempt(),signed.rawTransaction().getBytes(StandardCharsets.UTF_8));
             jdbc.update("INSERT INTO bitcoin_payout_sign_results(attempt_id,status,txid,key_id,ciphertext,content_mac) VALUES(?,'SIGNED',?,?,?,?)",start.attempt(),signed.txid(),crypto.keyId(),cipher,mac);
             jdbc.update("INSERT INTO bitcoin_payout_sign_heads(request_id,attempt_id,txid) VALUES(?,?,?)",start.request(),start.attempt(),signed.txid());
@@ -63,18 +63,18 @@ public final class BitcoinSigningService {
             """,request);if(rows.size()!=1)throw new IllegalStateException("확정 서명 결과가 없습니다");var row=rows.getFirst();
             if(!"SIGNED".equals(row.get("status"))||!crypto.keyId().equals(row.get("key_id")))throw new IllegalStateException("서명 결과 원본을 확인할 수 없습니다");
             String raw=new String(crypto.decrypt(((Number)row.get("user_id")).longValue(),(UUID)row.get("attempt_id"),(byte[])row.get("ciphertext")),StandardCharsets.UTF_8);
-            if(!crypto.fingerprint("btc-native-signed-transaction-v1",raw).equals(row.get("content_mac")))throw new IllegalStateException("서명 결과 원본을 확인할 수 없습니다");
+            if(!crypto.fingerprint(raw).equals(row.get("content_mac")))throw new IllegalStateException("서명 결과 원본을 확인할 수 없습니다");
             return new StoredSigned((String)row.get("txid"),raw);});
     }
     private Map<String,Object> lock(Start start){
-        var rows=jdbc.queryForList("SELECT q.execution_mac,e.* FROM bitcoin_payout_sign_requests q JOIN bitcoin_payout_executions e ON e.withdrawal_id=q.withdrawal_id WHERE q.id=? FOR UPDATE OF q",start.request());
+        var rows=jdbc.queryForList("SELECT q.execution_mac,q.signer_key_id,q.ciphertext signer_ciphertext,q.content_mac signer_content_mac,e.withdrawal_id,e.review_id,e.candidate_id,e.user_id,e.network,e.unsigned_txid,e.authorized_at FROM bitcoin_payout_sign_requests q JOIN bitcoin_payout_executions e ON e.withdrawal_id=q.withdrawal_id WHERE q.id=? FOR UPDATE OF q",start.request());
         if(rows.size()!=1||!start.executionMac().equals(rows.getFirst().get("execution_mac"))||!start.payload().equals(read(rows.getFirst())))throw new IllegalStateException("서명 요청 원본이 변경됐습니다");return rows.getFirst();
     }
     private BitcoinPayoutExecutionRecords.Payload read(Map<String,Object> row){
         try{
             long owner=((Number)row.get("user_id")).longValue();UUID withdrawal=(UUID)row.get("withdrawal_id");
-            if(!crypto.keyId().equals(row.get("key_id")))throw new IllegalStateException();String raw=new String(crypto.decrypt(owner,withdrawal,(byte[])row.get("ciphertext")),StandardCharsets.UTF_8);
-            if(!crypto.fingerprint("btc-native-payout-execution-v1",raw).equals(row.get("content_mac"))||!row.get("content_mac").equals(row.get("execution_mac")))throw new IllegalStateException();
+            if(!crypto.keyId().equals(row.get("signer_key_id")))throw new IllegalStateException();String raw=new String(crypto.decrypt(owner,withdrawal,(byte[])row.get("signer_ciphertext")),StandardCharsets.UTF_8);
+            if(!crypto.fingerprint(raw).equals(row.get("signer_content_mac")))throw new IllegalStateException();
             var p=json.readValue(raw,BitcoinPayoutExecutionRecords.Payload.class);
             if(!BitcoinPayoutExecutionRecords.POLICY.equals(p.policy())||!withdrawal.equals(p.withdrawalId())||p.funds().customerId()!=owner
                     ||!p.reviewId().equals(row.get("review_id"))||!p.candidateId().equals(row.get("candidate_id"))||!p.prepared().network().equals(row.get("network"))

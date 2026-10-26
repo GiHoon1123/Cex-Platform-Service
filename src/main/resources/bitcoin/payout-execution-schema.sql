@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS bitcoin_payout_executions (
 );
 CREATE TABLE IF NOT EXISTS bitcoin_payout_sign_requests (
  id uuid PRIMARY KEY,withdrawal_id uuid NOT NULL UNIQUE REFERENCES bitcoin_payout_executions(withdrawal_id),execution_mac varchar(64) NOT NULL,
- requested_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),CHECK(id=withdrawal_id)
+ signer_key_id varchar(64) NOT NULL,ciphertext bytea NOT NULL,content_mac varchar(64) NOT NULL,
+ requested_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),CHECK(id=withdrawal_id),
+ CHECK(signer_key_id~'^[0-9a-f]{64}$' AND content_mac~'^[0-9a-f]{64}$' AND octet_length(ciphertext) BETWEEN 28 AND 1048604)
 );
 CREATE TABLE IF NOT EXISTS bitcoin_payout_sign_attempts (
  id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES bitcoin_payout_sign_requests(id),position integer NOT NULL CHECK(position BETWEEN 1 AND 100),
