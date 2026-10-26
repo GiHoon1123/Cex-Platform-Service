@@ -39,7 +39,7 @@ ALTER TABLE bitcoin_payout_candidates DROP CONSTRAINT IF EXISTS bitcoin_payout_c
 
 `ALTER TABLE ... DROP CONSTRAINT`는 해당 고유 규칙만 제거한다. 기존 행이나 고객 금액을 삭제하지 않는다. 검토별 후보 고유성, 준비 시도 고유성, 활성 후보/입력 배정 기본 키, 외래 키, 불변/필수 감사 제약은 그대로 적용된다. 호환 폴백이나 별도 저장 경로를 추가하지 않았다.
 
-출처: [BitcoinPayoutCandidateReapprovalIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinPayoutCandidateReapprovalIntegrationTest.java#L31), 현재 소스의 부분 발췌.
+출처: [BitcoinPayoutCandidateReapprovalIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinPayoutCandidateReapprovalIntegrationTest.java#L30), 현재 소스의 부분 발췌.
 
 ```java
     @Test void aNewApprovalReusesTheUnsignedIdentityOnlyAfterTheOldAllocationIsReleased()throws Exception {

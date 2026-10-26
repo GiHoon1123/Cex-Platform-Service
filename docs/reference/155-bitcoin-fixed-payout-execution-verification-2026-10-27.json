@@ -1,0 +1,20 @@
+{
+  "cycle": 155,
+  "implementation_commit": "7cf60b4199e2a8d6419cf9461fda6a38cfb2e275",
+  "executed_at": "2026-10-27",
+  "verification": {
+    "new_execution": {"tests": 12, "failures": 0, "errors": 0, "skipped": 0, "container_removed": true},
+    "existing_reviews": {"tests": 34, "failures": 0, "errors": 0, "skipped": 0, "container_removed": true},
+    "existing_candidates": {"tests": 17, "failures": 0, "errors": 0, "skipped": 0, "container_removed": true},
+    "selected_wallet": {"tests": 1, "failures": 0, "errors": 0, "skipped": 0, "container_removed": true},
+    "existing_reapproval": {"tests": 3, "failures": 0, "errors": 0, "skipped": 0, "container_removed": true},
+    "unique_tests": 67,
+    "executions": 67,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "boot_jar": "passed",
+    "operator_admin_jar": "passed",
+    "real_private_key_or_broadcast": false
+  }
+}

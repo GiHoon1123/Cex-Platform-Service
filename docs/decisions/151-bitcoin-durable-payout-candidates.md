@@ -30,7 +30,7 @@
 
 `BitcoinWithdrawalPayoutReviews.currentForPreparation`은 이미 실제 내용 결합 서명으로 승인된 검토의 현재 담당자·다른 승인자·고객을 순서대로 잠근다. 암호 원본, 최신 승인·수명·미실행, 현재 KYC/CDD/거래 자격·원장·위험 범위를 다시 검사한다. 가짜 운영자 세션을 만들지 않고 내부 승인 권한을 검사한다.
 
-출처: [BitcoinPayoutCandidates.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPayoutCandidates.java#L48), 현재 소스의 부분 발췌.
+출처: [BitcoinPayoutCandidates.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPayoutCandidates.java#L49), 현재 소스의 부분 발췌.
 
 ```java
     public Result prepare(UUID reviewId) {
@@ -50,7 +50,7 @@
 
 `TransactionTemplate.execute` 안에서 현재 승인을 검사한다. 기존 후보가 있으면 암호 원본의 검토 해시·경제 범위·금융 원본까지 대조하고 그대로 반환한다. 새 시도는 별도 UUID로 노드 호출 전에 저장한다. TypeScript의 Promise 완료와 달리 이 콜백이 반환돼 DB 커밋까지 성공해야 다음 외부 호출로 넘어간다.
 
-출처: [BitcoinPayoutCandidates.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPayoutCandidates.java#L88), 현재 소스의 부분 발췌.
+출처: [BitcoinPayoutCandidates.java](../../src/main/java/dustin/cex/domains/bitcoin/BitcoinPayoutCandidates.java#L89), 현재 소스의 부분 발췌.
 
 ```java
                 var inputs=prepared.inputs().stream().sorted(Comparator.comparing(BitcoinPayoutClient.Input::txid).thenComparingInt(BitcoinPayoutClient.Input::vout)).toList();
