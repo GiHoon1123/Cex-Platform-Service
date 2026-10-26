@@ -56,7 +56,7 @@ sequenceDiagram
 
 ## 실제 코드·문법과 검증 경계
 
-출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L112), 현재 소스의 부분 발췌.
+출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L113), 현재 소스의 부분 발췌.
 
 ```java
         var result=processing.processNext().orElseThrow();assertEquals(EngineDepositClient.Outcome.DURABLY_CREDITED,result.transportOutcome());assertEquals("WAITING_EVENT",result.state());pendingOnly();
@@ -66,7 +66,7 @@ sequenceDiagram
 
 대역 EngineDepositClient를 주입하지 않고 Spring의 실제 클라이언트인지 별도 확인한다. 현재 금융 조건/권한·시도를 거친 결과가 WAITING_EVENT여도 원장에는 PENDING만 있어야 한다. listeners.start() 뒤 실제 Kafka 금융 수신을 기다린다. Java var는 컴파일 시 타입 추론이며 TypeScript any와 달리 타입 검사를 없애지 않는다.
 
-출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L104), 현재 소스의 부분 발췌.
+출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L105), 현재 소스의 부분 발췌.
 
 ```java
         if(engineProcess!=null){engineProcess.destroy();if(!engineProcess.waitFor(15,TimeUnit.SECONDS)){engineProcess.destroyForcibly();assertTrue(engineProcess.waitFor(10,TimeUnit.SECONDS));}}
@@ -77,7 +77,7 @@ sequenceDiagram
 
 이 시험이 생성한 Rust 프로세스만 강제 종료한다. startEngine은 같은 임시 WAL 경로로 다시 실행한다. 기존 전달의5초 간격을 실제 기다리며 금융 원본/이력을 수정해 재시도 조건을 우회하지 않는다. 같은 입금 ID와 이벤트 원문이 복구 후 유지되어야 한다.
 
-출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L116), 현재 소스의 부분 발췌.
+출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L117), 현재 소스의 부분 발췌.
 
 ```java
         try(var admin=AdminClient.create(Map.of("bootstrap.servers",System.getenv("CEX_WIRE_KAFKA")))){await(()->{try{var offset=admin.listConsumerGroupOffsets("cex-consumer-group").partitionsToOffsetAndMetadata().get(2,TimeUnit.SECONDS).get(new TopicPartition("order-events",0));return offset!=null&&offset.offset()>duplicate.offset();}catch(Exception waiting){return false;}},20);}
@@ -86,7 +86,7 @@ sequenceDiagram
 
 실제 금융 소비 그룹의 커밋 위치가 재발행 오프셋을 넘을 때까지 기다린다. 잔액이 잠시 같다는 관찰만으로 중복 처리 통과를 주장하지 않는다. try-with-resources는 블록 종료 시 AdminClient를 닫는 문법이며, await는 시험의 유한 대기다.
 
-출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L128), 현재 소스의 부분 발췌.
+출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L129), 현재 소스의 부분 발췌.
 
 ```java
         var attempted=new AtomicBoolean();

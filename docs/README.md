@@ -279,3 +279,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [133. 체인 복구 근거를 실제 저널·원장·독립 노드 대사에 결합](decisions/133-bitcoin-chain-recovery-proofs.md)
 
 - [134. 독립 내용 서명으로 복구한 체인 위험 구간만 해제](decisions/134-independent-bitcoin-chain-risk-clearance.md)
+
+- [135. 취소 요청을 영속 재확인하고 예약 해제는 금융 결과에만 결합](decisions/135-durable-order-cancellation.md)

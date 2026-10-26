@@ -169,7 +169,7 @@ tx.execute 안에서 검증한 보안키 증명의 소모와 단일 결정을 �
 
 ### 주문 접수의 격리 조건을 명시하기
 
-출처: [OrderService.java](../../src/main/java/dustin/cex/domains/order/service/OrderService.java#L99). 현재 소스의 부분 발췌이며 주변 빈·트랜잭션이 필요하다.
+출처: [OrderService.java](../../src/main/java/dustin/cex/domains/order/service/OrderService.java#L98). 현재 소스의 부분 발췌이며 주변 빈·트랜잭션이 필요하다.
 
 ```java
 this.transactionTemplate = new TransactionTemplate(transactionManager);

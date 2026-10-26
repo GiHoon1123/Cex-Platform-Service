@@ -45,7 +45,7 @@ Java BalanceSyncService, EngineHttpClient.syncBalance/buildSyncBalanceRequest, B
 
 Mockito 호출 이력에서 init만 허용한다. 금융 명령이 새 이름으로 추가돼도 준비 이벤트에서 호출하면 시험이 실패한다. 생성 후 초기화를 금융 거래로 오인하지 않고, 특정 삭제 메서드에 대한 verify 코드를 남기지 않는다.
 
-출처: [EngineHttpClientTest.java](../../src/test/java/dustin/cex/shared/http/EngineHttpClientTest.java#L140), 현재 소스의 부분 발췌.
+출처: [EngineHttpClientTest.java](../../src/test/java/dustin/cex/shared/http/EngineHttpClientTest.java#L142), 현재 소스의 부분 발췌.
 
 ```java
             var client=client(server,2000);submit(client);client.cancelOrder(123L,101L,"BTC/USDT");

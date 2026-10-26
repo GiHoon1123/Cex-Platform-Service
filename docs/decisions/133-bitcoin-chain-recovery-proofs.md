@@ -105,7 +105,7 @@ READY 저장 때 기존 성공 ID만 믿지 않는다. 시작 이후 생성된 �
 
 두 요청이 겹치는 동안 두 번째 요청은 같은 STARTED 기록을 보고 외부 생산자를 늘리지 않는다. CountDownLatch로 겹치는 시점을 고정하며 단순 시간 지연으로 경쟁을 추측하지 않는다. 테스트 전용 실행기는 닫고 제품의 체결 스레드를 추가하지 않는다.
 
-출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L133), 현재 소스의 부분 발췌.
+출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L134), 현재 소스의 부분 발췌.
 
 ```java
     @Test void realJournalReconciliationBuildsRecoveryEvidenceWithoutClearingTheRisk()throws Exception{

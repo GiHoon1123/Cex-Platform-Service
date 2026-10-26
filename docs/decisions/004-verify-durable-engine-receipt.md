@@ -58,7 +58,7 @@ Jackson `path`는 없는 필드에 MissingNode를 반환한다. `isTextual`과 �
 
 ### 현재 코드로 연결해 읽기
 
-HTTP 성공 코드와 영속 접수 증명을 함께 검사하는 부분이다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/http/EngineHttpClient.java#L137)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
+HTTP 성공 코드와 영속 접수 증명을 함께 검사하는 부분이다. 아래는 2026-10-23 현재 [실제 소스](../../src/main/java/dustin/cex/shared/http/EngineHttpClient.java#L140)의 연속 행 발췌다. 메서드 일부일 수 있으므로 독립 실행 예제로 사용하지 않고 앞뒤 검증과 함께 읽는다. 과거 사이클의 코드/측정 시점은 본문의 기록을 유지한다.
 
 ```java
 int status = response.getStatusCode().value();
