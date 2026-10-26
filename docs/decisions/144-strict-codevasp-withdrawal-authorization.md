@@ -31,7 +31,7 @@ BTC 지급 전 상대 사업자에게 실제 지급액과 당사자 정보를 �
 
 기존 입금/신규 출금은 동일한 제한 복호화와 개인 자료 파서를 공유한다. 이전 decryptTransfer 호출을 제거하고 두 업무가 실제로 쓰는 decrypt(envelope,key)로 바꿨다. 호환 메서드/대체 키/실패 폴백을 남기지 않았다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L115), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L139), 현재 소스의 부분 발췌.
 
 ```java
             var publicFields=json.createObjectNode().put("transferId",input.transferId().toString()).put("currency","BTC")
@@ -54,7 +54,7 @@ BTC 지급 전 상대 사업자에게 실제 지급액과 당사자 정보를 �
 
 현재 소스의 부분 발췌다. 검증된 공개 원본 뒤에만 비공개 복호화를 호출한다. 기존 파서가 한 개인·법적 이름·계정 목록을 해석하며 이후 코드가 요청의 이름/생일/계정/수신 주소와 비교한다. 파싱 성공을 지급 승인으로 해석하지 않는다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L140), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L164), 현재 소스의 부분 발췌.
 
 ```java
             // 게이트웨이 전송 뒤에는 검증 응답을 잃었을 수 있다. 새 이전 UUID로 자동 재요청하지 않는다.

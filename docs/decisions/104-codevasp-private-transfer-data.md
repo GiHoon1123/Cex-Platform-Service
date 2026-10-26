@@ -68,7 +68,7 @@ Jackson JsonNode는 TypeScript의 타입 단언과 달리 실제 수신 JSON의 
 
 BigDecimal.setScale의 UNNECESSARY는9번째 소수 자리에 실제 값이 있으면 실패한다. 0으로 끝나는 추가 자리는 값 손실 없이8자리로 표현한다. float/double로 금액을 비교하지 않는다. 공개 필드가 다르면 복호화 호출이 없다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L151), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L175), 현재 소스의 부분 발췌.
 
 ```java
             var identity=decoded.path("body");String original=text(decoded,"bodyString",65536);

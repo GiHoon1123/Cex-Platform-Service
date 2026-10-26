@@ -299,3 +299,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [144. 실제 BTC 지급액과 당사자를 결합한 이전 승인 클라이언트](decisions/144-strict-codevasp-withdrawal-authorization.md)
 
 - [145. 출금 신청 시점의 순 지급액 원화 참고평가를 같은 금융 커밋에 보존](decisions/145-bitcoin-withdrawal-request-time-valuation.md)
+
+- [146. 신원 제공 전에 선택한 사업자의 BTC 지급 주소 소속 확인](decisions/146-codevasp-withdrawal-address-verification.md)

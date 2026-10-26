@@ -95,7 +95,7 @@ codevasp.public-key=
 
 JDK 포맷터로 공식 UTC 유효기한을 읽는다. 시차가 없는 문서 예제도 UTC0으로 처리하며 JVM 로컬 시각이나 임의 시간대의 폴백으로 해석하지 않는다.
 
-출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L164), 현재 소스의 부분 발췌.
+출처: [CodeVaspTransport.java](../../src/main/java/dustin/cex/domains/travelrule/CodeVaspTransport.java#L188), 현재 소스의 부분 발췌.
 
 ```java
             var pending=http.sendAsync(request.timeout(Duration.ofSeconds(5)).header("Accept","application/json").build(),info->new LimitedResponseBody(limit));
