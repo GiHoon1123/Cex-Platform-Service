@@ -65,7 +65,7 @@
 
 입력은 거래 ID와 숫자 출력 순번으로 정렬한다. 입력 이력과 전역 예약이 먼저 완성되고 출금의 활성 후보를 연결한다. 어느 INSERT라도 고유 제약에 걸리면 같은 트랜잭션의 앞선 입력 행도 함께 롤백된다. 이 경합은 Java 플랫폼 DB 업무이며 Rust 엔진 공유 락을 추가하지 않는다.
 
-출처: [payout-candidate-schema.sql](../../src/main/resources/bitcoin/payout-candidate-schema.sql#L34), 현재 소스의 부분 발췌.
+출처: [payout-candidate-schema.sql](../../src/main/resources/bitcoin/payout-candidate-schema.sql#L37), 현재 소스의 부분 발췌.
 
 ```sql
 CREATE TABLE IF NOT EXISTS bitcoin_payout_input_reservations (

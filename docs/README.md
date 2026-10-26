@@ -313,3 +313,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [151. 승인 원본과 미서명 후보의 불변 저장 및 입력 이중 배정 방지](decisions/151-bitcoin-durable-payout-candidates.md)
 
 - [152. 입력 잠금 관측과 미실행 후보의 안전한 배정 해제](decisions/152-bitcoin-candidate-wallet-lifecycle.md)
+
+- [153. 미실행 정리 뒤 동일 미서명 거래를 다시 준비할 수 있도록 수정](decisions/153-bitcoin-unsigned-candidate-reapproval.md)
