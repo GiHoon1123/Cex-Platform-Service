@@ -301,3 +301,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [145. 출금 신청 시점의 순 지급액 원화 참고평가를 같은 금융 커밋에 보존](decisions/145-bitcoin-withdrawal-request-time-valuation.md)
 
 - [146. 신원 제공 전에 선택한 사업자의 BTC 지급 주소 소속 확인](decisions/146-codevasp-withdrawal-address-verification.md)
+
+- [147. 고정 BTC 출금의 주소 확인 뒤 신원 제공과 미해결 전송 보존](decisions/147-bitcoin-withdrawal-transfer-review.md)
