@@ -27,6 +27,7 @@ class CodeVaspWithdrawalAuthorizationClientTest {
     HttpServer module,gateway;ExecutorService workers;CodeVaspTransport transport;CodeVaspWithdrawalAuthorizationClient client;
     KeyPair pair;String ownKey,peerKey;
     volatile String mode="NORMAL";
+    volatile BigDecimal expectedKrw=KRW;
     final AtomicLong nonce=new AtomicLong();
     final AtomicInteger signs=new AtomicInteger(),sent=new AtomicInteger(),decrypts=new AtomicInteger();
     final AtomicReference<Throwable> callbackFailure=new AtomicReference<>();
@@ -44,7 +45,7 @@ class CodeVaspWithdrawalAuthorizationClientTest {
             signs.incrementAndGet();assertEquals("POST",e.getRequestMethod());
             var command=JSON.readTree(e.getRequestBody().readAllBytes());assertEquals("TRANSFER_AUTHORIZATION",command.path("apiType").asText());assertEquals("CODE",command.path("allianceName").asText());assertEquals(peerKey,command.path("remotePublicKey").asText());
             var r=command.path("request");assertEquals(id.toString(),r.path("transferId").asText());assertEquals(NET.toPlainString(),r.path("amount").asText());
-            assertEquals(KRW.toPlainString(),r.path("tradePrice").asText());assertEquals("KRW",r.path("tradeCurrency").asText());
+            assertEquals(expectedKrw.toPlainString(),r.path("tradePrice").asText());assertEquals("KRW",r.path("tradeCurrency").asText());
             assertEquals(SENDER,r.path("originatorNaturalPersonLastName").asText());assertEquals(BIRTH.toString(),r.path("originatorNaturalPersonDob").asText());
             assertEquals(ACCOUNT,r.path("originatorWalletAddress").asText());assertEquals(RECIPIENT,r.path("beneficiaryNaturalPersonLastName").asText());assertEquals(ADDRESS,r.path("beneficiaryWalletAddress").asText());
             if(mode.equals("SIGN_SLOW")){slow(e);return;}
@@ -131,5 +132,11 @@ class CodeVaspWithdrawalAuthorizationClientTest {
         ProxySelector.setDefault(new ProxySelector(){public List<Proxy> select(URI uri){selected.incrementAndGet();return List.of(new Proxy(Proxy.Type.HTTP,new InetSocketAddress("127.0.0.1",1)));}public void connectFailed(URI uri,SocketAddress address,java.io.IOException error){}});
         try(var direct=new CodeVaspTransport(new CodeVaspSettings(gatewayBase(),moduleBase(),"cex-withdrawal",ownKey))){assertEquals("VERIFIED",new CodeVaspWithdrawalAuthorizationClient(direct,approved()).authorize(request()).status());assertEquals(0,selected.get());}
         finally{ProxySelector.setDefault(previous);}
+    }
+    @Test void fiatValuationPreservesTheExactProductWithoutEightDigitRounding(){
+        var original=request();expectedKrw=new BigDecimal("100000000.12345678").multiply(NET);
+        var precise=new CodeVaspWithdrawalAuthorizationClient.Request(id,NET,expectedKrw,true,ACCOUNT,SENDER,BIRTH,ADDRESS,RECIPIENT,original.peer(),original.key());
+        assertEquals("1000000.0012345678000000",precise.krwValue().toPlainString());
+        assertEquals("VERIFIED",client.authorize(precise).status());assertEquals(1,sent.get());
     }
 }

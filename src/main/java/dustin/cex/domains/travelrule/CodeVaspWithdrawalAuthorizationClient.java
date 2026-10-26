@@ -23,7 +23,8 @@ public class CodeVaspWithdrawalAuthorizationClient {
                     ||peer.entityId()==null||!peer.entityId().matches("[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}")
                     ||key==null||key.publicKey()==null||!CodeVaspSettings.key(key.publicKey(),32)||key.expiresAt()==null
                     ||!key.expiresAt().isAfter(Instant.now())||peer.keys()==null||!peer.keys().contains(key))throw invalid();
-            try {amount=amount.setScale(8,RoundingMode.UNNECESSARY);krwValue=krwValue.setScale(8,RoundingMode.UNNECESSARY);}
+            // BTC 단위만8자리다. 지급액×참고가격의 원화 곱은 반올림하거나8자리로 잘라 법정 경계를 바꾸지 않는다.
+            try {amount=amount.setScale(8,RoundingMode.UNNECESSARY);}
             catch(ArithmeticException inexact){throw invalid();}
         }
         private static boolean account(String value){return value!=null&&value.matches("[A-Za-z0-9]{14,120}");}
