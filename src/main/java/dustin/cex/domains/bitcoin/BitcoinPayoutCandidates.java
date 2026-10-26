@@ -35,13 +35,14 @@ public class BitcoinPayoutCandidates {
     private final BitcoinWithdrawalPayoutReviews reviews;
     private final BitcoinPayoutClient node;
     private final BitcoinPayoutInputSources inputSources;
+    private final BitcoinPayoutCandidateRecords records;
     private final JdbcTemplate jdbc;
     private final CddCrypto crypto;
     private final ObjectMapper json;
     private final AuditService audit;
     private final TransactionTemplate tx;
-    public BitcoinPayoutCandidates(BitcoinWithdrawalPayoutReviews reviews,BitcoinPayoutClient node,BitcoinPayoutInputSources inputSources,JdbcTemplate jdbc,CddCrypto crypto,ObjectMapper json,AuditService audit,PlatformTransactionManager manager) {
-        this.reviews=reviews;this.node=node;this.inputSources=inputSources;this.jdbc=jdbc;this.crypto=crypto;this.json=json;this.audit=audit;
+    public BitcoinPayoutCandidates(BitcoinWithdrawalPayoutReviews reviews,BitcoinPayoutClient node,BitcoinPayoutInputSources inputSources,BitcoinPayoutCandidateRecords records,JdbcTemplate jdbc,CddCrypto crypto,ObjectMapper json,AuditService audit,PlatformTransactionManager manager) {
+        this.reviews=reviews;this.node=node;this.inputSources=inputSources;this.records=records;this.jdbc=jdbc;this.crypto=crypto;this.json=json;this.audit=audit;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     /** 먼저 시도를 커밋하고 노드를 호출한다. 응답 후에는 현재 승인·취소·위험 범위를 다시 검사한다. */
@@ -131,28 +132,7 @@ public class BitcoinPayoutCandidates {
         audit.record(null,"BTC_PAYOUT_PREPARATION_FINISHED","bitcoin-payout-preparation:"+start.attemptId(),"SUCCESS",status);
     }
     private Candidate existing(UUID review){var ids=jdbc.queryForList("SELECT id FROM bitcoin_payout_candidates WHERE review_id=?",UUID.class,review);return ids.isEmpty()?null:read(ids.getFirst());}
-    /** 내부 조회에서도 암호 원문과 검색용 열의 결합을 확인한다. */
-    private Candidate read(UUID id){
-        var row=jdbc.queryForMap("SELECT * FROM bitcoin_payout_candidates WHERE id=?",id);long owner=((Number)row.get("user_id")).longValue();
-        try {
-            if(!crypto.keyId().equals(row.get("key_id")))throw held();
-            String raw=new String(crypto.decrypt(owner,id,(byte[])row.get("ciphertext")),StandardCharsets.UTF_8);
-            if(!crypto.fingerprint("btc-payout-candidate-v1",raw).equals(row.get("payload_hash")))throw held();var p=json.readValue(raw,Payload.class);var n=p.prepared();
-            if(!id.equals(p.id())||!p.reviewId().equals(row.get("review_id"))||!p.funds().withdrawalId().equals(row.get("withdrawal_id"))||p.funds().customerId()!=owner
-                ||!n.network().equals(row.get("network"))||!n.wallet().equals(row.get("wallet"))||!n.policy().equals(row.get("policy"))||!n.unsignedTxid().equals(row.get("unsigned_txid"))||!sha(n.psbt()).equals(row.get("psbt_hash"))
-                ||new BigDecimal(n.amount()).compareTo((BigDecimal)row.get("amount"))!=0||new BigDecimal(n.nativeFee()).compareTo((BigDecimal)row.get("native_fee"))!=0||n.inputs().size()!=((Number)row.get("input_count")).intValue())throw held();
-            var review=jdbc.queryForMap("SELECT payload_hash,scope_hash FROM bitcoin_withdrawal_payout_reviews WHERE id=?",p.reviewId());
-            if(!p.reviewHash().equals(review.get("payload_hash"))||!p.scopeHash().equals(review.get("scope_hash")))throw held();
-            // 검색용 입력 행과 현재 배정도 암호 원문과 대조한다. 정상적인 암호문만 있고 배정이 빠진 상태도 허용하지 않는다.
-            var inputs=jdbc.queryForList("SELECT * FROM bitcoin_payout_candidate_inputs WHERE candidate_id=?",id);
-            if(inputs.size()!=n.inputs().size())throw held();
-            for(var input:n.inputs())if(inputs.stream().noneMatch(i->input.txid().equals(i.get("txid"))&&input.vout()==((Number)i.get("vout")).intValue()
-                &&input.scriptPubKey().equals(i.get("script_pub_key"))&&new BigDecimal(input.amount()).compareTo((BigDecimal)i.get("amount"))==0))throw held();
-            if(!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM bitcoin_payout_active_candidates WHERE withdrawal_id=? AND candidate_id=?)",Boolean.class,p.funds().withdrawalId(),id))
-                ||jdbc.queryForObject("SELECT count(*) FROM bitcoin_payout_input_reservations WHERE candidate_id=? AND network=?",Long.class,id,n.network())!=inputs.size())throw held();
-            return new Candidate(p,(String)row.get("payload_hash"));
-        }catch(RuntimeException corrupt){throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"지급 후보의 보존 원본을 확인할 수 없습니다");}
-    }
+    private Candidate read(UUID id){return records.read(id);}
     private void validate(BitcoinWithdrawalPayoutReviews.Request r,BitcoinPayoutClient.Prepared p){
         if(p==null)throw held();var f=r.payload().basis().funds();
         if(!p.withdrawalId().equals(f.withdrawalId())||!p.network().equals(f.network())||!BitcoinPayoutClient.POLICY.equals(p.policy())||new BigDecimal(p.amount()).compareTo(new BigDecimal(f.amount()))!=0

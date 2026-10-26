@@ -14,7 +14,6 @@ import org.springframework.web.server.ResponseStatusException;
 /** 같은 미서명 거래를 다시 준비할 수 있어도 현재 입력의 독점 배정과 과거 미실행 종료는 유지해야 한다. */
 class BitcoinPayoutCandidateReapprovalIntegrationTest extends BitcoinPayoutCandidatesTestSupport {
     @Autowired BitcoinPayoutCandidateWallet wallet;
-    @MockitoBean BitcoinPayoutInputLocks locks;
     static final String UNSIGNED="c".repeat(64);
     @BeforeEach void noChangeTransaction(){
         doAnswer(call->{assertFalse(TransactionSynchronizationManager.isActualTransactionActive());assertTrue(count("bitcoin_payout_preparations")>0);return fee();}).when(node).quote();
@@ -24,7 +23,7 @@ class BitcoinPayoutCandidateReapprovalIntegrationTest extends BitcoinPayoutCandi
                 List.of(new BitcoinPayoutClient.Input(INPUT,0,OWN,"0014"+"cd".repeat(20),new BigDecimal(p.amount()).add(new BigDecimal(p.nativeFee())).toPlainString())),p.quote(),p.finishedAt());
         }).when(node).prepare(any(),any());
     }
-    @AfterEach void neverLockSignOrBroadcast(){verifyNoInteractions(locks);assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));}
+    @AfterEach void neverLockSignOrBroadcast(){verifyNoInteractions(lockNode);assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));}
     BitcoinWithdrawalPayoutReviews.Request newerReview()throws Exception {
         pending.recognize(nativeInput());assertEquals("NO_SIGNAL",monitoring.processNext().orElseThrow().result().outcome());return decide(proposal(),true);
     }

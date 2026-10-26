@@ -24,30 +24,30 @@ class BitcoinWithdrawalPayoutReviewIntegrationTest extends BitcoinWithdrawalPayo
     @Test void independentSignatureApprovesExactFundsAndCommitDoesNotPay()throws Exception {
         var r=proposal();assertEquals("PENDING",r.status());var f=r.payload().basis().funds();assertEquals(withdrawal,f.withdrawalId());assertEquals("0.01000000",f.amount());assertEquals("0.00000100",f.fee());assertEquals("0.01000100",f.total());assertEquals(ADDRESS,f.address());
         assertEquals("APPROVED",decide(r,true).status());assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));
-        assertEquals("APPROVED",payouts.commit(r.payload().id()).status());assertEquals("APPROVED",payouts.commit(r.payload().id()).status());
+        assertEquals("APPROVED",commit(r.payload().id()).status());assertEquals("APPROVED",commit(r.payload().id()).status());
         assertEquals(1,count("bitcoin_withdrawal_payout_commitments"));assertEquals("PAYOUT_COMMITTED",withdrawals.status(customer.getId(),sid,withdrawal).state());
         assertEquals(409,assertThrows(ResponseStatusException.class,this::cancel).getStatusCode().value());
     }
     @Test void approvalRemainsCancellableUntilExecutionCommit()throws Exception {
         var r=proposal();decide(r,true);cancel();assertEquals("CANCELLATION_PENDING",withdrawals.status(customer.getId(),sid,withdrawal).state());
-        assertThrows(ResponseStatusException.class,()->payouts.commit(r.payload().id()));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));assertEquals(1,count("bitcoin_withdrawal_payout_decisions"));
+        assertThrows(ResponseStatusException.class,()->commit(r.payload().id()));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));assertEquals(1,count("bitcoin_withdrawal_payout_decisions"));
     }
     @Test void databaseAlsoRejectsCancellationAfterExecutionCommit()throws Exception {
-        var r=proposal();decide(r,true);payouts.commit(r.payload().id());
+        var r=proposal();decide(r,true);commit(r.payload().id());
         assertThrows(DataAccessException.class,()->jdbc.update("INSERT INTO bitcoin_withdrawal_cancellations(withdrawal_id,user_id,session_id) VALUES(?,?,?)",withdrawal,customer.getId(),sid));
         assertEquals(0,count("bitcoin_withdrawal_cancellations"));
     }
     @Test void simultaneousCancellationAndExecutionCommitHaveExactlyOneWinner()throws Exception {
-        var r=proposal();decide(r,true);var start=new CountDownLatch(1);
+        var r=proposal();decide(r,true);readyNative(r.payload().id());var start=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(2)) {
-            var a=pool.submit(()->{assertTrue(start.await(5,TimeUnit.SECONDS));try{payouts.commit(r.payload().id());return true;}catch(ResponseStatusException held){return false;}});
+            var a=pool.submit(()->{assertTrue(start.await(5,TimeUnit.SECONDS));try{commit(r.payload().id());return true;}catch(ResponseStatusException held){return false;}});
             var b=pool.submit(()->{assertTrue(start.await(5,TimeUnit.SECONDS));try{cancellations.cancel(customer.getId(),sid,withdrawal);return true;}catch(ResponseStatusException held){return false;}});
             start.countDown();assertNotEquals(a.get(15,TimeUnit.SECONDS),b.get(15,TimeUnit.SECONDS));
         }clearInvocations(engineWithdrawal);assertEquals(1,count("bitcoin_withdrawal_cancellations")+count("bitcoin_withdrawal_payout_commitments"));
     }
     @Test void aNewCustomerRestrictionBlocksPreviouslyApprovedExecution()throws Exception {
         var r=proposal();decide(r,true);jdbc.update("UPDATE users SET trading_restricted=true WHERE id=?",customer.getId());
-        assertThrows(ResponseStatusException.class,()->payouts.commit(r.payload().id()));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));
+        assertThrows(ResponseStatusException.class,()->commit(r.payload().id()));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));
     }
     @Test void changedCustomerVersionInvalidatesTheUnsignedReviewBeforeSignatureConsumption()throws Exception {
         var r=proposal();payouts.inspect(checker.user().getId(),checker.sid(),r.payload().id());var proof=signature(r,true);jdbc.update("UPDATE users SET version=version+1 WHERE id=?",customer.getId());
@@ -89,7 +89,7 @@ class BitcoinWithdrawalPayoutReviewIntegrationTest extends BitcoinWithdrawalPayo
     }
     @Test void rejectionPreservesFundsAndAllowsANewExplicitReview()throws Exception {
         var r=proposal();assertEquals("REJECTED",decide(r,false).status());var next=proposal();assertNotEquals(r.payload().id(),next.payload().id());
-        assertThrows(ResponseStatusException.class,()->payouts.commit(r.payload().id()));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));assertEquals(0,count("bitcoin_withdrawal_cancellations"));
+        assertThrows(ResponseStatusException.class,()->commit(r.payload().id()));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));assertEquals(0,count("bitcoin_withdrawal_cancellations"));
     }
     @Test void missingProposalAuditRollsBackTheEncryptedReviewAndBinding() {
         doNothing().when(audit).record(anyLong(),eq("BTC_PAYOUT_REVIEW_PROPOSED"),anyString(),eq("SUCCESS"),anyString());
@@ -113,10 +113,10 @@ class BitcoinWithdrawalPayoutReviewIntegrationTest extends BitcoinWithdrawalPayo
     }
     @Test void missingExecutionAuditLeavesTheCustomerFreeToCancel()throws Exception {
         var r=proposal();decide(r,true);doNothing().when(audit).record(isNull(),eq("BTC_PAYOUT_EXECUTION_COMMITTED"),anyString(),eq("SUCCESS"),anyString());
-        assertThrows(DataAccessException.class,()->payouts.commit(r.payload().id()));reset(audit);assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));cancel();
+        assertThrows(DataAccessException.class,()->commit(r.payload().id()));reset(audit);assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));cancel();
     }
     @Test void encryptedOpinionAndAllApprovalFactsAreImmutable()throws Exception {
-        var r=proposal();decide(r,true);payouts.commit(r.payload().id());
+        var r=proposal();decide(r,true);commit(r.payload().id());
         var row=jdbc.queryForMap("SELECT * FROM bitcoin_withdrawal_payout_reviews WHERE id=?",r.payload().id());String raw=new String(crypto.decrypt(customer.getId(),r.payload().id(),(byte[])row.get("ciphertext")),StandardCharsets.UTF_8);
         assertEquals(crypto.fingerprint("btc-payout-review-v1",raw),row.get("payload_hash"));assertTrue(raw.contains(NOTE));assertFalse(new String((byte[])row.get("ciphertext"),StandardCharsets.UTF_8).contains(NOTE));assertFalse(r.toString().contains(NOTE));
         for(String table:List.of("bitcoin_withdrawal_payout_reviews","bitcoin_withdrawal_payout_views","bitcoin_withdrawal_payout_decisions","bitcoin_withdrawal_payout_commitments"))for(String sql:List.of("UPDATE "+table+" SET created_txid=0","DELETE FROM "+table,"TRUNCATE "+table+" CASCADE"))assertThrows(DataAccessException.class,()->jdbc.execute(sql));
@@ -130,7 +130,7 @@ class BitcoinWithdrawalPayoutReviewIntegrationTest extends BitcoinWithdrawalPayo
     }
     @Test void routineDirectoryRefreshDoesNotChangeTheApprovedEconomicScope()throws Exception {
         var r=proposal();long old=r.payload().basis().transfer().currentDirectoryAttempt();directory.refresh();clearInvocations(directoryClient);
-        assertNotEquals(old,directory.current().attemptId());assertEquals("APPROVED",decide(r,true).status());payouts.commit(r.payload().id());
+        assertNotEquals(old,directory.current().attemptId());assertEquals("APPROVED",decide(r,true).status());commit(r.payload().id());
     }
     @Test void corruptedMaterializedBalanceCannotBecomeAPayoutPermission() {
         jdbc.update("UPDATE user_balances SET locked=locked+0.00000001 WHERE user_id=? AND mint_address='BTC'",customer.getId());
@@ -138,7 +138,7 @@ class BitcoinWithdrawalPayoutReviewIntegrationTest extends BitcoinWithdrawalPayo
         finally{jdbc.update("UPDATE user_balances SET locked=locked-0.00000001 WHERE user_id=? AND mint_address='BTC'",customer.getId());}
     }
     @Test void laterMarketReferenceDoesNotChangeTheSignedWithdrawal()throws Exception {
-        var r=proposal();doAnswer(call->referenceQuote(new BigDecimal("1"))).when(priceClient).read();referencePrices.refresh();assertEquals("APPROVED",decide(r,true).status());payouts.commit(r.payload().id());
+        var r=proposal();doAnswer(call->referenceQuote(new BigDecimal("1"))).when(priceClient).read();referencePrices.refresh();assertEquals("APPROVED",decide(r,true).status());commit(r.payload().id());
     }
     @Test void missingCurrentCounterpartyBlocksNewPayoutPermission() {
         doAnswer(call->new CodeVaspDirectoryClient.Directory(Instant.now(),Instant.now(),List.of())).when(directoryClient).read();directory.refresh();clearInvocations(directoryClient);
@@ -168,9 +168,9 @@ class BitcoinWithdrawalPayoutReviewIntegrationTest extends BitcoinWithdrawalPayo
         assertEquals("NO_SIGNAL",monitoring.processNext().orElseThrow().result().outcome());assertEquals("PENDING",proposal().status());
     }
     @Test void aNewNativeInputAfterApprovalBlocksExecutionUntilANewReview()throws Exception {
-        var r=proposal();decide(r,true);pending.recognize(nativeInput());assertThrows(ResponseStatusException.class,()->payouts.commit(r.payload().id()));
-        monitoring.processNext().orElseThrow();assertThrows(ResponseStatusException.class,()->payouts.commit(r.payload().id()));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));
-        var fresh=proposal();assertNotEquals(r.payload().basis().scopeHash(),fresh.payload().basis().scopeHash());decide(fresh,true);payouts.commit(fresh.payload().id());
+        var r=proposal();decide(r,true);pending.recognize(nativeInput());assertThrows(ResponseStatusException.class,()->commit(r.payload().id()));
+        monitoring.processNext().orElseThrow();assertThrows(ResponseStatusException.class,()->commit(r.payload().id()));assertEquals(0,count("bitcoin_withdrawal_payout_commitments"));
+        var fresh=proposal();assertNotEquals(r.payload().basis().scopeHash(),fresh.payload().basis().scopeHash());decide(fresh,true);commit(fresh.payload().id());
         assertEquals(2,count("bitcoin_withdrawal_payout_reviews"));assertEquals(1,count("bitcoin_withdrawal_payout_commitments"));
     }
     @Test void anOpenNativeMonitoringCaseCannotBeOverriddenByAPayoutOpinion() {

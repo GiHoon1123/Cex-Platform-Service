@@ -32,6 +32,9 @@ public class BitcoinWithdrawalPayoutReviews {
     }
     public record Confirmation(Request request,boolean approve,OperatorMfaService.Options authentication){}
     private final BitcoinWithdrawalPayoutBasis basis;
+    private final BitcoinPayoutCandidateRecords candidates;
+    private final BitcoinPayoutInputSources inputSources;
+    private final BitcoinPayoutExecutionRecords executions;
     private final JdbcTemplate jdbc;
     private final UserRepository users;
     private final OperatorSessionPolicy sessions;
@@ -40,9 +43,9 @@ public class BitcoinWithdrawalPayoutReviews {
     private final ObjectMapper json;
     private final AuditService audit;
     private final TransactionTemplate tx;
-    public BitcoinWithdrawalPayoutReviews(BitcoinWithdrawalPayoutBasis basis,JdbcTemplate jdbc,UserRepository users,
+    public BitcoinWithdrawalPayoutReviews(BitcoinWithdrawalPayoutBasis basis,BitcoinPayoutCandidateRecords candidates,BitcoinPayoutInputSources inputSources,BitcoinPayoutExecutionRecords executions,JdbcTemplate jdbc,UserRepository users,
             OperatorSessionPolicy sessions,OperatorMfaService mfa,CddCrypto crypto,ObjectMapper json,AuditService audit,PlatformTransactionManager manager) {
-        this.basis=basis;this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.mfa=mfa;this.crypto=crypto;this.json=json;this.audit=audit;
+        this.basis=basis;this.candidates=candidates;this.inputSources=inputSources;this.executions=executions;this.jdbc=jdbc;this.users=users;this.sessions=sessions;this.mfa=mfa;this.crypto=crypto;this.json=json;this.audit=audit;
         tx=new TransactionTemplate(manager);tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);tx.setTimeout(10);
     }
     public Request propose(long actor,UUID sid,UUID transferId,long checker,UUID key,String note) {
@@ -101,17 +104,30 @@ public class BitcoinWithdrawalPayoutReviews {
         var current=basis.require(people.get(p.basis().funds().customerId()),p.basis().transfer().intentId());
         if(!current.scopeHash().equals(p.basis().scopeHash()))throw denied(HttpStatus.CONFLICT);return r;
     }
-    /** 신뢰된 지급 워커가 사용할 내부 경계다. 현재 근거를 다시 검사하고 취소와 같은 고객 잠금에서 한 쪽만 확정한다. */
+    /** 준비·잠금이 끝난 실제 고정 지급을 승인한다. 노드/키 호출은 없고 취소와 같은 고객 잠금에서 한쪽만 확정한다. */
     public Request commit(UUID id) {
-        boundary();return tx.execute(t->{var meta=meta(id);var people=lock(number(meta,"requester_id"),number(meta,"checker_id"),number(meta,"user_id"));
-            var r=read(id);var p=r.payload();
-            var old=jdbc.queryForList("SELECT review_id FROM bitcoin_withdrawal_payout_commitments WHERE withdrawal_id=?",UUID.class,p.basis().funds().withdrawalId());
-            if(!old.isEmpty()){if(!id.equals(old.getFirst()))throw denied(HttpStatus.CONFLICT);return r;}
+        boundary();return tx.execute(t->{var meta=meta(id);UUID withdrawal=(UUID)meta.get("withdrawal_id");
+            var old=jdbc.queryForList("SELECT review_id FROM bitcoin_withdrawal_payout_commitments WHERE withdrawal_id=?",UUID.class,withdrawal);
+            if(!old.isEmpty()){
+                if(!id.equals(old.getFirst()))throw denied(HttpStatus.CONFLICT);
+                // 과거 원본 확인은 동일 실행/서명 요청을 다시 만들지 않는다. 없는 새 실행 근거를 추정하지 않는다.
+                var original=executions.read(withdrawal);if(!id.equals(original.reviewId()))throw denied(HttpStatus.CONFLICT);return read(id);
+            }
+            var rows=jdbc.queryForList("SELECT id,network,wallet FROM bitcoin_payout_candidates WHERE review_id=?",id);if(rows.size()!=1)throw denied(HttpStatus.CONFLICT);var row=rows.getFirst();UUID candidateId=(UUID)row.get("id");
+            var points=jdbc.queryForList("SELECT txid,vout FROM bitcoin_payout_candidate_inputs WHERE candidate_id=?",candidateId).stream().map(i->new BitcoinPayoutInputSources.Point((String)i.get("txid"),((Number)i.get("vout")).intValue())).toList();
+            inputSources.lockForReview(id,(String)row.get("network"),(String)row.get("wallet"),points);
+            var people=lock(number(meta,"requester_id"),number(meta,"checker_id"),number(meta,"user_id"));var r=read(id);var p=r.payload();
+            var raced=jdbc.queryForList("SELECT review_id FROM bitcoin_withdrawal_payout_commitments WHERE withdrawal_id=?",UUID.class,withdrawal);
+            if(!raced.isEmpty()){if(!id.equals(raced.getFirst()))throw denied(HttpStatus.CONFLICT);executions.read(withdrawal);return r;}
             requirePeople(p,people);
             if(!"APPROVED".equals(r.status())||!p.expiresAt().isAfter(now())||!latest(meta))throw denied(HttpStatus.CONFLICT);
             var current=basis.require(people.get(p.basis().funds().customerId()),p.basis().transfer().intentId());if(!current.scopeHash().equals(p.basis().scopeHash()))throw denied(HttpStatus.CONFLICT);
-            jdbc.update("INSERT INTO bitcoin_withdrawal_payout_commitments(withdrawal_id,review_id,user_id,payload_hash) VALUES(?,?,?,?)",p.basis().funds().withdrawalId(),id,p.basis().funds().customerId(),r.payloadHash());
-            audit.record(null,"BTC_PAYOUT_EXECUTION_COMMITTED","bitcoin-withdrawal:"+p.basis().funds().withdrawalId(),"SUCCESS",r.payloadHash());return r;});
+            var candidate=candidates.read(candidateId);if(!candidate.payload().reviewHash().equals(r.payloadHash())||!candidate.payload().funds().equals(current.funds()))throw denied(HttpStatus.CONFLICT);
+            var stored=inputSources.stored(candidateId,p.basis().funds().customerId(),candidate.payload().prepared());var fresh=inputSources.require(candidate.payload().prepared());
+            if(stored.size()!=fresh.size())throw denied(HttpStatus.CONFLICT);for(int i=0;i<stored.size();i++)if(!stored.get(i).origin().equals(fresh.get(i).origin()))throw denied(HttpStatus.CONFLICT);
+            executions.create(r,candidate,fresh);
+            jdbc.update("INSERT INTO bitcoin_withdrawal_payout_commitments(withdrawal_id,review_id,user_id,payload_hash) VALUES(?,?,?,?)",withdrawal,id,p.basis().funds().customerId(),r.payloadHash());
+            audit.record(null,"BTC_PAYOUT_EXECUTION_COMMITTED","bitcoin-withdrawal:"+withdrawal,"SUCCESS",r.payloadHash());return r;});
     }
     private Request check(long actor,UUID sid,UUID id,String hash) {
         var meta=meta(id);var people=assigned(actor,sid,meta);var r=read(id);var p=r.payload();

@@ -17,11 +17,10 @@ import org.springframework.web.server.ResponseStatusException;
 /** 실제 승인·후보·PG 배정과 노드 시도/관측의 실패 경계를 검증한다. 키 사용과 지급은 하지 않는다. */
 class BitcoinPayoutCandidateWalletIntegrationTest extends BitcoinPayoutCandidatesTestSupport {
     @Autowired BitcoinPayoutCandidateWallet wallet;
-    @MockitoBean BitcoinPayoutInputLocks lockNode;
     BitcoinPayoutCandidates.Candidate candidate;
     @BeforeEach void preparedCandidate(){candidate=prepareCandidate().candidate();clearInvocations(node);
-        when(lockNode.ensure(anyString(),anyString(),anyList())).thenAnswer(call->{assertOutsideTransactionAndStarted();return observation(true);});
-        when(lockNode.release(anyString(),anyString(),anyList())).thenAnswer(call->{assertOutsideTransactionAndStarted();return observation(false);});}
+        doAnswer(call->{assertOutsideTransactionAndStarted();return observation(true);}).when(lockNode).ensure(anyString(),anyString(),anyList());
+        doAnswer(call->{assertOutsideTransactionAndStarted();return observation(false);}).when(lockNode).release(anyString(),anyString(),anyList());}
     void assertOutsideTransactionAndStarted(){assertFalse(TransactionSynchronizationManager.isActualTransactionActive());assertTrue(count("bitcoin_payout_wallet_attempts")>0);assertEquals(1,count("bitcoin_payout_input_reservations"));}
     UUID id(){return candidate.payload().id();}
     BitcoinPayoutInputLocks.Observation observation(boolean locked){return new BitcoinPayoutInputLocks.Observation("bitcoin-regtest","watch",List.of(INPUT+":0"),locked,Instant.now());}
@@ -51,7 +50,7 @@ class BitcoinPayoutCandidateWalletIntegrationTest extends BitcoinPayoutCandidate
         assertEquals(2,count("bitcoin_payout_wallet_attempts"));assertEquals(1,count("bitcoin_payout_wallet_results"));assertEquals(0,count("bitcoin_payout_candidate_releases"));assertEquals(1,count("bitcoin_payout_input_reservations"));
         org.mockito.Mockito.verify(lockNode,times(1)).release(anyString(),anyString(),anyList());assertThrows(ResponseStatusException.class,()->wallet.lock(id()));
     }
-    @Test void committedPayoutCannotReleaseInputsEvenAfterCancellationIsAttempted(){payouts.commit(approved.payload().id());assertThrows(ResponseStatusException.class,this::cancel);assertThrows(ResponseStatusException.class,()->wallet.release(id()));verifyNoInteractions(lockNode);assertEquals(1,count("bitcoin_payout_input_reservations"));assertEquals(0,count("bitcoin_payout_candidate_releases"));}
+    @Test void committedPayoutCannotReleaseInputsEvenAfterCancellationIsAttempted(){commit(approved.payload().id());clearInvocations(lockNode);assertThrows(ResponseStatusException.class,this::cancel);assertThrows(ResponseStatusException.class,()->wallet.release(id()));verifyNoInteractions(lockNode);assertEquals(1,count("bitcoin_payout_input_reservations"));assertEquals(0,count("bitcoin_payout_candidate_releases"));}
     @Test void aNewCurrentReviewRetiresOnlyTheOldCandidateWithoutNodeContact()throws Exception {
         pending.recognize(nativeInput());assertEquals("NO_SIGNAL",monitoring.processNext().orElseThrow().result().outcome());
         var next=proposal();assertNotEquals(approved.payload().basis().scopeHash(),next.payload().basis().scopeHash());
