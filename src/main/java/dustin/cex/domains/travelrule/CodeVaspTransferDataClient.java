@@ -62,7 +62,7 @@ public class CodeVaspTransferDataClient {
             BigDecimal amount=new BigDecimal(value).setScale(8,RoundingMode.UNNECESSARY);
             if(amount.compareTo(request.expectedAddressAmount())!=0)throw unavailable();
             // 공개 결합 필드가 다르면 개인정보를 복호화하기 전에 중단한다.
-            var reply=transport.decryptTransfer(request,response);
+            var reply=transport.decrypt(response,request.key());
             var ivms=reply.identity().path("ivms101");
             if(!ivms.isObject()||!ivms.path("OriginatingVASP").isObject())throw unavailable();
             Person originator=person(ivms.path("Originator"),"originatorPersons",true),beneficiary=person(ivms.path("Beneficiary"),"beneficiaryPersons",false);
@@ -72,7 +72,7 @@ public class CodeVaspTransferDataClient {
         }catch(RuntimeException invalidReply){throw new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN);}
     }
     // 현재 업무는 개인 한 명의 법적 이름과 송신인 생일만 해석한다. 법인·여러 당사자·누락 정보는 추측해 채우지 않는다.
-    private static Person person(JsonNode party,String field,boolean birthRequired){
+    static Person person(JsonNode party,String field,boolean birthRequired){
         var people=party.path(field);var accounts=party.path("accountNumber");
         if(!party.isObject()||!people.isArray()||people.size()!=1||!accounts.isArray()||accounts.isEmpty()||accounts.size()>100)throw unavailable();
         var wrapper=people.get(0);if(!wrapper.isObject()||wrapper.hasNonNull("legalPerson"))throw unavailable();var person=wrapper.path("naturalPerson");

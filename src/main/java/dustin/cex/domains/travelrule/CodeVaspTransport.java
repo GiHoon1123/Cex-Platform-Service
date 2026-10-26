@@ -19,7 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 final class CodeVaspTransport implements AutoCloseable {
     private final CodeVaspSettings settings;
-    private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();
+    // 등록 신원·서명·암호문을 JVM 전역 프록시로 내보내지 않고 설정한 공급사/비공개 모듈에 직접 연결한다.
+    private final HttpClient http=HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(Duration.ofSeconds(2)).followRedirects(HttpClient.Redirect.NEVER).build();
     private final ObjectMapper json=JsonMapper.builder(JsonFactory.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
         .streamReadConstraints(StreamReadConstraints.builder().maxNestingDepth(32).maxStringLength(65536).build()).build()).enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).build();
     CodeVaspTransport(CodeVaspSettings settings){this.settings=settings;}
@@ -105,11 +106,46 @@ final class CodeVaspTransport implements AutoCloseable {
             throw new CodeVaspSubmissionFailure(gatewayStarted?CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN:CodeVaspSubmissionFailure.Admission.NOT_SENT);
         }
     }
-    DecodedTransfer decryptTransfer(CodeVaspTransferDataClient.Request input,JsonNode envelope){
+    JsonNode authorizeWithdrawal(CodeVaspWithdrawalAuthorizationClient.Request input){
+        if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("출금 이전 승인은 DB 트랜잭션 밖에서 실행하세요");
+        if(!settings.configured())throw new CodeVaspSubmissionFailure(CodeVaspSubmissionFailure.Admission.NOT_SENT);
+        boolean gatewayStarted=false;
+        try{
+            // 지급액은 고객 총 차감액이 아닌 실제 체인 지급액이다. 신원 평문은 비공개 모듈에만 보낸다.
+            var publicFields=json.createObjectNode().put("transferId",input.transferId().toString()).put("currency","BTC")
+                .put("amount",input.amount().toPlainString()).put("tradePrice",input.krwValue().toPlainString())
+                .put("tradeCurrency","KRW").put("isExceedingThreshold",input.thresholdExceeded())
+                .put("address",input.address()).put("network","BTC");
+            var request=publicFields.deepCopy().put("nameIdentifierType","LEGL")
+                .put("originatorNaturalPersonLastName",input.originatorName()).put("originatorNaturalPersonDob",input.originatorBirth().toString())
+                .put("originatorWalletAddress",input.originatorAccount()).put("beneficiaryWalletAddress",input.address())
+                .put("beneficiaryNameIdentifierType","LEGL").put("beneficiaryNaturalPersonLastName",input.beneficiaryName());
+            var command=json.createObjectNode().put("allianceName","CODE").put("apiType","TRANSFER_AUTHORIZATION")
+                .put("remotePublicKey",input.key().publicKey()).set("request",request);
+            var signed=sign(command);String raw=text(signed.raw(),"body",65536);var body=json.readTree(raw);
+            if(body==null||!body.isObject())throw unavailable();
+            for(String field:publicFields.propertyNames())if(!publicFields.path(field).equals(body.path(field)))throw unavailable();
+            for(String field:body.propertyNames())if(!publicFields.has(field)&&!Set.of("payload","historicalCost","originatingVasp").contains(field))throw unavailable();
+            // 현재 요청하지 않은 원가·사업자 정보는 임의 생성하지 않는다. 신원 필드가 평문에 추가돼도 차단한다.
+            if(body.has("historicalCost")&&(!body.path("historicalCost").isString()||!body.path("historicalCost").asText().isEmpty()))throw unavailable();
+            if(body.has("originatingVasp")&&(!body.path("originatingVasp").isObject()||!body.path("originatingVasp").isEmpty()))throw unavailable();
+            ciphertext(text(body,"payload",65536));
+            if(!input.key().expiresAt().isAfter(Instant.now()))throw unavailable();
+            var httpRequest=headers("/v1/code/transfer/"+input.peer().entityId(),signed)
+                .header("X-Code-Req-Remote-PubKey",input.key().publicKey()).header("Content-Type","application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(raw));
+            gatewayStarted=true;
+            return call(httpRequest,2097152);
+        }catch(Exception failure){
+            // 게이트웨이 전송 뒤에는 검증 응답을 잃었을 수 있다. 새 이전 UUID로 자동 재요청하지 않는다.
+            throw new CodeVaspSubmissionFailure(gatewayStarted?CodeVaspSubmissionFailure.Admission.OUTCOME_UNKNOWN:CodeVaspSubmissionFailure.Admission.NOT_SENT);
+        }
+    }
+    DecodedTransfer decrypt(JsonNode envelope,CodeVaspDirectoryClient.Key key){
         if(TransactionSynchronizationManager.isActualTransactionActive())throw new IllegalStateException("이전거래 복호화는 DB 트랜잭션 밖에서 실행하세요");
         try{
             String encrypted=text(envelope,"payload",65536);byte[] encryptedBytes=ciphertext(encrypted);
-            var decrypt=json.createObjectNode().put("allianceName","CODE").put("data",encrypted).put("remotePublicKey",input.key().publicKey());
+            var decrypt=json.createObjectNode().put("allianceName","CODE").put("data",encrypted).put("remotePublicKey",key.publicKey());
             var decoded=call(HttpRequest.newBuilder(settings.cipher.resolve("/api/v1/code/decrypt"))
                 .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(decrypt))),262144);
             var identity=decoded.path("body");String original=text(decoded,"bodyString",65536);
