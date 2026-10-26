@@ -52,7 +52,7 @@
 출처: [credit-chain-risk-schema.sql](../../src/main/resources/bitcoin/credit-chain-risk-schema.sql#L4), 현재 소스의 부분 발췌.
 
 ```sql
-CREATE OR REPLACE VIEW bitcoin_credit_chain_risks AS
+CREATE OR REPLACE VIEW bitcoin_credit_chain_risk_history AS
  SELECT a.receipt_id,a.user_id,a.asset,a.amount,o.id AS observation_id,risk.reason,o.recorded_at
   FROM bitcoin_credit_authorizations a JOIN bitcoin_deposit_receipts r ON r.id=a.receipt_id
   JOIN bitcoin_deposit_addresses addr ON addr.id=r.address_id
@@ -83,7 +83,7 @@ CREATE OR REPLACE VIEW bitcoin_credit_chain_risks AS
 출처: [credit-chain-risk-schema.sql](../../src/main/resources/bitcoin/credit-chain-risk-schema.sql#L40), 현재 소스의 부분 발췌.
 
 ```sql
- IF EXISTS(SELECT 1 FROM bitcoin_credit_chain_risks WHERE observation_id=NEW.id) THEN
+ IF EXISTS(SELECT 1 FROM bitcoin_credit_chain_risk_history WHERE observation_id=NEW.id) THEN
   IF NOT EXISTS(SELECT 1 FROM bitcoin_observation_heads h WHERE h.network=NEW.network AND h.txid=NEW.txid AND h.observation_id=NEW.id)
    OR NOT EXISTS(SELECT 1 FROM bitcoin_observation_wallet_debits w WHERE w.observation_id=NEW.id)
    OR NOT EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id IS NULL AND a.action='BTC_TRANSACTION_OBSERVED'
@@ -210,3 +210,7 @@ python3 scripts/verify_bitcoin_credit_wire.py
 
 - [구현 81baea6](https://github.com/GiHoon1123/Cex-Platform-Service/commit/81baea63d1cefd00e22d4c92da2a04cec9f59872)
 - [격리 실행 증적](../reference/131-bitcoin-post-authorization-chain-risk-verification-2026-10-26.json)
+
+### 현재 위험과 불변 원시 이력의 후속 분리
+
+134에서는 이 기록의 원시 관찰 판정을 bitcoin_credit_chain_risk_history로 보존하고 bitcoin_credit_chain_risks는 독립 승인된 구간을 제외한 현재 제한만 계산한다. 관찰 저장의 필수 감사는 원시 이력에 계속 연결하므로 해제 뒤 새 위험을 놓치지 않는다. 이 문서의 당시21개 검증 수치는 그대로 당시 결과이며 후속 해제 구현/검증은 [134](134-independent-bitcoin-chain-risk-clearance.md) 기록을 따른다.

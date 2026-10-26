@@ -82,7 +82,7 @@ $$;
 
 원장은 추가 전용이므로 행 개수와 마지막 ID가 금융 이동을 탐지하고, 잔액 투영의 정확 문자열 벡터가 별도 변경을 탐지한다. jsonb_agg의 명시적인 정렬로 같은 상태의 해시를 안정화한다. 이 지문은 원장과 잔액이 원래 맞는다는 증명이 아니며 실제 금융 대사의 성공을 함께 요구한다.
 
-출처: [chain-recovery-proof-schema.sql](../../src/main/resources/bitcoin/chain-recovery-proof-schema.sql#L71), 현재 소스의 부분 발췌.
+출처: [chain-recovery-proof-schema.sql](../../src/main/resources/bitcoin/chain-recovery-proof-schema.sql#L72), 현재 소스의 부분 발췌.
 
 ```sql
   SELECT * INTO native FROM bitcoin_current_deposit_reconciliation WHERE id=NEW.native_run AND receipt_id=probe.receipt_id;

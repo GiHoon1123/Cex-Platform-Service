@@ -277,3 +277,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [132. 현재 운영 인증과 실제 열람 감사로 체인 위험 조회](decisions/132-operator-bitcoin-chain-risk-review.md)
 
 - [133. 체인 복구 근거를 실제 저널·원장·독립 노드 대사에 결합](decisions/133-bitcoin-chain-recovery-proofs.md)
+
+- [134. 독립 내용 서명으로 복구한 체인 위험 구간만 해제](decisions/134-independent-bitcoin-chain-risk-clearance.md)
