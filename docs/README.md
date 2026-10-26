@@ -281,3 +281,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [134. 독립 내용 서명으로 복구한 체인 위험 구간만 해제](decisions/134-independent-bitcoin-chain-risk-clearance.md)
 
 - [135. 취소 요청을 영속 재확인하고 예약 해제는 금융 결과에만 결합](decisions/135-durable-order-cancellation.md)
+
+- [136. 미해결 BTC 체인 위험을 시스템 근거와 영속 주문 취소에 연결](decisions/136-automatic-bitcoin-risk-order-cancellation.md)

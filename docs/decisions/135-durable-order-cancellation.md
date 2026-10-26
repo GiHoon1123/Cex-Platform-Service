@@ -1,5 +1,7 @@
 # 취소 요청을 영속 재확인하고 예약 해제는 금융 결과에만 결합
 
+현재 후속 [136 시스템 위험 취소](136-automatic-bitcoin-risk-order-cancellation.md)가 실제 미해결 위험·시스템 감사에 결합한 자동 예약을 구현했다. 아래135의 당시 범위와286개 실행 결과는 역사 기록이며 현재 구현 상태와 구분한다.
+
 고객의 주문 취소 요청을 먼저 영속 기록하고, 응답 유실·프로세스 재시작에도 같은 주문의 취소를 재확인한다. 엔진의 정확한 취소 응답을 검증하되 플랫폼 주문 종료와 예약금 반환은 기존 Kafka 금융 결과 소비만 확정한다. 공통 사이클135다.
 
 ## 문제와 기존 동작
@@ -52,14 +54,14 @@
             var owned=orders.findByUserIdAndIdForUpdate(userId,orderId).orElseThrow(()->new IllegalArgumentException("본인 주문을 확인하세요"));
             if("cancelled".equals(owned.getStatus()))return false;
             if(TERMINAL.contains(owned.getStatus()))throw new IllegalArgumentException("종료된 주문은 취소할 수 없습니다");
-            var existing=cancellations.findForUpdate(orderId);
-            if(existing.isEmpty()){
-                var original=submissions.findByOrderId(orderId).orElseThrow(()->new IllegalStateException("취소할 불변 접수 원본이 없습니다"));
+            ensureQueued(owned);
+            access.recordCancellationIntent(userId,orderId);return true;
+        }));
 ```
 
 TransactionTemplate 콜백이 끝날 때 요청과 감사가 함께 확정된다. 이후 HTTP는 이 콜백 밖에 있다. NEVER는 호출자의 TX를 끊어 주는 기능이 아니라 TX가 이미 있으면 진입을 거부하는 조건이다. TypeScript의 await만으로 DB TX/잠금이 풀리지 않는 것과 구분한다.
 
-출처: [OrderCancellationService.java](../../src/main/java/dustin/cex/domains/order/service/OrderCancellationService.java#L58), 현재 소스의 부분 발췌.
+출처: [OrderCancellationService.java](../../src/main/java/dustin/cex/domains/order/service/OrderCancellationService.java#L71), 현재 소스의 부분 발췌.
 
 ```java
             cancellations.flush();
@@ -99,18 +101,18 @@ JPA는 필드 변경 즉시 SQL을 보내지 않을 수 있다. flush로 실제 
 출처: [cancellation-schema.sql](../../src/main/resources/order/cancellation-schema.sql#L24), 현재 소스의 부분 발췌.
 
 ```sql
- IF TG_OP='INSERT' THEN action_name:='ORDER_CANCEL_REQUESTED';required_detail:='INTENT_ONLY_ENGINE_RESULT_FOLLOWS';stamp:=NEW.requested_at;actor:=NEW.user_id;
+ IF TG_OP='INSERT' THEN
+  -- 고객이 직접 남긴 요청과 검증된 시스템 위험 조치를 구분한다. 시스템을 고객으로 위장해 기록하지 않는다.
+  IF EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id=NEW.user_id AND a.action='ORDER_CANCEL_REQUESTED' AND a.target='order:'||NEW.order_id::text
+   AND a.outcome='SUCCESS' AND a.detail='INTENT_ONLY_ENGINE_RESULT_FOLLOWS' AND a.occurred_at>=NEW.requested_at AND length(a.source_address)>0) THEN RETURN NULL;END IF;
+  IF EXISTS(SELECT 1 FROM bitcoin_chain_risk_order_cancellations c JOIN security_audit a ON a.actor_id IS NULL AND a.action='BTC_CHAIN_RISK_CANCEL_PLANNED'
+   AND a.target='order:'||NEW.order_id::text AND a.detail=c.audit_detail AND a.outcome='SUCCESS' AND a.occurred_at>=NEW.requested_at AND length(a.source_address)>0
+   WHERE c.order_id=NEW.order_id AND c.user_id=NEW.user_id AND c.created_txid=txid_current()) THEN RETURN NULL;END IF;
+  RAISE EXCEPTION '취소 요청에는 고객의 실제 의도 또는 검증된 시스템 위험 근거·감사가 필요합니다';
  ELSE
-  stamp:=NEW.updated_at;actor:=NULL;
-  IF NEW.attempts>OLD.attempts THEN action_name:='ORDER_CANCEL_ATTEMPT_STARTED';required_detail:='ATTEMPT:'||NEW.attempts::text;
-  ELSIF NEW.acknowledged_at IS DISTINCT FROM OLD.acknowledged_at THEN action_name:='ORDER_CANCEL_ATTEMPT_FINISHED';required_detail:='ATTEMPT:'||NEW.attempts::text||':ACKNOWLEDGED';
-  ELSIF NEW.next_attempt_at IS DISTINCT FROM OLD.next_attempt_at THEN action_name:='ORDER_CANCEL_ATTEMPT_FINISHED';required_detail:='ATTEMPT:'||NEW.attempts::text||':UNCERTAIN';
-  ELSE RETURN NULL;END IF;
- END IF;
- IF NOT EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id IS NOT DISTINCT FROM actor AND a.action=action_name AND a.target='order:'||NEW.order_id::text
 ```
 
-SQL 트리거는 최초 요청과 시도/응답 변경을 구분해 정확한 행위자·대상·시도/결과의 필수 감사를 검사한다. DB가 정한 이번 변경 시각 이후의 감사만 인정해 과거 UNCERTAIN 감사로 새 일정 변경을 승인하지 못하게 한다. 운영 시각/DB 권한 관리는 별도 인프라 조건이다.
+현재136의 최초 요청 분기는 실제 고객 의도와 검증된 시스템 위험 근거를 구분한다. 아래135의 실행 수치는 당시 결과다. SQL 트리거는 최초 요청과 시도/응답 변경을 구분해 정확한 행위자·대상·시도/결과의 필수 감사를 검사한다. DB가 정한 이번 변경 시각 이후의 감사만 인정해 과거 UNCERTAIN 감사로 새 일정 변경을 승인하지 못하게 한다. 운영 시각/DB 권한 관리는 별도 인프라 조건이다.
 
 출처: [OrderCancellationWorker.java](../../src/main/java/dustin/cex/domains/order/service/OrderCancellationWorker.java#L36), 현재 소스의 부분 발췌.
 
@@ -123,7 +125,7 @@ SQL 트리거는 최초 요청과 시도/응답 변경을 구분해 정확한 �
 
 volatile active는 종료 신호가 다른 스레드에 보이도록 한다. 일반 데이터 구조를 lock-free로 만드는 문법은 아니다. 워커의 수명 관리만 synchronized이며 Rust 코어의 단일 독점 상태에는 어떤 공유 락도 추가하지 않았다.
 
-출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L164), 현재 소스의 부분 발췌.
+출처: [BitcoinCreditWireIntegrationTest.java](../../src/test/java/dustin/cex/domains/kyc/BitcoinCreditWireIntegrationTest.java#L160), 현재 소스의 부분 발췌.
 
 ```java
         var after=actualAudit.page(0,null,null);assertEquals(2,after.path("events").size());assertEquals(cancellationEvent,after.path("events").get(1).asString());listeners.start();await(()->"cancelled".equals(orderRows.findById(order).orElseThrow().getStatus()),20);
