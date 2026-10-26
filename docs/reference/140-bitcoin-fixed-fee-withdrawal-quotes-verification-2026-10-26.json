@@ -1,0 +1,1665 @@
+{
+  "cycle": 140,
+  "implementation_commit": "4195f7e3f964768a219c9861bd13e10eb5731207",
+  "verification": {
+    "groups": [
+      {
+        "label": "quotes",
+        "command": "python3 scripts/verify_bitcoin_withdrawal_quotes.py (19개 통과 후 테스트 보조 함수 수정, 나머지10개 선택 실행)",
+        "tests": {
+          "tests": 29,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "quoteRecordsTheExactFeeAndCanonicalRecipientWithoutReservingFunds()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "repeatedRequestKeepsTheSameQuoteAndDoesNotRepeatNodeWork()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "mandatoryQuoteAuditFailureRollsBackTheQuote()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "silentlyOmittedQuoteAuditCannotCommit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "invalidKeyAmountAddressAndAmbientTransactionDoNotCallTheNode()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "theSameKeyCannotSwitchAmountOrDestination()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "theSameKeyCannotMoveToAnotherSession()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "anotherCustomersAndMissingQuotesAreBothNotFound()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "operatorForeignRevokedAndMissingSessionsCannotPrepare()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "unverifiedCustomerCannotReceiveANewQuote()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "tradingRestrictionBlocksNewQuotesWithoutHidingThePast()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "currentAccountDisableAlsoStopsHistoricalAccess()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "nodeIoDoesNotHoldTheCustomerRowOrDatabaseTransaction()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "customerVersionChangeDuringNodeReadPreventsTheNewQuote()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "currentTradingRestrictionDuringNodeReadCannotUseTheEarlierPermission()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "sourceFailureIsNotAUserAuthenticationDenial()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "replayAndReadAuditFailuresDoNotHideTheCommittedOriginal()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "quoteCannotBeEditedDeletedOrTruncated()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "aNewPublicHashCannotAuthorizeAWrongFeeOrTotal()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "extraMissingAndCoercedQuoteFieldsCannotEnterTheRecord()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "anotherRoleOrNetworkCannotForgeACustomerQuote()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "sourceNetworkCannotSilentlyMixWithTheBoundDatabase()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "quoteReadRejectsAlteredMoneyEvenWithARecomputedPublicHash()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "concurrentSameRequestsKeepOneQuoteAndOneCreationAudit()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "customerHttpReturnsOnlyAServerPricedQuote()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "customerHttpRejectsNumericAmountsAndInjectedFeesUnknownFieldsOrDuplicateBodies()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "customerHttpRejectsOversizedBodiesAndDoesNotCallTheNode()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "anonymousAndOperatorCannotReachTheQuoteController()"
+          },
+          {
+            "class": "dustin.cex.domains.kyc.BitcoinWithdrawalQuoteIntegrationTest",
+            "name": "anExpiredQuoteIsHistoricalAndCannotBeSilentlyRenewed()"
+          }
+        ],
+        "groups": [
+          {
+            "database": "monitoring_case_0",
+            "method": "quoteRecordsTheExactFeeAndCanonicalRecipientWithoutReservingFunds",
+            "exit": 0,
+            "clock_difference_seconds": 0.006349086761474609,
+            "duration_seconds": 8.926193952560425,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/quoteRecordsTheExactFeeAndCanonicalRecipientWithoutReservingFunds.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_1",
+            "method": "repeatedRequestKeepsTheSameQuoteAndDoesNotRepeatNodeWork",
+            "exit": 0,
+            "clock_difference_seconds": 0.005146026611328125,
+            "duration_seconds": 6.844210863113403,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/repeatedRequestKeepsTheSameQuoteAndDoesNotRepeatNodeWork.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_2",
+            "method": "mandatoryQuoteAuditFailureRollsBackTheQuote",
+            "exit": 0,
+            "clock_difference_seconds": 0.006137847900390625,
+            "duration_seconds": 6.852720022201538,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/mandatoryQuoteAuditFailureRollsBackTheQuote.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_3",
+            "method": "silentlyOmittedQuoteAuditCannotCommit",
+            "exit": 0,
+            "clock_difference_seconds": 0.005769968032836914,
+            "duration_seconds": 6.88175892829895,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/silentlyOmittedQuoteAuditCannotCommit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_4",
+            "method": "invalidKeyAmountAddressAndAmbientTransactionDoNotCallTheNode",
+            "exit": 0,
+            "clock_difference_seconds": 0.006349802017211914,
+            "duration_seconds": 8.24460506439209,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/invalidKeyAmountAddressAndAmbientTransactionDoNotCallTheNode.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_5",
+            "method": "theSameKeyCannotSwitchAmountOrDestination",
+            "exit": 0,
+            "clock_difference_seconds": 0.008459091186523438,
+            "duration_seconds": 7.001144886016846,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/theSameKeyCannotSwitchAmountOrDestination.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_6",
+            "method": "theSameKeyCannotMoveToAnotherSession",
+            "exit": 0,
+            "clock_difference_seconds": 0.0056841373443603516,
+            "duration_seconds": 6.809678077697754,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/theSameKeyCannotMoveToAnotherSession.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_7",
+            "method": "anotherCustomersAndMissingQuotesAreBothNotFound",
+            "exit": 0,
+            "clock_difference_seconds": 0.0059642791748046875,
+            "duration_seconds": 6.723437070846558,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/anotherCustomersAndMissingQuotesAreBothNotFound.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_8",
+            "method": "operatorForeignRevokedAndMissingSessionsCannotPrepare",
+            "exit": 0,
+            "clock_difference_seconds": 0.0061719417572021484,
+            "duration_seconds": 6.889739036560059,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/operatorForeignRevokedAndMissingSessionsCannotPrepare.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_9",
+            "method": "unverifiedCustomerCannotReceiveANewQuote",
+            "exit": 0,
+            "clock_difference_seconds": 0.005070924758911133,
+            "duration_seconds": 6.797706127166748,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/unverifiedCustomerCannotReceiveANewQuote.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_10",
+            "method": "tradingRestrictionBlocksNewQuotesWithoutHidingThePast",
+            "exit": 0,
+            "clock_difference_seconds": 0.0049991607666015625,
+            "duration_seconds": 6.763089179992676,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/tradingRestrictionBlocksNewQuotesWithoutHidingThePast.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_11",
+            "method": "currentAccountDisableAlsoStopsHistoricalAccess",
+            "exit": 0,
+            "clock_difference_seconds": 0.005136013031005859,
+            "duration_seconds": 6.723669052124023,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/currentAccountDisableAlsoStopsHistoricalAccess.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_12",
+            "method": "nodeIoDoesNotHoldTheCustomerRowOrDatabaseTransaction",
+            "exit": 0,
+            "clock_difference_seconds": 0.0053310394287109375,
+            "duration_seconds": 6.78727126121521,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/nodeIoDoesNotHoldTheCustomerRowOrDatabaseTransaction.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_13",
+            "method": "customerVersionChangeDuringNodeReadPreventsTheNewQuote",
+            "exit": 0,
+            "clock_difference_seconds": 0.005608081817626953,
+            "duration_seconds": 6.57698392868042,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/customerVersionChangeDuringNodeReadPreventsTheNewQuote.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_14",
+            "method": "currentTradingRestrictionDuringNodeReadCannotUseTheEarlierPermission",
+            "exit": 0,
+            "clock_difference_seconds": 0.006325960159301758,
+            "duration_seconds": 6.497483730316162,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/currentTradingRestrictionDuringNodeReadCannotUseTheEarlierPermission.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_15",
+            "method": "sourceFailureIsNotAUserAuthenticationDenial",
+            "exit": 0,
+            "clock_difference_seconds": 0.0065038204193115234,
+            "duration_seconds": 7.069053888320923,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/sourceFailureIsNotAUserAuthenticationDenial.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_16",
+            "method": "replayAndReadAuditFailuresDoNotHideTheCommittedOriginal",
+            "exit": 0,
+            "clock_difference_seconds": 0.006699800491333008,
+            "duration_seconds": 6.489022970199585,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/replayAndReadAuditFailuresDoNotHideTheCommittedOriginal.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_17",
+            "method": "quoteCannotBeEditedDeletedOrTruncated",
+            "exit": 0,
+            "clock_difference_seconds": 0.0064258575439453125,
+            "duration_seconds": 6.8180389404296875,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/quoteCannotBeEditedDeletedOrTruncated.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_18",
+            "method": "aNewPublicHashCannotAuthorizeAWrongFeeOrTotal",
+            "exit": 0,
+            "clock_difference_seconds": 0.005633115768432617,
+            "duration_seconds": 6.6118621826171875,
+            "log": "bitcoin-withdrawal-quotes/81004070d46f/aNewPublicHashCannotAuthorizeAWrongFeeOrTotal.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_0",
+            "method": "extraMissingAndCoercedQuoteFieldsCannotEnterTheRecord",
+            "exit": 0,
+            "clock_difference_seconds": 0.006621122360229492,
+            "duration_seconds": 8.131563186645508,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/extraMissingAndCoercedQuoteFieldsCannotEnterTheRecord.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_1",
+            "method": "anotherRoleOrNetworkCannotForgeACustomerQuote",
+            "exit": 0,
+            "clock_difference_seconds": 0.006027936935424805,
+            "duration_seconds": 7.301469326019287,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/anotherRoleOrNetworkCannotForgeACustomerQuote.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_2",
+            "method": "sourceNetworkCannotSilentlyMixWithTheBoundDatabase",
+            "exit": 0,
+            "clock_difference_seconds": 0.006908893585205078,
+            "duration_seconds": 7.773726940155029,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/sourceNetworkCannotSilentlyMixWithTheBoundDatabase.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_3",
+            "method": "quoteReadRejectsAlteredMoneyEvenWithARecomputedPublicHash",
+            "exit": 0,
+            "clock_difference_seconds": 0.006315946578979492,
+            "duration_seconds": 7.039080858230591,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/quoteReadRejectsAlteredMoneyEvenWithARecomputedPublicHash.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_4",
+            "method": "concurrentSameRequestsKeepOneQuoteAndOneCreationAudit",
+            "exit": 0,
+            "clock_difference_seconds": 0.006747007369995117,
+            "duration_seconds": 6.579653978347778,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/concurrentSameRequestsKeepOneQuoteAndOneCreationAudit.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_5",
+            "method": "customerHttpReturnsOnlyAServerPricedQuote",
+            "exit": 0,
+            "clock_difference_seconds": 0.006128072738647461,
+            "duration_seconds": 6.543801784515381,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/customerHttpReturnsOnlyAServerPricedQuote.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_6",
+            "method": "customerHttpRejectsNumericAmountsAndInjectedFeesUnknownFieldsOrDuplicateBodies",
+            "exit": 0,
+            "clock_difference_seconds": 0.006385087966918945,
+            "duration_seconds": 7.187190771102905,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/customerHttpRejectsNumericAmountsAndInjectedFeesUnknownFieldsOrDuplicateBodies.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_7",
+            "method": "customerHttpRejectsOversizedBodiesAndDoesNotCallTheNode",
+            "exit": 0,
+            "clock_difference_seconds": 0.0065348148345947266,
+            "duration_seconds": 7.505066871643066,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/customerHttpRejectsOversizedBodiesAndDoesNotCallTheNode.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_8",
+            "method": "anonymousAndOperatorCannotReachTheQuoteController",
+            "exit": 0,
+            "clock_difference_seconds": 0.007155895233154297,
+            "duration_seconds": 7.718824863433838,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/anonymousAndOperatorCannotReachTheQuoteController.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          },
+          {
+            "database": "monitoring_case_9",
+            "method": "anExpiredQuoteIsHistoricalAndCannotBeSilentlyRenewed",
+            "exit": 0,
+            "clock_difference_seconds": 0.007411956787109375,
+            "duration_seconds": 128.01156306266785,
+            "log": "bitcoin-withdrawal-quotes/9a8a8998205f/anExpiredQuoteIsHistoricalAndCannotBeSilentlyRenewed.log",
+            "tests": {
+              "tests": 1,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0
+            }
+          }
+        ],
+        "run_ids": [
+          "81004070d46f",
+          "9a8a8998205f"
+        ]
+      },
+      {
+        "label": "amounts",
+        "command": [
+          "./gradlew",
+          "test",
+          "--tests",
+          "*BitcoinWithdrawalAmountsTest",
+          "--rerun",
+          "--console=plain"
+        ],
+        "tests": {
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.bitcoin.BitcoinWithdrawalAmountsTest",
+            "name": "fractionalSatoshiFeeIsRoundedUpBeforeComputingTheTotal()"
+          },
+          {
+            "class": "dustin.cex.domains.bitcoin.BitcoinWithdrawalAmountsTest",
+            "name": "malformedPrecisionAndRangeNeverBecomeRoundedPaymentAmounts()"
+          },
+          {
+            "class": "dustin.cex.domains.bitcoin.BitcoinWithdrawalAmountsTest",
+            "name": "protocolSupplyBoundIncludesTheFee()"
+          },
+          {
+            "class": "dustin.cex.domains.bitcoin.BitcoinWithdrawalAmountsTest",
+            "name": "oneSatoshiQuoteStillDisclosesItsWholeSatoshiFee()"
+          },
+          {
+            "class": "dustin.cex.domains.bitcoin.BitcoinWithdrawalAmountsTest",
+            "name": "manyExactIntegerSatoshiInputsPreserveAmountPlusFee()"
+          },
+          {
+            "class": "dustin.cex.domains.bitcoin.BitcoinWithdrawalAmountsTest",
+            "name": "equivalentTrailingZeroNotationHasTheSameAmounts()"
+          },
+          {
+            "class": "dustin.cex.domains.bitcoin.BitcoinWithdrawalAmountsTest",
+            "name": "oneBasisPointUsesTheFixedUserChosenRate()"
+          }
+        ]
+      },
+      {
+        "label": "finance",
+        "command": [
+          "python3",
+          "scripts/verify_engine_inbox.py"
+        ],
+        "tests": {
+          "tests": 217,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "aggregateBookQuantityCanExceedSingleAccountColumnLimit()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "rejectsUnsortedNegativeAndOversizedDepth()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "rejectsForgedSequenceAndDuplicateTradeIdentity()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "accountAmountsAndTradeIdsSerializeWithoutBrowserNumberLoss()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "duplicateReceiptDoesNotRewriteBookOrTrades()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSafetyTest",
+            "name": "acceptsSortedSnapshotAndSerializesNoPrivateAccountFields()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "jacksonThreePreservesExactAmountAndIsoTime()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "monthlyRetryStopsAfterTransientFailureSucceeds()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "applicationUsesSupportedBootAndSecurityWithoutOldMapperModule()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "dailyRetryMakesThreeAttemptsAndPropagatesLastFailure()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "checkConstraintStillWorksAfterSchemaConnectionCloses()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "monthlyAggregateFailureIsNotReportedAsSuccess()"
+          },
+          {
+            "class": "dustin.cex.domains.runtime.FrameworkContractTest",
+            "name": "monthlyUserFailureDoesNotBecomeSuccessfulCompletion()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketPersistenceTest",
+            "name": "gapRollsBackReceiptAndCanRetryAfterMissingEvent()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketPersistenceTest",
+            "name": "changedPayloadCannotOverwriteConfirmedSnapshot()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketPersistenceTest",
+            "name": "duplicateAfterCommitPreservesOneTradeAndOneCandle()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketPersistenceTest",
+            "name": "earlierRestartSnapshotDoesNotRollBackBookOrDuplicateTrades()"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "존재하지 않는 runId로 updateCompletedStep 호출 시 예외 없이 스킵"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "parseFailedUserIds: 잘못된 JSON이면 빈 리스트 반환"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "failRun 시 failedUserIds null/빈 리스트면 JSON 미설정, NPE 없음"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "런 실패 시 FAILED + failedUserIds 저장"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementRunServiceTest",
+            "name": "런 시작 -> 단계 업데이트 -> 완료 시 SUCCESS 저장"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSocketTest",
+            "name": "connectionLimitReleasesExactlyOneSlotAfterClose()"
+          },
+          {
+            "class": "dustin.cex.domains.market.MarketSocketTest",
+            "name": "publicSocketRejectsOrderMessages()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "consecutivePartialFillsKeepFeesAndFutureReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "alteredRejectionAndPartiallyFilledOrderCannotReleaseFunds()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "marketBudgetDustSurvivesDatabaseCommitWithoutRounding()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "lateBalanceFailureRollsBackTradeOrdersAndEarlierAccountChanges()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "marketBuyUsesBudgetAndReleasesOnlyItsUnusedReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "alteredFeeOrFrozenRateRollsBackAllFinancialRows()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "wrongCompletionTotalsCountsAndStatusDoNotReleaseReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "marketSellPartialCompletionPreservesOtherReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "failedRejectionRefundRollsBackStateAndDispatchThenAllowsCorrectRetry()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "durableRejectionReturnsOnlyOriginalReservationAndConfirmsDelivery()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "zeroFillMarketBuyAndSellReturnWholeReservation()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "overBudgetTradeAndFailedRefundRollBackAndAllowCorrectCompletion()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "marketBuyRejectionUsesOriginalBudgetWithExplicitNullQuantity()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.TradeFeeSettlementTest",
+            "name": "fullySpentMarketBuyWaitsForCompletionAndDoesNotRefund()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderDispatchTest",
+            "name": "expiredLeaseCanBeClaimedButOldResponseCannotConfirmNewAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderDispatchTest",
+            "name": "backoffIsBoundedAndNeverExpiresFinancialReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderDispatchTest",
+            "name": "confirmedRejectionCannotBeReopenedByLateFailure()"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [1] body=\"\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [2] body=\"{}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [3] body=\"<html>취소 성공처럼 보이는 화면</html>\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [4] body=\"{\\\"id\\\":123,\\\"user_id\\\":101,\\\"base_mint\\\":\\\"BTC\\\",\\\"quote_mint\\\":\\\"USDT\\\",\\\"status\\\":\\\"cancelled\\\"}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [5] body=\"{\\\"id\\\":\\\"124\\\",\\\"user_id\\\":101,\\\"base_mint\\\":\\\"BTC\\\",\\\"quote_mint\\\":\\\"USDT\\\",\\\"status\\\":\\\"cancelled\\\"}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [6] body=\"{\\\"id\\\":\\\"123\\\",\\\"user_id\\\":102,\\\"base_mint\\\":\\\"BTC\\\",\\\"quote_mint\\\":\\\"USDT\\\",\\\"status\\\":\\\"cancelled\\\"}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [7] body=\"{\\\"id\\\":\\\"123\\\",\\\"user_id\\\":\\\"101\\\",\\\"base_mint\\\":\\\"BTC\\\",\\\"quote_mint\\\":\\\"USDT\\\",\\\"status\\\":\\\"cancelled\\\"}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [8] body=\"{\\\"id\\\":\\\"123\\\",\\\"user_id\\\":101,\\\"base_mint\\\":\\\"ETH\\\",\\\"quote_mint\\\":\\\"USDT\\\",\\\"status\\\":\\\"cancelled\\\"}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [9] body=\"{\\\"id\\\":\\\"123\\\",\\\"user_id\\\":101,\\\"base_mint\\\":\\\"BTC\\\",\\\"quote_mint\\\":\\\"USDC\\\",\\\"status\\\":\\\"cancelled\\\"}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [10] body=\"{\\\"id\\\":\\\"123\\\",\\\"user_id\\\":101,\\\"base_mint\\\":\\\"BTC\\\",\\\"quote_mint\\\":\\\"USDT\\\",\\\"status\\\":\\\"filled\\\"}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [11] body=\"{\\\"id\\\":\\\"123\\\",\\\"id\\\":\\\"123\\\",\\\"user_id\\\":101,\\\"base_mint\\\":\\\"BTC\\\",\\\"quote_mint\\\":\\\"USDT\\\",\\\"status\\\":\\\"cancelled\\\"}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "ambiguousOrDifferentCancellationIsNeverAnAcknowledgement [12] body=\"{\\\"id\\\":\\\"123\\\",\\\"user_id\\\":101,\\\"base_mint\\\":\\\"BTC\\\",\\\"quote_mint\\\":\\\"USDT\\\",\\\"status\\\":\\\"cancelled\\\"} {}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "allEngineCommandsCarryServiceIdentity()"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "otherCancellationHttpStatusesDoNotBecomeDurableAcknowledgements [1] status=201"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "otherCancellationHttpStatusesDoNotBecomeDurableAcknowledgements [2] status=202"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "otherCancellationHttpStatusesDoNotBecomeDurableAcknowledgements [3] status=204"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "otherCancellationHttpStatusesDoNotBecomeDurableAcknowledgements [4] status=400"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "otherCancellationHttpStatusesDoNotBecomeDurableAcknowledgements [5] status=500"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[1] timeout = 0"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[2] timeout = -1"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[1] status = 200"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[2] status = 202"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[3] status = 201"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[4] status = 400"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[5] status = 500"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[6] status = 503"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "receivedRequestWithoutResponseTimesOutWithoutResubmitting()"
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[1] defect = \"{}\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[2] defect = \"wrong-order\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[3] defect = \"wrong-user\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[4] defect = \"numeric-id\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[5] defect = \"missing-time\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[6] defect = \"invalid-time\""
+          },
+          {
+            "class": "dustin.cex.shared.http.EngineHttpClientTest",
+            "name": "[7] defect = \"wrong-state\""
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "concurrentDeliveriesHaveOneWinner()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "financialFailureRollsBackReceiptAndAllowsRetry()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "actualConsumerFailureRollsBackTheRealInboxClaim()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "sameIdentityDifferentPayloadIsRejected()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "transactionAndDurableIdentityAreRequired()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.EngineEventInboxTest",
+            "name": "duplicateDeliveryChangesFinancialStateOnce()"
+          },
+          {
+            "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+            "name": "준비 이벤트를 반복 발행해도 잔액 변경 요청이 없다"
+          },
+          {
+            "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+            "name": "플랫폼 컨텍스트를 다시 만들어도 기존 잔액을 재입금하지 않는다"
+          },
+          {
+            "class": "dustin.cex.shared.services.PlatformBalanceStartupTest",
+            "name": "플랫폼 준비 이벤트는 기존 잔액을 엔진에 입금하지 않는다"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "unavailableSourceRecordsFailedRunWithoutChangingMoney()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "serviceRejectsUnbalancedPostingWithoutAnyFinancialWrite()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "corruptedProjectionIsDetectedAndNeverRepaired()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "finishedReportAndEvidenceCannotBeRewritten()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "customerCustodyAndSystemPendingAreInvalidAccounts()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "accountConstraintExpansionPreservesCommittedRows()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "terminalStateCannotDisagreeWithDurableResult()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "openingAndReservationMatchLedgerProjectionAndOriginalOrder()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "changedPageIdentityCannotProduceSuccessfulReport()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "wrongReceiptAndCoherentlyWrongRefundCannotPassIndependentSourceComparison()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "unreceivedEngineResultIsIncompleteRatherThanMatched()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "committedJournalCannotBeEditedDeletedOrExtended()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "openingRefusesFinancialHistoryEvenWhenBalancesLookValid()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "openingCannotBeRepeatedOrInferredFromExistingOrders()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "databaseRejectsUnbalancedDirectInsertAtCommitAndRollsBackBalance()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "customerOverdraftRollsBackBalancedPosting()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "committedLedgerCannotBeTruncatedDirectlyOrThroughCascade()"
+          },
+          {
+            "class": "dustin.cex.domains.ledger.OrderLedgerTest",
+            "name": "missingOpeningNeverAdoptsCurrentBalanceAutomatically()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "differentKeyCreatesIndependentOrder()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "keyIsScopedToAuthenticatedUser()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "equivalentDecimalAndDefaultQuoteAreTheSameIntent()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "newServiceInstanceUsesDatabaseRatherThanMemoryForReplay()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "sameKeyReturnsSameOrderWithoutAnotherReservationOrSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "unrelatedIntegrityErrorWithoutCommittedKeyIsNotHiddenAsReplay()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "retryAfterLostResponseFindsStoredOrderWithoutResending()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[1] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000700202ea80@6e451bcb"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[2] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000700202ecb0@6d5f824d"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[3] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000700202eee0@d628db3"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[4] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000700202f110@49fc2556"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[5] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000700202f340@4bd89109"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "[6] change = dustin.cex.domains.order.service.OrderIdempotencyTest$$Lambda/0x000000700202f570@1c553585"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "marketBudgetIsExposedInResponseAndExpiredOrderCannotBeCancelled()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "duplicateWhileFirstHttpIsInFlightDoesNotWaitForOrRepeatHttp()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "failedLocalReservationRollsBackTheKeyToo()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "uniqueConstraintRaceRollsBackCandidateAndReadsWinnerAfterRollback()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "marketBudgetIsPreservedApartFromChangingOrderState()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderIdempotencyTest",
+            "name": "feePolicyChangesAffectOnlyNewIntentAndInvalidPolicyRollsBackReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "repeatedAcceptedCancellationDoesNotSendAnotherFinancialCommand()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "anotherCustomerCannotCreateOrSendTheCancellation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "requestAndClaimAreCommittedBeforeTheExternalCancellation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "theOutputWorkerMayClaimTheNewIntentBeforeTheApiWithoutASecondHttpCall()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "claimAuditFailureLeavesTheCommittedIntentRetryableWithoutSending()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "requestAuditFailurePreventsEveryExternalCall()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "aFreshDispatchServiceRetriesTheSamePersistedUnknownCancellation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "anAmbientTransactionIsRejectedBeforeCreatingAnIntent()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "anOldResponseCannotOverwriteANewerLeasedAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "concurrentCustomerRequestsHaveOneProducerAndOneOriginal()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "[1] status = \"filled\""
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "[2] status = \"rejected\""
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "[3] status = \"expired\""
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationTest",
+            "name": "[4] status = \"cancelled\""
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "insufficientBalanceRollsBackOrderBeforeSending()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "corruptNegativeReservationIsRejectedWithoutRepairOrSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "concurrentImmediateClaimSendsOneHttpRequest()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "nextOrderCannotSpendFundsReservedByUnknownSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "[1] failure = org.springframework.web.client.ResourceAccessException: response lost"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "[2] failure = org.springframework.web.client.HttpServerErrorException: 500 INTERNAL_SERVER_ERROR"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "[3] failure = org.springframework.web.client.HttpClientErrorException: 400 BAD_REQUEST"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "[4] failure = java.lang.IllegalStateException: unexpected client failure"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "sellTimeoutPreservesBaseAssetReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "uncertainDeliveryRetriesSameOriginalWithoutSecondReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "omittedQuoteUsesSameAssetForStorageReservationAndSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "ambientTransactionIsRejectedBeforeAnyFinancialWrite()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "createdEventFailureDoesNotUndoOrderOrRepeatSubmission()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "claimIsCommittedBeforeHttpAndCompetingWorkerCannotSendAgain()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "failedCancellationPreservesOrderAndReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "marketBuyTimeoutPreservesExactQuoteReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "lateResponseFailureDoesNotOverwriteAlreadyFilledOrder()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "unrepresentableReservationSplitRollsBackOrderAndOriginalBalance()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "cancellationAcceptanceDoesNotPreemptKafkaStateOrBalanceRelease()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "falseResponseDoesNotProveRejectionOrReleaseFunds()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "engineCallObservesCommittedReservationOutsideTransaction()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "committedBeforeSendIsRecoveredByNewServiceInstance()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderSubmissionTest",
+            "name": "unknownOrderCannotBeReadByAnotherOwner()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "missingRequestKeyIsRejectedBeforeService()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "replayReturnsExistingOrderWithOkAndLocation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "missingIdentityDoesNotCreateAnOrder()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "confirmedHttpResponseKeepsCreatedContract()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "statusLookupPassesAuthenticatedOwnerToService()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "differentRequestForSameKeyReturnsConflict()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "malformedRequestKeyIsRejectedBeforeService()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "malformedOrderDoesNotEnterUncertainSubmissionHandling()"
+          },
+          {
+            "class": "dustin.cex.domains.order.controller.OrderSubmissionResponseTest",
+            "name": "uncertainSubmissionReturnsAcceptedWithExactIdAndQueryLocation()"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+            "name": "recordFailure 후 getFailuresByDate로 조회"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+            "name": "recordFailure 시 errorMessage null이어도 예외 없음"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+            "name": "1·2·4단계 실패 기록 시 userId null 허용"
+          },
+          {
+            "class": "dustin.cex.domains.settlement.trade.TradeSettlementFailureTest",
+            "name": "실패 기록 없는 날짜 조회 시 빈 리스트"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationWorkerTest",
+            "name": "storageFailureBacksOffBeforeTheNextOwnedAttempt()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationWorkerTest",
+            "name": "shutdownDoesNotTakeAnotherRequestAfterTheInFlightCall()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationWorkerTest",
+            "name": "oneLongLivedWorkerDrainsReadyRequestsAndDoesNotStartTwice()"
+          },
+          {
+            "class": "dustin.cex.domains.order.service.OrderCancellationWorkerTest",
+            "name": "disabledWorkerDoesNotContactTheDispatchService()"
+          },
+          {
+            "class": "dustin.cex.domains.fee.service.FeeConfigServiceTest",
+            "name": "specificityAndAtomicRefreshPreserveValidatedPolicy()"
+          },
+          {
+            "class": "dustin.cex.domains.fee.service.FeeConfigServiceTest",
+            "name": "invalidRatesAndUnsupportedTypesAreRejected()"
+          },
+          {
+            "class": "dustin.cex.domains.fee.service.FeeConfigServiceTest",
+            "name": "missingPolicyRejectsInsteadOfInventingDefault()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "actualPartialDepthContractUpdatesBtcReferenceAndIgnoresOlderSnapshot()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "disabledBotsDoNotConnectOrReadAccounts()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "fullBotOrderBudgetCancelsOldestAndWaitsForResultBeforeAdding()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "missingReferenceAndStaleReferenceNeverInventPrice()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "excessiveOrDifferentAssetBotOrdersDoNotReachNormalOrderService()"
+          },
+          {
+            "class": "dustin.cex.domains.bot.service.BotSafetyTest",
+            "name": "enabledBotRequiresProvisionedAccountAndDoesNotCreateMoney()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "unrepresentableReservationProductIsRejectedBeforeReservation()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "marketBuyCannotCarryBaseAmount()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "marketSellReservesBaseAmount()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "limitSellWithInexactQuoteValueIsRejectedLikeLimitBuy()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[1] request = CreateOrderRequest(orderType=BUY, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[2] request = CreateOrderRequest(orderType=buy, orderSide=stop, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[3] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint= SOL, quoteMint=null, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[4] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=USDT, quoteMint=null, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[5] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=, price=100, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[6] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=0, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[7] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=null, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[8] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=1)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[9] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=1E-10, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[10] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=1000000000000000000000, amount=2, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[11] request = CreateOrderRequest(orderType=buy, orderSide=limit, baseMint=SOL, quoteMint=null, price=1.000000001, amount=1.000000001, quoteAmount=null)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[12] request = CreateOrderRequest(orderType=buy, orderSide=market, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=1)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[13] request = CreateOrderRequest(orderType=sell, orderSide=limit, baseMint=SOL, quoteMint=null, price=100, amount=2, quoteAmount=1)"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[1] value = \"1E+1000000000\""
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[2] value = \"1E-1000000000\""
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "marketBuyKeepsMissingAmountAndExactQuoteBudget()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "exactDecimalBoundaryAndTrailingZerosAreAccepted()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "equivalentDecimalsAndDefaultQuoteProduceSameCommand()"
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[1] value = \"999999999999999999999.123456789\""
+          },
+          {
+            "class": "dustin.cex.domains.order.model.OrderCommandTest",
+            "name": "[2] value = \"79228162514264337593.543950336\""
+          },
+          {
+            "class": "dustin.cex.domains.fee.service.FeeRevenueTest",
+            "name": "revenueKeepsEachAssetAndExactDayBoundary()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "knownDuplicateDoesNotTouchFinancialRepositories()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "inboxFailurePropagatesBeforeFinancialUpdates()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "fullApplicationTestConfigurationNeverEnablesBots()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "missingFinancialOrderFailsInsteadOfCommittingOnlyReceipt()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "cancellationMustMatchOriginalOwnerAndMarket()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "unknownEventTypeIsRejected()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "consumerConfigurationStopsInsteadOfDiscardingFailedFinancialEvent()"
+          },
+          {
+            "class": "dustin.cex.shared.kafka.KafkaOrderEventConsumerTest",
+            "name": "newEventCannotSilentlySkipAnAlreadyClosedOrder()"
+          }
+        ]
+      },
+      {
+        "label": "security",
+        "command": [
+          "python3",
+          "scripts/verify_platform_security.py"
+        ],
+        "tests": {
+          "tests": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "cases": [
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "concurrentApprovalsExecuteExactlyOnce()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "apiNeverRedirectsToLoginPageOrChallengesBasic()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "bootstrapRejectsCustomerWithFinancialState()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "restrictionCanBeLiftedOnlyByAnotherApprovedRequest()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "bootstrapAuditFailureRollsBackRoleEnrollmentAndSessionRevocation()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "changedPayloadAndMissingProofAreRejected()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "corsAllowsOnlyConfiguredFrontendAndReviewedHeaders()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "auditFailureRollsBackOrderReservationLedgerAndDispatch()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "fakeSessionAndWrongTokenPurposeAreRejected()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "auditReadsAreBoundedAndContainNoCredentials()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "customerAndOperatorCannotEscalateRoles()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "missingAndWeakSecretsFailImmediately()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "roleChangeAndDisableAffectExistingAccessToken()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "loginPasswordGuessingIsBoundedAndDoesNotRevokeExistingSession()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "settlementAndPrivateTradeDataAreNotPublic()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "completedRequestCannotExecuteAgain()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "wrongAudiencePurposeAlgorithmAndTokenLifetimeAreRejected()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "logoutRevokesAccessAndRefreshTogether()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "bootstrapRejectsZeroBalanceWithHistoricalLedgerEntries()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "auditUsesPeerAddressAndPreservesRoleSnapshot()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "oldUnapprovedSettlementWritesAndUnknownRoutesAreDenied()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "expiredApprovalCannotExecute()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "approvalRunsThroughActualHttpAndAudit()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "bootstrapIsExplicitRevokesSessionsAndAuditsRoleGrant()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "rejectionDoesNotApplyRestrictionAndCannotBeReused()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "restrictionBlocksNewReservationButKeepsOriginalReplay()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "logoutCannotRevokeAnotherPersonsSession()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "publicSignupCannotChooseOperatorRole()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "newPathMatchingDoesNotOpenSimilarOrNestedPrivateRoutes()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "approvalProofGuessingIsBoundedWithoutApplyingEffect()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "changedTargetVersionAndRevokedRequesterInvalidateApproval()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "mandatoryAuditFailureRollsBackApprovalAndCustomerState()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "refreshRotationHasOneWinnerUnderConcurrency()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "concurrentSignupAllocatesOneEmailAddress()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "bootstrapRejectsShortEnrollmentSecretWithoutGrantingRole()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "differentAccountsOfSamePersonCannotApprove()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "requiredSigninAuditFailureDoesNotRevokeOrIssueSessions()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "missingApprovalFieldsAndUnboundedPagesAreRejected()"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "[1] identityExpired = true"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "[2] identityExpired = false"
+          },
+          {
+            "class": "dustin.cex.domains.security.PlatformSecurityTest",
+            "name": "auditAndApprovalPayloadCannotBeMutated()"
+          }
+        ]
+      }
+    ],
+    "tests": {
+      "tests": 294,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "unique": 294,
+    "executions": 294
+  }
+}

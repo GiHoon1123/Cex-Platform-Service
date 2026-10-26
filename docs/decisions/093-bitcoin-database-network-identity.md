@@ -97,11 +97,11 @@ public class BitcoinSchemaInitializer {
     private final JdbcTemplate jdbc;
     private final BitcoinNetworkIdentity identity;
     public BitcoinSchemaInitializer(JdbcTemplate jdbc,BitcoinNetworkIdentity identity){this.jdbc=jdbc;this.identity=identity;}
-    @PostConstruct void initialize()throws Exception{jdbc.execute(new ClassPathResource("bitcoin/schema.sql").getContentAsString(StandardCharsets.UTF_8));identity.verifyOrBind();}
+    @PostConstruct void initialize()throws Exception{jdbc.execute(new ClassPathResource("bitcoin/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("bitcoin/withdrawal-quote-schema.sql").getContentAsString(StandardCharsets.UTF_8));identity.verifyOrBind();}
 }
 ```
 
-@DependsOn은 초기화 순서를 명시한다. 보안 표 준비 전 최초 감사 쓰기가 실행되지 않도록 하고, 원본 표/트리거 준비 뒤 네트워크 검사를 수행한다. 단순 선언뿐 아니라 실제 Spring 기동 회귀로 확인한다.
+@DependsOn은 초기화 순서를 명시한다. 보안 표 준비 전 최초 감사 쓰기가 실행되지 않도록 하고, 원본 표/트리거 준비 뒤 네트워크 검사를 수행한다. 단순 선언뿐 아니라 실제 Spring 기동 회귀로 확인한다. 위 발췌는140 현재 소스이며, [출금 견적](140-bitcoin-fixed-fee-withdrawal-quotes.md) 스키마도 준비한 뒤 네트워크를 검사한다.140에서 견적 원본의 네트워크도 초기화 확인에 추가했다. 아래093 당시 실행 결과와 현재 범위를 구분한다.
 
 ## 작성한 테스트
 
