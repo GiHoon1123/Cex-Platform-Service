@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.backoff.BackOffExecution;
 import org.springframework.util.backoff.ExponentialBackOff;
 
-/** 출금 예약 명령만 전용 장수 스레드에서 재확인한다. 금융 원본과 대기 기준은 DB에 남긴다. */
+/** 출금 예약·해제를 전용 장수 스레드에서 재확인한다. 금융 원본과 대기 기준은 DB에 남긴다. */
 @Component
 @Profile("!test")
 @DependsOn("bitcoinWithdrawalSchemaInitializer")

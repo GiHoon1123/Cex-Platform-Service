@@ -25,7 +25,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 엔진 저널에서 확정된 최초 예약·금융 거절만 동일한 수신 키 TX로 반영한다. HTTP409는 이 반환 경로가 아니다. */
+/** 엔진 저널의 예약·최초 금융 거절·고객 취소 해제를 같은 수신 키 트랜잭션으로 반영한다. HTTP409만으로 반환하지 않는다. */
 @Service
 @DependsOn("bitcoinWithdrawalSchemaInitializer")
 public class BitcoinWithdrawalEvents {
