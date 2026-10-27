@@ -13,7 +13,7 @@ import tools.jackson.databind.ObjectMapper;
 
 /** 웹·Kafka·JPA·서명·방송 권한 없이 체인 확정 사실만 기록하는 프로세스 진입점이다. */
 @Configuration(proxyBeanMethods=false) @EnableScheduling
-@EnableAutoConfiguration(exclude={org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration.class,org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class,org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration.class})
+@EnableAutoConfiguration(exclude={org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration.class,org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration.class,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class,org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration.class})
 @Import(AuditService.class)
 public class BitcoinConfirmerApplication {
     @Bean BitcoinConfirmationSettings settings(org.springframework.core.env.Environment e){return new BitcoinConfirmationSettings(e.getRequiredProperty("bitcoin.confirmation.rpc-url"),e.getRequiredProperty("bitcoin.confirmation.rpc-user"),e.getRequiredProperty("bitcoin.confirmation.rpc-password"),e.getProperty("bitcoin.confirmation.network","REGTEST"),e.getProperty("bitcoin.confirmation.required",Integer.class,6));}

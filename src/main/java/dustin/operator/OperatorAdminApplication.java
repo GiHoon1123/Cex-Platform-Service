@@ -17,7 +17,8 @@ import dustin.cex.domains.security.*;
  */
 @Configuration(proxyBeanMethods=false)
 @EnableAutoConfiguration(exclude={org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration.class,
-    org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class})
+    org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,
+    org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration.class})
 @EntityScan(basePackageClasses=User.class)
 @EnableJpaRepositories(basePackageClasses=UserRepository.class)
 @Import({AuditService.class,OperatorBootstrapService.class})

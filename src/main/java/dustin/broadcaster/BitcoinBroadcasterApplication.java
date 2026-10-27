@@ -14,7 +14,7 @@ import tools.jackson.databind.ObjectMapper;
 
 /** 웹·Kafka·JPA·개인키 없이 확정 서명 결과만 공개하는 별도 프로세스 진입점이다. */
 @Configuration(proxyBeanMethods=false)
-@EnableAutoConfiguration(exclude={org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration.class,org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class,org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration.class})
+@EnableAutoConfiguration(exclude={org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration.class,org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration.class,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class,org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration.class})
 @EnableScheduling
 @Import({BitcoinSignerEnvelopeCrypto.class,AuditService.class})
 public class BitcoinBroadcasterApplication {

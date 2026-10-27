@@ -16,6 +16,7 @@ import tools.jackson.databind.ObjectMapper;
 @Configuration(proxyBeanMethods=false)
 @EnableAutoConfiguration(exclude={org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration.class,
     org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,
+    org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration.class,
     org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class,
     org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration.class})
 @EnableScheduling

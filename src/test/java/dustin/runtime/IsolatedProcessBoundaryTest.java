@@ -11,6 +11,7 @@ import dustin.signer.*;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.*;
 import org.junit.jupiter.api.Test;
+import org.flywaydb.core.Flyway;
 import org.springframework.boot.*;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -109,5 +110,7 @@ class IsolatedProcessBoundaryTest {
         assertTrue(context.getBeansOfType(DispatcherServlet.class).isEmpty());
         assertTrue(context.getBeansOfType(KafkaTemplate.class).isEmpty());
         assertTrue(context.getBeansOfType(EntityManagerFactory.class).isEmpty());
+        // 스키마 이력의 단일 소유자는 고객 플랫폼이다. 격리 워커가 기동 중 마이그레이션을 실행하면 안 된다.
+        assertTrue(context.getBeansOfType(Flyway.class).isEmpty());
     }
 }

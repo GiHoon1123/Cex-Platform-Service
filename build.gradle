@@ -64,6 +64,9 @@ dependencies {
 	// 메일 프로토콜·MIME·TLS는 Spring 표준 메일 구현에 맡긴다.
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.postgresql:postgresql'
+	// 신규 환경의 JPA 기본 표는 버전이 고정된 이력으로 먼저 만들고 Hibernate는 검증만 수행한다.
+	implementation 'org.springframework.boot:spring-boot-starter-flyway'
+	runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 	implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
 	// Swagger가 이미 요구하는 Jackson 2를 JWT 내부에서도 사용해 세 번째 JSON 라이브러리를 추가하지 않는다.

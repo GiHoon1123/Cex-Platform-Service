@@ -15,6 +15,7 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [161. 고객 웹과 운영·서명·방송·확인 프로세스 경계](decisions/161-isolated-process-boundaries.md): 비웹 컨텍스트 강제, JDBC 워커의 JPA 자동 구성 제거, 실제 컨텍스트와 다섯 JAR 회귀 검증.
 - [162. Bitcoin Core 수탁 잔액과 플랫폼 원장의 독립 대사](decisions/162-bitcoin-custody-reconciliation.md): 신뢰 잔액·블록과 불변 수탁 원장 비교, 전이 중 상태 구분, 자동 정정 금지와 실제 노드 검증.
 - [163. 승인된 Bitcoin 수탁 차이의 불변 균형 보정](decisions/163-approved-bitcoin-custody-correction.md): 독립 제안·열람·내용 결합 서명·새 대사 재검증과 CUSTODY/SUSPENSE 균형 분개.
+- [176. 빈 데이터베이스를 버전 이력으로 재현](decisions/176-versioned-fresh-database-schema.md): Flyway 기준선·엔진 접수 순서, 격리 워커의 마이그레이션 권한 제거와 실제 빈 DB/컨테이너 검증.
 
 ## 기존 설계·측정 문서
 
