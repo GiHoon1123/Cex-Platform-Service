@@ -149,7 +149,7 @@ class PlatformSecurityTest {
     private static boolean isPublicRoute(HttpMethod method,String path) {
         return method==HttpMethod.POST && (path.equals("/api/auth/signup")||path.equals("/api/auth/signin")
                 ||path.equals("/api/auth/refresh")||path.equals("/api/kyc/webhook"))
-            || method==HttpMethod.GET && path.startsWith("/api/market/");
+            || method==HttpMethod.GET && (path.startsWith("/api/market/")||path.equals("/api/health/live")||path.equals("/api/health/ready"));
     }
     private static boolean isCustomerBusinessRoute(String path) {
         return path.startsWith("/api/customer/")||path.startsWith("/api/cex/")||path.startsWith("/api/kyc/");
