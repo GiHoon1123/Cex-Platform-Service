@@ -10,6 +10,7 @@ import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorato
 import jakarta.annotation.PreDestroy;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.net.URI;
 
 /** 금융 소비자는 디비 커밋만 수행한다. 느린 브라우저 전송은 유한 별도 실행기로 분리한다. */
 @Component @RequiredArgsConstructor
@@ -21,15 +22,18 @@ public class MarketSocket extends TextWebSocketHandler {
     private final ThreadPoolExecutor sends=new ThreadPoolExecutor(4,4,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(100),new ThreadPoolExecutor.AbortPolicy());
     private static final class Client {
         final WebSocketSession session;
+        final String base;
+        final String quote;
         final AtomicLong started=new AtomicLong();
         volatile String last="";
         volatile long sent;
-        Client(WebSocketSession session) {this.session=new ConcurrentWebSocketSessionDecorator(session,10000,1048576);}
+        Client(WebSocketSession session,String base,String quote) {this.session=new ConcurrentWebSocketSessionDecorator(session,10000,1048576);this.base=base;this.quote=quote;}
     }
     @Override public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         // 공개 시세 연결만 허용한다. 계정·주문 구독은 이 채널에 추가하지 않는다.
-        if(!capacity.tryAcquire()) {session.close(CloseStatus.POLICY_VIOLATION);return;}
-        clients.put(session.getId(),new Client(session));
+        String[] market=market(session.getUri());
+        if(market==null||!capacity.tryAcquire()) {session.close(CloseStatus.POLICY_VIOLATION);return;}
+        clients.put(session.getId(),new Client(session,market[0],market[1]));
     }
     @Override public void afterConnectionClosed(WebSocketSession session,CloseStatus status) {if(clients.remove(session.getId())!=null)capacity.release();}
     @Override public void handleTransportError(WebSocketSession session,Throwable error) throws Exception {var client=clients.get(session.getId());if(client!=null)close(session.getId(),client);}
@@ -40,13 +44,10 @@ public class MarketSocket extends TextWebSocketHandler {
     @Scheduled(fixedDelay=250)
     public void publish() {
         if(clients.isEmpty()) return;
-        String payload;
-        try {payload=mapper.writeValueAsString(service.view("BTC","USDT"));}
-        catch(Exception unavailable) {payload="{\"status\":\"waiting\"}";}
-        final String frame=payload;
         long now=System.currentTimeMillis();
         for(var entry:clients.entrySet()) {
             Client client=entry.getValue();
+            final String frame=frame(client);
             long started=client.started.get();
             if(started!=0) {
                 if(now-started>10000) close(entry.getKey(),client);
@@ -63,6 +64,17 @@ public class MarketSocket extends TextWebSocketHandler {
                 finally {client.started.set(0);}
             });} catch(RejectedExecutionException full) {client.started.set(0);close(entry.getKey(),client);}
         }
+    }
+    private String frame(Client client) {
+        try {return mapper.writeValueAsString(service.view(client.base,client.quote));}
+        catch(Exception unavailable) {return "{\"status\":\"waiting\"}";}
+    }
+    private static String[] market(URI uri) {
+        if(uri==null)return null;
+        String[] path=uri.getPath().split("/",-1);
+        if(path.length!=5||!"ws".equals(path[1])||!"market".equals(path[2]))return null;
+        try {MarketService.pair(path[3],path[4]);return new String[]{path[3],path[4]};}
+        catch(IllegalArgumentException invalid){return null;}
     }
     private void close(String id,Client client) {
         if(clients.remove(id,client))capacity.release();

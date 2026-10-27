@@ -335,3 +335,4 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [164. 확정 체결·취소에서 시장 이상거래 검토 신호 만들기](decisions/164-durable-market-surveillance-signals.md)
 - [165. 독립 승인으로 신규 주문 시장 중단·재개하기](decisions/165-independently-approved-market-halt.md)
 - [166. 자동 시장 신호를 담당자 조사 사건과 불변 이력으로 잇기](decisions/166-market-surveillance-case-history.md)
+- [172. BTC·ETH 거래쌍별 공개 시세 연결](decisions/172-multi-market-public-socket.md)

@@ -10,6 +10,6 @@ public class MarketWebConfig implements WebSocketConfigurer {
     private final MarketSocket socket;
     @Value("${frontend.origin:http://localhost:3003}") private String origin;
     @Override public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(socket,"/ws/market/BTC/USDT").setAllowedOrigins(origin);
+        registry.addHandler(socket,"/ws/market/*/*").setAllowedOrigins(origin);
     }
 }
