@@ -1,0 +1,243 @@
+name: cex-single-host
+
+services:
+  postgres:
+    image: postgres:16.10-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME:?DATABASE_USERNAME이 필요합니다}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD가 필요합니다}
+      POSTGRES_DB: cex
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d cex"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  kafka:
+    image: apache/kafka:3.9.1
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  engine:
+    build:
+      context: ../../../Cex-Engine
+    restart: unless-stopped
+    cpuset: ${ENGINE_CPUSET:-0}
+    cap_add: [SYS_NICE]
+    environment:
+      DATABASE_URL: ${ENGINE_DATABASE_URL:?ENGINE_DATABASE_URL이 필요합니다}
+      ENGINE_SERVICE_TOKEN: ${ENGINE_SERVICE_TOKEN:?ENGINE_SERVICE_TOKEN이 필요합니다}
+      ENGINE_AUDIT_TOKEN: ${ENGINE_AUDIT_TOKEN:?ENGINE_AUDIT_TOKEN이 필요합니다}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ENGINE_HTTP_ADDRESS: 0.0.0.0:3002
+      ENGINE_DATA_DIR: /app/data
+      ENGINE_CORE_ID: ${ENGINE_CORE_ID:-0}
+    expose: ["3002"]
+    volumes:
+      - engine-data:/app/data
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+      platform: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3002/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+
+  platform:
+    build:
+      context: ../..
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/cex
+      DATABASE_USERNAME: ${DATABASE_USERNAME:?DATABASE_USERNAME이 필요합니다}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD가 필요합니다}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET이 필요합니다}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ENGINE_HTTP_URL: http://engine:3002
+      ENGINE_SERVICE_TOKEN: ${ENGINE_SERVICE_TOKEN:?ENGINE_SERVICE_TOKEN이 필요합니다}
+      OPERATOR_WEBAUTHN_RP_ID: ${OPERATOR_WEBAUTHN_RP_ID:?OPERATOR_WEBAUTHN_RP_ID가 필요합니다}
+      OPERATOR_WEBAUTHN_ORIGIN: https://${ADMIN_HOST:?ADMIN_HOST가 필요합니다}
+      KYC_RECONCILIATION_ENABLED: "false"
+      BOT_BOT_COUNT: "0"
+      SPRINGDOC_API_DOCS_ENABLED: "false"
+      SPRINGDOC_SWAGGER_UI_ENABLED: "false"
+      BITCOIN_PROCESSING_ENABLED: ${BITCOIN_PROCESSING_ENABLED:-false}
+      BITCOIN_RPC_URL: ${BITCOIN_RPC_URL:-}
+      BITCOIN_RPC_USER: ${BITCOIN_RPC_USER:-}
+      BITCOIN_RPC_PASSWORD: ${BITCOIN_RPC_PASSWORD:-}
+      BITCOIN_WALLET: ${BITCOIN_WALLET:-}
+      BITCOIN_NETWORK: ${BITCOIN_NETWORK:-MAINNET}
+      ETHEREUM_PROCESSING_ENABLED: ${ETHEREUM_PROCESSING_ENABLED:-false}
+      ETHEREUM_COMPLETION_ENABLED: ${ETHEREUM_COMPLETION_ENABLED:-false}
+      ETHEREUM_RPC_URL: ${ETHEREUM_RPC_URL:-}
+      ETHEREUM_CHAIN_ID: ${ETHEREUM_CHAIN_ID:-1}
+      ETHEREUM_DEPOSIT_ADDRESSES: ${ETHEREUM_DEPOSIT_ADDRESSES:-}
+      CDD_ENCRYPTION_KEY: ${CDD_ENCRYPTION_KEY:-}
+      CDD_FINGERPRINT_KEY: ${CDD_FINGERPRINT_KEY:-}
+      EDD_EVIDENCE_KEY: ${EDD_EVIDENCE_KEY:-}
+      AUDIT_EVIDENCE_KEY: ${AUDIT_EVIDENCE_KEY:-}
+      BITCOIN_SIGNER_ENVELOPE_ENCRYPTION_KEY: ${BITCOIN_SIGNER_ENVELOPE_ENCRYPTION_KEY:-}
+      BITCOIN_SIGNER_ENVELOPE_FINGERPRINT_KEY: ${BITCOIN_SIGNER_ENVELOPE_FINGERPRINT_KEY:-}
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+    expose: ["8080"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      kafka: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/health/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 30
+
+  exchange:
+    build:
+      context: ../../../Cex-Frontend
+    restart: unless-stopped
+    environment:
+      PLATFORM_INTERNAL_URL: http://platform:8080
+      EXCHANGE_PUBLIC_ORIGIN: https://${EXCHANGE_HOST:?EXCHANGE_HOST가 필요합니다}
+    expose: ["3003"]
+    depends_on:
+      platform: {condition: service_healthy}
+      engine: {condition: service_healthy}
+
+  admin:
+    build:
+      context: ../../../Cex-Frontend
+    command: ["npm", "run", "start", "--workspace", "@cex/admin"]
+    restart: unless-stopped
+    environment:
+      PLATFORM_INTERNAL_URL: http://platform:8080
+      ADMIN_PUBLIC_ORIGIN: https://${ADMIN_HOST:?ADMIN_HOST가 필요합니다}
+    expose: ["3004"]
+    depends_on:
+      platform: {condition: service_healthy}
+
+  proxy:
+    image: nginx:1.28.0-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      EXCHANGE_HOST: ${EXCHANGE_HOST:?EXCHANGE_HOST가 필요합니다}
+      ADMIN_HOST: ${ADMIN_HOST:?ADMIN_HOST가 필요합니다}
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./tls:/etc/nginx/tls:ro
+    depends_on:
+      - exchange
+      - admin
+
+  ethereum-signer:
+    profiles: [payout]
+    build: {context: ../..}
+    command: ["java", "-jar", "/app/cex-0.0.1-SNAPSHOT-ethereum-signer.jar"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/cex
+      DATABASE_USERNAME: ${DATABASE_USERNAME:?DATABASE_USERNAME이 필요합니다}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD가 필요합니다}
+      ETHEREUM_SIGNER_RPC_URL: ${ETHEREUM_SIGNER_RPC_URL:?ETHEREUM_SIGNER_RPC_URL이 필요합니다}
+      ETHEREUM_SIGNER_CHAIN_ID: ${ETHEREUM_CHAIN_ID:?ETHEREUM_CHAIN_ID가 필요합니다}
+      ETHEREUM_SIGNER_FROM: ${ETHEREUM_SIGNER_FROM:?ETHEREUM_SIGNER_FROM이 필요합니다}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  bitcoin-signer:
+    profiles: [payout]
+    build: {context: ../..}
+    command: ["java", "-jar", "/app/cex-0.0.1-SNAPSHOT-bitcoin-signer.jar"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/cex
+      DATABASE_USERNAME: ${DATABASE_USERNAME:?DATABASE_USERNAME이 필요합니다}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD가 필요합니다}
+      BITCOIN_SIGNER_RPC_URL: ${BITCOIN_SIGNER_RPC_URL:?BITCOIN_SIGNER_RPC_URL이 필요합니다}
+      BITCOIN_SIGNER_RPC_USER: ${BITCOIN_SIGNER_RPC_USER:?BITCOIN_SIGNER_RPC_USER가 필요합니다}
+      BITCOIN_SIGNER_RPC_PASSWORD: ${BITCOIN_SIGNER_RPC_PASSWORD:?BITCOIN_SIGNER_RPC_PASSWORD가 필요합니다}
+      BITCOIN_SIGNER_WALLET: ${BITCOIN_SIGNER_WALLET:?BITCOIN_SIGNER_WALLET이 필요합니다}
+      BITCOIN_SIGNER_NETWORK: ${BITCOIN_NETWORK:-MAINNET}
+      BITCOIN_SIGNER_ENVELOPE_ENCRYPTION_KEY: ${BITCOIN_SIGNER_ENVELOPE_ENCRYPTION_KEY:?BITCOIN_SIGNER_ENVELOPE_ENCRYPTION_KEY가 필요합니다}
+      BITCOIN_SIGNER_ENVELOPE_FINGERPRINT_KEY: ${BITCOIN_SIGNER_ENVELOPE_FINGERPRINT_KEY:?BITCOIN_SIGNER_ENVELOPE_FINGERPRINT_KEY가 필요합니다}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  bitcoin-broadcaster:
+    profiles: [payout]
+    build: {context: ../..}
+    command: ["java", "-jar", "/app/cex-0.0.1-SNAPSHOT-bitcoin-broadcaster.jar"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/cex
+      DATABASE_USERNAME: ${DATABASE_USERNAME:?DATABASE_USERNAME이 필요합니다}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD가 필요합니다}
+      BITCOIN_BROADCASTER_RPC_URL: ${BITCOIN_BROADCASTER_RPC_URL:?BITCOIN_BROADCASTER_RPC_URL이 필요합니다}
+      BITCOIN_BROADCASTER_RPC_USER: ${BITCOIN_BROADCASTER_RPC_USER:?BITCOIN_BROADCASTER_RPC_USER가 필요합니다}
+      BITCOIN_BROADCASTER_RPC_PASSWORD: ${BITCOIN_BROADCASTER_RPC_PASSWORD:?BITCOIN_BROADCASTER_RPC_PASSWORD가 필요합니다}
+      BITCOIN_BROADCASTER_WALLET: ${BITCOIN_BROADCASTER_WALLET:?BITCOIN_BROADCASTER_WALLET이 필요합니다}
+      BITCOIN_BROADCASTER_NETWORK: ${BITCOIN_NETWORK:-MAINNET}
+      BITCOIN_SIGNER_ENVELOPE_ENCRYPTION_KEY: ${BITCOIN_SIGNER_ENVELOPE_ENCRYPTION_KEY:?BITCOIN_SIGNER_ENVELOPE_ENCRYPTION_KEY가 필요합니다}
+      BITCOIN_SIGNER_ENVELOPE_FINGERPRINT_KEY: ${BITCOIN_SIGNER_ENVELOPE_FINGERPRINT_KEY:?BITCOIN_SIGNER_ENVELOPE_FINGERPRINT_KEY가 필요합니다}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  bitcoin-confirmer:
+    profiles: [payout]
+    build: {context: ../..}
+    command: ["java", "-jar", "/app/cex-0.0.1-SNAPSHOT-bitcoin-confirmer.jar"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/cex
+      DATABASE_USERNAME: ${DATABASE_USERNAME:?DATABASE_USERNAME이 필요합니다}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD가 필요합니다}
+      BITCOIN_CONFIRMATION_RPC_URL: ${BITCOIN_CONFIRMATION_RPC_URL:?BITCOIN_CONFIRMATION_RPC_URL이 필요합니다}
+      BITCOIN_CONFIRMATION_RPC_USER: ${BITCOIN_CONFIRMATION_RPC_USER:?BITCOIN_CONFIRMATION_RPC_USER가 필요합니다}
+      BITCOIN_CONFIRMATION_RPC_PASSWORD: ${BITCOIN_CONFIRMATION_RPC_PASSWORD:?BITCOIN_CONFIRMATION_RPC_PASSWORD가 필요합니다}
+      BITCOIN_CONFIRMATION_NETWORK: ${BITCOIN_NETWORK:-MAINNET}
+      BITCOIN_CONFIRMATION_REQUIRED: ${BITCOIN_CONFIRMATIONS:-6}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  ethereum-confirmer:
+    profiles: [payout]
+    build: {context: ../..}
+    command: ["java", "-jar", "/app/cex-0.0.1-SNAPSHOT-ethereum-confirmer.jar"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/cex
+      DATABASE_USERNAME: ${DATABASE_USERNAME:?DATABASE_USERNAME이 필요합니다}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD가 필요합니다}
+      ETHEREUM_CONFIRMATION_RPC_URL: ${ETHEREUM_CONFIRMATION_RPC_URL:?ETHEREUM_CONFIRMATION_RPC_URL이 필요합니다}
+      ETHEREUM_CONFIRMATION_CHAIN_ID: ${ETHEREUM_CHAIN_ID:?ETHEREUM_CHAIN_ID가 필요합니다}
+      ETHEREUM_CONFIRMATION_REQUIRED: ${ETHEREUM_CONFIRMATIONS:-12}
+    depends_on:
+      postgres: {condition: service_healthy}
+
+volumes:
+  postgres-data:
+  kafka-data:
+  engine-data:

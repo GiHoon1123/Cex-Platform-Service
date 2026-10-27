@@ -38,3 +38,7 @@ out/
 
 # 검증 실행기의 임포트가 만드는 파이썬 캐시는 소스에 포함하지 않는다.
 __pycache__/
+
+# 단일 호스트 운영 비밀과 TLS 개인키는 저장소에 넣지 않는다.
+/deploy/single-host/.env
+/deploy/single-host/tls/
