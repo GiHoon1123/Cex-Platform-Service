@@ -47,9 +47,15 @@ engine.http.url=${ENGINE_HTTP_URL}
 
 python3 scripts/verify_platform_security.py
 42 passed, 0 failed, 0 errors, 0 skipped
+
+python3 scripts/verify_market_path.py
+실제 플랫폼 HTTP·PostgreSQL·Rust WAL·Kafka·공개 소켓·재시작·독립 대사 통과
+실행 소유 PostgreSQL·Kafka 회수 성공
 ```
 
 최초 보안 회귀에서는 테스트 WebAuthn 출처를 새 어드민 포트로 잘못 바꿔 13건이 실패했다. 제품 설정 문제가 아니라 기존 테스트 증명의 고정 출처와 불일치한 것이므로 테스트 프로필을 원래 격리 출처로 복구하고 위 전 회귀를 통과시켰다. 실패 실행을 성공 결과에 포함하지 않는다.
+
+전체 시장 경로의 첫 실행은 새 필수 DB 계정을 통합 시험에 주입하지 않아 인증 단계에서 실패했고, 두 번째 실행은 통합 시험이 엔진의 폐기된 `DATABASE_HOST` 계약을 사용해 실패했다. 세 번째 실행은 시험 안에서 다시 띄우는 대사 명령이 같은 필수 설정을 전달하지 않아 실패했다. 모든 실제 프로세스 경계를 `DATABASE_URL`과 명시적 Spring 계정으로 통일한 뒤 위 전체 경로를 통과시켰다.
 
 ## 관련 커밋과 참고 자료
 
