@@ -94,14 +94,19 @@ public class CustomerMailOutbox {
         jdbc.update("UPDATE customer_mail_delivery SET status=?,last_reason=?,next_attempt_at=clock_timestamp()+(? * interval '1 second'),lease_id=NULL,lease_until=NULL WHERE job_id=?",status,result,Math.min(300,30*(1<<Math.min((lease.attempt()-1)%5,4))),lease.id());
         event(lease.id(),lease.token(),lease.attempt(),"RESULT",result);audit.record(null,"CUSTOMER_MAIL_RESULT","mail:"+lease.id(),"SUCCESS",status+":"+result);return true;
     });}
-    /** 금융/감사 이력은 유지하고 종료·만료한 수신 주소/토큰의 암호문만 제한된 묶음으로 삭제한다. */
+    /** 금융/감사 이력은 유지하고 종료·만료했으며 활성 보존 정지가 없는 수신 주소/토큰 암호문만 삭제한다. */
     public int pruneExpiredPayloads(){return tx.execute(t->{
-        int count=jdbc.update("""
-            WITH due AS (SELECT p.job_id FROM customer_mail_payloads p JOIN customer_mail_jobs j ON j.id=p.job_id JOIN customer_mail_delivery d ON d.job_id=j.id
-                WHERE j.expires_at<clock_timestamp()-interval '1 day' AND d.status IN ('SMTP_ACCEPTED','SUPPRESSED','EXHAUSTED') ORDER BY j.expires_at,j.id LIMIT 100 FOR UPDATE OF p SKIP LOCKED)
-            DELETE FROM customer_mail_payloads p USING due WHERE p.job_id=due.job_id
-            """);
-        if(count>0)audit.record(null,"CUSTOMER_MAIL_PAYLOADS_PRUNED","mail-payloads","SUCCESS","EXPIRED_TERMINAL:"+count);return count;
+        var due=jdbc.queryForList("""
+            SELECT p.job_id FROM customer_mail_payloads p JOIN customer_mail_jobs j ON j.id=p.job_id JOIN customer_mail_delivery d ON d.job_id=j.id
+            WHERE j.expires_at<clock_timestamp()-interval '1 day' AND d.status IN ('SMTP_ACCEPTED','SUPPRESSED','EXHAUSTED')
+              AND NOT EXISTS(SELECT 1 FROM data_retention_holds h LEFT JOIN data_retention_hold_releases r ON r.hold_id=h.id
+                WHERE r.hold_id IS NULL AND ((h.scope_type='MAIL_JOB' AND h.scope_id=j.id::text) OR (h.scope_type='USER' AND h.scope_id=j.user_id::text)))
+            ORDER BY j.expires_at,j.id LIMIT 100 FOR UPDATE OF p SKIP LOCKED
+            """,UUID.class);
+        if(due.isEmpty())return 0;
+        UUID run=UUID.randomUUID();jdbc.update("INSERT INTO data_disposal_runs(id,dataset,disposed_count) VALUES(?,'CUSTOMER_MAIL_PAYLOAD',?)",run,due.size());
+        for(UUID id:due){jdbc.update("INSERT INTO data_disposal_items(run_id,dataset,item_id) VALUES(?,'CUSTOMER_MAIL_PAYLOAD',?)",run,id);jdbc.update("DELETE FROM customer_mail_payloads WHERE job_id=?",id);}
+        audit.record(null,"CUSTOMER_MAIL_PAYLOADS_PRUNED","mail-payloads","SUCCESS","RUN:"+run+":COUNT:"+due.size());return due.size();
     });}
     public State state(UUID id){var row=jdbc.queryForMap("SELECT * FROM customer_mail_delivery WHERE job_id=?",id);return new State(id,(String)row.get("status"),((Number)row.get("attempts")).intValue(),(String)row.get("last_reason"));}
     private void event(UUID id,UUID lease,int attempt,String phase,String result){jdbc.update("INSERT INTO customer_mail_attempts(id,job_id,lease_id,attempt,phase,outcome) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),id,lease,attempt,phase,result);}

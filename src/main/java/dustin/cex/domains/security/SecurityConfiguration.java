@@ -58,6 +58,11 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/market-controls").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/market-controls/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/market-controls/*/approve/options","/api/admin/market-controls/*/reject/options","/api/admin/market-controls/*/approve","/api/admin/market-controls/*/reject").access(audited(audit,sessions,"APPROVER"))
+                // 보존 정지·해제는 제안자와 지정 승인자를 분리하고 실제 열람·내용 결합 서명을 요구한다.
+                .requestMatchers(HttpMethod.GET,"/api/admin/data-retention/holds").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/data-retention/requests").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/data-retention/requests/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/data-retention/requests/*/approve/options","/api/admin/data-retention/requests/*/reject/options","/api/admin/data-retention/requests/*/approve","/api/admin/data-retention/requests/*/reject").access(audited(audit,sessions,"APPROVER"))
                 // 탐지 원본의 명시적 처리 요청도 현재 운영 업무다. 감사자에게 작업 생성 권한을 부여하지 않는다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 // 체인 제한 해제는 요청 담당자와 지정 승인자의 역할을 분리하고 내용 결합 서명을 별도로 요구한다.
