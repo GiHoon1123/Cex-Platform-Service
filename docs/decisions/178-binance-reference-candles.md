@@ -38,7 +38,7 @@ synchronized(slot) {
 }
 ```
 
-`synchronized`는 외부 기준 시세 캐시 슬롯에만 사용한다. Rust 체결 코어의 상태나 주문 처리 경로와 무관하며 거래쌍·간격별 슬롯이므로 BTC 1분 봉 조회가 ETH 1일 봉 캐시를 잠그지 않는다. 지원 시장은 BTCUSDT와 ETHUSDT, 간격은 `1m`, `5m`, `15m`, `1h`, `4h`, `1d`로 고정한다. 원격 URL은 HTTPS만 허용하고 단위 테스트 서버를 위해 루프백 HTTP만 예외로 허용한다.
+`synchronized`는 외부 기준 시세 캐시 슬롯에만 사용한다. Rust 체결 코어의 상태나 주문 처리 경로와 무관하며 거래쌍·간격별 슬롯이므로 BTC 1분 봉 조회가 ETH 월봉 캐시를 잠그지 않는다. 지원 시장은 BTCUSDT와 ETHUSDT, 간격은 `1m`, `5m`, `15m`, `1h`, `4h`, `1d`, `1w`, `1M`으로 고정한다. Binance 계약에서 대문자 `M`은 월을 뜻하므로 소문자 분 단위와 구분한다. 원격 URL은 HTTPS만 허용하고 단위 테스트 서버를 위해 루프백 HTTP만 예외로 허용한다.
 
 응답은 `source`, `market`, `interval`, `fetchedAt`, `candles`를 포함한다. 클라이언트가 이 목록을 자체 체결 봉으로 오인하지 않게 출처를 데이터에도 고정했다. 과거 `/candles` 공개 경로는 더 이상 사용하지 않고 `/reference-candles`로 교체했다.
 
@@ -58,7 +58,7 @@ synchronized(slot) {
 `BinanceReferenceCandleServiceTest` 4개와 `MarketSafetyTest` 6개, 총 10개 통과, 실패 0
 ```
 
-실제 로컬 플랫폼에서 BTC와 ETH의 여섯 간격을 호출해 12개 조합 모두 500개 봉, `source=BINANCE`, 요청 간격·시장·갱신 시각을 확인했다. 허용하지 않은 `2m`은 400을 반환했다. 프론트 Chrome 결과는 [반응형 기간 선택 기록](../../../Cex-Frontend/docs/decisions/009-responsive-chart-periods.md)을 따른다.
+실제 로컬 플랫폼에서 BTC와 ETH의 여덟 간격을 호출해 `source=BINANCE`, 요청 간격·시장·갱신 시각을 확인했다. 조회 상한은 500개이며 실제 Binance 상장 이력에 따라 주봉은 481개, 월봉은 111개가 반환됐다. 허용하지 않은 `2m`은 400을 반환했다. 프론트 Chrome 결과는 [반응형 기간 선택 기록](../../../Cex-Frontend/docs/decisions/009-responsive-chart-periods.md)을 따른다.
 
 ## 남은 한계
 
