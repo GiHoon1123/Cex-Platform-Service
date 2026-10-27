@@ -1,0 +1,9 @@
+{
+  "network": "regtest",
+  "node_version": 310100,
+  "selection_mode": "custody-reconciliation-only",
+  "tests": {"tests": 8, "failures": 0, "errors": 0, "skipped": 0},
+  "exit": 0,
+  "node_stopped": true,
+  "database_removed": true
+}

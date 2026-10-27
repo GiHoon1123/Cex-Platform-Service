@@ -13,6 +13,7 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 
 - [006. 엔진 WAL 재발행의 영속 중복 방지](decisions/006-engine-event-inbox.md): 이벤트 ID·본문 검사, 금융 변경과 수신 키의 동시 커밋, 소비 실패 중단과 격리 검증.
 - [161. 고객 웹과 운영·서명·방송·확인 프로세스 경계](decisions/161-isolated-process-boundaries.md): 비웹 컨텍스트 강제, JDBC 워커의 JPA 자동 구성 제거, 실제 컨텍스트와 다섯 JAR 회귀 검증.
+- [162. Bitcoin Core 수탁 잔액과 플랫폼 원장의 독립 대사](decisions/162-bitcoin-custody-reconciliation.md): 신뢰 잔액·블록과 불변 수탁 원장 비교, 전이 중 상태 구분, 자동 정정 금지와 실제 노드 검증.
 
 ## 기존 설계·측정 문서
 
