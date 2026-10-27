@@ -14,10 +14,15 @@ public class CustomerSmtpTransport {
     public CustomerSmtpTransport(ObjectProvider<JavaMailSender> provider,@Value("${customer-mail.from:}") String from,@Value("${customer-mail.public-base:}") URI base){this.provider=provider;this.from=from;this.base=base;}
     public boolean configured(){return provider.getIfAvailable()!=null&&!from.isBlank();}
     public void requireReady(){
-        if(!(provider.getIfAvailable() instanceof JavaMailSenderImpl sender)||from.isBlank()||!Set.of("smtp","smtps").contains(sender.getProtocol())||!"https".equals(base.getScheme())||base.getHost()==null||base.getUserInfo()!=null||base.getQuery()!=null||base.getFragment()!=null)throw new IllegalStateException("고객 메일 발신/TLS/공개 주소 설정이 필요합니다");
+        if(!(provider.getIfAvailable() instanceof JavaMailSenderImpl sender)||from.isBlank()||!Set.of("smtp","smtps").contains(sender.getProtocol())||base.getHost()==null||base.getUserInfo()!=null||base.getQuery()!=null||base.getFragment()!=null)throw new IllegalStateException("고객 메일 발신/TLS/공개 주소 설정이 필요합니다");
         var properties=sender.getJavaMailProperties();String protocol=sender.getProtocol(),prefix="mail."+protocol+".";boolean local=Set.of("127.0.0.1","::1","localhost").contains(sender.getHost());
+        boolean localPublic=Set.of("127.0.0.1","::1","localhost").contains(base.getHost());
+        // 로컬 Mailpit은 실제 외부 전송을 하지 않고 루프백에서만 메일을 잡는다. 이 조합에만
+        // 평문 SMTP와 HTTP 복귀 주소를 허용하고, 한쪽이라도 외부 주소면 운영 TLS 계약을 유지한다.
+        boolean isolatedLocal="smtp".equals(protocol)&&local&&localPublic&&"http".equals(base.getScheme());
+        if(!isolatedLocal&&!"https".equals(base.getScheme()))throw new IllegalStateException("고객 메일 발신/TLS/공개 주소 설정이 필요합니다");
         boolean tls="smtps".equals(protocol)||Boolean.parseBoolean(properties.getProperty(prefix+"ssl.enable"))||(Boolean.parseBoolean(properties.getProperty(prefix+"starttls.enable"))&&Boolean.parseBoolean(properties.getProperty(prefix+"starttls.required")));
-        if(!tls||(!local&&properties.getProperty(prefix+"ssl.trust")!=null))throw new IllegalStateException("검증된 TLS 메일 연결이 필요합니다");
+        if((!isolatedLocal&&!tls)||(!local&&properties.getProperty(prefix+"ssl.trust")!=null))throw new IllegalStateException("검증된 TLS 메일 연결이 필요합니다");
         if(!local){properties.setProperty(prefix+"ssl.checkserveridentity","true");if(sender.getUsername()==null||sender.getUsername().isBlank()||sender.getPassword()==null||sender.getPassword().isBlank())throw new IllegalStateException("메일 발신 인증이 필요합니다");properties.setProperty(prefix+"auth","true");}
         properties.setProperty("mail.debug","false");properties.setProperty("mail.debug.auth","false");sender.getSession().setDebug(false);
         properties.setProperty(prefix+"connectiontimeout","5000");properties.setProperty(prefix+"timeout","5000");properties.setProperty(prefix+"writetimeout","5000");
