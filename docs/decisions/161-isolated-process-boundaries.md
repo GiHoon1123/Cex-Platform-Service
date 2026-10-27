@@ -1,6 +1,6 @@
 # 고객 웹 플랫폼과 운영·서명·방송·확인 프로세스 경계 고정
 
-같은 코드 저장소에서 만드는 다섯 실행 파일이 서로 다른 권한을 유지하도록 실제 Spring 컨텍스트와 JAR 진입점을 검증했다. 이 과정에서 비트코인 워커 세 개가 JPA 자동 구성 일부 때문에 기동하지 못하던 결함을 찾아 수정했다.
+이 결정 당시 같은 코드 저장소에서 만들던 다섯 실행 파일이 서로 다른 권한을 유지하도록 실제 Spring 컨텍스트와 JAR 진입점을 검증했다. 이 과정에서 비트코인 워커 세 개가 JPA 자동 구성 일부 때문에 기동하지 못하던 결함을 찾아 수정했다. 이후 ETH 서명·확인 경계가 추가되어 현재 실행기는 일곱 JAR와 여섯 비웹 경계 시험을 검증한다.
 
 ## 문제와 기존 동작
 
@@ -66,7 +66,7 @@ app.setApplicationContextFactory(type ->
 - `signerIgnoresAnExternalServletRequestAndLoadsOnlyItsWorker`: 서블릿 명령행 설정에도 일반 컨텍스트와 서명 워커만 존재하고 HTTP·Kafka·JPA 빈은 없는지 확인한다.
 - `broadcasterIgnoresAnExternalServletRequestAndLoadsOnlyItsWorker`: 방송 워커만 존재하고 서명·확인 워커와 웹·Kafka·JPA 빈이 없는지 확인한다.
 - `confirmerIgnoresAnExternalServletRequestAndLoadsOnlyItsWorker`: 확인 워커만 존재하고 서명·방송 워커와 웹·Kafka·JPA 빈이 없는지 확인한다.
-- 실행기: [verify_process_boundaries.py](../../scripts/verify_process_boundaries.py)는 위 네 시험을 새로 실행하고 다섯 JAR의 `Start-Class`를 확인한다.
+- 실행기: [verify_process_boundaries.py](../../scripts/verify_process_boundaries.py)는 현재 여섯 시험을 새로 실행하고 고객·운영·BTC 세 개·ETH 두 개, 총 일곱 JAR의 `Start-Class`를 확인한다.
 
 ## 실행 명령과 결과
 

@@ -64,7 +64,7 @@ python3 scripts/verify_ethereum_rpc.py
 python3 scripts/verify_platform_security.py
 ```
 
-ETH 단위 9개와 프로세스 경계 6개가 통과했고, 실제 Anvil 1개와 격리 PostgreSQL 보안 42개가 실패·오류·제외 없이 통과했다. 고객/운영자/ETH 서명/ETH 확인 JAR 네 개가 생성됐다.
+ETH 단위 9개와 프로세스 경계 6개가 통과했고, 실제 Anvil 1개와 격리 PostgreSQL 보안 42개가 실패·오류·제외 없이 통과했다. 고객/운영자/BTC 서명·방송·확인/ETH 서명·확인 JAR 일곱 개가 생성됐으며 현재 경계 실행기가 모두 확인한다.
 
 ## 관련 커밋과 참고 자료
 

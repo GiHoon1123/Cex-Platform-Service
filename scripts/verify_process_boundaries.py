@@ -1,4 +1,4 @@
-"""플랫폼의 다섯 실행 파일과 비웹 권한 경계를 함께 검증한다."""
+"""플랫폼의 일곱 실행 파일과 비웹 권한 경계를 함께 검증한다."""
 from pathlib import Path
 from uuid import uuid4
 import json,subprocess,time,xml.etree.ElementTree as ET,zipfile
@@ -9,7 +9,8 @@ run=uuid4().hex[:12]
 proof=ARTIFACTS/run
 proof.mkdir(parents=True)
 command=['./gradlew','test','--rerun','--tests','dustin.runtime.IsolatedProcessBoundaryTest',
-         'bootJar','operatorAdminJar','bitcoinSignerJar','bitcoinBroadcasterJar','bitcoinConfirmerJar','--console=plain']
+         'bootJar','operatorAdminJar','bitcoinSignerJar','bitcoinBroadcasterJar','bitcoinConfirmerJar',
+         'ethereumSignerJar','ethereumConfirmerJar','--console=plain']
 started=time.time()
 with (proof/'verification.log').open('w') as log:
     completed=subprocess.run(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT)
@@ -25,6 +26,8 @@ expected={
     'cex-0.0.1-SNAPSHOT-bitcoin-signer.jar':'dustin.signer.BitcoinSignerApplication',
     'cex-0.0.1-SNAPSHOT-bitcoin-broadcaster.jar':'dustin.broadcaster.BitcoinBroadcasterApplication',
     'cex-0.0.1-SNAPSHOT-bitcoin-confirmer.jar':'dustin.confirmer.BitcoinConfirmerApplication',
+    'cex-0.0.1-SNAPSHOT-ethereum-signer.jar':'dustin.ethsigner.EthereumSignerApplication',
+    'cex-0.0.1-SNAPSHOT-ethereum-confirmer.jar':'dustin.ethconfirmer.EthereumConfirmerApplication',
 }
 manifests={}
 for name,main in expected.items():
@@ -38,5 +41,5 @@ result={'run_id':run,'command':command,'tests':counts,'exit':completed.returncod
         'jars':manifests,'log':str((proof/'verification.log').relative_to(ROOT.parent/'.local'))}
 (proof/'result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
 (ARTIFACTS/'latest.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
-if completed.returncode or counts!={'tests':4,'failures':0,'errors':0,'skipped':0}:raise SystemExit(json.dumps(result,ensure_ascii=False))
+if completed.returncode or counts!={'tests':6,'failures':0,'errors':0,'skipped':0}:raise SystemExit(json.dumps(result,ensure_ascii=False))
 print(json.dumps(result,ensure_ascii=False,indent=2))
