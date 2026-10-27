@@ -1,0 +1,12 @@
+{
+  "container": "cex-custody-corrections-235d1ed5e99d",
+  "run_id": "235d1ed5e99d",
+  "groups": [
+    {"name":"correction","database":"custody_correction","exit":0,"tests":{"tests":6,"failures":0,"errors":0,"skipped":0},"log":"bitcoin-custody-corrections/235d1ed5e99d/correction.log"},
+    {"name":"reconciliation","database":"custody_reconciliation","exit":0,"tests":{"tests":4,"failures":0,"errors":0,"skipped":0},"log":"bitcoin-custody-corrections/235d1ed5e99d/reconciliation.log"},
+    {"name":"ledger","database":"custody_ledger","exit":0,"tests":{"tests":18,"failures":0,"errors":0,"skipped":0},"log":"bitcoin-custody-corrections/235d1ed5e99d/ledger.log"}
+  ],
+  "tests":{"tests":28,"failures":0,"errors":0,"skipped":0},
+  "exit":0,
+  "container_removed":true
+}

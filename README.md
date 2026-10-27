@@ -25,6 +25,7 @@ python3 scripts/verify_market_path.py
 - [엔진 이벤트의 영속 수신](docs/decisions/006-engine-event-inbox.md)
 - [고객 웹과 운영·서명·방송·확인 프로세스 경계](docs/decisions/161-isolated-process-boundaries.md)
 - [Bitcoin Core 수탁 잔액과 플랫폼 원장의 독립 대사](docs/decisions/162-bitcoin-custody-reconciliation.md)
+- [승인된 Bitcoin 수탁 차이의 불변 균형 보정](docs/decisions/163-approved-bitcoin-custody-correction.md)
 
 현재 구현·격리 검증을 운영 보안·금융 정합성·규제 심사 완료로 해석하지 않는다. 수수료·시장가·주문 실패 복구의 현재 범위와 남은 원장·대사 과제는 구현 기록에서 확인한다.
 
