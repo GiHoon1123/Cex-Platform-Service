@@ -13,13 +13,14 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
     asset VARCHAR(50) NOT NULL,
     delta NUMERIC(38,9) NOT NULL CHECK(delta<>0),
     UNIQUE(operation_key,owner_id,bucket,asset),
-    CONSTRAINT ledger_entry_bucket_owner CHECK ((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED','PENDING')) OR (owner_id=0 AND bucket IN ('FEE','OPENING','CUSTODY')))
+    CONSTRAINT ledger_entry_bucket_owner CHECK ((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED','PENDING')) OR (owner_id=0 AND bucket IN ('FEE','OPENING','CUSTODY','SUSPENSE')))
 );
 -- 기존 금융 행을 보존한 채 새 계정 제약을 먼저 검증한 뒤 이전 익명 제약을 제거한다. 시작마다 전체 재검증하지 않는다.
 DO $$ BEGIN
-    IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='ledger_entry_bucket_owner' AND conrelid='ledger_entries'::regclass) THEN
+    IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='ledger_entry_bucket_owner' AND conrelid='ledger_entries'::regclass AND pg_get_constraintdef(oid) LIKE '%SUSPENSE%') THEN
+        ALTER TABLE ledger_entries DROP CONSTRAINT IF EXISTS ledger_entry_bucket_owner;
         ALTER TABLE ledger_entries ADD CONSTRAINT ledger_entry_bucket_owner CHECK
-         ((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED','PENDING')) OR (owner_id=0 AND bucket IN ('FEE','OPENING','CUSTODY')));
+         ((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED','PENDING')) OR (owner_id=0 AND bucket IN ('FEE','OPENING','CUSTODY','SUSPENSE')));
     END IF;
 END $$;
 ALTER TABLE ledger_entries DROP CONSTRAINT IF EXISTS ledger_entries_check;

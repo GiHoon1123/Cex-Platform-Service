@@ -64,6 +64,10 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/withdrawals/BTC/payout-reviews").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/withdrawals/BTC/payout-reviews/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/withdrawals/BTC/payout-reviews/*/approve/options","/api/admin/withdrawals/BTC/payout-reviews/*/reject/options","/api/admin/withdrawals/BTC/payout-reviews/*/approve","/api/admin/withdrawals/BTC/payout-reviews/*/reject").access(audited(audit,sessions,"APPROVER"))
+                // 수탁 차이 정정은 담당자가 제안하고 지정된 독립 승인자만 내용 결합 서명을 남긴다. 실행 경로는 HTTP로 공개하지 않는다.
+                .requestMatchers(HttpMethod.POST,"/api/admin/custody/BTC/corrections").access(audited(audit,sessions,"OPERATOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/custody/BTC/corrections/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/custody/BTC/corrections/*/approve/options","/api/admin/custody/BTC/corrections/*/reject/options","/api/admin/custody/BTC/corrections/*/approve","/api/admin/custody/BTC/corrections/*/reject").access(audited(audit,sessions,"APPROVER"))
                 // 출금의 상대 확인은 운영 업무다. 감사자에게는 개인정보 없는 기존 상태 조회만 허용한다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/withdrawals/BTC/*/transfer-intents","/api/admin/withdrawals/BTC/transfer-intents/*/execute").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/withdrawals/BTC/transfer-intents/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))

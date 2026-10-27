@@ -43,6 +43,8 @@ class OrderLedgerTest {
         jdbc.execute("CREATE TABLE bitcoin_withdrawal_reservation_events(withdrawal_id uuid,event_type text)");
         jdbc.execute("CREATE TABLE bitcoin_withdrawal_cancellations(withdrawal_id uuid)");
         jdbc.execute("CREATE TABLE bitcoin_withdrawal_release_events(withdrawal_id uuid)");
+        // 독립 대사는 완료 이벤트도 항상 왼쪽 결합한다. 비어 있어도 현재 스키마 계약을 가진 원본 표가 필요하다.
+        jdbc.execute("CREATE TABLE bitcoin_withdrawal_completion_events(withdrawal_id uuid)");
         jdbc.execute("CREATE TABLE bitcoin_withdrawal_valuations(withdrawal_id uuid,user_id bigint,amount numeric,price numeric,krw_value numeric,source_hash text,reference_at timestamptz,policy text,price_attempt_id bigint)");
         jdbc.execute("CREATE TABLE btc_krw_price_results(attempt_id bigint,price numeric,payload_hash text,status text)");
         ledger=new LedgerService(jdbc);ledger.schema();
@@ -182,7 +184,7 @@ class OrderLedgerTest {
         jdbc.execute("ALTER TABLE ledger_entries ADD CONSTRAINT ledger_entries_check CHECK((owner_id>0 AND bucket IN ('AVAILABLE','LOCKED')) OR(owner_id=0 AND bucket IN ('FEE','OPENING')))");
         ledger.schema();assertEquals(before,jdbc.queryForList("SELECT * FROM ledger_entries ORDER BY id"));
         String definition=jdbc.queryForObject("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='ledger_entry_bucket_owner' AND conrelid='ledger_entries'::regclass",String.class);
-        assertTrue(definition.contains("PENDING"));assertTrue(definition.contains("CUSTODY"));assertEquals("MATCHED",reconciliation.run().status());
+        assertTrue(definition.contains("PENDING"));assertTrue(definition.contains("CUSTODY"));assertTrue(definition.contains("SUSPENSE"));assertEquals("MATCHED",reconciliation.run().status());
     }
     @Test void customerCustodyAndSystemPendingAreInvalidAccounts() {
         assertThrows(IllegalArgumentException.class,()->p(1,"CUSTODY","BTC",n("1")));

@@ -77,7 +77,7 @@ class BoundApprovalTest {
     record Case(OperatorMfaService.ApprovalKind kind,UUID id,String hash,String path) {}
     Case create(OperatorMfaService.ApprovalKind kind) {
         return switch(kind) {
-            case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW, TM_CASE_ACTION, BTC_CHAIN_RECOVERY, BTC_WITHDRAWAL_PAYOUT -> throw new AssertionError("업무별 전용 통합 검증을 사용하세요");
+            case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW, TM_CASE_ACTION, BTC_CHAIN_RECOVERY, BTC_WITHDRAWAL_PAYOUT, BTC_CUSTODY_CORRECTION -> throw new AssertionError("업무별 전용 통합 검증을 사용하세요");
             case ROLE -> {var r=service.request(maker.user().getId(),maker.sid(),candidate.getId(),candidate.getVersion(),UUID.randomUUID(),UserRole.OPERATOR,
                 Instant.now().plusSeconds(86400),"역할 배정","IDENTITY_100","NOTICE_100");yield new Case(kind,r.payload().id(),r.payloadHash(),"/api/admin/operator-security/role-requests/");}
             case MFA_RECOVERY,ACCESS_REVIEW -> {var r=lifecycle.request(maker.user().getId(),maker.sid(),owner.user().getId(),current(owner).getVersion(),
@@ -90,7 +90,7 @@ class BoundApprovalTest {
     }
     OperatorMfaService.Options options(Case c,boolean approve) {
         return switch(c.kind()) {
-            case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW, TM_CASE_ACTION, BTC_CHAIN_RECOVERY, BTC_WITHDRAWAL_PAYOUT -> throw new AssertionError("업무별 전용 통합 검증을 사용하세요");
+            case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW, TM_CASE_ACTION, BTC_CHAIN_RECOVERY, BTC_WITHDRAWAL_PAYOUT, BTC_CUSTODY_CORRECTION -> throw new AssertionError("업무별 전용 통합 검증을 사용하세요");
             case ROLE -> service.options(checker.user().getId(),checker.sid(),c.id(),c.hash(),approve).authentication();
             case MFA_RECOVERY,ACCESS_REVIEW -> lifecycle.options(checker.user().getId(),checker.sid(),c.id(),c.hash(),approve).authentication();
             case TRADING_RESTRICTION -> restrictions.options(checker.user().getId(),checker.sid(),c.id(),c.hash(),approve).authentication();
@@ -102,14 +102,14 @@ class BoundApprovalTest {
     Object decide(Case c,boolean approve,OperatorMfaService.AuthorizationProof p) {return decide(c,checker.sid(),c.hash(),approve,p);}
     Object decide(Case c,UUID sid,String hash,boolean approve,OperatorMfaService.AuthorizationProof p) {
         return switch(c.kind()) {
-            case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW, TM_CASE_ACTION, BTC_CHAIN_RECOVERY, BTC_WITHDRAWAL_PAYOUT -> throw new AssertionError("업무별 전용 통합 검증을 사용하세요");
+            case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW, TM_CASE_ACTION, BTC_CHAIN_RECOVERY, BTC_WITHDRAWAL_PAYOUT, BTC_CUSTODY_CORRECTION -> throw new AssertionError("업무별 전용 통합 검증을 사용하세요");
             case ROLE -> service.decide(checker.user().getId(),sid,c.id(),hash,approve,p);
             case MFA_RECOVERY,ACCESS_REVIEW -> lifecycle.decide(checker.user().getId(),sid,c.id(),hash,approve,p);
             case TRADING_RESTRICTION -> restrictions.decide(checker.user().getId(),sid,c.id(),hash,approve,p);
         };
     }
-    String table(Case c) {return switch(c.kind()){case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW,TM_CASE_ACTION,BTC_CHAIN_RECOVERY,BTC_WITHDRAWAL_PAYOUT->throw new AssertionError("업무별 전용 통합 검증을 사용하세요");case ROLE->"operator_role_requests";case MFA_RECOVERY,ACCESS_REVIEW->"operator_security_requests";case TRADING_RESTRICTION->"operator_requests";};}
-    String action(Case c) {return switch(c.kind()){case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW,TM_CASE_ACTION,BTC_CHAIN_RECOVERY,BTC_WITHDRAWAL_PAYOUT->throw new AssertionError("업무별 전용 통합 검증을 사용하세요");case ROLE->"ROLE_DECIDE";case MFA_RECOVERY,ACCESS_REVIEW->"OPERATOR_SECURITY_DECIDE";case TRADING_RESTRICTION->"RESTRICTION_APPROVE";};}
+    String table(Case c) {return switch(c.kind()){case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW,TM_CASE_ACTION,BTC_CHAIN_RECOVERY,BTC_WITHDRAWAL_PAYOUT,BTC_CUSTODY_CORRECTION->throw new AssertionError("업무별 전용 통합 검증을 사용하세요");case ROLE->"operator_role_requests";case MFA_RECOVERY,ACCESS_REVIEW->"operator_security_requests";case TRADING_RESTRICTION->"operator_requests";};}
+    String action(Case c) {return switch(c.kind()){case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW,TM_CASE_ACTION,BTC_CHAIN_RECOVERY,BTC_WITHDRAWAL_PAYOUT,BTC_CUSTODY_CORRECTION->throw new AssertionError("업무별 전용 통합 검증을 사용하세요");case ROLE->"ROLE_DECIDE";case MFA_RECOVERY,ACCESS_REVIEW->"OPERATOR_SECURITY_DECIDE";case TRADING_RESTRICTION->"RESTRICTION_APPROVE";};}
     String state(Case c) {return jdbc.queryForObject("SELECT status FROM "+table(c)+" WHERE id=?",String.class,c.id());}
     void unchanged(Case c) {
         assertEquals("PENDING",state(c));assertEquals(UserRole.CUSTOMER,users.findById(candidate.getId()).orElseThrow().getRole());
@@ -254,7 +254,7 @@ class BoundApprovalTest {
     void independentApproverApprovalAndRejectionRaceHasOneFinalDecision(OperatorMfaService.ApprovalKind kind) throws Exception {
         var c=create(kind);var approve=signed(c,true);var other=account(UserRole.APPROVER);
         var options=switch(kind) {
-            case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW, TM_CASE_ACTION, BTC_CHAIN_RECOVERY, BTC_WITHDRAWAL_PAYOUT -> throw new AssertionError("업무별 전용 통합 검증을 사용하세요");
+            case EDD_REVIEW, EDD_ADDRESS_REVIEW, EDD_FUNDS_REVIEW, EDD_WEALTH_REVIEW, STR_REVIEW, STR_CUSTODY, RELATIONSHIP_EXIT, EXIT_RESCISSION, CUSTOMER_REVIEW_CUSTODY, CUSTOMER_REVIEW_FINAL, CUSTOMER_MAIL_RETRY, TM_CASE_REVIEW, TM_CASE_ACTION, BTC_CHAIN_RECOVERY, BTC_WITHDRAWAL_PAYOUT, BTC_CUSTODY_CORRECTION -> throw new AssertionError("업무별 전용 통합 검증을 사용하세요");
             case ROLE -> service.options(other.user().getId(),other.sid(),c.id(),c.hash(),false).authentication();
             case MFA_RECOVERY,ACCESS_REVIEW -> lifecycle.options(other.user().getId(),other.sid(),c.id(),c.hash(),false).authentication();
             case TRADING_RESTRICTION -> restrictions.options(other.user().getId(),other.sid(),c.id(),c.hash(),false).authentication();

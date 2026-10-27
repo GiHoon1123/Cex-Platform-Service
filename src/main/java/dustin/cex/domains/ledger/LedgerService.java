@@ -26,7 +26,7 @@ public class LedgerService {
     public record Posting(long owner, String bucket, String asset, BigDecimal delta) {
         public Posting {
             if(owner<0 || asset==null || asset.isBlank() || asset.length()>50
-                    || !(owner==0 ? Set.of("FEE","OPENING","CUSTODY") : Set.of("AVAILABLE","LOCKED","PENDING")).contains(bucket))
+                    || !(owner==0 ? Set.of("FEE","OPENING","CUSTODY","SUSPENSE") : Set.of("AVAILABLE","LOCKED","PENDING")).contains(bucket))
                 throw new IllegalArgumentException("잘못된 원장 계정");
             ExactAmount.requireNonNegative(delta.abs(),"원장 이동액");
         }
