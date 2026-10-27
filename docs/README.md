@@ -31,6 +31,7 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [공통 작업 규칙·문서 양식](../../AGENTS.md)
 
 - [007. BTC 주문·자체 시세의 플랫폼 진입점](decisions/007-platform-market-gateway.md): 영속 호가·공개 체결, 전체 스냅샷 스트림, 봇 제한, 취소 반영 순서와 실제 전체 경로 검증.
+- [178. Binance 외부 기준 차트](decisions/178-binance-reference-candles.md): BTC·ETH 1분 봉 중계, 거래쌍별 유한 캐시, 응답 검증·외부 장애 차단과 자체 호가 권위 분리.
 
 - [008. 수수료 권위와 체결 변화량](decisions/008-fee-authority-and-balance-deltas.md): 원본 적용률·후속 예약 보존·자산별 수익·실제 통합 검증.
 
