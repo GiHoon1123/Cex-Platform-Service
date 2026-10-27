@@ -88,6 +88,8 @@ PostgreSQL 기본 키와 [ON CONFLICT](https://www.postgresql.org/docs/current/s
 python3 scripts/verify_engine_inbox.py
 ```
 
+현재 실행기는 이름과 책임에 맞게 `EngineEventInboxTest` 6개와 제품 JAR 빌드만 실행한다. 시장·주문·정산 전체 회귀를 같은 DB에 섞으면 서로 다른 스키마 초기화 방식과 불변 원장이 충돌하므로, 해당 업무는 `verify_market_path.py`, `verify_order_idempotency.py` 등 각 격리 실행기에서 검증한다. 회귀 수가 줄어든 것은 제품 보장을 삭제한 것이 아니라 실행기의 소유 경계를 분리한 결과다.
+
 실행기는 자신이 만든 PostgreSQL 16 컨테이너만 사용한다. H2를 쓰는 기존 주문·정산 회귀도 포함한다. **113개 통과, 실패·오류·제외 0개**, Java 21 bootJar 빌드도 통과했다. 새 PostgreSQL 검증은 실행기 환경 변수가 없으면 제외되지만, 위 결과에서는 변수를 지정해 6개 모두 실제 실행했다.
 
 실제 Java↔Rust 응답 유실·재전송·재시작 3개와 실제 Kafka·Rust 장애·복구 6개는 엔진 문서에 기록한다. 이 결과는 실제 Kafka 소비자와 전체 정산 도메인을 한 번에 장애 주입한 종단 검증을 대신하지 않는다. 새 소비자 분기 테스트 일부는 업무 저장소 대역을 쓴다.

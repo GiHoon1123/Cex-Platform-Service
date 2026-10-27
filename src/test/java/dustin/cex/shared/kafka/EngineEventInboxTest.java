@@ -86,7 +86,7 @@ class EngineEventInboxTest {
                 org.mockito.Mockito.mock(dustin.cex.domains.auth.repository.UserRepository.class),
                 org.mockito.Mockito.mock(dustin.cex.domains.order.repository.OrderDispatchRepository.class),org.mockito.Mockito.mock(dustin.cex.domains.bitcoin.BitcoinCreditedEvents.class),org.mockito.Mockito.mock(dustin.cex.domains.bitcoin.BitcoinWithdrawalEvents.class),org.mockito.Mockito.mock(dustin.cex.domains.market.MarketSurveillanceInputs.class));
         String payload="""
-                {"event_type":"order_cancelled","event_id":"%s","engine_id":"%s","order_id":1,"user_id":2,"base_mint":"SOL","quote_mint":"USDT"}
+                {"event_type":"order_cancelled","event_id":"%s","engine_id":"%s","order_id":1,"user_id":2,"base_mint":"BTC","quote_mint":"USDT"}
                 """.formatted(event,engine);
         assertThrows(IllegalStateException.class,()->transaction.executeWithoutResult(status -> consumer.consumeOrderEvent(payload)));
         assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM engine_event_receipts WHERE event_id=?",Integer.class,event));
