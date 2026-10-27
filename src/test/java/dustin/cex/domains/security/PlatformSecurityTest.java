@@ -20,6 +20,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.*;
 import dustin.cex.domains.auth.model.entity.*;
@@ -46,6 +48,7 @@ class PlatformSecurityTest {
         r.add("spring.jpa.hibernate.ddl-auto",()->"create-drop");
     }
     @Autowired MockMvc mvc;@Autowired ObjectMapper json;@Autowired JdbcTemplate jdbc;
+    @Autowired RequestMappingHandlerMapping mappings;
     @Autowired UserRepository users;@Autowired RefreshTokenRepository tokens;@Autowired JwtService jwt;
     @Autowired SessionService sessionService;
     @Autowired PasswordService passwords;@Autowired AuthService auth;@Autowired OperatorApprovalService approvals;
@@ -117,6 +120,43 @@ class PlatformSecurityTest {
             mvc.perform(get(path)).andExpect(status().isUnauthorized());
             mvc.perform(get(path).header("Authorization","Bearer "+token(customer))).andExpect(status().isForbidden());
         }
+    }
+    @Test void everyRegisteredApiRouteKeepsTheAuthenticationAndApplicationBoundary() throws Exception {
+        // 실제 컨트롤러 등록 목록을 기준으로 검사하므로 새 API를 추가하고 보안 규칙을 빼먹는 회귀도 함께 잡는다.
+        var routes=new ArrayList<Map.Entry<HttpMethod,String>>();
+        mappings.getHandlerMethods().keySet().forEach(info->{
+            var patterns=info.getPathPatternsCondition();
+            if(patterns==null)return;
+            var methods=info.getMethodsCondition().getMethods();
+            for(var pattern:patterns.getPatternValues()) {
+                if(!pattern.startsWith("/api/"))continue;
+                if(methods.isEmpty())routes.add(Map.entry(HttpMethod.GET,concretePath(pattern)));
+                else methods.forEach(method->routes.add(Map.entry(HttpMethod.valueOf(method.name()),concretePath(pattern))));
+            }
+        });
+        assertFalse(routes.isEmpty());
+        for(var route:routes) {
+            if(isPublicRoute(route.getKey(),route.getValue()))continue;
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(route.getKey(),route.getValue())).andExpect(status().isUnauthorized());
+            if(route.getValue().startsWith("/api/admin/"))
+                mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(route.getKey(),route.getValue()).header("Authorization","Bearer "+token(customer)))
+                    .andExpect(status().isForbidden());
+            if(isCustomerBusinessRoute(route.getValue()))
+                mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(route.getKey(),route.getValue()).header("Authorization","Bearer "+token(operator)))
+                    .andExpect(status().isForbidden());
+        }
+    }
+    private static boolean isPublicRoute(HttpMethod method,String path) {
+        return method==HttpMethod.POST && (path.equals("/api/auth/signup")||path.equals("/api/auth/signin")
+                ||path.equals("/api/auth/refresh")||path.equals("/api/kyc/webhook"))
+            || method==HttpMethod.GET && path.startsWith("/api/market/");
+    }
+    private static boolean isCustomerBusinessRoute(String path) {
+        return path.startsWith("/api/customer/")||path.startsWith("/api/cex/")||path.startsWith("/api/kyc/");
+    }
+    private static String concretePath(String pattern) {
+        // 인증 필터가 컨트롤러보다 먼저 거절하므로 형식상 유효한 고정 값이면 업무 데이터를 만들지 않는다.
+        return pattern.replaceAll("\\{[^}]+}","1");
     }
     @Test void corsAllowsOnlyConfiguredFrontendAndReviewedHeaders() throws Exception {
         mvc.perform(options("/api/cex/orders").header("Origin","http://localhost:3003")
