@@ -12,6 +12,7 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [Java·DB·Rust 공통 금액 계약과 예약 검증](decisions/005-common-exact-amount-contract.md): 입력·저장·조회 경계 오류 재현, 수정과 회귀 검증.
 
 - [006. 엔진 WAL 재발행의 영속 중복 방지](decisions/006-engine-event-inbox.md): 이벤트 ID·본문 검사, 금융 변경과 수신 키의 동시 커밋, 소비 실패 중단과 격리 검증.
+- [161. 고객 웹과 운영·서명·방송·확인 프로세스 경계](decisions/161-isolated-process-boundaries.md): 비웹 컨텍스트 강제, JDBC 워커의 JPA 자동 구성 제거, 실제 컨텍스트와 다섯 JAR 회귀 검증.
 
 ## 기존 설계·측정 문서
 

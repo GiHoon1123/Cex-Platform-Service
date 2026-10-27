@@ -23,6 +23,7 @@ python3 scripts/verify_market_path.py
 - [문서 목차](docs/README.md)
 - [BTC 주문·자체 시세·봇 경계와 검증](docs/decisions/007-platform-market-gateway.md)
 - [엔진 이벤트의 영속 수신](docs/decisions/006-engine-event-inbox.md)
+- [고객 웹과 운영·서명·방송·확인 프로세스 경계](docs/decisions/161-isolated-process-boundaries.md)
 
 현재 구현·격리 검증을 운영 보안·금융 정합성·규제 심사 완료로 해석하지 않는다. 수수료·시장가·주문 실패 복구의 현재 범위와 남은 원장·대사 과제는 구현 기록에서 확인한다.
 
