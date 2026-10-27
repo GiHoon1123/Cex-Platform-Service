@@ -18,6 +18,17 @@ DROP TRIGGER IF EXISTS security_audit_no_change ON security_audit;
 CREATE TRIGGER security_audit_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON security_audit
  FOR EACH STATEMENT EXECUTE FUNCTION security_audit_immutable();
 
+-- 감사 제출 묶음은 당시 조회 조건·정렬된 사건·서명을 그대로 보존한다. 일반 감사 조회와 내보내기를 구분한다.
+CREATE TABLE IF NOT EXISTS audit_evidence_exports (
+ id uuid PRIMARY KEY,requester_id bigint NOT NULL,requester_person uuid NOT NULL,requester_role varchar(16) NOT NULL,
+ range_start timestamptz NOT NULL,range_end timestamptz NOT NULL,action_filter varchar(64),event_count integer NOT NULL CHECK(event_count BETWEEN 0 AND 1000),
+ manifest text NOT NULL,manifest_hash varchar(64) NOT NULL,signature varchar(64) NOT NULL,key_id varchar(64) NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),CHECK(range_start<range_end)
+);
+DROP TRIGGER IF EXISTS audit_evidence_export_no_change ON audit_evidence_exports;
+CREATE TRIGGER audit_evidence_export_no_change BEFORE UPDATE OR DELETE OR TRUNCATE ON audit_evidence_exports
+ FOR EACH STATEMENT EXECUTE FUNCTION security_audit_immutable();
+
 CREATE TABLE IF NOT EXISTS operator_requests (
  id uuid PRIMARY KEY, requester_id bigint NOT NULL, requester_person uuid NOT NULL,
  target_id bigint NOT NULL, target_version bigint NOT NULL, restricted boolean NOT NULL,

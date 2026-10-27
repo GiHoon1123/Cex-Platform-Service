@@ -63,6 +63,9 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.POST,"/api/admin/data-retention/requests").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/data-retention/requests/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/data-retention/requests/*/approve/options","/api/admin/data-retention/requests/*/reject/options","/api/admin/data-retention/requests/*/approve","/api/admin/data-retention/requests/*/reject").access(audited(audit,sessions,"APPROVER"))
+                // 감사 제출은 일반 목록 조회와 분리한다. 승인자·감사자만 최근 인증으로 새 묶음을 만들 수 있다.
+                .requestMatchers(HttpMethod.POST,"/api/admin/audit-evidence").access(audited(audit,sessions,"APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/audit-evidence/*/verification").access(audited(audit,sessions,"APPROVER","AUDITOR"))
                 // 탐지 원본의 명시적 처리 요청도 현재 운영 업무다. 감사자에게 작업 생성 권한을 부여하지 않는다.
                 .requestMatchers(HttpMethod.POST,"/api/admin/deposits/BTC/*/monitoring-requests").access(audited(audit,sessions,"OPERATOR","APPROVER"))
                 // 체인 제한 해제는 요청 담당자와 지정 승인자의 역할을 분리하고 내용 결합 서명을 별도로 요구한다.
