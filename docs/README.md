@@ -333,3 +333,4 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 
 - [160. 실제 Core부터 Rust WAL·Kafka·원장까지 BTC 출금 전체 연결 검증](decisions/160-bitcoin-payout-full-wire.md)
 - [164. 확정 체결·취소에서 시장 이상거래 검토 신호 만들기](decisions/164-durable-market-surveillance-signals.md)
+- [165. 독립 승인으로 신규 주문 시장 중단·재개하기](decisions/165-independently-approved-market-halt.md)
