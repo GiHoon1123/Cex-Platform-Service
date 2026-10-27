@@ -12,7 +12,7 @@ public class MarketController {
         return service.view(base,quote);
     }
     @GetMapping("/{base}/{quote}/reference-candles")
-    public BinanceReferenceCandleService.ReferenceCandles referenceCandles(@PathVariable String base,@PathVariable String quote) {
-        return referenceCandles.candles(base,quote);
+    public BinanceReferenceCandleService.ReferenceCandles referenceCandles(@PathVariable String base,@PathVariable String quote,@RequestParam String interval) {
+        return referenceCandles.candles(base,quote,interval);
     }
 }
