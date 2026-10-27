@@ -79,6 +79,10 @@ docker build -t cex-platform:deployment-review .
 
 최초 전체 Gradle 실행은 `CEX_TEST_DATABASE_URL` 없이 PostgreSQL 소유 회귀까지 한 DB에서 시작해 실패했고, Flyway를 끈 뒤에도 각 실행기가 요구하는 격리 DB가 없어 실패했다. 이 저장소의 PostgreSQL 회귀는 테스트 묶음별 DB를 만드는 `scripts/verify_*.py`가 기준이다. 실패를 제품 통과에 합산하지 않고 관련 격리 실행기와 빈 DB 실행기로 다시 검증한다.
 
+시장 전체 경로와 주문 재시작 회귀가 띄우는 보조 JAR도 실행기가 이미 만든 임시 스키마를 사용한다. 제품 최초 기동으로 오해하지 않도록 그 보조 프로세스에만 `spring.flyway.enabled=false`를 명시한다. 운영 Compose와 일반 JAR 기본값은 계속 Flyway 적용이다.
+
+`scripts/verify_order_idempotency.py`의 10개 회귀는 사례마다 새 PostgreSQL DB를 만들도록 고쳤다. 따라서 불변 원장을 지우거나 트리거를 끄지 않고도 동시 중복 키, 응답 유실 후 재시도, 프로세스 재시작, 다른 본문의 같은 키, 원자적 롤백을 서로 오염 없이 확인한다. 거래 기본 시장도 현재 제품 계약과 같은 `BTC/USDT`를 사용한다. `python3 scripts/verify_order_idempotency.py` 실행 결과 10개가 모두 통과했다.
+
 ## 남은 한계
 
 기준선은 신규 환경을 위한 것이다. 실제 운영 데이터가 생긴 뒤에는 새 버전 파일과 백업·복원 훈련이 필요하다. 단일 호스트 디스크 손실은 Flyway가 보호하지 않으며 외부 복제와 백업이 별도 운영 조건이다.

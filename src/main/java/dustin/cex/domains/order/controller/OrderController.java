@@ -93,7 +93,7 @@ public class OrderController {
      * 요청 본문:
      * - orderType: "buy" 또는 "sell" (필수)
      * - orderSide: "limit" 또는 "market" (필수)
-     * - baseMint: 기준 자산 (필수, 예: "SOL")
+     * - baseMint: 기준 자산 (필수, 예: "BTC")
      * - quoteMint: 기준 통화 (선택, 기본값: "USDT")
      * - price: 지정가 가격 (지정가 주문만 필수)
      * - amount: 주문 수량 (시장가 매수 제외 필수)
@@ -107,9 +107,9 @@ public class OrderController {
      * - 500: 서버 오류
      * 
      * 예시:
-     * - 지정가 매수: {"orderType":"buy","orderSide":"limit","baseMint":"SOL","price":"100.0","amount":"1.0"}
-     * - 시장가 매수: {"orderType":"buy","orderSide":"market","baseMint":"SOL","quoteAmount":"1000.0"}
-     * - 시장가 매도: {"orderType":"sell","orderSide":"market","baseMint":"SOL","amount":"1.0"}
+     * - 지정가 매수: {"orderType":"buy","orderSide":"limit","baseMint":"BTC","price":"100000.0","amount":"0.01"}
+     * - 시장가 매수: {"orderType":"buy","orderSide":"market","baseMint":"BTC","quoteAmount":"1000.0"}
+     * - 시장가 매도: {"orderType":"sell","orderSide":"market","baseMint":"BTC","amount":"0.01"}
      */
     @Operation(
             summary = "주문 생성",
@@ -118,9 +118,9 @@ public class OrderController {
                          "- 지정가 주문 (`limit`): 원하는 가격에 주문 등록, 매칭될 때까지 대기\n" +
                          "- 시장가 주문 (`market`): 즉시 체결, 오더북의 최적 가격으로 매칭\n\n" +
                          "**요청 예시:**\n" +
-                         "1. 지정가 매수: `{\"orderType\":\"buy\",\"orderSide\":\"limit\",\"baseMint\":\"SOL\",\"price\":\"100.0\",\"amount\":\"1.0\"}`\n" +
-                         "2. 시장가 매수: `{\"orderType\":\"buy\",\"orderSide\":\"market\",\"baseMint\":\"SOL\",\"quoteAmount\":\"1000.0\"}`\n" +
-                         "3. 시장가 매도: `{\"orderType\":\"sell\",\"orderSide\":\"market\",\"baseMint\":\"SOL\",\"amount\":\"1.0\"}`\n\n" +
+                         "1. 지정가 매수: `{\"orderType\":\"buy\",\"orderSide\":\"limit\",\"baseMint\":\"BTC\",\"price\":\"100000.0\",\"amount\":\"0.01\"}`\n" +
+                         "2. 시장가 매수: `{\"orderType\":\"buy\",\"orderSide\":\"market\",\"baseMint\":\"BTC\",\"quoteAmount\":\"1000.0\"}`\n" +
+                         "3. 시장가 매도: `{\"orderType\":\"sell\",\"orderSide\":\"market\",\"baseMint\":\"BTC\",\"amount\":\"0.01\"}`\n\n" +
                          "**응답 예시:**\n" +
                          "```json\n" +
                          "{\n" +
@@ -129,7 +129,7 @@ public class OrderController {
                          "    \"userId\": 1,\n" +
                          "    \"orderType\": \"buy\",\n" +
                          "    \"orderSide\": \"limit\",\n" +
-                         "    \"baseMint\": \"SOL\",\n" +
+                         "    \"baseMint\": \"BTC\",\n" +
                          "    \"quoteMint\": \"USDT\",\n" +
                          "    \"price\": 100.0,\n" +
                          "    \"amount\": 1.0,\n" +
@@ -251,7 +251,7 @@ public class OrderController {
                          "    \"userId\": 1,\n" +
                          "    \"orderType\": \"buy\",\n" +
                          "    \"orderSide\": \"limit\",\n" +
-                         "    \"baseMint\": \"SOL\",\n" +
+                         "    \"baseMint\": \"BTC\",\n" +
                          "    \"quoteMint\": \"USDT\",\n" +
                          "    \"price\": 100.5,\n" +
                          "    \"amount\": 1.0,\n" +
@@ -328,7 +328,7 @@ public class OrderController {
                          "      \"userId\": 1,\n" +
                          "      \"orderType\": \"buy\",\n" +
                          "      \"orderSide\": \"limit\",\n" +
-                         "      \"baseMint\": \"SOL\",\n" +
+                         "      \"baseMint\": \"BTC\",\n" +
                          "      \"quoteMint\": \"USDT\",\n" +
                          "      \"price\": 100.5,\n" +
                          "      \"amount\": 1.0,\n" +

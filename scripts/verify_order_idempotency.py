@@ -63,7 +63,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
     def setUpClass(cls):
         ARTIFACTS.mkdir(exist_ok=True)
         cls.docker = shutil.which("docker") or "/usr/local/bin/docker"
-        cls.database = "cex_idempotency_" + uuid4().hex[:12]
+        cls.database = "postgres"
         cls.secret = secrets.token_hex(32)
         cls.service_token = secrets.token_hex(32)
         EngineStub.service_token = cls.service_token
@@ -80,17 +80,14 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         cls.container = "cex-idempotency-" + uuid4().hex[:12]
         subprocess.run([cls.docker,"run","--detach","--rm","--name",cls.container,"--publish","127.0.0.1::5432",
                         "--tmpfs","/var/lib/postgresql/data","-e","POSTGRES_USER=root","-e","POSTGRES_PASSWORD=1234",
-                        "-e","POSTGRES_DB="+cls.database,"postgres:16"],check=True,stdout=subprocess.DEVNULL)
+                        "-e","POSTGRES_DB=postgres","postgres:16"],check=True,stdout=subprocess.DEVNULL)
         deadline=time.monotonic()+45
         while subprocess.run([cls.docker,"exec",cls.container,"pg_isready","-h","127.0.0.1","-U","root","-d",cls.database],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
             if time.monotonic()>deadline: raise RuntimeError("격리 PostgreSQL 시작 시간 초과")
             time.sleep(0.2)
         cls.database_address=subprocess.check_output([cls.docker,"port",cls.container,"5432/tcp"],text=True).strip()
-        cls.sql("CREATE TABLE fee_configs(id BIGSERIAL PRIMARY KEY, base_mint VARCHAR(255), quote_mint VARCHAR(255), fee_rate NUMERIC(10,6) NOT NULL, fee_type VARCHAR(20) NOT NULL, is_active BOOLEAN NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL); INSERT INTO fee_configs(fee_rate,fee_type,is_active,created_at,updated_at) VALUES(0.001,'both',true,now(),now());")
-        cls.created_database = True
         cls.engine = ThreadingHTTPServer(("127.0.0.1", 0), EngineStub)
         threading.Thread(target=cls.engine.serve_forever, daemon=True).start()
-        cls.start_platform()
 
     @classmethod
     def sql(cls, statement, database=None):
@@ -101,7 +98,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         ], text=True).strip()
 
     @classmethod
-    def start_platform(cls):
+    def start_platform(cls, initialize_schema=False):
         with socket.socket() as reserve:
             reserve.bind(("127.0.0.1", 0))
             cls.port = reserve.getsockname()[1]
@@ -111,12 +108,14 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         command = [str(Path(java_home) / "bin/java"), "-jar", str(PROJECT / "build/libs/cex-0.0.1-SNAPSHOT.jar"),
                    f"--spring.datasource.url=jdbc:postgresql://{cls.database_address}/{cls.database}",
                    "--spring.datasource.username=root", "--spring.datasource.password=1234",
+                   "--spring.flyway.enabled=false",
                    "--spring.kafka.bootstrap-servers=127.0.0.1:1", "--spring.kafka.listener.auto-startup=false",
                    "--spring.kafka.producer.properties.max.block.ms=500",
+                   "--operator.webauthn.rp-id=localhost", "--operator.webauthn.origin=http://localhost:3004",
                    f"--engine.http.url=http://127.0.0.1:{cls.engine.server_port}", "--engine.http.timeout=300",
                    "--bot.bot-count=0", "--order.dispatch.enabled=false", "--bot.binance-ws-url=ws://127.0.0.1:1",
                    "--server.address=127.0.0.1", f"--server.port={cls.port}", f"--jwt.secret={cls.secret}", f"--engine.service.token={cls.service_token}",
-                   "--spring.jpa.hibernate.ddl-auto=" + ("update" if cls.platform_runs == 1 else "validate")]
+                   "--spring.jpa.hibernate.ddl-auto=" + ("update" if initialize_schema else "validate")]
         # 프로세스 회귀도 실제 공급사 키와 백그라운드 대사 작업을 물려받지 않는다.
         env=os.environ.copy()
         for key in list(env):
@@ -171,16 +170,27 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         }, ensure_ascii=False, indent=2))
 
     def setUp(self):
+        # 불변 금융 원장은 시험 사이에도 삭제하지 않는다. 각 사례가 새 DB를 소유해 격리한다.
+        cls = type(self)
+        cls.stop_platform()
+        if cls.created_database:
+            cls.sql(f"DROP DATABASE {cls.database} WITH (FORCE)", database="postgres")
+        cls.database = "cex_idempotency_" + uuid4().hex[:12]
+        cls.sql(f"CREATE DATABASE {cls.database}", database="postgres")
+        cls.created_database = True
+        cls.sql("CREATE TABLE fee_configs(id BIGSERIAL PRIMARY KEY, base_mint VARCHAR(255), quote_mint VARCHAR(255), fee_rate NUMERIC(10,6) NOT NULL, fee_type VARCHAR(20) NOT NULL, is_active BOOLEAN NOT NULL, created_at TIMESTAMP NOT NULL, updated_at TIMESTAMP NOT NULL); INSERT INTO fee_configs(fee_rate,fee_type,is_active,created_at,updated_at) VALUES(0.001,'both',true,now(),now());")
+        cls.start_platform(initialize_schema=True)
         EngineStub.mode = 202
         with EngineStub.lock:
             EngineStub.calls.clear()
-        # 이 스크립트가 소유한 임시 DB에만 테스트 데이터를 만든다.
-        self.sql("DELETE FROM order_dispatches; DELETE FROM order_submissions; DELETE FROM orders; DELETE FROM user_balances")
+        # 이 스크립트가 소유한 새 DB에만 테스트 데이터를 만든다.
         self.sql("INSERT INTO users(id,email,password_hash,role,enabled,trading_restricted,version,created_at,updated_at) VALUES(101,'one@test.invalid','unused','CUSTOMER',true,false,0,now(),now()),(102,'two@test.invalid','unused','CUSTOMER',true,false,0,now(),now()) ON CONFLICT(id) DO NOTHING")
         self.sql("""INSERT INTO user_balances (user_id,mint_address,available,locked,created_at,updated_at)
                     VALUES (101,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP),
                            (102,'USDT',1000,25,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)""")
-        self.sql((PROJECT/"src/test/resources/ledger-opening-fixture.sql").read_text())
+        # 새 DB에는 지울 과거 원장이 없다. 불변 트리거를 우회하지 않고 삽입 구간만 실행한다.
+        opening = (PROJECT/"src/test/resources/ledger-opening-fixture.sql").read_text()
+        self.sql("BEGIN;" + opening.partition("BEGIN;")[2])
         self.sql((PROJECT/"src/test/resources/kyc-verified-fixture.sql").read_text())
 
     def token(self, user):
@@ -208,7 +218,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
 
     @staticmethod
     def limit():
-        return {"orderType": "buy", "orderSide": "limit", "baseMint": "SOL", "quoteMint": "USDT",
+        return {"orderType": "buy", "orderSide": "limit", "baseMint": "BTC", "quoteMint": "USDT",
                 "price": "100", "amount": "2"}
 
     def assert_single(self, calls=1):
@@ -325,7 +335,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
 
     def test_market_original_budget_survives_order_changes(self):
         key = uuid4()
-        market = {"orderType": "buy", "orderSide": "market", "baseMint": "SOL", "quoteAmount": "123.250000001"}
+        market = {"orderType": "buy", "orderSide": "market", "baseMint": "BTC", "quoteAmount": "123.250000001"}
         status, _, result = self.post(key, market)
         self.assertEqual(status, 201)
         order_id = int(result["order"]["id"])

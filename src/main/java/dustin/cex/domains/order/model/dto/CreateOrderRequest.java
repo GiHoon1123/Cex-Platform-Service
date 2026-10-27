@@ -26,11 +26,11 @@ import lombok.NoArgsConstructor;
  * 4. 시장가 매도: orderType='sell', orderSide='market', amount 필수
  * 
  * 예시:
- * - 지정가 매수: "SOL을 100 USDT에 1개 구매"
+ * - 지정가 매수: "BTC를 100,000 USDT에 0.01개 구매"
  *   → orderType='buy', orderSide='limit', price=100.0, amount=1.0
- * - 시장가 매수: "1000 USDT어치 SOL 구매"
+ * - 시장가 매수: "1000 USDT어치 BTC 구매"
  *   → orderType='buy', orderSide='market', quoteAmount=1000.0
- * - 시장가 매도: "SOL 1개 즉시 판매"
+ * - 시장가 매도: "BTC 0.01개 즉시 판매"
  *   → orderType='sell', orderSide='market', amount=1.0
  */
 @Data
@@ -72,13 +72,13 @@ public class CreateOrderRequest {
      * 기준 자산
      * Base Asset
      * 
-     * 구매/판매하려는 자산 (예: SOL, USDC, RAY 등)
-     * 예: SOL/USDT 거래 → baseMint='SOL'
+     * 구매/판매하려는 기준 자산이다.
+     * 예: BTC/USDT 거래 → baseMint='BTC'
      * 
      * 필수값: true
      */
     @NotBlank(message = "기준 자산은 필수입니다")
-    @Schema(description = "기준 자산 (예: SOL, USDC)", example = "SOL", required = true)
+    @Schema(description = "기준 자산 (예: BTC, ETH)", example = "BTC", required = true)
     private String baseMint;
     
     /**
@@ -96,7 +96,7 @@ public class CreateOrderRequest {
      * Limit Price
      * 
      * 지정가 주문 시 필수, 시장가 주문은 불필요
-     * USDT 기준 가격 (1 SOL = 100 USDT 라면 price=100.0)
+     * USDT 기준 가격 (1 BTC = 100,000 USDT라면 price=100000.0)
      * 
      * 유효성 검증:
      * - 지정가 주문: 필수, 양수여야 함
@@ -110,7 +110,7 @@ public class CreateOrderRequest {
      * Order Amount
      * 
      * 주문한 수량 (baseMint 기준)
-     * 소수점 값 지원 (예: 0.1 SOL, 0.0001 SOL)
+     * 소수점 값 지원 (예: 0.01 BTC, 0.0001 BTC)
      * 
      * 규칙:
      * - 지정가 매수: 필수
@@ -129,7 +129,7 @@ public class CreateOrderRequest {
      * Quote Amount (for market buy orders only)
      * 
      * 시장가 매수 주문 시 사용
-     * 예: "1000 USDT어치 SOL 사기"
+     * 예: "1000 USDT어치 BTC 사기"
      * 
      * 규칙:
      * - 시장가 매수: 필수 (amount 대신 사용)

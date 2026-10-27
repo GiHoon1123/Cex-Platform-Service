@@ -122,8 +122,8 @@ public class OrderResponse {
          * Base Asset
          */
         @Schema(
-            description = "기준 자산 (거래되는 자산, 예: SOL, USDC 등)", 
-            example = "SOL",
+            description = "기준 자산 (거래되는 자산, 예: BTC, ETH)",
+            example = "BTC",
             required = true
         )
         private String baseMint;
@@ -147,7 +147,7 @@ public class OrderResponse {
          * 지정가 주문만 값이 있음, 시장가 주문은 null
          */
         @Schema(
-            description = "지정가 가격 (USDT 기준, 1 SOL = 100 USDT라면 100.0). 시장가 주문은 null",
+            description = "지정가 가격 (USDT 기준, 1 BTC = 100,000 USDT라면 100000.0). 시장가 주문은 null",
             example = "100.5",
             required = false
         )

@@ -309,7 +309,8 @@ class MarketPathTest {
             var cli=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-jar","build/libs/cex-0.0.1-SNAPSHOT.jar",
                 "--reconciliation.run=true","--server.port=0","--server.address=127.0.0.1","--bot.bot-count=0","--order.dispatch.enabled=false",
                 "--spring.kafka.listener.auto-startup=false","--spring.kafka.bootstrap-servers="+System.getenv("CEX_TEST_KAFKA"),
-                "--spring.datasource.url="+System.getenv("CEX_TEST_DATABASE_URL"),"--spring.datasource.username=root","--spring.datasource.password=1234","--spring.jpa.hibernate.ddl-auto=validate",
+                "--spring.datasource.url="+System.getenv("CEX_TEST_DATABASE_URL"),"--spring.datasource.username=root","--spring.datasource.password=1234",
+                "--spring.jpa.hibernate.ddl-auto=validate","--spring.flyway.enabled=false",
                 "--operator.webauthn.rp-id=localhost","--operator.webauthn.origin=http://localhost:3003",
                 "--engine.http.url="+System.getenv("CEX_TEST_ENGINE_URL"));
             cli.environment().put("JWT_SECRET","isolated-market-verification-secret-key-only");

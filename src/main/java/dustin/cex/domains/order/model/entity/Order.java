@@ -37,9 +37,9 @@ import lombok.NoArgsConstructor;
  * - 'expired': 시장가 미사용 잔량의 만료. 체결 내역은 보존됨
  * 
  * 예시:
- * - 지정가 매수: "SOL을 100 USDT에 1개 구매하고 싶다"
+ * - 지정가 매수: "BTC를 100,000 USDT에 0.01개 구매하고 싶다"
  *   → orderType='buy', orderSide='limit', price=100.0, amount=1.0
- * - 시장가 매도: "지금 시장가로 SOL 1개 판매하고 싶다"
+ * - 시장가 매도: "지금 시장가로 BTC 0.01개 판매하고 싶다"
  *   → orderType='sell', orderSide='market', price=null, amount=1.0
  * 
  * 데이터베이스 매핑:
@@ -108,8 +108,8 @@ public class Order {
      * 기준 자산
      * Base Asset
      * 
-     * 구매/판매하려는 자산 (예: SOL, USDC, RAY 등)
-     * 예: SOL/USDT 거래 → baseMint='SOL'
+     * 구매/판매하려는 기준 자산이다.
+     * 예: BTC/USDT 거래 → baseMint='BTC'
      */
     @Column(name = "base_mint", nullable = false, length = 255)
     private String baseMint;
@@ -119,7 +119,7 @@ public class Order {
      * Quote Currency
      * 
      * 항상 'USDT'가 기준 통화
-     * 예: SOL/USDT 거래 → quoteMint='USDT'
+     * 예: BTC/USDT 거래 → quoteMint='USDT'
      */
     @Column(name = "quote_mint", nullable = false, length = 255)
     @Builder.Default
@@ -130,7 +130,7 @@ public class Order {
      * Limit Price
      * 
      * 지정가 주문만 필요, 시장가 주문은 NULL
-     * USDT 기준 가격 (1 SOL = 100 USDT 라면 price=100.0)
+     * USDT 기준 가격 (1 BTC = 100,000 USDT라면 price=100000.0)
      * 
      * 데이터베이스: DECIMAL(30, 9) - 소수점 9자리까지 지원
      */
@@ -142,7 +142,7 @@ public class Order {
      * Order Amount
      * 
      * 주문한 총 수량. 예산 기반 시장가 매수의 0은 수량 미정이며 체결량 상한이 아니다.
-     * 예: SOL 10개 주문 → amount=10.0
+     * 예: BTC 0.01개 주문 → amount=0.01
      * 
      * 데이터베이스: DECIMAL(30, 9) - 소수점 9자리까지 지원
      */
@@ -154,7 +154,7 @@ public class Order {
      * Filled Amount
      * 
      * 부분 체결 가능
-     * 예: SOL 10개 주문 → 3개 체결 → amount=10.0, filledAmount=3.0
+     * 예: BTC 0.01개 주문 중 0.003개 체결 → amount=0.01, filledAmount=0.003
      * 예산 기반 시장가 매수는 원본 수량 미정이므로 amount와 비교하지 않고 최종 상태를 확인한다.
      * 
      * 데이터베이스: DECIMAL(30, 9), 기본값: 0
@@ -170,7 +170,7 @@ public class Order {
      * 체결된 거래의 총 결제 금액 (USDT 기준)
      * 시장가 주문의 경우, 모든 체결의 (가격 * 수량) 합계
      * 
-     * 예: 시장가 매수로 SOL 1개를 평균 100.5 USDT에 구매
+     * 예: 시장가 매수로 BTC 0.01개를 평균 100,000 USDT에 구매
      * → filledQuoteAmount = 100.5
      * 
      * 누적 대금도 예약·체결과 같은 소수 9자리 계약이다. 8자리 저장은 잔여 예산을 반올림한다.
