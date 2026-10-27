@@ -47,6 +47,7 @@ public class KafkaOrderEventConsumer {
     private final dustin.cex.domains.order.repository.OrderDispatchRepository dispatches;
     private final dustin.cex.domains.bitcoin.BitcoinCreditedEvents deposits;
     private final dustin.cex.domains.bitcoin.BitcoinWithdrawalEvents withdrawals;
+    private final dustin.cex.domains.market.MarketSurveillanceInputs surveillance;
     private final ObjectMapper mapper = new ObjectMapper();
 
     @KafkaListener(topics = "order-events", groupId = "cex-consumer-group", containerFactory = "kafkaListenerContainerFactory")
@@ -94,6 +95,8 @@ public class KafkaOrderEventConsumer {
         var saved = tradeRepository.save(Trade.builder().engineEventId(event.path("event_id").asText()).buyOrderId(buy.getId()).sellOrderId(sell.getId())
                 .buyerId(buy.getUserId()).sellerId(sell.getUserId()).baseMint(base).quoteMint(quote)
                 .price(price).amount(quantity).createdAt(time).build());
+        // 확정 체결과 같은 트랜잭션에 감시 입력을 고정한다. 감시 실패를 숨기고 금융 결과만 커밋하지 않는다.
+        surveillance.trade(event.path("event_id").asText(),saved);
         fill(buy, quantity, value);
         fill(sell, quantity, value);
         // 지정가 매수는 해당 수량의 예약 대금 전체를 해제하고 실제 지출 차이만 반환한다.
@@ -240,7 +243,9 @@ public class KafkaOrderEventConsumer {
         change(order.getUserId(), buy ? order.getQuoteMint() : order.getBaseMint(), refund, refund.negate());
         refundLedger(event,order,buy ? order.getQuoteMint() : order.getBaseMint(),refund,"CANCELLED");
         order.setStatus("cancelled");
-        orderRepository.save(order);
+        // JDBC 감시 입력의 DB 제약이 같은 트랜잭션의 확정 상태를 읽으므로 먼저 JPA 변경을 실제 SQL로 보낸다.
+        orderRepository.saveAndFlush(order);
+        surveillance.cancelled(event.path("event_id").asText(),Instant.parse(event.path("timestamp").asText()),order);
     }
 
     private void refundLedger(JsonNode event,Order order,String asset,BigDecimal refund,String kind) {
