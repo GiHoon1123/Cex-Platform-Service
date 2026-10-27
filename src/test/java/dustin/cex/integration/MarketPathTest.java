@@ -39,6 +39,10 @@ class MarketPathTest {
         registry.add("cdd.encryption-key",()->"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         registry.add("cdd.fingerprint-key",()->"AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
         registry.add("spring.datasource.url",()->System.getenv("CEX_TEST_DATABASE_URL"));
+        registry.add("spring.datasource.username",()->"root");
+        registry.add("spring.datasource.password",()->"1234");
+        registry.add("operator.webauthn.rp-id",()->"localhost");
+        registry.add("operator.webauthn.origin",()->"http://localhost:3003");
         registry.add("spring.kafka.bootstrap-servers",()->System.getenv("CEX_TEST_KAFKA"));
         registry.add("engine.service.token",()->System.getenv("CEX_TEST_SERVICE_TOKEN"));
         registry.add("engine.audit.token",()->System.getenv("CEX_TEST_AUDIT_TOKEN"));
@@ -64,7 +68,7 @@ class MarketPathTest {
     void startEngine(boolean append) throws Exception {
         var builder=new ProcessBuilder(System.getenv("CEX_ENGINE_BINARY"));
         var env=builder.environment();
-        env.put("DATABASE_HOST",System.getenv("CEX_TEST_DATABASE_URL").replace("jdbc:postgresql://","").replace("/cex",""));
+        env.put("DATABASE_URL",System.getenv("CEX_TEST_DATABASE_URL").replace("jdbc:postgresql://","postgresql://root:1234@"));
         env.put("ENGINE_HTTP_ADDRESS",URI.create(System.getenv("CEX_TEST_ENGINE_URL")).getAuthority());
         env.put("ENGINE_SERVICE_TOKEN",System.getenv("CEX_TEST_SERVICE_TOKEN"));
         env.put("ENGINE_AUDIT_TOKEN",System.getenv("CEX_TEST_AUDIT_TOKEN"));
@@ -305,7 +309,8 @@ class MarketPathTest {
             var cli=new ProcessBuilder(Path.of(System.getProperty("java.home"),"bin","java").toString(),"-jar","build/libs/cex-0.0.1-SNAPSHOT.jar",
                 "--reconciliation.run=true","--server.port=0","--server.address=127.0.0.1","--bot.bot-count=0","--order.dispatch.enabled=false",
                 "--spring.kafka.listener.auto-startup=false","--spring.kafka.bootstrap-servers="+System.getenv("CEX_TEST_KAFKA"),
-                "--spring.datasource.url="+System.getenv("CEX_TEST_DATABASE_URL"),"--spring.jpa.hibernate.ddl-auto=validate",
+                "--spring.datasource.url="+System.getenv("CEX_TEST_DATABASE_URL"),"--spring.datasource.username=root","--spring.datasource.password=1234","--spring.jpa.hibernate.ddl-auto=validate",
+                "--operator.webauthn.rp-id=localhost","--operator.webauthn.origin=http://localhost:3003",
                 "--engine.http.url="+System.getenv("CEX_TEST_ENGINE_URL"));
             cli.environment().put("JWT_SECRET","isolated-market-verification-secret-key-only");
             cli.environment().put("ENGINE_SERVICE_TOKEN",System.getenv("CEX_TEST_SERVICE_TOKEN"));

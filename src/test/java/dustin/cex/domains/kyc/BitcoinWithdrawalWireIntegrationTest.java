@@ -80,7 +80,7 @@ class BitcoinWithdrawalWireIntegrationTest extends BitcoinWithdrawalTestSupport 
     void startEngine()throws Exception {
         var launch=new ProcessBuilder(Path.of(System.getenv("CEX_WIRE_ENGINE_ROOT"),"target/debug/cex-engine").toString())
             .directory(Path.of(System.getenv("CEX_WIRE_ENGINE_ROOT")).toFile());
-        launch.environment().putAll(Map.of("DATABASE_HOST",System.getenv("CEX_WIRE_DATABASE_HOST"),"ENGINE_DATA_DIR",directory.toString(),
+        launch.environment().putAll(Map.of("DATABASE_URL","postgresql://root:1234@"+System.getenv("CEX_WIRE_DATABASE_HOST")+"/cex","ENGINE_DATA_DIR",directory.toString(),
             "ENGINE_HTTP_ADDRESS","127.0.0.1:"+ENGINE_PORT,"ENGINE_SERVICE_TOKEN",SERVICE,"ENGINE_AUDIT_TOKEN",AUDIT,"KAFKA_BOOTSTRAP_SERVERS",System.getenv("CEX_WIRE_KAFKA")));
         launch.redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.appendTo(engineLog.toFile()));engineProcess=launch.start();
         try(var health=HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(Duration.ofMillis(200)).build()) {

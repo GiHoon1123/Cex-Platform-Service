@@ -56,7 +56,7 @@ class BitcoinPayoutFullWireIntegrationTest extends BitcoinPayoutCandidatesTestSu
     }
     void startEngine()throws Exception{
         var launch=new ProcessBuilder(Path.of(System.getenv("CEX_PAYOUT_WIRE_ENGINE_ROOT"),"target/debug/cex-engine").toString()).directory(Path.of(System.getenv("CEX_PAYOUT_WIRE_ENGINE_ROOT")).toFile());
-        launch.environment().putAll(Map.of("DATABASE_HOST",System.getenv("CEX_PAYOUT_WIRE_DATABASE_HOST"),"ENGINE_DATA_DIR",directory.toString(),"ENGINE_HTTP_ADDRESS","127.0.0.1:"+ENGINE_PORT,"ENGINE_SERVICE_TOKEN",SERVICE,"ENGINE_AUDIT_TOKEN",AUDIT,"KAFKA_BOOTSTRAP_SERVERS",System.getenv("CEX_PAYOUT_WIRE_KAFKA")));
+        launch.environment().putAll(Map.of("DATABASE_URL","postgresql://root:1234@"+System.getenv("CEX_PAYOUT_WIRE_DATABASE_HOST")+"/cex","ENGINE_DATA_DIR",directory.toString(),"ENGINE_HTTP_ADDRESS","127.0.0.1:"+ENGINE_PORT,"ENGINE_SERVICE_TOKEN",SERVICE,"ENGINE_AUDIT_TOKEN",AUDIT,"KAFKA_BOOTSTRAP_SERVERS",System.getenv("CEX_PAYOUT_WIRE_KAFKA")));
         launch.redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.appendTo(engineLog.toFile()));engineProcess=launch.start();
         try(var health=HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY).connectTimeout(Duration.ofMillis(200)).build()){await(()->{assertTrue(engineProcess.isAlive(),"소유 엔진이 종료됐다");try{return health.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+ENGINE_PORT+"/api/health")).timeout(Duration.ofMillis(300)).GET().build(),HttpResponse.BodyHandlers.discarding()).statusCode()==200;}catch(Exception waiting){return false;}},20);}
     }
