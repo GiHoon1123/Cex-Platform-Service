@@ -14,7 +14,7 @@ import tools.jackson.databind.ObjectMapper;
 
 /** 웹·Kafka·JPA·개인키 없이 확정 서명 결과만 공개하는 별도 프로세스 진입점이다. */
 @Configuration(proxyBeanMethods=false)
-@EnableAutoConfiguration(exclude={org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration.class,org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class})
+@EnableAutoConfiguration(exclude={org.springframework.boot.kafka.autoconfigure.KafkaAutoConfiguration.class,org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration.class,org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration.class,org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration.class})
 @EnableScheduling
 @Import({BitcoinSignerEnvelopeCrypto.class,AuditService.class})
 public class BitcoinBroadcasterApplication {
@@ -22,5 +22,13 @@ public class BitcoinBroadcasterApplication {
     @Bean(destroyMethod="close") BitcoinBroadcastRpcClient broadcastRpc(BitcoinBroadcastSettings settings,ObjectMapper json){return new BitcoinBroadcastRpcClient(settings,json);}
     @Bean BitcoinBroadcastService broadcast(JdbcTemplate jdbc,BitcoinSignerEnvelopeCrypto crypto,AuditService audit,BitcoinBroadcastRpcClient rpc,PlatformTransactionManager manager){return new BitcoinBroadcastService(jdbc,crypto,audit,rpc,manager);}
     @Bean BitcoinBroadcasterWorker worker(BitcoinBroadcastService service){return new BitcoinBroadcasterWorker(service);}
-    public static void main(String[] args){var app=new SpringApplication(BitcoinBroadcasterApplication.class);app.setWebApplicationType(WebApplicationType.NONE);app.addInitializers(context->context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("bitcoin-broadcaster-boundary",Map.of("spring.sql.init.mode","never","spring.main.web-application-type","none","spring.jpa.hibernate.ddl-auto","none"))));app.run(args);}
+    /** 서명과 분리한 방송 프로세스가 외부 설정 때문에 웹 서버로 확장되지 않도록 일반 컨텍스트를 강제한다. */
+    public static SpringApplication application(){
+        var app=new SpringApplication(BitcoinBroadcasterApplication.class);app.setWebApplicationType(WebApplicationType.NONE);
+        app.setEnvironment(new org.springframework.core.env.StandardEnvironment());
+        app.setApplicationContextFactory(type->new org.springframework.context.annotation.AnnotationConfigApplicationContext());
+        app.addInitializers(context->context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("bitcoin-broadcaster-boundary",Map.of("spring.sql.init.mode","never","spring.main.web-application-type","none","spring.jpa.hibernate.ddl-auto","none"))));
+        return app;
+    }
+    public static void main(String[] args){application().run(args);}
 }

@@ -1,0 +1,90 @@
+package dustin.runtime;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import dustin.broadcaster.*;
+import dustin.confirmer.*;
+import dustin.operator.OperatorAdminApplication;
+import dustin.signer.*;
+import jakarta.persistence.EntityManagerFactory;
+import java.util.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.*;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.*;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.servlet.DispatcherServlet;
+
+/** 분리 실행 파일이 고객 웹 플랫폼의 HTTP·Kafka·JPA 권한을 함께 얻지 않는지 검증한다. */
+class IsolatedProcessBoundaryTest {
+    private static final String PASSWORD="p".repeat(32);
+
+    @Test void isolatedEntrypointsUseExplicitConfigurationInsteadOfCustomerComponentScanning(){
+        for(var source:List.of(BitcoinSignerApplication.class,BitcoinBroadcasterApplication.class,
+                BitcoinConfirmerApplication.class,OperatorAdminApplication.class)){
+            assertNotNull(source.getAnnotation(Configuration.class),source.getName());
+            assertNull(source.getAnnotation(SpringBootApplication.class),source.getName());
+            assertNotNull(source.getAnnotation(EnableAutoConfiguration.class),source.getName());
+        }
+        var applications=Map.of(
+                BitcoinSignerApplication.class,BitcoinSignerApplication.application(),
+                BitcoinBroadcasterApplication.class,BitcoinBroadcasterApplication.application(),
+                BitcoinConfirmerApplication.class,BitcoinConfirmerApplication.application(),
+                OperatorAdminApplication.class,OperatorAdminApplication.application());
+        applications.forEach((source,application)->{
+            assertEquals(WebApplicationType.NONE,application.getWebApplicationType(),source.getName());
+            assertEquals(Set.of(source),application.getAllSources(),source.getName());
+        });
+    }
+
+    @Test void signerIgnoresAnExternalServletRequestAndLoadsOnlyItsWorker(){
+        try(var context=run(BitcoinSignerApplication.application(),"signer",
+                "--bitcoin.signer.rpc-url=http://127.0.0.1:1","--bitcoin.signer.rpc-user=signer",
+                "--bitcoin.signer.rpc-password="+PASSWORD,"--bitcoin.signer.wallet=keys")){
+            assertBeanBoundary(context,BitcoinSignerWorker.class);
+            assertTrue(context.getBeansOfType(BitcoinBroadcasterWorker.class).isEmpty());
+            assertTrue(context.getBeansOfType(BitcoinConfirmerWorker.class).isEmpty());
+        }
+    }
+
+    @Test void broadcasterIgnoresAnExternalServletRequestAndLoadsOnlyItsWorker(){
+        try(var context=run(BitcoinBroadcasterApplication.application(),"broadcaster",
+                "--bitcoin.broadcaster.rpc-url=http://127.0.0.1:1","--bitcoin.broadcaster.rpc-user=broadcaster",
+                "--bitcoin.broadcaster.rpc-password="+PASSWORD,"--bitcoin.broadcaster.wallet=watch")){
+            assertBeanBoundary(context,BitcoinBroadcasterWorker.class);
+            assertTrue(context.getBeansOfType(BitcoinSignerWorker.class).isEmpty());
+            assertTrue(context.getBeansOfType(BitcoinConfirmerWorker.class).isEmpty());
+        }
+    }
+
+    @Test void confirmerIgnoresAnExternalServletRequestAndLoadsOnlyItsWorker(){
+        try(var context=run(BitcoinConfirmerApplication.application(),"confirmer",
+                "--bitcoin.confirmation.rpc-url=http://127.0.0.1:1","--bitcoin.confirmation.rpc-user=confirmer",
+                "--bitcoin.confirmation.rpc-password="+PASSWORD)){
+            assertBeanBoundary(context,BitcoinConfirmerWorker.class);
+            assertTrue(context.getBeansOfType(BitcoinSignerWorker.class).isEmpty());
+            assertTrue(context.getBeansOfType(BitcoinBroadcasterWorker.class).isEmpty());
+        }
+    }
+
+    private ConfigurableApplicationContext run(SpringApplication app,String name,String... settings){
+        var arguments=new ArrayList<>(List.of(settings));
+        // 공격적 외부 설정을 가장 높은 명령행 우선순위로 넣어도 실행 파일은 웹 컨텍스트를 만들면 안 된다.
+        arguments.add("--spring.main.web-application-type=servlet");
+        arguments.add("--spring.datasource.url=jdbc:h2:mem:"+name+";MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
+        arguments.add("--spring.datasource.username=sa");
+        arguments.add("--spring.datasource.password=");
+        arguments.add("--spring.task.scheduling.enabled=false");
+        return app.run(arguments.toArray(String[]::new));
+    }
+
+    private void assertBeanBoundary(ConfigurableApplicationContext context,Class<?> expectedWorker){
+        assertInstanceOf(AnnotationConfigApplicationContext.class,context);
+        assertFalse(context.getBeansOfType(expectedWorker).isEmpty());
+        assertTrue(context.getBeansOfType(DispatcherServlet.class).isEmpty());
+        assertTrue(context.getBeansOfType(KafkaTemplate.class).isEmpty());
+        assertTrue(context.getBeansOfType(EntityManagerFactory.class).isEmpty());
+    }
+}

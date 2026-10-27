@@ -22,7 +22,8 @@ import dustin.cex.domains.security.*;
 @EnableJpaRepositories(basePackageClasses=UserRepository.class)
 @Import({AuditService.class,OperatorBootstrapService.class})
 public class OperatorAdminApplication {
-    public static void main(String[] args) {
+    /** 운영자 최초 권한 부여에 필요한 비웹 실행 경계를 테스트와 실제 실행이 함께 사용한다. */
+    public static SpringApplication application() {
         var app=new SpringApplication(OperatorAdminApplication.class);app.setWebApplicationType(WebApplicationType.NONE);
         // 외부 설정이 웹 모드를 요청해도 웹 컨텍스트·서블릿 환경 자체를 생성하지 않는다.
         app.setEnvironment(new org.springframework.core.env.StandardEnvironment());
@@ -30,7 +31,10 @@ public class OperatorAdminApplication {
         // 관리 프로세스가 운영 스키마를 자동 수정하거나 SQL 초기화 파일을 실행하지 못하게 강제한다.
         app.addInitializers(context->context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("operator-admin-boundary",Map.of(
             "spring.jpa.hibernate.ddl-auto","validate","spring.sql.init.mode","never","spring.main.web-application-type","none"))));
-        try(var context=app.run(args)) {
+        return app;
+    }
+    public static void main(String[] args) {
+        try(var context=application().run(args)) {
             var env=context.getEnvironment();
             context.getBean(OperatorBootstrapService.class).grant(
                 Long.parseLong(env.getRequiredProperty("operator.bootstrap.user-id")),
