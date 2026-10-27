@@ -29,8 +29,8 @@ class BinanceReferenceCandleServiceTest {
 
     @Test void tenSecondCacheCombinesIdenticalRequestsWithoutSharingConditions() {
         var service=service();service.candles("BTC","USDT","1m");service.candles("BTC","USDT","1m");
-        service.candles("BTC","USDT","1d");service.candles("ETH","USDT","1m");
-        assertEquals(3,requests.get());
+        service.candles("BTC","USDT","1d");service.candles("ETH","USDT","1m");service.candles("ETH","USDT","1w");service.candles("ETH","USDT","1M");
+        assertEquals(5,requests.get());
     }
 
     @Test void unsupportedMarketAndMalformedRowsFailClosed() {

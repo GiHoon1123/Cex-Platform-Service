@@ -16,7 +16,7 @@ import tools.jackson.databind.*;
 @Service
 public class BinanceReferenceCandleService {
     private static final Duration CACHE_TTL=Duration.ofSeconds(10);
-    private static final Set<String> INTERVALS=Set.of("1m","5m","15m","1h","4h","1d");
+    private static final Set<String> INTERVALS=Set.of("1m","5m","15m","1h","4h","1d","1w","1M");
     private final ObjectMapper json;
     private final HttpClient http;
     private final URI endpoint;
