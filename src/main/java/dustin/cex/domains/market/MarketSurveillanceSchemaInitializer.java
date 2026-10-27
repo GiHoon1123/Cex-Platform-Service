@@ -5,9 +5,11 @@ import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.DependsOn;
 
 /** 체결·취소 반영보다 먼저 시장 감시의 불변 입력과 평가 표를 준비한다. */
 @Component
+@DependsOn("securitySchemaInitializer")
 public class MarketSurveillanceSchemaInitializer {
     private final JdbcTemplate jdbc;
     public MarketSurveillanceSchemaInitializer(JdbcTemplate jdbc){this.jdbc=jdbc;}

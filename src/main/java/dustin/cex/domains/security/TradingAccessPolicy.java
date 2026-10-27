@@ -10,14 +10,16 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class TradingAccessPolicy {
     private final UserRepository users;private final AuditService audit;private final CustomerFinancialEligibility eligibility;
-    public TradingAccessPolicy(UserRepository users,AuditService audit,CustomerFinancialEligibility eligibility) {this.users=users;this.audit=audit;this.eligibility=eligibility;}
+    private final dustin.cex.domains.market.MarketControlService markets;
+    public TradingAccessPolicy(UserRepository users,AuditService audit,CustomerFinancialEligibility eligibility,dustin.cex.domains.market.MarketControlService markets) {this.users=users;this.audit=audit;this.eligibility=eligibility;this.markets=markets;}
     @Transactional(propagation=Propagation.MANDATORY)
-    public void requireNewOrder(long userId) {
+    public void requireNewOrder(long userId,String baseAsset,String quoteAsset) {
         var user=users.lockById(userId).orElse(null);
         if(!eligibility.permitted(user)) {
             audit.denied(userId,"NEW_ORDER","user:"+userId,"TRADING_NOT_PERMITTED");
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"신규 주문이 제한되어 있습니다");
         }
+        markets.requireOpen(baseAsset,quoteAsset);
     }
     @Transactional(propagation=Propagation.MANDATORY)
     public void recordCancellationIntent(long userId,long orderId) {

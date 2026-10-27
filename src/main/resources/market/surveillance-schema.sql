@@ -82,3 +82,128 @@ DROP TRIGGER IF EXISTS market_surveillance_assessment_immutable ON market_survei
 CREATE TRIGGER market_surveillance_assessment_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON market_surveillance_assessments FOR EACH STATEMENT EXECUTE FUNCTION market_surveillance_immutable();
 DROP TRIGGER IF EXISTS market_surveillance_signal_preserve ON market_surveillance_signals;
 CREATE TRIGGER market_surveillance_signal_preserve BEFORE DELETE OR TRUNCATE ON market_surveillance_signals FOR EACH STATEMENT EXECUTE FUNCTION market_surveillance_immutable();
+
+-- 시장 전체의 신규 주문 허용 상태는 플랫폼 DB의 한 행이 권위다. 취소 요청은 이 상태와 무관하게 계속 허용한다.
+CREATE TABLE IF NOT EXISTS market_trading_states (
+ base_asset varchar(20) NOT NULL,quote_asset varchar(20) NOT NULL,state varchar(12) NOT NULL CHECK(state IN ('OPEN','HALTED')),
+ version bigint NOT NULL CHECK(version>=0),updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),PRIMARY KEY(base_asset,quote_asset)
+);
+INSERT INTO market_trading_states(base_asset,quote_asset,state,version) VALUES('BTC','USDT','OPEN',0) ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS market_state_requests (
+ id uuid PRIMARY KEY,base_asset varchar(20) NOT NULL,quote_asset varchar(20) NOT NULL,expected_state varchar(12) NOT NULL,
+ expected_version bigint NOT NULL,desired_state varchar(12) NOT NULL,signal_id uuid REFERENCES market_surveillance_signals(id),
+ requester_id bigint NOT NULL REFERENCES users(id),requester_person uuid NOT NULL,requester_version bigint NOT NULL,
+ checker_id bigint NOT NULL REFERENCES users(id),checker_person uuid NOT NULL,checker_version bigint NOT NULL,request_key uuid NOT NULL,
+ reason varchar(300) NOT NULL,payload text NOT NULL,payload_hash varchar(64) NOT NULL,expires_at timestamptz NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),
+ kind varchar(24) NOT NULL DEFAULT 'MARKET_STATE' CHECK(kind='MARKET_STATE'),
+ UNIQUE(requester_id,request_key),CHECK(expected_state IN ('OPEN','HALTED') AND desired_state IN ('OPEN','HALTED') AND expected_state<>desired_state),
+ CHECK(requester_id<>checker_id AND requester_person<>checker_person AND length(reason) BETWEEN 1 AND 300 AND payload_hash~'^[0-9a-f]{64}$'),
+ CHECK((desired_state='HALTED' AND signal_id IS NOT NULL) OR(desired_state='OPEN' AND signal_id IS NULL)),
+ FOREIGN KEY(base_asset,quote_asset) REFERENCES market_trading_states(base_asset,quote_asset),
+ FOREIGN KEY(kind,id) REFERENCES operator_approval_bindings(kind,request_id) DEFERRABLE INITIALLY DEFERRED
+);
+CREATE TABLE IF NOT EXISTS market_state_views (
+ id uuid PRIMARY KEY,request_id uuid NOT NULL REFERENCES market_state_requests(id),actor_id bigint NOT NULL REFERENCES users(id),
+ actor_person uuid NOT NULL,actor_version bigint NOT NULL,session_id uuid NOT NULL,payload_hash varchar(64) NOT NULL,
+ viewed_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current()
+);
+CREATE TABLE IF NOT EXISTS market_state_decisions (
+ request_id uuid PRIMARY KEY REFERENCES market_state_requests(id),approver_id bigint NOT NULL REFERENCES users(id),session_id uuid NOT NULL,
+ approved boolean NOT NULL,payload_hash varchar(64) NOT NULL,authorization_id uuid NOT NULL UNIQUE,
+ decided_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current()
+);
+CREATE TABLE IF NOT EXISTS market_state_changes (
+ request_id uuid PRIMARY KEY REFERENCES market_state_decisions(request_id),base_asset varchar(20) NOT NULL,quote_asset varchar(20) NOT NULL,
+ previous_state varchar(12) NOT NULL,previous_version bigint NOT NULL,next_state varchar(12) NOT NULL,next_version bigint NOT NULL,
+ changed_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),
+ FOREIGN KEY(base_asset,quote_asset) REFERENCES market_trading_states(base_asset,quote_asset),CHECK(next_version=previous_version+1)
+);
+
+CREATE OR REPLACE FUNCTION market_state_request_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE current_market record;maker record;checker record;
+BEGIN
+ SELECT * INTO current_market FROM market_trading_states WHERE base_asset=NEW.base_asset AND quote_asset=NEW.quote_asset FOR UPDATE;
+ SELECT * INTO maker FROM users WHERE id=NEW.requester_id FOR UPDATE;SELECT * INTO checker FROM users WHERE id=NEW.checker_id FOR UPDATE;
+ IF coalesce(NEW.created_txid<>txid_current() OR NEW.created_at>clock_timestamp() OR NEW.expires_at<=NEW.created_at OR NEW.expires_at>NEW.created_at+interval '10 minutes 10 seconds'
+  OR current_market.state<>NEW.expected_state OR current_market.version<>NEW.expected_version
+  OR maker.role<>'OPERATOR' OR checker.role<>'APPROVER' OR NOT maker.enabled OR NOT checker.enabled
+  OR maker.operator_person_id<>NEW.requester_person OR checker.operator_person_id<>NEW.checker_person
+  OR maker.version<>NEW.requester_version OR checker.version<>NEW.checker_version
+  OR maker.operator_access_expires_at<=clock_timestamp() OR checker.operator_access_expires_at<=clock_timestamp()
+  OR maker.operator_recovery_request_id IS NOT NULL OR checker.operator_recovery_request_id IS NOT NULL
+  OR (NEW.desired_state='HALTED' AND NOT EXISTS(SELECT 1 FROM market_surveillance_signals WHERE id=NEW.signal_id))
+  OR NOT EXISTS(SELECT 1 FROM operator_approval_bindings b WHERE b.kind='MARKET_STATE' AND b.request_id=NEW.id AND b.requester_id=NEW.requester_id
+    AND b.requester_version=NEW.requester_version AND b.payload_hash=NEW.payload_hash AND b.expires_at=NEW.expires_at),true)
+ THEN RAISE EXCEPTION '현재 시장 상태와 분리된 담당자·승인 요청입니다';END IF;RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS market_state_request_binding_check ON market_state_requests;
+CREATE CONSTRAINT TRIGGER market_state_request_binding_check AFTER INSERT ON market_state_requests DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION market_state_request_binding();
+CREATE OR REPLACE FUNCTION market_state_view_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE request record;actor record;
+BEGIN SELECT * INTO request FROM market_state_requests WHERE id=NEW.request_id;SELECT * INTO actor FROM users WHERE id=NEW.actor_id FOR UPDATE;
+ IF coalesce(NEW.created_txid<>txid_current() OR NEW.viewed_at>clock_timestamp() OR NEW.payload_hash<>request.payload_hash
+  OR NEW.actor_id NOT IN(request.requester_id,request.checker_id) OR actor.operator_person_id<>NEW.actor_person OR actor.version<>NEW.actor_version
+  OR NOT actor.enabled OR actor.role NOT IN('OPERATOR','APPROVER') OR actor.operator_access_expires_at<=clock_timestamp()
+  OR actor.operator_recovery_request_id IS NOT NULL,true) THEN RAISE EXCEPTION '현재 지정 인물의 시장 상태 요청만 열람할 수 있습니다';END IF;RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS market_state_view_binding_check ON market_state_views;
+CREATE TRIGGER market_state_view_binding_check BEFORE INSERT ON market_state_views FOR EACH ROW EXECUTE FUNCTION market_state_view_binding();
+CREATE OR REPLACE FUNCTION market_state_decision_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE request record;checker record;
+BEGIN SELECT * INTO request FROM market_state_requests WHERE id=NEW.request_id;SELECT * INTO checker FROM users WHERE id=request.checker_id FOR UPDATE;
+ IF coalesce(NEW.created_txid<>txid_current() OR NEW.decided_at>request.expires_at OR NEW.approver_id<>request.checker_id OR NEW.payload_hash<>request.payload_hash
+  OR checker.role<>'APPROVER' OR NOT checker.enabled OR checker.operator_person_id<>request.checker_person OR checker.version<>request.checker_version
+  OR checker.operator_access_expires_at<=clock_timestamp() OR checker.operator_recovery_request_id IS NOT NULL
+  OR NOT EXISTS(SELECT 1 FROM market_state_views v WHERE v.request_id=request.id AND v.actor_id=NEW.approver_id AND v.actor_person=request.checker_person
+    AND v.actor_version=request.checker_version AND v.session_id=NEW.session_id AND v.payload_hash=request.payload_hash AND v.viewed_at>=clock_timestamp()-interval '5 minutes')
+  OR NOT EXISTS(SELECT 1 FROM operator_authorization_challenges c WHERE c.id=NEW.authorization_id AND c.user_id=NEW.approver_id AND c.session_id=NEW.session_id
+    AND c.kind='MARKET_STATE' AND c.request_id=request.id AND c.payload_hash=request.payload_hash AND c.approve=NEW.approved AND c.consumed),true)
+ THEN RAISE EXCEPTION '시장 상태 결정과 현재 열람·내용 결합 서명이 다릅니다';END IF;RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS market_state_decision_binding_check ON market_state_decisions;
+CREATE TRIGGER market_state_decision_binding_check BEFORE INSERT ON market_state_decisions FOR EACH ROW EXECUTE FUNCTION market_state_decision_binding();
+CREATE OR REPLACE FUNCTION market_state_change_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE request record;decision record;current_market record;
+BEGIN SELECT * INTO request FROM market_state_requests WHERE id=NEW.request_id;SELECT * INTO decision FROM market_state_decisions WHERE request_id=NEW.request_id;
+ SELECT * INTO current_market FROM market_trading_states WHERE base_asset=NEW.base_asset AND quote_asset=NEW.quote_asset;
+ IF coalesce(NEW.created_txid<>txid_current() OR NOT decision.approved OR NEW.changed_at>request.expires_at
+  OR NEW.base_asset<>request.base_asset OR NEW.quote_asset<>request.quote_asset OR NEW.previous_state<>request.expected_state
+  OR NEW.previous_version<>request.expected_version OR NEW.next_state<>request.desired_state OR current_market.state<>NEW.next_state OR current_market.version<>NEW.next_version,true)
+ THEN RAISE EXCEPTION '승인 요청과 정확히 일치하는 시장 상태 변경이 필요합니다';END IF;RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS market_state_change_binding_check ON market_state_changes;
+CREATE CONSTRAINT TRIGGER market_state_change_binding_check AFTER INSERT ON market_state_changes DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION market_state_change_binding();
+CREATE OR REPLACE FUNCTION market_state_update_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NEW.base_asset<>OLD.base_asset OR NEW.quote_asset<>OLD.quote_asset OR NEW.version<>OLD.version+1 OR NEW.state=OLD.state
+  OR NOT EXISTS(SELECT 1 FROM market_state_changes c JOIN market_state_decisions d ON d.request_id=c.request_id AND d.approved
+    WHERE c.base_asset=NEW.base_asset AND c.quote_asset=NEW.quote_asset AND c.previous_state=OLD.state AND c.previous_version=OLD.version
+      AND c.next_state=NEW.state AND c.next_version=NEW.version AND c.created_txid=txid_current())
+ THEN RAISE EXCEPTION '독립 승인된 시장 상태 변경만 허용합니다';END IF;RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS market_state_update_binding_check ON market_trading_states;
+CREATE TRIGGER market_state_update_binding_check BEFORE UPDATE ON market_trading_states FOR EACH ROW EXECUTE FUNCTION market_state_update_binding();
+
+CREATE OR REPLACE FUNCTION market_state_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE actor bigint;action_name text;target_name text;detail_text text;stamp timestamptz;
+BEGIN
+ IF TG_TABLE_NAME='market_state_requests' THEN actor:=NEW.requester_id;action_name:='MARKET_STATE_PROPOSED';target_name:='market-state:'||NEW.id;detail_text:=NEW.payload_hash;stamp:=NEW.created_at;
+ ELSIF TG_TABLE_NAME='market_state_views' THEN actor:=NEW.actor_id;action_name:='MARKET_STATE_VIEWED';target_name:='market-state-view:'||NEW.id;detail_text:=NEW.payload_hash;stamp:=NEW.viewed_at;
+ ELSIF TG_TABLE_NAME='market_state_decisions' THEN actor:=NEW.approver_id;action_name:='MARKET_STATE_DECIDED';target_name:='market-state:'||NEW.request_id;detail_text:=NEW.payload_hash;stamp:=NEW.decided_at;
+ ELSE actor:=NEW.approver_id;END IF;
+ IF TG_TABLE_NAME<>'market_state_changes' AND NOT EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id=actor AND a.action=action_name AND a.target=target_name AND a.outcome='SUCCESS' AND a.detail=detail_text AND a.occurred_at>=stamp)
+ THEN RAISE EXCEPTION '시장 상태 업무와 필수 감사는 함께 보존해야 합니다';END IF;RETURN NULL;
+END $$;
+CREATE OR REPLACE FUNCTION market_state_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION '시장 상태 요청·열람·결정·변경 이력은 변경하거나 삭제할 수 없습니다';END $$;
+DO $$ DECLARE table_name text;BEGIN
+ FOREACH table_name IN ARRAY ARRAY['market_state_requests','market_state_views','market_state_decisions','market_state_changes'] LOOP
+  EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I',table_name||'_immutable',table_name);
+  EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE OR DELETE OR TRUNCATE ON %I FOR EACH STATEMENT EXECUTE FUNCTION market_state_immutable()',table_name||'_immutable',table_name);
+  IF table_name<>'market_state_changes' THEN
+   EXECUTE format('DROP TRIGGER IF EXISTS market_state_audit_check ON %I',table_name);
+   EXECUTE format('CREATE CONSTRAINT TRIGGER market_state_audit_check AFTER INSERT ON %I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION market_state_audit()',table_name);
+  END IF;
+ END LOOP;
+END $$;

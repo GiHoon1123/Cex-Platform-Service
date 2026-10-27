@@ -29,7 +29,8 @@ try:
         SPRING_KAFKA_BOOTSTRAP_SERVERS="127.0.0.1:1",SPRING_KAFKA_LISTENER_AUTO_STARTUP="false",BOT_BOT_COUNT="0",
         BITCOIN_PROCESSING_ENABLED="false",CUSTOMER_MAIL_DISPATCH_ENABLED="false",ORDER_DISPATCH_ENABLED="false",ENGINE_HTTP_URL="http://127.0.0.1:1")
     env.setdefault("JAVA_HOME","/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home")
-    groups=[("surveillance",["*MarketSurveillanceIntegrationTest"]),("cancellation",["*OrderCancellationIntegrationTest.theActualFinancialEventReleasesOnceAndStopsFurtherRetry"]),
+    groups=[("surveillance",["*MarketSurveillanceIntegrationTest"]),("control",["*MarketControlIntegrationTest"]),
+        ("cancellation",["*OrderCancellationIntegrationTest.theActualFinancialEventReleasesOnceAndStopsFurtherRetry"]),
         ("consumer-unit",["*KafkaOrderEventConsumerTest","*EngineEventInboxTest"])]
     for group,patterns in groups:
         database="market_"+group.replace("-","_")

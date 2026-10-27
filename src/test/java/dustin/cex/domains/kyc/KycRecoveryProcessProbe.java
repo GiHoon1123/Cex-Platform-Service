@@ -61,7 +61,7 @@ public class KycRecoveryProcessProbe {
             if(!"VERIFIED".equals(service.status(user).identityStatus())) throw new AssertionError("승인 복원 실패");
             var until=service.status(user).validUntil();
             var tx=new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
-            tx.executeWithoutResult(status->context.getBean(TradingAccessPolicy.class).requireNewOrder(user));
+            tx.executeWithoutResult(status->context.getBean(TradingAccessPolicy.class).requireNewOrder(user,"BTC","USDT"));
             if(jdbc.queryForObject("SELECT count(*) FROM kyc_events",Long.class)!=1) throw new AssertionError("수신 효과 중복");
             jdbc.update("UPDATE kyc_reconciliations SET next_attempt_at=clock_timestamp()-interval '1 second' WHERE attempt_id=?",attempt);
             if(!reconciliation.reconcileDue()) throw new AssertionError("재조회 실패");

@@ -114,6 +114,6 @@ abstract class EddTestSupport {
         return new OperatorMfaService.AuthorizationProof(o.challengeId(),a.key().assertion(o,"http://localhost:3003",true,counter.incrementAndGet(),null));
     }
     EddService.Report decide(EddService.Report r,boolean approve,OperatorMfaService.AuthorizationProof p) {return service.decide(checker.user().getId(),checker.sid(),r.payload().id(),r.payloadHash(),approve,p);}
-    void allowed() {new TransactionTemplate(manager).executeWithoutResult(s->trading.requireNewOrder(customer.getId()));}
+    void allowed() {new TransactionTemplate(manager).executeWithoutResult(s->trading.requireNewOrder(customer.getId(),"BTC","USDT"));}
     void blocked() {assertThrows(ResponseStatusException.class,this::allowed);}
 }

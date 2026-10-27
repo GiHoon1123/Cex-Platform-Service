@@ -127,7 +127,7 @@ public class OrderService {
         try {
             savedOrder = transactionTemplate.execute(status -> {
                 // 제한 변경과 신규 예약이 사용자 행에서 순서를 정한다. 기존 접수 재조회는 허용한다.
-                access.requireNewOrder(userId);
+                access.requireNewOrder(userId,command.baseMint(),command.quoteMint());
                 Order order = orderRepository.save(buildOrderEntity(userId, command));
                 // 원본 명령·키·주문·예약을 같은 트랜잭션에 기록한다. 유일 제약 경쟁에서
                 // 진 요청은 여기서 실패하며 주문 행도 롤백된다. 잔액을 먼저 변경하지 않는다.

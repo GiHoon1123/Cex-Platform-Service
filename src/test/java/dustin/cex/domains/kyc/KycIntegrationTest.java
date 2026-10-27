@@ -154,7 +154,7 @@ class KycIntegrationTest {
         return HexFormat.of().formatHex(mac.doFinal(verifier.canonical(verifier.json.readTree(raw)).getBytes(StandardCharsets.UTF_8)));
     }
     void send(Map<String,Object> e) throws Exception {byte[] raw=bytes(e);service.webhook(raw,signature(raw),e.get("timestamp").toString());}
-    void allowed() {new TransactionTemplate(manager).executeWithoutResult(status->trading.requireNewOrder(user.getId()));}
+    void allowed() {new TransactionTemplate(manager).executeWithoutResult(status->trading.requireNewOrder(user.getId(),"BTC","USDT"));}
     void blocked() {assertThrows(ResponseStatusException.class,this::allowed);}
     @Test void unverifiedCustomerIsBlockedThenVerifiedOnlyAfterSignedChecks() throws Exception {
         blocked();UUID id=start();blocked();send(event(id,"Approved",now));assertEquals("VERIFIED",service.status(user.getId()).identityStatus());allowed();

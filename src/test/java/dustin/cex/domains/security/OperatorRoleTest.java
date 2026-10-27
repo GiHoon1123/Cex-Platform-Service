@@ -361,7 +361,7 @@ class OperatorRoleTest {
     @Test void oldCustomerAccessCannotCreateOrderAfterApprovedRoleChange() throws Exception {
         var r=request();decide(checker,r,true,proof(checker,r,true));
         var tx=new org.springframework.transaction.support.TransactionTemplate(manager);
-        assertThrows(ResponseStatusException.class,()->tx.executeWithoutResult(status->trading.requireNewOrder(candidate.getId())));
+        assertThrows(ResponseStatusException.class,()->tx.executeWithoutResult(status->trading.requireNewOrder(candidate.getId(),"BTC","USDT")));
     }
     @Test void authorizationHelpersCannotRunOutsideBusinessTransaction() {
         assertThrows(IllegalStateException.class,()->mfa.approvalOptions(checker.user().getId(),checker.sid(),OperatorMfaService.ApprovalKind.ROLE,UUID.randomUUID(),"a".repeat(64),true));
