@@ -337,3 +337,4 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [166. 자동 시장 신호를 담당자 조사 사건과 불변 이력으로 잇기](decisions/166-market-surveillance-case-history.md)
 - [172. BTC·ETH 거래쌍별 공개 시세 연결](decisions/172-multi-market-public-socket.md)
 - [173. 이더리움 확정 블록 입금 관찰과 엔진 적립](decisions/173-ethereum-deposit-observation.md)
+- [174. 고객 서명 ETH 출금 예약과 엔진 확정 결과](decisions/174-ethereum-signed-withdrawal-reservation.md)

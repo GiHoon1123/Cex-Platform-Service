@@ -27,7 +27,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /** 엔진 저널의 예약·거절·해제·체인 확정 완료를 같은 수신 키 트랜잭션으로 반영한다. HTTP 응답만으로 금융 상태를 바꾸지 않는다. */
 @Service
-@DependsOn("bitcoinWithdrawalSchemaInitializer")
+@DependsOn({"bitcoinWithdrawalSchemaInitializer", "ethereumSchemaInitializer"})
 public class BitcoinWithdrawalEvents {
     private static final Set<String> RESERVED = Set.of("event_id", "engine_id", "event_type",
         "withdrawal_id", "user_id", "asset", "amount", "timestamp");
@@ -74,18 +74,30 @@ public class BitcoinWithdrawalEvents {
         long owner = user.longValue();
         String asset = text(event, "asset");
         String money = text(event, "amount");
-        if (!"BTC".equals(asset) || money.length() > 40 || !money.matches("[0-9]+(?:\\.[0-9]{1,8})?"))
+        boolean ethereum = "ETH".equals(asset);
+        int scale = "BTC".equals(asset) ? 8 : ethereum ? 9 : -1;
+        if (scale < 0 || money.length() > 40 || !money.matches("[0-9]+(?:\\.[0-9]{1," + scale + "})?"))
             throw new IllegalArgumentException("출금 결과의 자산·금액 형식이 다릅니다");
+        // ETH의 체인 지급·완료는 별도 승인·서명 계층이 확정되기 전까지 열지 않는다. 예약과 최초 금융 거절만 처리한다.
+        if (ethereum && (type.equals("withdrawal_released") || type.equals("withdrawal_completed")))
+            throw new IllegalStateException("ETH 출금의 체인 지급 생명주기가 아직 확정되지 않았습니다");
         BigDecimal gross = ExactAmount.requirePositive(new BigDecimal(money), "엔진 출금 총액");
         String timestamp = text(event, "timestamp");
         Instant.parse(timestamp);
         users.lockById(owner).orElseThrow(() -> new IllegalStateException("확정 출금 고객이 없습니다"));
-        var originals = jdbc.queryForList("SELECT user_id,asset,total FROM bitcoin_withdrawals WHERE id=?", id);
+        String originalsSql = ethereum
+                ? "SELECT user_id,asset,total FROM ethereum_withdrawals WHERE id=?"
+                : "SELECT user_id,asset,total FROM bitcoin_withdrawals WHERE id=?";
+        var originals = jdbc.queryForList(originalsSql, id);
         if (originals.size() != 1) throw new IllegalStateException("확정 출금의 서명/예약 원본이 없습니다");
         var original = originals.getFirst();
         if (((Number) original.get("user_id")).longValue() != owner
                 || !asset.equals(original.get("asset")) || gross.compareTo((BigDecimal) original.get("total")) != 0)
             throw new IllegalStateException("엔진 결과와 서명한 금융 원본이 다릅니다");
+        if (ethereum) {
+            applyEthereumReservation(type, id, engine, eventId, timestamp, raw, owner, gross);
+            return;
+        }
         if(type.equals("withdrawal_released")) {
             release(id,engine,eventId,timestamp,raw,owner,gross);
             return;
@@ -108,6 +120,23 @@ public class BitcoinWithdrawalEvents {
             """, id, eventId, engine, type, timestamp, BitcoinWithdrawalQuotes.digest(raw), operation);
         audit.record(null, "BTC_WITHDRAWAL_ENGINE_RESULT", "bitcoin-withdrawal:" + id,
             "SUCCESS", "EVENT:" + eventId);
+    }
+
+    private void applyEthereumReservation(String type, UUID id, UUID engine, String eventId,
+            String timestamp, String raw, long owner, BigDecimal gross) {
+        if (Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS(SELECT 1 FROM ethereum_withdrawal_reservation_events WHERE withdrawal_id=?)", Boolean.class, id)))
+            throw new IllegalStateException("같은 ETH 출금에 서로 다른 최초 금융 결과가 도착했습니다");
+        String operation = "engine:" + eventId;
+        if (type.equals("withdrawal_rejected")) {
+            refundAsset(owner, gross, operation, "ETH", "ETH_WITHDRAWAL_REJECTED");
+        } else {
+            ledger.record(operation, "ETH_WITHDRAWAL_RESERVED", List.of());
+        }
+        jdbc.update("INSERT INTO ethereum_withdrawal_reservation_events(withdrawal_id,event_id,engine_id,event_type,event_time,payload_hash,operation_key) VALUES(?,?,?,?,?,?,?)",
+                id, eventId, engine, type, timestamp, BitcoinWithdrawalQuotes.digest(raw), operation);
+        audit.record(null, "ETH_WITHDRAWAL_ENGINE_RESULT", "ethereum-withdrawal:" + id,
+                "SUCCESS", "EVENT:" + eventId);
     }
 
     private void complete(UUID id,UUID engine,String eventId,String timestamp,String raw,long owner,BigDecimal gross){
@@ -138,14 +167,18 @@ public class BitcoinWithdrawalEvents {
     }
 
     private void refund(long owner,BigDecimal gross,String operation,String kind) {
-        var balance=balances.findByUserIdAndMintAddressForUpdate(owner,"BTC")
-            .orElseThrow(() -> new IllegalStateException("반환할 BTC 잔액이 없습니다"));
-        BigDecimal locked=ExactAmount.requireNonNegative(balance.getLocked(),"잠긴 BTC 잔액");
+        refundAsset(owner,gross,operation,"BTC",kind);
+    }
+
+    private void refundAsset(long owner, BigDecimal gross, String operation, String asset, String kind) {
+        var balance=balances.findByUserIdAndMintAddressForUpdate(owner,asset)
+            .orElseThrow(() -> new IllegalStateException("반환할 " + asset + " 잔액이 없습니다"));
+        BigDecimal locked=ExactAmount.requireNonNegative(balance.getLocked(),"잠긴 " + asset + " 잔액");
         if(locked.compareTo(gross)<0)throw new IllegalStateException("출금의 반환할 예약금이 부족합니다");
-        balance.setLocked(ExactAmount.requireNonNegative(locked.subtract(gross),"반환 후 잠긴 BTC"));
-        balance.setAvailable(ExactAmount.requireNonNegative(balance.getAvailable().add(gross),"반환 후 가용 BTC"));
+        balance.setLocked(ExactAmount.requireNonNegative(locked.subtract(gross),"반환 후 잠긴 " + asset));
+        balance.setAvailable(ExactAmount.requireNonNegative(balance.getAvailable().add(gross),"반환 후 가용 " + asset));
         balances.saveAndFlush(balance);
-        ledger.record(operation,kind,List.of(p(owner,"LOCKED","BTC",gross.negate()),p(owner,"AVAILABLE","BTC",gross)));
+        ledger.record(operation,kind,List.of(p(owner,"LOCKED",asset,gross.negate()),p(owner,"AVAILABLE",asset,gross)));
     }
 
     private static String text(JsonNode json, String field) {

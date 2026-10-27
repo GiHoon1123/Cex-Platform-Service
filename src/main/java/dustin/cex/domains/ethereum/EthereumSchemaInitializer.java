@@ -11,6 +11,7 @@ public class EthereumSchemaInitializer {
     public EthereumSchemaInitializer(JdbcTemplate jdbc,EthereumSettings settings,EthereumJsonRpcClient rpc){this.jdbc=jdbc;this.settings=settings;this.rpc=rpc;}
     @PostConstruct void initialize()throws Exception{
         jdbc.execute(new ClassPathResource("ethereum/schema.sql").getContentAsString(StandardCharsets.UTF_8));
+        jdbc.execute(new ClassPathResource("ethereum/withdrawal-schema.sql").getContentAsString(StandardCharsets.UTF_8));
         if(!settings.configured())return;
         BigInteger actual=quantity(rpc.call("eth_chainId",List.of()).asString());
         var genesis=rpc.call("eth_getBlockByNumber",List.of("0x0",false));String hash=data(genesis.path("hash").asString(),64);
