@@ -14,5 +14,5 @@ public class BitcoinSchemaInitializer {
     private final JdbcTemplate jdbc;
     private final BitcoinNetworkIdentity identity;
     public BitcoinSchemaInitializer(JdbcTemplate jdbc,BitcoinNetworkIdentity identity){this.jdbc=jdbc;this.identity=identity;}
-    @PostConstruct void initialize()throws Exception{jdbc.execute(new ClassPathResource("bitcoin/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("bitcoin/withdrawal-quote-schema.sql").getContentAsString(StandardCharsets.UTF_8));identity.verifyOrBind();}
+    @PostConstruct void initialize()throws Exception{jdbc.execute(new ClassPathResource("bitcoin/schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("bitcoin/withdrawal-quote-schema.sql").getContentAsString(StandardCharsets.UTF_8));jdbc.execute(new ClassPathResource("bitcoin/custody-reconciliation-schema.sql").getContentAsString(StandardCharsets.UTF_8));identity.verifyOrBind();}
 }

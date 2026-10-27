@@ -30,6 +30,15 @@ class BitcoinCoreIntegrationTest {
             finally{rpc.close();}
         }
     }
+    @Test void watchOnlyWalletExposesTrustedAndTransitionalBalanceBuckets(){
+        var setting=settings("cex_watch","REGTEST");var rpc=new BitcoinRpcClient(setting,JsonMapper.builder().build());
+        try{
+            var ready=rpc.ready();var balances=rpc.call("getbalances",List.of());var mine=balances.path("mine");var block=balances.path("lastprocessedblock");
+            assertEquals(ready.chain().path("bestblockhash").asString(),block.path("hash").asString());
+            assertEquals(ready.chain().path("blocks").asLong(),block.path("height").asLong());
+            for(String field:List.of("trusted","untrusted_pending","immature"))assertTrue(mine.path(field).isNumber(),field);
+        }finally{rpc.close();}
+    }
     @Test void nodeCredentialsCannotSignExportImportOrTransfer()throws Exception{
         try(var http=HttpClient.newHttpClient()){
             String auth=System.getenv("CEX_BITCOIN_TEST_USER")+":"+System.getenv("CEX_BITCOIN_TEST_PASSWORD");

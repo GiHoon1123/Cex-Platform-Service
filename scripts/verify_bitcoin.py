@@ -19,6 +19,7 @@ parser=argparse.ArgumentParser(description="소유 Bitcoin Core와 DB의 전체 
 selection=parser.add_mutually_exclusive_group()
 selection.add_argument("--deposit-review-only",action="store_true",help="운영 입금 조회의 기존 실제 PG 회귀만 실행")
 selection.add_argument("--destinations-only",action="store_true",help="지급 주소 검증과 기존 제한 노드/본문 경계를 실제 노드로 실행")
+selection.add_argument("--custody-reconciliation-only",action="store_true",help="실제 노드 잔액과 수탁 원장 대사 경계만 실행")
 options=parser.parse_args()
 ROOT=Path(__file__).resolve().parent.parent
 ARTIFACTS=ROOT.parent/".local"
@@ -39,7 +40,7 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
     config=data/"bitcoin.conf"
     config.write_text("\n".join(["regtest=1","server=1","listen=0","networkactive=0","dnsseed=0","discover=0",
         "walletbroadcast=0","addresstype=bech32","changetype=bech32","printtoconsole=0","rpcauth="+credentials["rpcauth"],"rpcwhitelistdefault=0",
-        "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getnewaddress,getaddressinfo,gettransaction,getblockheader,getblockhash,getdescriptoractivity,validateaddress,decodescript",
+        "rpcwhitelist=cex_addresses:getblockchaininfo,getwalletinfo,getbalances,getnewaddress,getaddressinfo,gettransaction,getblockheader,getblockhash,getdescriptoractivity,validateaddress,decodescript",
         "[regtest]","rpcbind=127.0.0.1","rpcallowip=127.0.0.1","rpcport="+str(rpc_port)])+"\n")
     config.chmod(0o600)
     daemon=None
@@ -156,10 +157,12 @@ with tempfile.TemporaryDirectory(prefix="cex-bitcoin-") as temporary:
             "deposit-review":["*BitcoinDepositReviewSourceIntegrationTest"],
             "customer-deposits":["*CustomerBitcoinDepositsIntegrationTest"],
             "deposit-reconciliation":["*BitcoinDepositReconciliationTest","*BitcoinDepositReconciliationIntegrationTest"],
+            "custody-reconciliation":["*BitcoinCustodyReconciliationIntegrationTest"],
         }
         if options.deposit_review_only:groups={"deposit-review":groups["deposit-review"]}
         if options.destinations_only:groups={"destinations":["*BitcoinDestinationClientTest","*BitcoinDestinationIntegrationTest","*BitcoinCoreClientTest","*BitcoinCoreIntegrationTest","*LimitedResponseBodyTest"]}
-        result["selection_mode"]="destinations-only" if options.destinations_only else "deposit-review-only" if options.deposit_review_only else "full"
+        if options.custody_reconciliation_only:groups={"custody-reconciliation":["*BitcoinCoreIntegrationTest","*BitcoinCustodyReconciliationIntegrationTest"]}
+        result["selection_mode"]="custody-reconciliation-only" if options.custody_reconciliation_only else "destinations-only" if options.destinations_only else "deposit-review-only" if options.deposit_review_only else "full"
         result["groups"]=[]
         for group,patterns in groups.items():
             result["exit"]=None
