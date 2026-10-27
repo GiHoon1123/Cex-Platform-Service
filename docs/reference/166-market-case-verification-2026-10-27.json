@@ -1,0 +1,10 @@
+{
+  "container":"cex-market-surveillance-49bf5dd2021a","run_id":"49bf5dd2021a",
+  "groups":[
+    {"name":"surveillance","database":"market_surveillance","exit":0,"tests":{"tests":1,"failures":0,"errors":0,"skipped":0},"log":"market-surveillance/49bf5dd2021a/surveillance.log"},
+    {"name":"control","database":"market_control","exit":0,"tests":{"tests":4,"failures":0,"errors":0,"skipped":0},"log":"market-surveillance/49bf5dd2021a/control.log"},
+    {"name":"cancellation","database":"market_cancellation","exit":0,"tests":{"tests":1,"failures":0,"errors":0,"skipped":0},"log":"market-surveillance/49bf5dd2021a/cancellation.log"},
+    {"name":"consumer-unit","database":"market_consumer_unit","exit":0,"tests":{"tests":14,"failures":0,"errors":0,"skipped":0},"log":"market-surveillance/49bf5dd2021a/consumer-unit.log"}
+  ],
+  "tests":{"tests":20,"failures":0,"errors":0,"skipped":0},"exit":0,"container_removed":true
+}
