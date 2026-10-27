@@ -66,7 +66,7 @@ abstract class BitcoinWithdrawalTestSupport extends CustomerMailTestSupport {
             new OperatorMfaService.Options(options.challengeId(),options.publicKey()),"http://localhost:3003",true,1,null));
         sid=UUID.fromString(jwt.verifyAccessToken(signed.accessToken()).get("sid",String.class));
         customerAccess=signed.accessToken();
-        when(destination.validate(ADDRESS)).thenReturn(new BitcoinDestinationClient.Destination("bitcoin-regtest",ADDRESS,SCRIPT,"witness_v0_keyhash"));
+        when(destination.validate(withdrawalAddress())).thenReturn(new BitcoinDestinationClient.Destination("bitcoin-regtest",withdrawalAddress(),withdrawalScript(),"witness_v0_keyhash"));
         when(engineWithdrawal.execute(any())).thenReturn(EngineWithdrawalClient.Outcome.DURABLY_RESERVED);
         balances.saveAndFlush(UserBalance.builder().userId(customer.getId()).mintAddress("BTC")
             .available(FUNDS).locked(BigDecimal.ZERO).build());
@@ -74,7 +74,11 @@ abstract class BitcoinWithdrawalTestSupport extends CustomerMailTestSupport {
         // 새 예약은 신청 시점의 서버 참고가격을 요구한다. 실제 HTTP만 대역이며 원본/현재 위치 저장은 제품 서비스다.
         when(priceClient.read()).thenAnswer(call->referenceQuote(new BigDecimal("100000000.12345678")));
         assertEquals("SUCCESS",referencePrices.refresh().status());
+        afterCustomerFunding();
     }
+
+    /** 실제 엔진 연결 시험이 금융 이력 생성 전에 소유 엔진을 시작하는 확장 지점이다. */
+    void afterCustomerFunding()throws Exception{}
 
     dustin.cex.domains.valuation.BitcoinKrwPriceClient.Quote referenceQuote(BigDecimal price) {
         // 외부 가격은 이 시험에서만 합성한다. 호스트와 격리 DB의 수 ms 차이를 미래 가격으로 잘못 만드는
@@ -85,7 +89,10 @@ abstract class BitcoinWithdrawalTestSupport extends CustomerMailTestSupport {
         return new dustin.cex.domains.valuation.BitcoinKrwPriceClient.Quote(price,trade,provider,read,read,raw,sha(raw));
     }
 
-    BitcoinWithdrawalQuotes.Quote price(){return quotes.prepare(customer.getId(),sid,UUID.randomUUID(),ADDRESS,"0.01");}
+    /** 대부분의 단위·통합 시험은 합성 목적지를 쓰고, 실제 Core 연결 시험만 소유 노드가 만든 주소로 바꾼다. */
+    String withdrawalAddress(){return ADDRESS;}
+    String withdrawalScript(){return SCRIPT;}
+    BitcoinWithdrawalQuotes.Quote price(){return quotes.prepare(customer.getId(),sid,UUID.randomUUID(),withdrawalAddress(),"0.01");}
     CustomerWithdrawalAuthorization.Options challenge(UUID quote){return withdrawals.options(customer.getId(),sid,quote);}
     CustomerWithdrawalAuthorization.Proof proof(CustomerWithdrawalAuthorization.Options options)throws Exception {
         return new CustomerWithdrawalAuthorization.Proof(options.challengeId(),browser.assertion(

@@ -47,13 +47,14 @@ abstract class BitcoinWithdrawalTransferTestSupport extends BitcoinWithdrawalTes
         when(core.derive(any())).thenReturn(new BitcoinCoreClient.Address("bitcoin-regtest",OWN,"0014"+"cd".repeat(20)));
         ownAddresses.issue(customer.getId(),sid);
         when(directoryClient.read()).thenAnswer(call->new CodeVaspDirectoryClient.Directory(Instant.now(),Instant.now(),List.of(new CodeVaspDirectoryClient.Vasp(PEER,"가상 표시","가상 수취 사업자","KR","CODE",true,List.of(new CodeVaspDirectoryClient.Key(KEY,Instant.now().plusSeconds(3600)))))));
-        directory.refresh();withdrawal=price().payload().id();submit(withdrawal);
-        reserveEngine=UUID.randomUUID();events.consumeOrderEvent(event(withdrawal,reserveEngine,"withdrawal_reserved",1));
+        directory.refresh();withdrawal=price().payload().id();submit(withdrawal);reserveOriginal();
         when(addressClient.verify(any())).thenAnswer(call->{assertFalse(TransactionSynchronizationManager.isActualTransactionActive());
             assertEquals(1,count("bitcoin_withdrawal_transfer_attempts"));return new CodeVaspWithdrawalAddressClient.Result("VALID",null,PEER);});
         when(transferClient.authorize(any())).thenAnswer(call->{assertFalse(TransactionSynchronizationManager.isActualTransactionActive());return verified(call.getArgument(0));});
         clearInvocations(core,directoryClient,engineWithdrawal);
     }
+    /** 기본 시험은 합성 엔진 확정을 사용하고, 전체 연결 시험은 이 지점에서 실제 엔진의 WAL/Kafka 예약을 사용한다. */
+    void reserveOriginal(){reserveEngine=UUID.randomUUID();events.consumeOrderEvent(event(withdrawal,reserveEngine,"withdrawal_reserved",1));}
     CodeVaspWithdrawalAuthorizationClient.Result verified(CodeVaspWithdrawalAuthorizationClient.Request r) {
         return new CodeVaspWithdrawalAuthorizationClient.Result("VERIFIED",null,new CodeVaspWithdrawalAuthorizationClient.Data(r.transferId(),
             new CodeVaspTransferDataClient.Person(r.originatorName(),null,r.originatorBirth(),List.of(r.originatorAccount())),
@@ -63,6 +64,6 @@ abstract class BitcoinWithdrawalTransferTestSupport extends BitcoinWithdrawalTes
     BitcoinWithdrawalTransferReview.State execute(UUID id){return reviews.execute(maker.user().getId(),maker.sid(),id);}
     @AfterEach void neverPayOrDiscloseInAudit() {
         amount(FUNDS.subtract(expectedHold),expectedHold);verifyNoInteractions(engineWithdrawal,core,directoryClient);
-        for(var row:jdbc.queryForList("SELECT detail FROM security_audit WHERE action LIKE 'BTC_WITHDRAWAL_TRANSFER_%'"))for(String secret:List.of(ADDRESS,OWN,"1990-01-01",declaration(dustin.cex.domains.cdd.CustomerDeclaration.Pep.NO).fullName()))assertFalse(row.get("detail").toString().contains(secret));
+        for(var row:jdbc.queryForList("SELECT detail FROM security_audit WHERE action LIKE 'BTC_WITHDRAWAL_TRANSFER_%'"))for(String secret:List.of(withdrawalAddress(),OWN,"1990-01-01",declaration(dustin.cex.domains.cdd.CustomerDeclaration.Pep.NO).fullName()))assertFalse(row.get("detail").toString().contains(secret));
     }
 }
