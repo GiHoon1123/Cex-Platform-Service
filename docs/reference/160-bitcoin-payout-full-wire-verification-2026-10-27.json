@@ -1,0 +1,16 @@
+{
+  "run_id": "840b156e8ef8",
+  "command": ["./gradlew", "test", "--rerun", "--tests", "dustin.cex.domains.kyc.BitcoinPayoutFullWireIntegrationTest", "bootJar", "operatorAdminJar", "bitcoinSignerJar", "bitcoinBroadcasterJar", "bitcoinConfirmerJar", "--console=plain"],
+  "engine_commit": "013cd6889fe4e9c75874d4e4aa3cf0681054fad1",
+  "node_version": 310100,
+  "network": "regtest",
+  "connections": 0,
+  "txid": "322c2f44e9b56220abb91b92b01b16a075580f2838fb4322a2b024489f0d328e",
+  "confirmations": 6,
+  "tests": {"tests": 1, "failures": 0, "errors": 0, "skipped": 0},
+  "exit": 0,
+  "log": "bitcoin-payout-full-wire/840b156e8ef8/tests.log",
+  "node_stopped": true,
+  "broker_removed": true,
+  "database_removed": true
+}

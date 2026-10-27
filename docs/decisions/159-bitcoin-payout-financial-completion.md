@@ -55,13 +55,13 @@
 - `python3 scripts/verify_bitcoin_withdrawal_reservations.py`: 기존 19개 통과, 실패·오류·제외 0.
 - `python3 scripts/verify_bitcoin_withdrawal_wire.py`: 실제 소유 PostgreSQL·Kafka·Rust/WAL 연결 3개 통과, 자원 정리 성공.
 - `cargo test --locked --offline withdrawal_complete_debits_only_the_original_hold_once`: 고유 1개가 두 시험 모듈에서 2회 통과. 기존 Rust 경고는 남아 있으며 경고 없음으로 주장하지 않는다.
-- 고유 32개/33회 통과다. 실제 Core 방송·여섯 확인은 157·158의 분리된 실제 시험 결과이며, 이 사이클 하나의 시험에서 Core부터 Rust/Kafka까지 전부 연결한 것은 아니다.
+- 고유 32개/33회 통과다. 이 문서 시점에는 실제 Core 방송·여섯 확인과 Rust/Kafka 검증이 분리돼 있었다. 이후 [160 전체 실제 연결](160-bitcoin-payout-full-wire.md)이 그 빈칸을 닫았다.
 
 ## 완료 범위와 남은 한계
 
 BTC 출금의 코드 경로는 고객 예약 → 심사/승인 → 관찰 지갑 준비 → 입력 잠금 → 격리 서명 → 격리 방송 → 여섯 확인 → 엔진 완료 → 플랫폼 원장 정산까지 연결됐다. 각 단계의 격리·실패 회귀는 통과했지만 메인넷 자금, 실제 공급사, 별도 운영 노드/호스트, HSM, 외부 백업·복원, 조직상 승인 분리와 전체 운영 부하 시험은 완료하지 않았다.
 
-다음 백엔드 검토에서는 이 경로를 포함한 전체 미충족 목록과 실행 설정을 다시 대조한다. 그 뒤 합의한 숨은 마지막 기능인 ETH 입출금을 BTC와 같은 안전 원칙으로 추가한다.
+다음 백엔드 검토에서는 이 경로를 포함한 전체 미충족 목록과 실행 설정을 다시 대조한다. 이후 고객·어드민 프론트와 연결 검증을 끝내고, 합의한 마지막 기능인 ETH 거래시장·입출금을 BTC와 같은 안전 원칙으로 추가한다.
 
 ## 관련 커밋과 증적
 

@@ -327,3 +327,5 @@ Java 플랫폼의 업무·정합성·보안 결정과 구현·테스트 결과�
 - [158. 방송된 BTC 거래의 여섯 확인을 별도 읽기 워커로 확정](decisions/158-bitcoin-chain-confirmation.md)
 
 - [159. 여섯 확인 뒤 엔진 완료와 BTC 출금 금융 정산](decisions/159-bitcoin-payout-financial-completion.md)
+
+- [160. 실제 Core부터 Rust WAL·Kafka·원장까지 BTC 출금 전체 연결 검증](decisions/160-bitcoin-payout-full-wire.md)
