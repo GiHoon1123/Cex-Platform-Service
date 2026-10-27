@@ -109,6 +109,8 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 제품 PostgreSQL 마이그레이션은 별도 실제 DB 회귀가 소유한다. 단위·통합 시험의 임시 스키마와 섞지 않는다.
+	systemProperty 'spring.flyway.enabled', 'false'
 }
 
 // JMH 벤치마크에 GC 로그 및 JVM 옵션 추가

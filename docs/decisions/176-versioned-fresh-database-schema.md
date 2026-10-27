@@ -60,6 +60,7 @@ Spring의 자동 구성 후보에서 Flyway를 빼므로 해당 프로세스는 
 
 - `scripts/verify_fresh_database.py`: 엔진 DDL 동일성, 실제 플랫폼 생존 응답, Flyway `1,2` 순차 성공, 접수 표 존재를 검증한다.
 - `IsolatedProcessBoundaryTest.assertBeanBoundary`: 다섯 수탁 워커와 운영자 관리 진입점에 `Flyway` 빈이 없음을 검증한다.
+- Gradle `test` 작업은 Flyway를 항상 끈다. 기존 회귀는 실행기별 소유 PostgreSQL 또는 H2 임시 스키마를 만들며 제품 마이그레이션 검증은 위 빈 DB 실행기만 소유한다.
 - 컨테이너 검증: 빈 PostgreSQL DB를 대상으로 플랫폼 이미지를 비특권 사용자 `cex`로 실행하고 생존 응답과 이력 `1,2`를 확인했다.
 
 ## 실행 명령과 결과
@@ -75,6 +76,8 @@ docker build -t cex-platform:deployment-review .
 - 격리 경계: 6개 진입점의 비웹·비Kafka·비JPA·비Flyway 경계가 통과했다.
 - 이미지: 일곱 실행 JAR 생성, 비특권 사용자 실행, 실제 생존 응답과 Flyway `1,2` 적용을 확인했다.
 - 의존성 감사: 233개 패키지 버전을 OSV와 대조해 알려진 검출 0건이었다. 이는 운영 OS·JDK 이미지·향후 공지를 포함한 취약점 부재 보장이 아니다.
+
+최초 전체 Gradle 실행은 `CEX_TEST_DATABASE_URL` 없이 PostgreSQL 소유 회귀까지 한 DB에서 시작해 실패했고, Flyway를 끈 뒤에도 각 실행기가 요구하는 격리 DB가 없어 실패했다. 이 저장소의 PostgreSQL 회귀는 테스트 묶음별 DB를 만드는 `scripts/verify_*.py`가 기준이다. 실패를 제품 통과에 합산하지 않고 관련 격리 실행기와 빈 DB 실행기로 다시 검증한다.
 
 ## 남은 한계
 
