@@ -1,6 +1,8 @@
 package dustin.cex.domains.kyc;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -20,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 class MarketSurveillanceIntegrationTest extends EddTestSupport {
     @Autowired MarketSurveillanceInputs inputs;
     @Autowired MarketSurveillanceService surveillance;
+    @Autowired MarketSurveillanceCases cases;
     @Autowired OrderRepository orders;
 
     @Test void confirmedEventsCreateReviewSignalsWithoutAutomaticallyRestrictingTheCustomer()throws Exception{
@@ -38,12 +41,23 @@ class MarketSurveillanceIntegrationTest extends EddTestSupport {
 
         var ids=jdbc.queryForList("SELECT id FROM market_surveillance_signals ORDER BY created_at",UUID.class);
         assertEquals(2,ids.size());
+        var investigations=cases.page(0);assertEquals(2,investigations.size());var selected=investigations.getFirst();
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->cases.observe(checker.user().getId(),checker.sid(),selected.id(),"배정 전 의견"));
+        assertEquals("UNDER_REVIEW",cases.claim(maker.user().getId(),maker.sid(),selected.id()).status());
+        assertEquals("OBSERVATION",cases.observe(maker.user().getId(),maker.sid(),selected.id(),"두 체결 가격과 취소 묶음의 원본을 확인했습니다").type());
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,()->cases.close(checker.user().getId(),checker.sid(),selected.id(),"ESCALATED","다른 담당자의 결론"));
+        assertEquals("ESCALATED",cases.close(maker.user().getId(),maker.sid(),selected.id(),"ESCALATED","시장 통제 검토로 회부합니다").status());
+        assertEquals(4,cases.history(selected.id(),0).size());
+        var remaining=investigations.get(1);doNothing().when(audit).record(eq(maker.user().getId()),eq("MARKET_CASE_CLAIMED"),anyString(),eq("SUCCESS"),anyString());
+        assertThrows(DataAccessException.class,()->cases.claim(maker.user().getId(),maker.sid(),remaining.id()));reset(audit);assertEquals("OPEN",cases.detail(remaining.id()).status());
         mvc.perform(get("/api/admin/market-surveillance/signals").header("Authorization","Bearer "+maker.access())).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
         mvc.perform(get("/api/admin/market-surveillance/signals/"+ids.getFirst()).header("Authorization","Bearer "+maker.access())).andExpect(status().isOk()).andExpect(jsonPath("$.source_hash").isString());
         mvc.perform(get("/api/admin/market-surveillance/signals").header("Authorization","Bearer "+customerAccess)).andExpect(status().isForbidden());
 
         assertThrows(DataAccessException.class,()->jdbc.update("UPDATE market_activity_events SET base_asset='ETH'"));
         assertThrows(DataAccessException.class,()->jdbc.update("DELETE FROM market_surveillance_assessments"));
+        assertThrows(DataAccessException.class,()->jdbc.update("DELETE FROM market_surveillance_case_events"));
+        assertThrows(DataAccessException.class,()->jdbc.update("UPDATE market_surveillance_cases SET status='OPEN'"));
         assertThrows(DataAccessException.class,()->jdbc.update("UPDATE market_surveillance_state SET observed_event=0 WHERE singleton=true"));
     }
 

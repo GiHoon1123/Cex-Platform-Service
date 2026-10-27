@@ -207,3 +207,79 @@ DO $$ DECLARE table_name text;BEGIN
   END IF;
  END LOOP;
 END $$;
+
+-- 자동 신호는 사람의 사건 판단과 분리한다. 현재 상태는 작업 큐이고 모든 판단은 별도 불변 사건으로 남긴다.
+CREATE TABLE IF NOT EXISTS market_surveillance_cases (
+ id uuid PRIMARY KEY,signal_id uuid NOT NULL UNIQUE REFERENCES market_surveillance_signals(id),status varchar(24) NOT NULL CHECK(status IN ('OPEN','UNDER_REVIEW','CLOSED_NO_ACTION','ESCALATED')),
+ assignee_id bigint REFERENCES users(id),version bigint NOT NULL DEFAULT 0 CHECK(version>=0),created_at timestamptz NOT NULL DEFAULT clock_timestamp(),updated_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+ CHECK((status='OPEN' AND assignee_id IS NULL) OR(status<>'OPEN' AND assignee_id IS NOT NULL))
+);
+CREATE TABLE IF NOT EXISTS market_surveillance_case_events (
+ id uuid PRIMARY KEY,case_id uuid NOT NULL REFERENCES market_surveillance_cases(id),event_type varchar(24) NOT NULL CHECK(event_type IN ('OPENED','CLAIMED','OBSERVATION','CLOSED_NO_ACTION','ESCALATED')),
+ actor_id bigint REFERENCES users(id),actor_person uuid,actor_version bigint,session_id uuid,next_status varchar(24),next_assignee bigint REFERENCES users(id),
+ detail varchar(1000) NOT NULL,recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),created_txid bigint NOT NULL DEFAULT txid_current(),
+ CHECK((event_type='OPENED' AND actor_id IS NULL AND actor_person IS NULL AND actor_version IS NULL AND session_id IS NULL AND next_status='OPEN' AND next_assignee IS NULL)
+  OR(event_type<>'OPENED' AND actor_id IS NOT NULL AND actor_person IS NOT NULL AND actor_version IS NOT NULL AND session_id IS NOT NULL)),
+ CHECK((event_type='OBSERVATION' AND next_status IS NULL AND next_assignee IS NULL)
+  OR(event_type='OPENED' AND next_status='OPEN' AND next_assignee IS NULL)
+  OR(event_type='CLAIMED' AND next_status='UNDER_REVIEW' AND next_assignee=actor_id)
+  OR(event_type IN('CLOSED_NO_ACTION','ESCALATED') AND next_status=event_type AND next_assignee=actor_id))
+);
+CREATE INDEX IF NOT EXISTS market_surveillance_case_queue ON market_surveillance_cases(status,updated_at,id);
+CREATE INDEX IF NOT EXISTS market_surveillance_case_history ON market_surveillance_case_events(case_id,recorded_at,id);
+CREATE OR REPLACE FUNCTION market_surveillance_case_event_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE actor record;current_case record;
+BEGIN
+ SELECT * INTO current_case FROM market_surveillance_cases WHERE id=NEW.case_id;
+ IF NEW.created_txid<>txid_current() OR NEW.recorded_at>clock_timestamp() THEN RAISE EXCEPTION '시장 조사 사건 시각이 올바르지 않습니다';END IF;
+ IF NEW.event_type='OPENED' THEN
+  IF current_case.status<>'OPEN' OR current_case.signal_id IS NULL THEN RAISE EXCEPTION '실제 신호의 열린 사건만 생성할 수 있습니다';END IF;RETURN NEW;
+ END IF;
+ SELECT * INTO actor FROM users WHERE id=NEW.actor_id FOR UPDATE;
+ IF coalesce(actor.role<>'OPERATOR' OR NOT actor.enabled OR actor.operator_person_id<>NEW.actor_person OR actor.version<>NEW.actor_version
+  OR actor.operator_access_expires_at<=clock_timestamp() OR actor.operator_recovery_request_id IS NOT NULL
+  OR NOT EXISTS(SELECT 1 FROM refresh_tokens t WHERE t.user_id=NEW.actor_id AND t.session_id=NEW.session_id AND NOT t.revoked
+    AND t.expires_at>localtimestamp AND t.mfa_verified_at>=localtimestamp-interval '5 minutes' AND t.mfa_credential_fingerprint~'^[0-9a-f]{64}$'),true)
+ THEN RAISE EXCEPTION '현재 인증된 사건 담당자만 기록할 수 있습니다';END IF;
+ IF NEW.event_type='CLAIMED' AND current_case.status<>'OPEN' THEN RAISE EXCEPTION '열린 사건만 배정할 수 있습니다';END IF;
+ IF NEW.event_type IN('OBSERVATION','CLOSED_NO_ACTION','ESCALATED') AND(current_case.status<>'UNDER_REVIEW' OR current_case.assignee_id<>NEW.actor_id)
+ THEN RAISE EXCEPTION '현재 담당자만 조사하거나 종결할 수 있습니다';END IF;RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS market_surveillance_case_event_binding_check ON market_surveillance_case_events;
+CREATE TRIGGER market_surveillance_case_event_binding_check BEFORE INSERT ON market_surveillance_case_events FOR EACH ROW EXECUTE FUNCTION market_surveillance_case_event_binding();
+CREATE OR REPLACE FUNCTION market_surveillance_case_insert_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM market_surveillance_signals WHERE id=NEW.signal_id)
+  OR NOT EXISTS(SELECT 1 FROM market_surveillance_case_events e WHERE e.case_id=NEW.id AND e.event_type='OPENED' AND e.created_txid=txid_current())
+ THEN RAISE EXCEPTION '시장 신호와 열린 사건 이력이 함께 필요합니다';END IF;RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS market_surveillance_case_insert_binding_check ON market_surveillance_cases;
+CREATE CONSTRAINT TRIGGER market_surveillance_case_insert_binding_check AFTER INSERT ON market_surveillance_cases DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION market_surveillance_case_insert_binding();
+CREATE OR REPLACE FUNCTION market_surveillance_case_update_binding() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF NEW.id<>OLD.id OR NEW.signal_id<>OLD.signal_id OR NEW.created_at<>OLD.created_at OR NEW.version<>OLD.version+1 OR NEW.status=OLD.status
+  OR NOT EXISTS(SELECT 1 FROM market_surveillance_case_events e WHERE e.case_id=NEW.id AND e.created_txid=txid_current()
+    AND e.next_status=NEW.status AND e.next_assignee IS NOT DISTINCT FROM NEW.assignee_id)
+ THEN RAISE EXCEPTION '시장 사건 현재 상태에는 같은 트랜잭션의 이력이 필요합니다';END IF;RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS market_surveillance_case_update_binding_check ON market_surveillance_cases;
+CREATE TRIGGER market_surveillance_case_update_binding_check BEFORE UPDATE ON market_surveillance_cases FOR EACH ROW EXECUTE FUNCTION market_surveillance_case_update_binding();
+DROP TRIGGER IF EXISTS market_surveillance_case_event_immutable ON market_surveillance_case_events;
+CREATE TRIGGER market_surveillance_case_event_immutable BEFORE UPDATE OR DELETE OR TRUNCATE ON market_surveillance_case_events FOR EACH STATEMENT EXECUTE FUNCTION market_surveillance_immutable();
+DROP TRIGGER IF EXISTS market_surveillance_case_preserve ON market_surveillance_cases;
+CREATE TRIGGER market_surveillance_case_preserve BEFORE DELETE OR TRUNCATE ON market_surveillance_cases FOR EACH STATEMENT EXECUTE FUNCTION market_surveillance_immutable();
+CREATE OR REPLACE FUNCTION market_surveillance_case_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE action_name text;target_name text;detail_text text;signal uuid;current_version bigint;
+BEGIN
+ SELECT signal_id,version INTO signal,current_version FROM market_surveillance_cases WHERE id=NEW.case_id;
+ target_name:='market-surveillance-case:'||NEW.case_id;
+ IF NEW.event_type='OPENED' THEN action_name:='MARKET_SURVEILLANCE_CASE_OPENED';detail_text:='SIGNAL:'||signal;
+ ELSIF NEW.event_type='CLAIMED' THEN action_name:='MARKET_CASE_CLAIMED';detail_text:='VERSION:'||current_version;
+ ELSIF NEW.event_type='OBSERVATION' THEN action_name:='MARKET_CASE_OBSERVED';detail_text:='EVENT:'||NEW.id;
+ ELSE action_name:='MARKET_CASE_CLOSED';detail_text:=NEW.event_type||':VERSION:'||current_version;END IF;
+ IF NOT EXISTS(SELECT 1 FROM security_audit a WHERE a.actor_id IS NOT DISTINCT FROM NEW.actor_id AND a.action=action_name AND a.target=target_name
+  AND a.outcome='SUCCESS' AND a.detail=detail_text AND a.occurred_at>=NEW.recorded_at)
+ THEN RAISE EXCEPTION '시장 조사 사건과 필수 감사는 함께 보존해야 합니다';END IF;RETURN NULL;
+END $$;
+DROP TRIGGER IF EXISTS market_surveillance_case_audit_check ON market_surveillance_case_events;
+CREATE CONSTRAINT TRIGGER market_surveillance_case_audit_check AFTER INSERT ON market_surveillance_case_events DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION market_surveillance_case_audit();

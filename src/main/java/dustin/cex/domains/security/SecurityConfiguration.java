@@ -52,6 +52,8 @@ public class SecurityConfiguration {
                 .requestMatchers(HttpMethod.GET,"/api/admin/monitoring-cases","/api/admin/monitoring-cases/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 // 시장 신호는 위반 확정이 아니다. 운영·승인·감사 역할에 읽기만 허용하고 자동 제재 경로를 두지 않는다.
                 .requestMatchers(HttpMethod.GET,"/api/admin/market-surveillance/signals","/api/admin/market-surveillance/signals/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.GET,"/api/admin/market-surveillance/cases","/api/admin/market-surveillance/cases/*","/api/admin/market-surveillance/cases/*/history").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
+                .requestMatchers(HttpMethod.POST,"/api/admin/market-surveillance/cases/*/claims","/api/admin/market-surveillance/cases/*/observations","/api/admin/market-surveillance/cases/*/closures").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.GET,"/api/admin/market-controls/*/*").access(audited(audit,sessions,"OPERATOR","APPROVER","AUDITOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/market-controls").access(audited(audit,sessions,"OPERATOR"))
                 .requestMatchers(HttpMethod.POST,"/api/admin/market-controls/*/inspect").access(audited(audit,sessions,"OPERATOR","APPROVER"))

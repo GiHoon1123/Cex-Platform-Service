@@ -41,7 +41,13 @@ public class MarketSurveillanceService {
         String hash=sha(document);UUID assessment=UUID.randomUUID();
         jdbc.update("INSERT INTO market_surveillance_assessments(id,input_event,policy_id,outcome,reason,source_document,source_hash) VALUES(?,?,?,?,?,?,?)",
             assessment,id,POLICY,decision.outcome(),decision.reason(),document,hash);
-        if("REVIEW_REQUIRED".equals(decision.outcome()))jdbc.update("INSERT INTO market_surveillance_signals(id,assessment_id) VALUES(?,?)",UUID.randomUUID(),assessment);
+        if("REVIEW_REQUIRED".equals(decision.outcome())){
+            UUID signal=UUID.randomUUID(),investigation=UUID.randomUUID();
+            jdbc.update("INSERT INTO market_surveillance_signals(id,assessment_id) VALUES(?,?)",signal,assessment);
+            jdbc.update("INSERT INTO market_surveillance_cases(id,signal_id,status) VALUES(?,?,'OPEN')",investigation,signal);
+            jdbc.update("INSERT INTO market_surveillance_case_events(id,case_id,event_type,next_status,detail) VALUES(?,?,'OPENED','OPEN',?)",UUID.randomUUID(),investigation,"POLICY:"+POLICY+":SIGNAL:"+decision.reason());
+            audit.record(null,"MARKET_SURVEILLANCE_CASE_OPENED","market-surveillance-case:"+investigation,"SUCCESS","SIGNAL:"+signal);
+        }
         jdbc.update("UPDATE market_surveillance_state SET observed_event=?,updated_at=clock_timestamp() WHERE singleton=true",id);
         audit.record(null,"MARKET_SURVEILLANCE_ASSESSED","market-event:"+id,"SUCCESS","POLICY:"+POLICY+":OUTCOME:"+decision.outcome()+":REASON:"+decision.reason());
         return Optional.of(new Assessment(assessment,id,decision.outcome(),decision.reason(),hash));
