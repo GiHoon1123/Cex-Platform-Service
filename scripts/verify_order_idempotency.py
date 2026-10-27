@@ -110,6 +110,7 @@ class OrderIdempotencyProcessTest(unittest.TestCase):
         log_path = ARTIFACTS / f"order-idempotency-platform-{cls.platform_runs}.log"
         command = [str(Path(java_home) / "bin/java"), "-jar", str(PROJECT / "build/libs/cex-0.0.1-SNAPSHOT.jar"),
                    f"--spring.datasource.url=jdbc:postgresql://{cls.database_address}/{cls.database}",
+                   "--spring.datasource.username=root", "--spring.datasource.password=1234",
                    "--spring.kafka.bootstrap-servers=127.0.0.1:1", "--spring.kafka.listener.auto-startup=false",
                    "--spring.kafka.producer.properties.max.block.ms=500",
                    f"--engine.http.url=http://127.0.0.1:{cls.engine.server_port}", "--engine.http.timeout=300",
