@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import dustin.broadcaster.*;
 import dustin.confirmer.*;
+import dustin.ethconfirmer.*;
+import dustin.ethsigner.*;
 import dustin.operator.OperatorAdminApplication;
 import dustin.signer.*;
 import jakarta.persistence.EntityManagerFactory;
@@ -23,7 +25,8 @@ class IsolatedProcessBoundaryTest {
 
     @Test void isolatedEntrypointsUseExplicitConfigurationInsteadOfCustomerComponentScanning(){
         for(var source:List.of(BitcoinSignerApplication.class,BitcoinBroadcasterApplication.class,
-                BitcoinConfirmerApplication.class,OperatorAdminApplication.class)){
+                BitcoinConfirmerApplication.class,EthereumSignerApplication.class,
+                EthereumConfirmerApplication.class,OperatorAdminApplication.class)){
             assertNotNull(source.getAnnotation(Configuration.class),source.getName());
             assertNull(source.getAnnotation(SpringBootApplication.class),source.getName());
             assertNotNull(source.getAnnotation(EnableAutoConfiguration.class),source.getName());
@@ -32,6 +35,8 @@ class IsolatedProcessBoundaryTest {
                 BitcoinSignerApplication.class,BitcoinSignerApplication.application(),
                 BitcoinBroadcasterApplication.class,BitcoinBroadcasterApplication.application(),
                 BitcoinConfirmerApplication.class,BitcoinConfirmerApplication.application(),
+                EthereumSignerApplication.class,EthereumSignerApplication.application(),
+                EthereumConfirmerApplication.class,EthereumConfirmerApplication.application(),
                 OperatorAdminApplication.class,OperatorAdminApplication.application());
         applications.forEach((source,application)->{
             assertEquals(WebApplicationType.NONE,application.getWebApplicationType(),source.getName());
@@ -66,6 +71,24 @@ class IsolatedProcessBoundaryTest {
             assertBeanBoundary(context,BitcoinConfirmerWorker.class);
             assertTrue(context.getBeansOfType(BitcoinSignerWorker.class).isEmpty());
             assertTrue(context.getBeansOfType(BitcoinBroadcasterWorker.class).isEmpty());
+        }
+    }
+
+    @Test void ethereumSignerLoadsNoCustomerWebOrKafkaBoundary(){
+        try(var context=run(EthereumSignerApplication.application(),"ethereum-signer",
+                "--ethereum.signer.rpc-url=http://127.0.0.1:1","--ethereum.signer.chain-id=31337",
+                "--ethereum.signer.from=0x0000000000000000000000000000000000000001")){
+            assertBeanBoundary(context,EthereumPayoutWorker.class);
+            assertTrue(context.getBeansOfType(EthereumConfirmationWorker.class).isEmpty());
+        }
+    }
+
+    @Test void ethereumConfirmerHasNoSignerOrCustomerWebBoundary(){
+        try(var context=run(EthereumConfirmerApplication.application(),"ethereum-confirmer",
+                "--ethereum.confirmation.rpc-url=http://127.0.0.1:1","--ethereum.confirmation.chain-id=31337",
+                "--ethereum.confirmation.required=1")){
+            assertBeanBoundary(context,EthereumConfirmationWorker.class);
+            assertTrue(context.getBeansOfType(EthereumPayoutWorker.class).isEmpty());
         }
     }
 

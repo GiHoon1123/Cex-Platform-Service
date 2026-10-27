@@ -79,7 +79,7 @@ public class BitcoinWithdrawalEvents {
         if (scale < 0 || money.length() > 40 || !money.matches("[0-9]+(?:\\.[0-9]{1," + scale + "})?"))
             throw new IllegalArgumentException("출금 결과의 자산·금액 형식이 다릅니다");
         // ETH의 체인 지급·완료는 별도 승인·서명 계층이 확정되기 전까지 열지 않는다. 예약과 최초 금융 거절만 처리한다.
-        if (ethereum && (type.equals("withdrawal_released") || type.equals("withdrawal_completed")))
+        if (ethereum && type.equals("withdrawal_released"))
             throw new IllegalStateException("ETH 출금의 체인 지급 생명주기가 아직 확정되지 않았습니다");
         BigDecimal gross = ExactAmount.requirePositive(new BigDecimal(money), "엔진 출금 총액");
         String timestamp = text(event, "timestamp");
@@ -95,7 +95,8 @@ public class BitcoinWithdrawalEvents {
                 || !asset.equals(original.get("asset")) || gross.compareTo((BigDecimal) original.get("total")) != 0)
             throw new IllegalStateException("엔진 결과와 서명한 금융 원본이 다릅니다");
         if (ethereum) {
-            applyEthereumReservation(type, id, engine, eventId, timestamp, raw, owner, gross);
+            if (type.equals("withdrawal_completed")) completeEthereum(id, engine, eventId, timestamp, raw, owner, gross);
+            else applyEthereumReservation(type, id, engine, eventId, timestamp, raw, owner, gross);
             return;
         }
         if(type.equals("withdrawal_released")) {
@@ -120,6 +121,32 @@ public class BitcoinWithdrawalEvents {
             """, id, eventId, engine, type, timestamp, BitcoinWithdrawalQuotes.digest(raw), operation);
         audit.record(null, "BTC_WITHDRAWAL_ENGINE_RESULT", "bitcoin-withdrawal:" + id,
             "SUCCESS", "EVENT:" + eventId);
+    }
+
+    private void completeEthereum(UUID id, UUID engine, String eventId, String timestamp,
+            String raw, long owner, BigDecimal gross) {
+        var sources = jdbc.queryForList("SELECT w.amount,w.fee,c.gas_fee FROM ethereum_withdrawals w JOIN ethereum_payout_confirmations c ON c.withdrawal_id=w.id WHERE w.id=?", id);
+        if (sources.size() != 1) throw new IllegalStateException("ETH 체인 확정 지급 원본이 없습니다");
+        var reserved = jdbc.queryForList("SELECT event_id FROM ethereum_withdrawal_reservation_events WHERE withdrawal_id=? AND engine_id=? AND event_type='withdrawal_reserved'", String.class, id, engine);
+        if (reserved.size() != 1 || Long.parseLong(reserved.getFirst().split(":")[1]) >= Long.parseLong(eventId.split(":")[1])
+                || Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM ethereum_completion_events WHERE withdrawal_id=?)", Boolean.class, id)))
+            throw new IllegalStateException("ETH 선행 예약과 일회 체인 완료를 확인하세요");
+        var source = sources.getFirst();
+        BigDecimal amount = (BigDecimal) source.get("amount"), fee = (BigDecimal) source.get("fee"), gas = (BigDecimal) source.get("gas_fee");
+        var balance = balances.findByUserIdAndMintAddressForUpdate(owner, "ETH").orElseThrow();
+        BigDecimal locked = ExactAmount.requireNonNegative(balance.getLocked(), "잠긴 ETH 잔액");
+        if (locked.compareTo(gross) < 0) throw new IllegalStateException("완료할 ETH 예약금이 부족합니다");
+        balance.setLocked(ExactAmount.requireNonNegative(locked.subtract(gross), "완료 후 잠긴 ETH"));
+        balances.saveAndFlush(balance);
+        String operation = "engine:" + eventId, gasOperation = "eth:withdrawal:gas:" + id;
+        ledger.record(operation, "ETH_WITHDRAWAL_COMPLETE", List.of(
+                p(owner, "LOCKED", "ETH", gross.negate()), p(0, "FEE", "ETH", fee), p(0, "CUSTODY", "ETH", amount)));
+        // 공통 원장의 아홉 자리 제한과 섞지 않고 실제 wei 단위 회사 가스 비용을 별도 18자리 균형 기록으로 보존한다.
+        jdbc.update("INSERT INTO ethereum_gas_ledger(operation_key,entry_type,amount,withdrawal_id) VALUES(?, 'CUSTODY', ?, ?),(?, 'EXPENSE', ?, ?)",
+                gasOperation, gas.negate(), id, gasOperation, gas, id);
+        jdbc.update("INSERT INTO ethereum_completion_events(withdrawal_id,event_id,engine_id,event_time,payload_hash,operation_key,gas_operation_key) VALUES(?,?,?,?,?,?,?)",
+                id, eventId, engine, timestamp, BitcoinWithdrawalQuotes.digest(raw), operation, gasOperation);
+        audit.record(null, "ETH_WITHDRAWAL_COMPLETED", "ethereum-withdrawal:" + id, "SUCCESS", "EVENT:" + eventId);
     }
 
     private void applyEthereumReservation(String type, UUID id, UUID engine, String eventId,

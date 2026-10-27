@@ -46,7 +46,7 @@ class EthereumWithdrawalEventTest {
     }
 
     @Test
-    void ethereumCompletionIsClosedUntilThePayoutLifecycleExists() {
+    void ethereumCompletionIsClosedWithoutCanonicalChainConfirmation() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         UserRepository users = mock(UserRepository.class);
         UUID engine = UUID.randomUUID();

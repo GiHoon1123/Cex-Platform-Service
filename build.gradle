@@ -220,3 +220,19 @@ tasks.register('bitcoinConfirmerJar', org.springframework.boot.gradle.tasks.bund
     mainClass = 'dustin.confirmer.BitcoinConfirmerApplication'
     classpath = sourceSets.main.runtimeClasspath
 }
+
+// 이더리움 서명 RPC 권한은 고객·운영자 HTTP가 없는 별도 실행 파일에만 제공한다.
+tasks.register('ethereumSignerJar', org.springframework.boot.gradle.tasks.bundling.BootJar) {
+    archiveClassifier = 'ethereum-signer'
+    targetJavaVersion = JavaVersion.VERSION_21
+    mainClass = 'dustin.ethsigner.EthereumSignerApplication'
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+// 이더리움 체인 확인 프로세스에는 개인키 RPC나 고객 HTTP 진입점을 포함하지 않는다.
+tasks.register('ethereumConfirmerJar', org.springframework.boot.gradle.tasks.bundling.BootJar) {
+    archiveClassifier = 'ethereum-confirmer'
+    targetJavaVersion = JavaVersion.VERSION_21
+    mainClass = 'dustin.ethconfirmer.EthereumConfirmerApplication'
+    classpath = sourceSets.main.runtimeClasspath
+}

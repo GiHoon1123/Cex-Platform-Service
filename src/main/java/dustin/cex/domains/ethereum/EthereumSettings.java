@@ -26,7 +26,8 @@ public class EthereumSettings {
         if(!addresses.isBlank()&&addressPool.size()!=addresses.split(",",-1).length)throw new IllegalArgumentException("이더리움 입금 주소가 중복됐습니다");
     }
     boolean configured(){return endpoint!=null;}
-    static String address(String value){if(value==null||!value.matches("0x[0-9a-fA-F]{40}"))throw new IllegalArgumentException("이더리움 주소를 확인하세요");return value.toLowerCase(Locale.ROOT);}
+    public BigInteger chainId(){return chainId;}
+    public static String address(String value){if(value==null||!value.matches("0x[0-9a-fA-F]{40}"))throw new IllegalArgumentException("이더리움 주소를 확인하세요");return value.toLowerCase(Locale.ROOT);}
     private static BigInteger positive(String value,String field){try{var number=new BigInteger(value);if(number.signum()<=0)throw new IllegalArgumentException();return number;}catch(RuntimeException invalid){throw new IllegalArgumentException(field+"를 확인하세요");}}
     @Override public String toString(){return "EthereumSettings[노드 주소 생략]";}
 }
