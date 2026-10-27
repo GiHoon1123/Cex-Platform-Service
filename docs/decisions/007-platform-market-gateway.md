@@ -44,7 +44,7 @@ flowchart LR
 | 경로 | 역할 |
 | --- | --- |
 | `GET /api/market/BTC/USDT` | 최신 전체 호가와 최근 공개 체결 100개 |
-| `GET /api/market/BTC/USDT/reference-candles` | Binance 외부 기준 1분 OHLC·거래량. 2026-10-27의 후속 변경이며 자체 호가 권위가 아님 |
+| `GET /api/market/BTC/USDT/reference-candles?interval=1h` | Binance 외부 기준 OHLC·거래량. `1m·5m·15m·1h·4h·1d`만 허용하며 자체 호가 권위가 아님 |
 | `/ws/market/BTC/USDT` | 접속·재접속 뒤 전체 스냅샷과 후속 갱신 |
 | `POST /api/cex/orders` | 인증·원본 키·예약 후 엔진 동기 접수 |
 | `DELETE /api/cex/orders/{id}` | 인증·본인 확인 후 영속 취소 요청 접수, 202 |
